@@ -9,9 +9,9 @@ Input and output variables and variables are transferred via the
 `fmi2GetXXX` and `fmi2SetXXX` functions, defined in section 2.1.7.
 
 In order to enable the slave to interpolate the continuous real inputs
-between communication steps the derivatives of the inputs with respect
+between communication steps, the derivatives of the inputs with respect
 to time can be provided.
-To allow higher order interpolation also higher derivatives can be set.
+Also, higher derivatives can be set to allow higher order interpolation.
 Whether a slave is able to interpolate and
 therefore needs this information is provided by the capability attribute `canInterpolateInputs`.
 
@@ -37,7 +37,7 @@ Inputs and their derivatives are set with respect to the beginning of a
 communication time step.
 
 [role=indented2]
-To allow interpolation/approximation of the real output variables between communication steps (if they are used as inputs for other slaves) the derivatives of the outputs with respect to time can be read.
+To allow interpolation/approximation of the real output variables between communication steps (if they are used as inputs for other slaves), the derivatives of the outputs with respect to time can be read.
 Whether the slave is able to provide the derivatives of outputs is given by the unsigned integer capability flag `MaxOutputDerivativeOrder`.
 It delivers the maximum order of the output derivative.
 If the actual order is lower (because the order of integration algorithm is low),
@@ -94,7 +94,7 @@ synchronize to these points by always integrating exactly to latexmath:[tc_i + h
 It is up to `fmi2DoStep` how to achieve this.]_
 At the first call to `fmiDoStep` after `fmi2ExitInitializationMode` was called
 `currentCommunicationPoint` must be equal to `startTime` as set with `fmi2SetupExperiment`.
-_[Formally argument `currentCommunicationPoint` is not needed.
+_[Formally, argument `currentCommunicationPoint` is not needed.
 It is present in order to handle a mismatch between the master and the FMU state of the slave: The `currentCommunicationPoint` and the FMU state of the slaves defined by former_ `fmi2DoStep` _or_
 `fmi2SetFMUState` _calls have to be consistent with respect to each other.
 For example, if the slave does not use the update formula for the independent variable as required above,_ latexmath:[tc_{i+1} = tc_i + hc_i] _(using argument_ latexmath:[tc_i] = `currentCommunicationPoint` _of_ `fmi2DoStep`) _but uses internally an own update formula,
@@ -111,14 +111,14 @@ The master can call the appropriate `fmi2GetXXXStatus` functions to get further 
 If possible, the master should retry the simulation with a shorter communication step size.
 _[Redoing a step is only possible if the FMU state has been recorded at the beginning of the current (failed) step with `fmi2GetFMUState`.
 Redoing a step is performed by calling `fmi2SetFMUState` and afterwards calling `fmi2DoStep` with the new communicationStepSize.
-Note, it is not possible to change `currentCommunicationPoint` in such a call.]_ +
+Note that it is not possible to change `currentCommunicationPoint` in such a call.]_ +
 `fmi2Error` - the communication step could not be carried out at all.
 The master can try to repeat the step with other input values and/or a different communication step size in the same way as described in the `fmi2Discard` case above. +
 `fmi2Fatal` - if an error occurred which corrupted the FMU irreparably.
 _[The master should stop the simulation run immediatlely.]_ See section 2.1.3 for details. +
-`fmi2Pending` - is returned if the slave executes the function asynchronously.
+`fmi2Pending` - this status is returned if the slave executes the function asynchronously.
 That means the slave starts the computation but returns immediately.
-The master has to call `fmi2GetStatus(...,fmi2DoStep,...)` to find out, if the slave is done.
+The master has to call `fmi2GetStatus(...,fmi2DoStep,...)` to find out if the slave is done.
 An alternative is to wait until the callback function fmi2StepFinished is called by the slave.
 `fmi2CancelStep` can be called to cancel the current computation.
 It is not allowed to call any other function during a pending `fmi2DoStep`.
@@ -130,7 +130,7 @@ fmi2Status fmi2CancelStep(fmi2Component c);
 
 [role=indented2]
 Can be called if `fmi2DoStep` returned `fmi2Pending` in order to stop the current asynchronous execution.
-The master calls this function if for example the co-simulation run is stopped by the user or one of the slaves.
+The master calls this function if, for example, the co-simulation run is stopped by the user or one of the slaves.
 Afterwards it is only allowed to call `fmi2Reset` or `fmi2FreeInstance`.
 
 It depends on the capabilities of the slave which parameter constellations and calling sequences are allowed (see 4.3.1)
@@ -213,33 +213,33 @@ simulation as follows:
 
 *instantiated*: +
 In this state,
-start and guess values (= variables that have `initial` = `"exact"` or `"approx`.") can be set.
+start and guess values (= variables that have `initial` = `"exact"` or `"approx`") can be set.
 
 *Initialization Mode:* +
-In this state equations are active to determine all outputs (and optionally other variables exposed by the exporting tool).
-The variables that can be retrieved by `fmi2GetXXX` calls are (1) defined in the xml file
-under `<ModelStructure><InitialUnknowns>` and (2) variables with `causality` = `"output"`.
+In this state, equations are active to determine all outputs (and optionally other variables exposed by the exporting tool).
+The variables that can be retrieved by `fmi2GetXXX` calls are (1) defined in the XML file
+under `<ModelStructure><InitialUnknowns>`, and (2) variables with `causality` = `"output"`.
 Variables with `initial` = `"exact"`,
 as well as variables with `variability` = `"input"` can be set.
 
 *slaveInitialized*: +
-In this state the slave is initialized and the co-simulation computation is performed. The calculation until the next communication point is performed with function `fmi2DoStep`. Depending on the return value, the slave is in a different state (step complete, step failed, step canceled).
+In this state, the slave is initialized and the co-simulation computation is performed. The calculation until the next communication point is performed with function `fmi2DoStep`. Depending on the return value, the slave is in a different state (step complete, step failed, step canceled).
 
 *terminated*: +
 In this state, the solution at the final time of the simulation can be retrieved.
 
-Note, in Initialization Mode input variables can be set with `fmi2SetXXX` and output variables can be get
+Note that in Initialization Mode input variables can be set with `fmi2SetXXX` and output variables can be retrieved
 with `fmi2GetXXX` interchangeably according to the model structure defined
-under element `<ModelStructure><InitialUnknowns>` in the xml-file.
-_[For example if one output `y1` depends on two inputs `u1`, `u2`,
-then these two inputs must be set, before `y1` can be get.
-If additionally an output `y2` depends on an input `u3`, then `u3` can be set and `y2` can be get afterwards.
+under element `<ModelStructure><InitialUnknowns>` in the XML file.
+_[For example, if one output `y1` depends on two inputs `u1`, `u2`,
+then these two inputs must be set, before `y1` can be retrieved.
+If additionally an output `y2` depends on an input `u3`, then `u3` can be set and `y2` can be retrieved afterwards.
 As a result, artificial or "real" algebraic loops over connected FMUs in
 Initialization Mode can be handled by using appropriate numerical algorithms.]_
 
 There is the additional restriction in `slaveInitialized` state that it is not allowed to call `fmi2GetXXX` functions after `fmi2SetXXX` functions without an `fmi2DoStep` call in between.
 
-_[The reason is to avoid different interpretations of the caching, since contrary to FMI for ModelExchange `fmi2DoStep` will perform the actual calculation and not `fmi2GetXXX` and therefore dummy algebraic loops at communication points cannot be handeled by an appropriate sequence of `fmi2GetXXX`, `fmi2SetXXX` calls as for ModelExchange.
+_[The reason is to avoid different interpretations of the caching, since contrary to FMI for Model Exchange, `fmi2DoStep` will perform the actual calculation instead of `fmi2GetXXX`, and therefore, dummy algebraic loops at communication points cannot be handeled by an appropriate sequence of `fmi2GetXXX` and, `fmi2SetXXX` calls as for ModelExchange.
 
 Examples:_
 
@@ -328,21 +328,21 @@ or `causality` = `"input"` +
 *8* always, but if status is other than `fmi2Terminated`,
 retrieved values are useable for debugging only
 
-==== Pseudo Code Example
+==== Pseudo-code Example
 
 In the following example,
 the usage of the FMI functions is sketched in order to clarify the typical calling sequence of the functions in a simulation environment.
-The example is given in a mix of pseudo-code and "C",
+The example is given in a mix of pseudo-code and C,
 in order to keep it small and understandable.
-We consider two slaves.
-Both have one continuous real input and one continuous real output which are connected in the following way:
+We consider two slaves,
+where both have one continuous real input and one continuous real output which are connected in the following way:
 
-.Connection graph of the slaves
+.Connection graph of the slaves.
 [caption="Figure 12: "]
 image::images/figure12.png[width=30%, align="center"]
 
 We assume no algebraic dependency between input and output of each slave.
-The code demonstrates the simplest master algorithm as shown in section 4.1.
+The code demonstrates the simplest master algorithm as shown in section 4.1:
 
 [start=8]
 . Constant communication step size.
