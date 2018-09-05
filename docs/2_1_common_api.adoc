@@ -1,0 +1,981 @@
+=== FMI Application Programming Interface
+
+This section contains the common interface definitions to execute functions of an FMU from a C program.
+
+The following general properties hold for an FMU:
+
+- FMI functions of one instance don't need to be thread safe. +
+_[For example, if the functions of one instance of an FMU are accessed from more than one thread;
+the multi-threaded environment that uses the FMU must guarantee that the calling sequences of functions defined in section 3.2.3 and section 4.2.4. are used.
+The FMU itself does not implement any services to support this.]_
+
+- FMI functions must not change global settings which affects other processes/threads.
+An FMI function may change settings of the process/thread in which it is called (such as floating point control registers),
+provided these changes are restored before leaving the function or before a callback function is called. +
+_[So functions of different FMU instances can be called safely in any order.
+Additionally, they can be called in parallel provided the functions are called in different process/threads.
+If an FMI function changes for example the floating point control word of the CPU,
+it must restore the previous value before return of the function.
+For x86 CPUs, the floating point control word is set using the fldcw instruction.
+This can be used to switch on additional exceptions such as "floating point division by zero".
+An FMU might temporarily change the floating point control word and get notified on floating point exceptions internally,
+but has to restore the flag and clear the floating point status word before return of the respective FMI function.]_
+
+
+==== Header Files and Naming of Functions
+
+Three header files are provided that define the interface of an FMU.
+In all header files the convention is used that all C function and type definitions start with the prefix "[underline]#fmi2#":
+
+- `"fmi2TypesPlatform.h"` +
+contains the type definitions of the input and output arguments of the functions.
+This header file must
+be used both by the FMU and by the target simulator.
+If the target simulator has different definitions in
+the header file (for example `"**typedef float** fmi2Real"` instead of `"**typedef double** fmi2Real"`),
+then the [underline]#FMU# needs to be [underline]#re-compiled# with the header file used by the [underline]#target simulator#.
+The header file platform for which the model was compiled can be inquired in the target simulator with
+`fmi2GetTypesPlatform`,
+see section 2.1.4. +
+_[Example for a definition in this header file: +
+ `**typedef double** fmi2Real;` +
+ ]_
+
+- `"fmi2FunctionTypes.h"` +
+contains `**typedef**` definitions of all function prototypes of an FMU.
+When dynamically loading an FMU,
+these definitions can be used to type-cast the function pointers to the respective function definition.
+_[Example for a definition in this header file: +
+ `**typedef** fmi2Status fmi2SetTimeTYPE(fmi2Component, fmi2Real);`]_
+
+- `"fmi2Functions.h"` +
+contains the function prototypes of an FMU that can be accessed in simulation environments and that
+are defined in chapters 2, 3, and 4.
+This header file includes `"fmi2TypesPlatform.h"` and
+`"fmi2FunctionTypes.h"`.
+The header file version number for which the model was compiled,
+can be inquired in the target simulator with fmi2GetVersion, see section 2.1.4. +
+_[Example for a definition in this header file_ footnote:[For Microsoft and Cygwin compilers;
+`FMI2_Export` is defined as `pass:[__]declspec(dllexport)` and for Gnu-Compilers `FMI2_Export` is defined as `pass:[__]attribute__ ( ( visibility("default") ) )` in order to export the name for dynamic loading.
+Otherwise it is an empty definition.]: +
+_`FMI2_Export fmi2SetTimeTYPE fmi2SetTime;`]_
+
+The goal is that both textual and binary representations of FMUs are supported and that several FMUs
+might be present at the same time in an executable (for example FMU A may use an FMU B).
+In order for this to be possible,
+the names of the functions in different FMUs must be different or function pointers must be used.
+To support the first variant macros are provided in `"fmi2Functions.h"` to build the actual
+function names by using a function prefix that depends on how the FMU is shipped.
+Typically, FMU functions are used as follows:
+
+[source, C]
+----
+// FMU is shipped with C source code, or with static link library
+#define FMI2_FUNCTION_PREFIX MyModel_
+#include "fmi2Functions.h"
+< usage of the FMU functions >
+// FMU is shipped with DLL/SharedObject
+#include "fmi2Functions.h"
+< usage of the FMU functions >
+----
+
+A function that is defined as `"fmi2GetReal"` is changed by the macros to the following function name:
+
+- FMU is shipped with C source code, or with static link library: +
+The constructed function name is `"MyModel_fmi2GetReal"`;
+in other words the function name is prefixed with the model name and an `"pass:[_]"`.
+As `FMI2_FUNCTION_PREFIX` the `modelIdentifier` attribute defined in `<fmiModelDescription><ModelExchange>`,
+or `<fmiModelDescription><CoSimulation>` is used,
+together with `"pass:[_]"` at the end (see sections 3.3.1 and 4.3.1).
+A simulation environment can therefore construct the relevant function names by
+generating code for the actual function call.
+In case of a static link library, the name of the library is MyModel.lib on Windows,
+and libMyModel.a on Linux, in other words the `modelIdentifier` attribute is used as library name.
+
+- FMU is shipped with DLL/SharedObject: +
+The constructed function name is `"fmi2GetReal"`, in other words it is not changed.
+A simulation environment will then dynamically load this library and will explicitly import the function symbols by providing the FMI function names as strings.
+The name of the library is `MyModel.dll` on Windows or `MyModel.so` on Linux,
+in other words the `modelIdentifier` attribute is used as library name.
+
+_[An FMU can be optionally shipped so that it basically contains only the communication to another tool
+(needsExecutionTool = true, see section 4.3.1).
+This is particularily common for co-simulation tasks.
+In FMI 1.0, the function names are always prefixed with the model name and therefore a DLL/Shared
+Object has to be generated for every model.
+FMI 2.0 improves this situation since model names are no longer used as prefix in case of DLL/Shared Objects:
+Therefore one DLL/Shared Object can be used for all models in case of tool coupling.
+If an FMU is imported into a simulation environment,
+this is usually performed dynamically (based on the FMU name,
+the corresponding FMU is loaded during execution of
+the simulation environment) and then it does not matter whether a model name is prefixed or not.]_
+
+Since `modelIdentifier` is used as prefix of a C-function name it must fulfill the restrictions on C-function
+names (only letters,
+digits and/or underscores are allowed).
+_[For example if `modelName = "A.B.C"`, then `modelIdentifier` might be "A_B_C".]_
+Since `modelIdentifier` is also used as name in a
+file system, it must also fulfill the restrictions of the targeted operating system.
+Basically, this means that it should be short.
+For example the Windows API only supports full path-names of a file up to 260
+characters (see: http://msdn.microsoft.com/en-us/library/aa365247%28VS.85%29.aspx).
+
+
+==== Platform Dependent Definitions (fmi2TypesPlatform.h)
+
+To simplify porting, no C types are used in the function interfaces,
+but the alias types defined in this section.
+All definitions in this section are provided in the header file `"fmi2TypesPlatform.h"`.
+
+`#define fmi2TypesPlatform "default"`
+
+A definition that can be inquired with `fmi2GetTypesPlatform`.
+It is used to uniquely identify the header file used for compilation of a binary.
+_[The "default" definition below is suitable for most common platforms.
+It is recommended to use this "default" definition for all binary FMUs.
+Only for source code FMUs, a change might be useful in some cases.]_:
+
+----
+fmi2Component           : an opaque object pointer
+fmi2ComponentEnvironment: an opaque object pointer
+fmi2FMUstate            : an opaque object pointer
+fmi2ValueReference      : value handle type
+fmi2Real                : real data type
+fmi2Integer             : integer data type
+fmi2Boolean             : datatype to be used with fmi2True and fmi2False
+fmi2Char                : character data type (size of one character)
+fmi2String              : pointer to a vector of fmi2Char characters
+                          ('\0' terminated, UTF8 encoded)
+fmi2Byte                : smallest addressable unit of the machine
+                          (typically one byte)
+----
+
+[source, C]
+----
+typedef void* fmi2Component;
+----
+
+This is a pointer to an FMU specific data structure that contains the information needed to
+process the model equations or to process the co-simulation of the respective slave.
+This data structure is implemented by the environment that provides the FMU,
+in other words the calling environment does not know its content and
+the code to process it must be provided by the FMU
+generation environment and must be shipped with the FMU.
+
+[source, C]
+----
+typedef void* fmi2ComponentEnvironment;
+----
+
+This is a pointer to a data structure in the simulation environment that calls the FMU.
+Via this pointer, data from the `modelDescription.xml` file
+_[(for example mapping of `valueReference`pass:[s] to variable names)]_
+can be transferred between the simulation environment and the `logger` function (see section 2.1.5).
+
+[source, C]
+----
+typedef void* fmi2FMUstate;
+----
+
+This is a pointer to a data structure in the FMU that saves the internal FMU state of the actual or a previous time instant.
+This allows to restart a simulation from a previous FMU state (see section 2.1.8).
+
+
+[source, C]
+----
+typedef unsigned int fmi2ValueReference;
+----
+
+This is a handle to a (base type) variable value of the model.
+Handle and base type (such as `fmi2Real`) uniquely identify the value of a variable.
+Variables of the same base type that have the same handle, always have identical values,
+but other parts of the variable definition might be different _[(for example min/max attributes)]_.
+
+All structured entities, like records or arrays,
+are "flattened" into a set of scalar values of type `fmi2Real`, `fmi2Integer` etc.
+An `fmi2ValueReference` references one such scalar.
+The coding of `fmi2ValueReference` is a "secret" of the environment that generated the FMU.
+The interface to the equations only provides access to variables via this handle.
+Extracting concrete information about a variable is specific to the used environment that reads the Model Description File in which the value handles are defined.
+If a function in the following sections is called with a wrong `fmi2ValueReference` value
+_[(for example setting a constant with a `fmi2SetReal(..)` function call)]_,
+then the function has to return with an error ( `fmi2Status = fmi2Error`, see section 2.1.3).
+
+[source, C]
+----
+typedef double fmi2Real ; // Data type for floating point real numbers
+typedef int fmi2Integer;  // Data type for signed integer numbers
+typedef int fmi2Boolean;  // Data type for Boolean numbers
+                          // (only two values: fmi2False, fmi2True)
+typedef char fmi2Char;    // Data type for one character
+typedef const fmi2Char* fmi2String; // Data type for character strings
+                                    // ('\0' terminated, UTF8 encoded)
+typedef char fmi2Byte;    // Data type for the smallest addressable
+                          // unit, typically one byte
+#define fmi2True 1
+#define fmi2False 0
+----
+
+These are the basic data types used in the interfaces of the C functions.
+More data types might be included in future versions of the interface.
+In order to keep flexibility, especially for embedded systems or for high performance computers,
+the exact data types or the word length of a number are not standardized.
+Instead, the precise definition (in other words the header file `fmi2TypesPlatform.h`) is provided by the environment where the FMU shall be used.
+In most cases, the definition above will be used.
+If the target environment has different definitions and the FMU is distributed in binary format,
+it must be newly compiled and linked with this target header file.
+
+If an `fmi2String` variable is passed as [underline]#input# argument to a FMI function and the FMU needs to use the string later,
+the FMI function must copy the string before it returns and store it in the internal FMU memory,
+because there is no guarantee for the lifetime of the string after the function has returned.
+
+If an `fmi2String` variable is passed as [underline]#output# argument from a FMI function and the string shall be used in the target environment,
+the target environment must copy the whole string (not only the pointer).
+The memory of this string may be deallocated by the next call to any of the FMI interface functions (the string memory might also be just a buffer, that is reused).
+
+
+==== Status Returned by Functions
+This section defines the `status` flag (an enumeration of type `fmi2Status` defined in file
+`fmi2FunctionTypes.h` ) that is returned by all functions to indicate the success of the function call:
+
+
+[source, C]
+----
+typedef enum { fmi2OK,
+               fmi2Warning,
+               fmi2Discard,
+               fmi2Error,
+               fmi2Fatal,
+               fmi2Pending } fmi2Status;
+----
+
+Status returned by functions.
+The status has the following meaning
+
+- `fmi2ok` - all well.
+
+- `fmi2Warning` - things are not quite right, but the computation can continue.
+Function `logger` was called in the model (see below) and it is expected that
+this function has shown the prepared information message to the user.
+
+- `fmi2Discard` - this return status is only possible, if explicitly defined for the corresponding function
+footnote:[Functions `fmi2SetXXX` are usually not performing calculations but just store the passed values in internal buffers.
+The actual calculation is performed by `fmi2GetXXX` functions.
+Still `fmi2SetXXX` functions could check whether the input arguments are in their validity range.
+If not, these functions could return with `fmi2Discard`.]:
+(ModelExchange: `fmi2SetReal`, `fmi2SetInteger`, `fmi2SetBoolean`, `fmi2SetString`,
+`fmi2SetContinuousStates`, `fmi2GetReal`, `fmi2GetDerivatives`,
+`fmi2GetContinuousStates`, `fmi2GetEventIndicators`;
+CoSimulation: `fmi2SetReal`, `fmi2SetInteger`, `fmi2SetBoolean`, `fmi2SetString`, `fmi2DoStep`,
+`fmiGetXXXStatus` ): +
+For "model exchange": It is recommended to perform a smaller step size and evaluate the model
+equations again, for example because an iterative solver in the model did not converge or because a
+function is outside of its domain (for example sqrt(<negative number>)).
+If this is not possible, the simulation has to be terminated. +
+For "co-simulation": `fmi2Discard` is returned also if the slave is not able to return the required
+status information.
+The master has to decide if the simulation run can be continued. +
+In both cases, function `logger` was called in the FMU (see below) and it is expected that this
+function has shown the prepared information message to the user if the FMU was called in debug
+mode (`loggingOn = fmi2True`).
+Otherwise, `logger` should not show a message.
+
+- `fmi2Error` - the FMU encountered an error.
+The simulation cannot be continued with this FMU instance.
+If one of the functions returns `fmi2Error`,
+it can be tried to restart the simulation from a formerly stored FMU state by calling `fmi2SetFMUstate`.
+This can be done if the capability flag `canGetAndSetFMUstate` is true and
+`fmu2GetFMUstate` was called before in non-erroneous state.
+If not, the simulation cannot be continued and `fmi2FreeInstance` or `fmi2Reset` [.underline]#must# be called
+afterwards.footnote:[Typically, `fmi2Error` return is for non-numerical reasons, like "disk full".
+There might be cases where the environment can fix such errors (eventually with the help oft the user),
+and then simulation can continue at the last consistent state defined with `fmi2SetFMUstate`.] +
+Further processing is possible after this call;
+especially other FMU instances are not affected.
+Function `logger` was called in the FMU (see below) and it is expected that this function has shown
+the prepared information message to the user.
+
+- `fmi2Fatal` - the model computations are irreparably corrupted for all FMU instances.
+_[For example, due to a run-time exception such as access violation or integer division by zero during the execution of an fmi function]_.
+Function `logger` was called in the FMU (see below) and it is expected that this
+function has shown the prepared information message to the user.
+It is not possible to call any other function for any of the FMU instances.
+
+- `fmi2Pending` - is returned only from the co-simulation interface,
+if the slave executes the function in an asynchronous way.
+That means the slave starts to compute but returns immediately.
+The master has to call `fmi2GetStatus(..., fmi2DoStepStatus)` to determine,
+if the slave has finished the computation.
+Can be returned only by `fmi2DoStep` and by `fmi2GetStatus` (see section 4.2.3).
+
+
+==== Inquire Platform and Version Number of Header Files
+
+This section documents functions to inquire information about the header files used to compile its functions.
+
+[source, C]
+----
+const char* fmi2GetTypesPlatform(void);
+----
+
+Returns the string to uniquely identify the `"fmi2TypesPlatform.h"`
+header file used for compilation of the functions of the FMU.
+The function returns a pointer to a static string specified by `"fmi2TypesPlatform"`
+defined in this header file.
+The standard header file, as documented in this specification,
+has `fmi2TypesPlatform` set to `"default"` (so this function usually returns `"default"`).
+
+[source, C]
+----
+const char* fmi2GetVersion(void);
+----
+
+Returns the version of the `"fmi2Functions.h"` header file which was used to compile the functions of the FMU.
+The function returns `"fmiVersion"` which is defined in this header file.
+The standard header file as documented in this specification has version `"2.0"` (so this function usually returns `"2.0"`).
+
+
+==== Creation, Destruction and Logging of FMU Instances
+
+This section documents functions that deal with instantiation, destruction and logging of FMUs.
+
+[source, C]
+----
+fmi2Component fmi2Instantiate(fmi2String  instanceName,
+                              fmi2Type    fmuType,
+                              fmi2String fmuGUID,
+                              fmi2String fmuResourceLocation,
+                              const fmi2CallbackFunctions* functions,
+                              fmi2Boolean visible,
+                              fmi2Boolean loggingOn);
+----
+
+[source, C]
+----
+typedef enum {fmi2ModelExchange,
+              fmi2CoSimulation
+             }fmi2Type;
+----
+
+The function returns a new instance of an FMU.
+If a null pointer is returned, then instantiation failed.
+In that case, `"functions->logger"` was called with detailed information about the reason.
+An FMU can be instantiated many times (provided capability flag `canBeInstantiatedOnlyOncePerProcess = false`).
+
+This function must be called successfully, before any of the following functions can be called.
+For co-simulation, this function call has to perform all actions of a slave which are necessary
+before a simulation run starts (for example loading the model file, compilation...).
+
+Argument `instanceName` is a unique identifier for the FMU instance.
+It is used to name the instance,
+for example in error or information messages generated by one of the `fmi2XXX` functions.
+It is not allowed to provide a null pointer and this string must be non-empty
+(in other words must have at least one character that is no white space).
+_[If only one FMU is simulated, as instanceName attribute `modelName` or
+`<ModelExchange/CoSimulation modelIdentifier="..">` from the XML schema `fmiModelDescription` might be used.]_
+
+Argument `fmuType` defines the type of the FMU:
+
+- = `fmi2ModelExchange`: FMU with initialization and events;
+between events simulation of continuous systems is performed with
+external integrators from the environment (see section 3).
+- = `fmi2CoSimulation`: Black box interface for co-simulation (see section 4).
+
+Argument `fmuGUID` is used to check that the `modelDescription.xml` file
+(see section 2.3) is compatible with the C code of the FMU.
+It is a vendor specific globally unique identifier of the XML file
+(for example it is a "fingerprint" of the relevant information stored in the XML file).
+It is stored in the XML file as attribute "guid" (see section 2.2.1)
+and has to be passed to the `fmi2Instantiate` function via argument `fmuGUID`.
+It must be identical to the one stored inside the `fmi2Instantiate` function.
+Otherwise the C code and the XML file of the FMU are not consistent to each other.
+This argument cannot be null.
+
+Argument `fmuResourceLocation` is an URI according to the
+http://datatracker.ietf.org/doc/rfc3986/[IETF RFC3986] syntax to indicate the location
+to the `"resources"` directory of the unzipped FMU archive.
+The following schemes must be understood by the FMU:
+
+- Mandatory: "file" with absolute path (either including or omitting the authority component)
+- Optional: "http", "https", "ftp"
+- Reserved: "fmi2" for FMI for PLM.
+
+_[Example: An FMU is unzipped in directory "C:\temp\MyFMU", then fmuResourceLocation = "file:///C:/temp/MyFMU/resources" or "file:/C:/temp/MyFMU/resources".
+Function fmi2Instantiate is then able to read all needed resources from this directory,
+for example maps or tables used by the FMU.]_
+
+Argument `functions` provides callback functions to be used from the FMU functions to utilize resources from the environment (see type `fmi2CallbackFunctions` below).
+
+Argument `visible = fmi2False` defines that the interaction with the user should be reduced to a minimum
+(no application window, no plotting, no animation, etc.),
+in other words the FMU is executed in batch mode.
+If `visible = fmi2True`,
+the FMU is executed in interactive mode and the FMU might require to explicitly acknowledge start of
+simulation / instantiation / initialization (acknowledgment is non-blocking).
+
+If `loggingOn = fmi2True`, debug logging is enabled. +
+If `loggingOn = fmi2False`, debug logging is disabled.
+
+_[The FMU enable/disables `LogCategories` which are useful for debugging according to this argument.
+Which `LogCategories` the FMU sets is unspecified.]_
+
+[source, C]
+----
+typedef struct {
+     void  (*logger)(fmi2ComponentEnvironment componentEnvironment,
+                          fmi2String instanceName,
+                          fmi2Status status,
+                          fmi2String category,
+                          fmi2String message, ...);
+     void* (*allocateMemory)(size_t nobj, size_t size);
+     void  (*freeMemory)    (void* obj);
+     void (*stepFinished)   (fmi2ComponentEnvironment componentEnvironment,
+                             fmi2Status status);
+     fmi2ComponentEnvironment componentEnvironment;
+} fmi2CallbackFunctions;
+----
+
+The struct contains pointers to functions provided by the environment to be used by the FMU.
+It is not allowed to change these functions between `fmi2Instantiate(..)` and `fmi2Terminate(..)` calls.
+Additionally,
+a pointer to the environment is provided (componentEnvironment) that needs to be passed to the `logger` function,
+in order that the `logger` function can utilize data from the environment,
+such as mapping a `valueReference` to a string.
+In the unlikely case that `fmi2Component` is also needed in the `logger`,
+it has to be passed via argument `componentEnvironment`.
+Argument `componentEnvironment` may be a null pointer.
+
+The `componentEnvironment` pointer is also passed to the `stepFinished(..)` function in order
+that the environment can provide an efficient way to identify the slave that called `stepFinished(..)`.
+
+In the default `fmi2FunctionTypes.h` file,
+typedefs for the function definitions are present to simplify the usage.
+This is non-normative.
+The functions have the following meaning:
+
+Function *logger*:
+Pointer to a function that is called in the FMU, usually if a `fmi2XXX` function does not behave as desired.
+If `logger` is called with `"status = fmi2OK"`, then the message is a pure information message.
+`"instanceName"` is the instance name of the model that calls this function.
+`category` is the category of the message.
+The meaning of `category` is defined by the modeling environment that generated the FMU.
+Depending on this modeling environment, none,
+some or all allowed values of `category` for this FMU are defined in the
+`modelDescription.xml` file via element `"<fmiModelDescription><LogCategories>"`, see section 2.2.4.
+Only messages are provided by function `logger` that have a category according to
+a call to `fmi2SetDebugLogging` (see below).
+Argument `"message"` is provided in the same way and with the same format control as in
+function `"printf"` from the C standard library.
+_[Typically, this function prints the message and stores it optionally in a log file.]_
+
+All string-valued arguments passed by the FMU to the `logger` may be deallocated
+by the FMU directly after function `logger` returns.
+The environment must therefore create copies of these strings if it needs to access these strings later. +
+The `logger` function will append a line break to each message when writing messages
+after each other to a terminal or a file (the messages may also be shown in other ways,
+for example as separate text-boxes in a GUI).
+The caller may include line-breaks (using "\n") within the message,
+but should avoid trailing line breaks. +
+Variables are referenced in a message with `\#<Type><ValueReference>#` where <Type> is "r" for `fmi2Real`,
+"i" for `fmi2Integer`, "b" for `fmi2Boolean` and "s" for `fmi2String`.
+If character `pass:[#]` shall be included in the message,
+it has to be prefixed with `pass:[#]`, so `"#"` is an escape character.
+_[Example:_
+
+
+_A message of the form "\#r1365#" must be larger than zero (used in IO channel ##4)"_ +
+_might be changed by the `logger` function to_ +
+_`"body.m must be larger than zero (used in IO channel #4)"`_ +
+_if `"body.m"` is the name of the `fmi2Real` variable with `fmi2ValueReference = 1365`.]_
+
+Function *allocateMemory*: +
+Pointer to a function that is called in the FMU if memory needs to be allocated.
+If attribute `"canNotUseMemoryManagementFunctions = true"` in `<fmiModelDescription><ModelExchange / CoSimulation>`,
+then function `allocateMemory` is not used in the FMU and a void pointer can be provided.
+If this attribute has a value of `"false"` (which is the default),
+the FMU must not use `malloc`, `calloc` or other memory allocation functions.
+One reason is that these functions might not be available for embedded systems on the target machine.
+Another reason is that the environment may have optimized or specialized memory allocation functions.
+`allocateMemory` returns a pointer to space for a vector of `nobj` objects,
+each of size `"size"` or `NULL`, if the request cannot be satisfied.
+The space is initialized to zero bytes _[(a simple implementation is to use `calloc` from the C standard library)]_.
+
+Function *freeMemory*: +
+Pointer to a function that must be called in the FMU if memory is freed that has been allocated with `allocateMemory`.
+If a null pointer is provided as input argument `obj`,
+the function shall perform no action _[(a simple implementation is to use free from the C standard library;
+in ANSI C89 and C99, the null pointer handling is identical as defined here)]_.
+If attribute `"canNotUseMemoryManagementFunctions = true"` in `<fmiModelDescription><ModelExchange / CoSimulation>`,
+then function `freeMemory` is not used in the FMU and a null pointer can be provided.
+
+Function *stepFinished*: +
+Optional call back function to signal if the computation of a communication step of a co- simulation slave is finished.
+A null pointer can be provided.
+In this case the master must use `fmiGetStatus(..)` to query the status of `fmi2DoStep`.
+If a pointer to a function is provided, it must be called by the FMU after a completed communication step.
+
+[source, C]
+----
+void fmi2FreeInstance(fmi2Component c);
+----
+
+Disposes the given instance, unloads the loaded model,
+and frees all the allocated memory and other resources that have been allocated by the functions of the FMU interface.
+If a null pointer is provided for `"c"`, the function call is ignored (does not have an effect).
+
+
+[source, C]
+----
+fmi2Status fmi2SetDebugLogging(fmi2Component c, fmi2Boolean loggingOn,
+                               size_t nCategories,
+                               const fmi2String categories[]);
+----
+
+If `loggingOn=fmi2True`, debug logging is enabled, otherwise it is switched off.
+If `loggingOn=fmi2True` and `nCategories > 0`,
+then only debug messages according to the `categories` argument shall be printed via the `logger` function.
+Vector `categories` has `nCategories` elements.
+The allowed values of `category` are defined by the modeling environment that generated the FMU.
+Depending on the generating modeling environment, none,
+some or all allowed values for `categories` for this FMU are defined in the `modelDescription.xml`
+file via element `fmiModelDescription.LogCategories`, see section 2.2.4.
+
+
+
+==== Initialization, Termination, and Resetting an FMU
+
+This section documents functions that deal with initialization, termination, and resetting of an FMU.
+
+[source, C]
+----
+fmi2Status fmi2SetupExperiment(fmi2Component c,
+                               fmi2Boolean   toleranceDefined,
+                               fmi2Real      tolerance,
+                               fmi2Real      startTime,
+                               fmi2Boolean   stopTimeDefined,
+                               fmi2Real      stopTime);
+----
+
+Informs the FMU to setup the experiment.
+This function can be called after `fmi2Instantiate` and before `fmi2EnterInitializationMode` is called.
+Arguments `toleranceDefined` and `tolerance` depend on the FMU type:
+
+[role=second-indented]
+*fmuType = fmi2ModelExchange*: +
+If `"toleranceDefined = fmi2True"` then the model is called with a numerical integration scheme where the
+step size is controlled by using `"tolerance"` for error estimation (usually as relative tolerance).
+In such a case all numerical algorithms used inside the model (for example to solve non-linear algebraic
+equations) should also operate with an error estimation of an appropriate smaller relative tolerance.
+
+[role=second-indented]
+*fmuType = fmi2CoSimulation*: +
+If `"toleranceDefined = fmi2True"` then the communication interval of the slave is controlled by error estimation.
+In case the slave utilizes a numerical integrator with variable step size and error estimation,
+it is suggested to use `"tolerance"` for the error estimation of the internal integrator
+(usually as relative tolerance). +
+An FMU for Co-Simulation might ignore this argument.
+
+The arguments `startTime` and `stopTime` can be used to check whether the model is valid within
+the given boundaries or to allocate memory which is necessary for storing results.
+Argument `startTime` is the fixed initial value of the independent variable
+footnote:[The variable that is defined with `causality = "independent"` in the `fmiModelDescription.xml` file.]
+value _[if the independent variable is `"time"`, `startTime` is the starting time of initializaton]_.
+If `stopTimeDefined = fmi2True`,
+then `stopTime` is the defined final value of the independent variable [if the independent variable is `"time"`,
+`stopTime` is the stop time of the simulation] and if the environment tries to compute past `stopTime` the FMU
+has to return `fmi2Status = fmi2Error`.
+ If `stopTimeDefined = fmi2False`,
+ then no final value of the independent variable is defined and argument `stopTime` is meaningless.
+
+
+[source, C]
+----
+fmi2Status fmi2EnterInitializationMode(fmi2Component c);
+----
+
+Informs the FMU to enter Initialization Mode.
+Before calling this function,
+all variables with attribute `<ScalarVariable initial = "exact"` or `"approx">` can be set with
+the `fmi2SetXXX` functions (the `ScalarVariable` attributes are defined in the Model Description File,
+see section 2.2.7).
+Setting other variables is not allowed.
+Furthermore, `fmi2SetupExperiment` must be called at least once before calling `fmi2EnterInitializationMode`,
+in order that `startTime` is defined.
+
+[source, C]
+----
+fmi2Status fmi2ExitInitializationMode(fmi2Component c);
+----
+
+Informs the FMU to exit Initialization Mode.
+For `fmuType = fmi2ModelExchange`,
+this function switches off all initialization equations and the FMU enters implicitely Event Mode,
+that is all continuous-time and active discrete- time equations are available.
+
+[source, C]
+----
+fmi2Status fmi2Terminate(fmi2Component c);
+----
+
+Informs the FMU that the simulation run is terminated.
+After calling this function,
+the final values of all variables can be inquired with the `fmi2GetXXX(..)` functions.
+It is not allowed to call this function after one of the functions returned with a status flag of `fmi2Error` or `fmi2Fatal`.
+
+[source, C]
+----
+fmi2Status fmi2Reset(fmi2Component c);
+----
+
+Is called by the environment to reset the FMU after a simulation run.
+The FMU goes into the same state as if `fmi2Instantiate` would have been called.
+All variables have their default values.
+Before starting a new run, `fmi2SetupExperiment` and `fmi2EnterInitializationMode` have to be called.
+
+==== Getting and Setting Variable Values
+
+All variable values of an FMU are identified with a variable handle called "value reference".
+The handle is defined in the `modelDescription.xml` file (as attribute `valueReference` in element `ScalarVariable`).
+Element `valueReference` might not be unique for all variables.
+If two or more variables of the same base data type (such as `fmi2Real`) have the same `valueReference`,
+then they have identical values but other parts of the variable definition might be different
+_[(for example min/max attributes)]_.
+
+The actual values of the variables that are defined in the `modelDescription.xml`
+file can be inquired after calling `fmi2EnterInitializationMode` with the following functions:
+
+[source, C]
+----
+fmi2Status fmi2GetReal   (fmi2Component c, const fmi2ValueReference vr[],
+                          size_t nvr, fmi2Real value[]);
+fmi2Status fmi2GetInteger(fmi2Component c, const fmi2ValueReference vr[],
+                          size_t nvr, fmi2Integer value[]);
+fmi2Status fmi2GetBoolean(fmi2Component c, const fmi2ValueReference vr[],
+                          size_t nvr, fmi2Boolean value[]);
+fmi2Status fmi2GetString (fmi2Component c, const fmi2ValueReference vr[],
+                          size_t nvr, fmi2String value[]);
+----
+
+[role=indented2]
+Get actual values of variables by providing their variable references.
+_[These functions are especially used to get the actual values of output variables if a model is connected with other models.
+Since state derivatives are also `ScalarVariable`pass:[s],
+it is possible to get the value of a state derivative.
+This is useful when connecting FMUs together.
+Furthermore, the actual value of every variable defined in the `modelDescription.xml` file
+can be determined at the actually defined time instant (see section 2.2.7).]_
+
+[role=indented2]
+- Argument `"vr"` is a vector of `"nvr"` value handles that define the variables that shall be inquired.
+- Argument `"value"` is a vector with the actual values of these variables.
+- The strings returned by `fmi2GetString` must be copied in the target environment,
+because the allocated memory for these strings might be deallocated by the next call to
+any of the fmi2 interface functions or it might be an internal string buffer that is reused.
+- For ModelExchange: `fmi2Status = fmi2Discard` is possible for `fmi2GetReal` only,
+but not for `fmi2GetInteger`, `fmi2GetBoolean`, `fmi2GetString`,
+because these are discrete-time variables and their values can only change at
+an event instant where `fmi2Discard` does not make sense.
+
+It is also possible to [underline]#set# the values of [underline]#certain# variables at particular instants in time using the following functions:
+
+[source, C]
+----
+fmi2Status fmi2SetReal   (fmi2Component c, const fmi2ValueReference vr[],
+                          size_t nvr, const fmi2Real value[]);
+fmi2Status fmi2SetInteger(fmi2Component c, const fmi2ValueReference vr[],
+                          size_t nvr, const fmi2Integer value[]);
+fmi2Status fmi2SetBoolean(fmi2Component c, const fmi2ValueReference vr[],
+                          size_t nvr, const fmi2Boolean value[]);
+fmi2Status fmi2SetString (fmi2Component c, const fmi2ValueReference vr[],
+                          size_t nvr, const fmi2String value[]);
+----
+
+[role=indented2]
+Set parameters, inputs, start values and re-initialize caching of variables that depend on these variables
+(see section 2.2.7 for the exact rules on which type of variables `fmi2SetXXX` can be called,
+as well as section 3.2.3 in case of ModelExchange and section 4.2.4 in case of CoSimulation).
+
+[role=indented2]
+- Argument `"vr"` is a vector of `"nvr"` value handles that define the variables that shall be set.
+- Argument `"value"` is a vector with the actual values of these variables.
+- All strings passed as arguments to `fmi2SetString` must be copied inside this function,
+because there is no guarantee of the lifetime of strings, when this function returns.
+- Note, `fmi2Status = fmi2Discard` is possible for the `fmi2SetXXX` functions.
+
+For co-simulation FMUs,
+additional functions are defined in section 4.2.1 to set and inquire derivatives of variables with respect
+to time in order to allow interpolation.
+
+[#GetSetCompleteFMUState]
+==== Getting and Setting the Complete FMU State
+
+The FMU has an internal state consisting of all values that are needed to continue a simulation.
+This internal state consists especially of the values of the continuous-time states, iteration variables,
+parameter values, input values, delay buffers, file identifiers and FMU internal status information.
+With the functions of this section,
+the internal FMU state can be copied and the pointer to this copy is returned to the environment.
+The FMU state copy can be set as actual FMU state, in order to continue the simulation from it.
+
+_[Examples, for using this feature:_
+
+_For variable step-size control of co-simulation master algorithms (get the FMU state for every accepted
+communication step;
+if the follow-up step is not accepted, restart co-simulation from this FMU state)._
+
+_For nonlinear Kalman filters (get the FMU state just before initialization;
+in every sample period, set new continuous states from the Kalman filter algorithm based on measured values;
+integrate to the next sample instant and inquire the predicted continuous states that are used
+in the Kalman filter algorithm as basis to set new continuous states)._
+
+_For nonlinear model predictive control (get the FMU state just before initialization;
+in every sample period, set new continuous states from an observer,
+initialize and get the FMU state after initialization.
+From this state, perform many simulations that are restarted after the initialization with new input signals proposed by the optimizer).]_
+
+Furthermore, the FMU state can be serialized and copied in a byte vector:
+_[This can be, for example used to perform an expensive steady-state initialization,
+copy the received FMU state in a byte vector and store this vector on file.
+Whenever needed, the byte vector can be loaded from file,
+can be deserialized and the simulation is restarted from this FMU state,
+in other words from the steady-state initialization.]_
+
+[source, C]
+----
+fmi2Status fmi2GetFMUstate (fmi2Component c, fmi2FMUstate* FMUstate);
+fmi2Status fmi2SetFMUstate (fmi2Component c, fmi2FMUstate  FMUstate);
+fmi2Status fmi2FreeFMUstate(fmi2Component c, fmi2FMUstate* FMUstate);
+----
+
+`fmi2GetFMUstate` makes a copy of the internal FMU state and returns a pointer to this copy (`FMUstate`).
+If on entry `*FMUstate == NULL`, a new allocation is required.
+If `*FMUstate != NULL`, then `*FMUstate` points to a previously returned `FMUstate` that has not been modified since.
+In particular, `fmi2FreeFMUstate` had not been called with this `FMUstate` as an argument.
+_[Function `fmi2GetFMUstate` typically reuses the memory of this `FMUstate`
+in this case and returns the same pointer to it, but with the actual `FMUstate`.]_
+
+`fmi2SetFMUstate` copies the content of the previously copied `FMUstate` back and uses it as actual new FMU state.
+The `FMUstate` copy does still exist.
+
+`fmi2FreeFMUstate` frees all memory and other resources allocated with the `fmi2GetFMUstate` call for this `FMUstate`.
+The input argument to this function is the `FMUstate` to be freed.
+If a null pointer is provided, the call is ignored.
+The function returns a null pointer in argument `FMUstate`.
+
+These functions are only supported by the FMU,
+if the optional capability flag `canGetAndSetFMUstate` in `<fmiModelDescription> <ModelExchange / CoSimulation> `
+in the XML file is explicitly set to `true` (see sections 3.3.1 and 4.3.1).
+
+[source, C]
+----
+mi2Status fmi2SerializedFMUstateSize(fmi2Component c, fmi2FMUstate FMUstate,
+                                     size_t *size);
+fmi2Status fmi2SerializeFMUstate    (fmi2Component c, fmi2FMUstate FMUstate,
+                                     fmi2Byte serializedState[], size_t size);
+fmi2Status fmi2DeSerializeFMUstate  (fmi2Component c,
+                                     const fmi2Byte serializedState[],
+                                     size_t size, fmi2FMUstate* FMUstate);
+----
+
+`fmi2SerializedFMUstateSize` returns the `size` of the byte vector,
+in order that `FMUstate` can be stored in it.
+With this information, the environment has to allocate an `fmi2Byte` vector of the required length `size`.
+
+`fmi2SerializeFMUstate` serializes the data which is referenced by pointer `FMUstate` and copies this
+data in to the byte vector `serializedState` of length `size`, that must be provided by the environment.
+
+`fmi2DeSerializeFMUstate` deserializes the byte vector `serializedState` of length `size`,
+constructs a copy of the FMU state and returns `FMUstate`, the pointer to this copy.
+_[The simulation is restarted at this state, when calling `fmi2SetFMUState` with `FMUstate`.]_
+
+These functions are only supported by the FMU,
+if the optional capability flags `canGetAndSetFMUstate` and `canSerializeFMUstate` in
+`<fmiModelDescription><ModelExchange / CoSimulation>` in the XML file are explicitly set to `true` (see sections 3.3.1 and 4.3.1).
+
+==== Getting Partial Derivatives
+
+It is optionally possible to provide evaluation of partial derivatives for an FMU.
+For Model Exchange, this means computing the partial derivatives at a particular time instant.
+For Co-Simulation, this means to compute the partial derivatives at a particular communication point.
+One function is provided to compute directional derivatives.
+This function can be used to construct the desired partial derivative matrices.
+
+[source, C]
+----
+fmi2Status fmi2GetDirectionalDerivative(fmi2Component c,
+                      const fmi2ValueReference vUnknown_ref[], size_t nUnknown,
+                      const fmi2ValueReference vKnown_ref[] , size_t nKnown,
+                      const fmi2Real dvKnown[],
+                            fmi2Real dvUnknown[])
+----
+
+[role=indented2]
+This function computes the directional derivatives of an FMU.
+An FMU has different Modes and in every Mode an FMU might be described by different equations and different unknowns.
+The precise definitions are given in the mathematical descriptions of Model Exchange (section 3.1) and Co-Simulation (section 4.1).
+In every Mode, the general form of the FMU equations are:
+
+[latexmath]
+++++
+\mathbf{v}_{unknown} = \mathbf{h}(\mathbf{v}_{known}, \mathbf{v}_{rest})
+++++
+
+where
+
+* latexmath:[\color{blue}{\mathbf{v}_{unknown}}] is the vector of unknown Real variables computed in the actual Mode:
+
+** _Initialization Mode_: The exposed unknowns listed under `<ModelStructure><InitialUnknowns>` that have type Real.
+
+** _Continuous-Time Mode (ModelExchange)_: The continuous-time outputs and state derivatives
+(= the variables listed under `<ModelStructure><Outputs>` with type Real and `variability = "continuous"` and
+the variables listed as state derivatives under `<ModelStructure><Derivatives>`).
+
+** _Event Mode (ModelExchange)_: The same variables as in the Continuous-Time Mode and additionally variables
+under `<ModelStructure><Outputs>` with type Real and `variability = "discrete"`.
+
+** _Step Mode (CoSimulation)_: The variables listed under `<ModelStructure><Outputs>` with type Real
+and `variability = "continuous"` or `"discrete"`.
+If `<ModelStructure><Derivatives>` is present, also the variables listed here as state derivatives.
+
+* latexmath:[\color{blue}{\mathbf{v}_{known}}] is the vector of Real input variables of function *h*
+that changes its value in the actual Mode.
+Details are described in the description of element `dependencies` in section 2.2.8.
+_[For example continuous-time inputs in Continuous-Time Mode.
+If a variable with `causality = "independent"` is explicitly defined under `ScalarVariable`pass:[s],
+a directional derivative with respect to this variable can be computed.
+If such a variable is not defined,
+the directional derivative with respect to the independent variable cannot be calculated]._
+
+* latexmath:[\color{blue}{\mathbf{v}_{rest}}] is the set of input variables of function *h*
+that either changes its value in the actual Mode but are non-Real variables,
+or do not change their values in this Mode,
+but change their values in other Modes _[for example discrete-time inputs in Continuous-Time Mode]_.
+
+If the capability attribute `"providesDirectionalDerivative"` is `true`,
+`fmi2GetDirectionalDerivative` computes a linear combination of the partial derivatives of *h* with
+respect to the selected input variables latexmath:[\color{blue}{\mathbf{v}_{known}}]:
+
+[latexmath]
+++++
+\Delta \mathbf{v}_{unknown} = \frac{\delta \mathbf{h}}{\delta \mathbf{v}_{known}}\mathbf{v}_{known}
+++++
+
+Accordingly, it computes the directional derivative vector
+latexmath:[\color{blue}{\Delta \mathbf{v}_{unknown}}] (`dvUnknown`) from the seed vector
+latexmath:[\color{blue}{\Delta \mathbf{v}_{known}}] (`dvKnown`)
+
+_[The variable relationships are different in different modes.
+For example, during Continuous-Time Mode,
+a continuous-time output y does not depend on discrete-time inputs (because they are held constant between events).
+However, at Event Mode, y depends on discrete-time inputs.]_ +
+_The function may compute the directional derivatives by numerical differentiation taking
+into account the sparseness of the equation system, or (preferred) by analytic derivatives._
+
+_Example:_ +
+_Assume an FMU has the output equations_
+
+[latexmath]
+++++
+\begin{bmatrix}
+y_1
+\\
+y_2
+\end{bmatrix}
+=
+\begin{bmatrix}
+g_1(x, u_1, u_3, u_4)
+\\
+g_2(x, u_1)
+\end{bmatrix}
+++++
+
+_and this FMU is connected, so that latexmath:[\color{blue}{y_1, u_1, u_3}] appear in an algebraic loop.
+Then the nonlinear solver needs a Jacobian and this Jacobian can be computed (without numerical differentiation)
+provided the partial derivative of latexmath:[\color{blue}{y_1}] with respect to
+latexmath:[\color{blue}{u_1}] and latexmath:[\color{blue}{u_3}] is available.
+Depending on the environment where the FMUs are connected, these derivatives can be provided_
+
+(a) _with one wrapper function around function fmi2GetDirectionalDerivative to compute the directional
+derivatives with respect to these two variables (in other words latexmath:[\color{blue}{v_{unknown} = y_1}],
+latexmath:[\color{blue}{v_{known} = \left \{ u_1, u_3 \right \}}] and then the environment calls
+this wrapper function with latexmath:[\color{blue}{\Delta v_{known} = \left \{ 1, 0 \right \}}]
+to compute the partial derivative with respect to
+latexmath:[\color{blue}{u_1}] and latexmath:[\color{blue}{\Delta v_{known} = \left \{ 0, 1 \right \}}]
+to compute the partial derivative with respect to latexmath:[\color{blue}{u_3}], or_
+
+(b) _with two direct function calls of fmi2GetDirectionalDerivative
+(in other words latexmath:[\color{blue}{v_{unknown} = y_1, v_{known} = u_1, \Delta v_{known} = 1}];
+and latexmath:[\color{blue}{v_{unknown} = y_1, v_{known} = u_3, \Delta v_{known} = 1}])._
+
+_A direct implementation of this function with analytic derivatives provides:_
+
+(a) _The directional derivative for all input variables;
+so in the above example: latexmath:[\color{blue}{\Delta y_1 = \frac{\delta g_1}{\delta x} \cdot \Delta x + \frac{\delta g_1}{\delta u_1} \cdot \Delta u_1 + \frac{\delta g_1}{\delta u_3} \cdot \Delta u_3 + \frac{\delta g_1}{\delta u_4} \cdot \Delta u_4}]_
+
+(b) _Initializes all seed-values to zero;
+so in the above example: latexmath:[\color{blue}{\Delta x = \Delta u_1 = \Delta u_3 = \Delta u_4 = 0}]_
+
+(c) _Computes the directional derivative with the seed-values provided in the function arguments;
+so in the above example: latexmath:[\color{blue}{\Delta v_{unknown} = \Delta y_1 (\Delta x = 0, \Delta u_1 = 1, \Delta u_3 = 1, \Delta u_4 = 0)}]]_
+
+_[Note, function fmi2GetDirectionalDerivative can be utilized for the following purposes:_
+
+- _Numerical integrators of stiff methods need matrix latexmath:[\color{blue}{\frac{\delta \mathbf{f}}{\delta \mathbf{x}}}]._
+
+- _If the FMU is connected with other FMUs,
+the partial derivatives of the state derivatives and outputs with respect to the continuous
+states and the inputs are needed in order to compute the Jacobian for the system of the connected FMUs._
+
+- _If the FMU shall be linearized, the same derivatives as in the previous item are needed._
+
+- _If the FMU is used as the model for an extended Kalman filter,
+latexmath:[\color{blue}{\frac{\delta \mathbf{f}}{\delta \mathbf{x}}}] and
+latexmath:[\color{blue}{\frac{\delta \mathbf{g}}{\delta \mathbf{x}}}] are needed._
+
+_If a dense matrix shall be computed,
+the columns of the matrix can be easily constructed by successive calls of fmi2GetDirectionalDerivative.
+For example, constructing the system Jacobian
+latexmath:[\color{blue}{\mathbf{A} = \frac{\delta \mathbf{f}}{\delta \mathbf{x}}}]
+as dense matrix can be performed in the following way (in pseudo-code notation):_
+
+[source, C]
+----
+m = M_fmi2Instantiate("m", ...)  // "m" is the instance name
+                                 // "M_" is the MODEL_IDENTIFIER
+// from XML file
+nx     = ...   // number of states
+x_ref [..] = ...   // vector of value references of cont.-time states
+xd_ref[..] = ...   // vector of value references of state derivatives
+...
+// If required at this step, compute the Jacobian as dense matrix
+   // Set time, states and inputs
+   M_fmi2SetTime(m, time)
+   M_fmi2SetContinuousStates(m, x, nx)
+   M_fmi2SetReal/Integer/Boolean/String(m, ...)
+   // Construct the Jacobian elements J[:,:] columnwise
+for i in 1:nx loop
+  M_fmi2GetDirectionalDerivative(m, x_ref[i], 1, xd_ref, nx, 1.0, ci);
+  J[:,i] = ci;    // ci is an auxiliary vector of nx elements
+                  // (it holds the i-th column of the Jacobian)
+end for;
+----
+
+_If the sparsity of a matrix shall be taken into account,
+then the matrix can be constructed in the following way:_
+
+. _The incidence information of the matrix (whether an element is zero or not zero)
+is extracted from the xml file from element <ModelStructure>._
+
+. _A so called graph coloring algorithm is employed to determine the columns
+of the matrix that can be computed by one call of fmi2GetDirectionalDerivative.
+Efficient graph coloring algorithms are freely available,
+such as library ColPack (http://www.cscapes.org/coloringpage/) written in C/C++ (LGPL),
+or the routines by Coleman, Garbow, Moré: "Software for estimating sparse Jacobian matrices",
+ACM Transactions on Mathematical Software - TOMS ,
+vol. 10, no. 3, pp. 346-347, 1984. See e.g. http://www.netlib.org/toms/618._
+
+. _For the columns determined in (2), one call to fmi2DirectionalDerivative is made.
+After each such call,
+the elements of the resulting directional derivative vector are copied into
+their correct locations of the partial derivative matrix._
+
+_More details and implementational notes are available from (Akesson et.al. 2012).]_

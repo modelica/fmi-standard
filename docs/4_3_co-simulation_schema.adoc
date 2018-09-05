@@ -1,0 +1,155 @@
+=== FMI Description Schema
+
+This is defined in 2.2.
+Additionally, the co-simulation specific element "Implementation" is defined in the next section.
+
+==== Co-Simulation FMU (CoSimulation)
+
+If the XML file defines an FMU for Co-Simulation,
+element "CoSimulation" must be present.
+It is defined as:
+
+image::images/cs_xml_1.png[width=80%, align="center"]
+
+image::images/cs_xml_2.png[width=70%, align="center"]
+
+These attributes have the following meaning (all attributes are optional with exception of `"modelIdentifier`"):
+
+[cols="1,1",options="header"]
+|====
+|Attribute Name
+|_Description_
+
+|`modelIdentifier`
+|Short class name according to C syntax, for example "A_B_C".
+Used as prefix for FMI functions if the functions are provided in C source code or in static libraries,
+but not if the functions are provided by a DLL/SharedObject.
+`modelIdentifier` is also used as name of the static library or DLL/SharedObject.
+See also section 2.1.1.
+
+|`needsExecutionTool`
+|If true, a tool is needed to execute the model.
+The FMU just contains the communication to this tool (see Figure 8).
+_[Typically, this information is only utilized for information purposes.
+For example a co-simulation master can inform the user that a tool has to be available on the computer where the slave is instantiated.
+The name of the tool can be taken from attribute `generationTool` of `fmiModelDescription`.]_
+
+|`canHandleVariableCommunicationStepSize`
+|The slave can handle variable communication step size.
+The communication step size (parameter communicationStepSize of `fmi2DoStep`) has not to be constant for each call.
+
+|`canInterpolateInputs`
+|The slave is able to interpolate continuous inputs.
+Calling of `fmi2SetRealInputDerivatives` has an effect for the slave.
+
+|`maxOutputDerivativeOrder`
+|The slave is able to provide derivatives of outputs with maximum order.
+Calling of `fmi2GetRealOutputDerivatives` is allowed up to the order defined by `maxOutputDerivativeOrder`.
+
+|`canRunAsynchronuously`
+|This flag describes the ability to carry out the `fmi2DoStep` call asynchronously.
+
+|`canBeInstantiatedOnlyOncePerProcess`
+|This flag indicates cases (especially for embedded code),
+where only one instance per FMU is possible (for multiple instantiation the default is `false`;
+if multiple instances are needed,
+the FMUs must be instantiated in different processes).
+
+|`canNotUseMemoryManagementFunctions`
+|If true, the slave uses its own functions for memory allocation and freeing only.
+The callback functions `allocateMemory` and `freeMemory` given in `fmi2Instantiate` are ignored.
+
+|`canGetAndSetFMUstate`
+|If true, the environment can inquire the internal FMU state and can restore it.
+That is, `fmi2GetFMUstate`, `fmi2SetFMUstate`, and `fmi2FreeFMUstate` are supported by the FMU.
+
+|`canSerializeFMUstate`
+|If true, the environment can serialize the internal FMU state,
+in other words `fmi2SerializedFMUstateSize`, `fmi2SerializeFMUstate`,
+`fmi2DeSerializeFMUstate` are supported by the FMU.
+If this is the case, then flag `canGetAndSetFMUstate` must be true as well.
+
+|`providesDirectionalDerivative`
+|If true, the directional derivative of the equations at communication points can be computed with `fmi2GetDirectionalDerivative`.
+|====
+
+The flags have the following default values. +
+boolean: false +
+unsignedInt: 0 +
+
+Note, if `needsExecutionTool = true`,
+then it is required that the original tool is available to be executed in co-simulation mode.
+If `needsExecutionTool = false`,
+the slave is completely contained inside the FMU in source code or binary format (DLL/SharedObject).
+
+==== Example XML Description File
+
+The example below is the same one as shown in section 3.3.2 for a ModelExchange FMU.
+The only difference is the replacement of element ModelExchange by element CoSimulation (with additional attributes) and the removed local variables which are associated with continuous states and their derivatives.
+The XML file may have the following content:
+
+[source, xml]
+----
+<?xml version="1.0" encoding="UTF8"?>
+<fmiModelDescription
+  fmiVersion="2.0"
+  modelName="MyLibrary.SpringMassDamper"
+  guid="{8c4e810f-3df3-4a00-8276-176fa3c9f9e0}"
+  description="Rotational Spring Mass Damper System"
+  version="1.0"
+  generationDateAndTime="2011-09-23T16:57:33Z"
+  variableNamingConvention="structured">
+  <CoSimulation modelIdentifier="MyLibrary_SpringMassDamper" canHandleVariableCommunicationStepSize="true" canInterpolateInputs="true"/>
+  <UnitDefinitions>
+    <Unit name="rad">
+      <BaseUnit rad="1"/>
+      <DisplayUnit name="deg" factor="57.2957795130823"/>
+    </Unit>
+    <Unit name="rad/s">
+      <BaseUnit s="-1" rad="1"/>
+    </Unit>
+    <Unit name="kg.m2">
+      <BaseUnit kg="1" m="2"/>
+    </Unit>
+  </UnitDefinitions>
+  <TypeDefinitions>
+    <SimpleType name="Modelica.SIunits.Inertia">
+      <Real quantity="MomentOfInertia" unit="kg.m2" min="0.0"/>
+    </SimpleType>
+    <SimpleType name="Modelica.SIunits.Torque">
+      <Real quantity="Torque" unit="N.m"/>
+    </SimpleType>
+    <SimpleType name="Modelica.SIunits.AngularVelocity">
+      <Real quantity="AngularVelocity" unit="rad/s"/>
+    </SimpleType>
+    <SimpleType name="Modelica.SIunits.Angle">
+      <Real quantity="Angle" unit="rad"/>
+    </SimpleType>
+  </TypeDefinitions>
+  <DefaultExperiment startTime="0.0" stopTime="3.0" tolerance="0.0001"/>
+  <ModelVariables>
+    <ScalarVariable name="inertia1.J" valueReference="1073741824" description="Moment of load inertia" causality="parameter" variability="fixed">
+      <Real declaredType="Modelica.SIunits.Inertia" start="1"/>
+    </ScalarVariable>
+    <ScalarVariable name="torque.tau" valueReference="536870912" description="Accelerating torque acting at flange (= -flange.tau)" causality="input">
+      <Real declaredType="Modelica.SIunits.Torque" start="0"/>
+    </ScalarVariable>
+    <ScalarVariable name="inertia1.phi" valueReference="805306368" description="Absolute rotation angle of component" causality="output">
+      <Real declaredType="Modelica.SIunits.Angle"/>
+    </ScalarVariable>
+    <ScalarVariable name="inertia1.w" valueReference="805306369" description="Absolute angular velocity of component (= der(phi))" causality="output">
+      <Real declaredType="Modelica.SIunits.AngularVelocity"/>
+    </ScalarVariable>
+  </ModelVariables>
+  <ModelStructure>
+    <Outputs>
+      <Unknown index="3"/>
+      <Unknown index="4"/>
+    </Outputs>
+    <InitialUnknowns>
+      <Unknown index="3"/>
+      <Unknown index="4"/>
+    </InitialUnknowns>
+  </ModelStructure>
+</fmiModelDescription>
+----
