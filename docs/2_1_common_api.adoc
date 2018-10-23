@@ -634,11 +634,30 @@ Before starting a new run, `fmi3SetupExperiment` and `fmi3EnterInitializationMod
 ==== Getting and Setting Variable Values
 
 All variable values of an FMU are identified with a variable handle called "value reference".
-The handle is defined in the `modelDescription.xml` file (as attribute `valueReference` in element `ScalarVariable`).
-Element `valueReference` might not be unique for all variables.
-If two or more variables of the same base data type (such as `fmi3Real`) have the same `valueReference`,
-then they have identical values but other parts of the variable definition might be different
-_[for example, min/max attributes]_.
+The handle is defined in the `modelDescription.xml` file (as attribute `valueReference` in element `Variable`).
+Element `valueReference` shall be unique for all variables.
+
+Variables can be scalar or array variables. When getting or setting the values of array variables, the serialization of array variable values used in C-API function calls, as well as in the XML `start` attributes is defined as row major - i.e. dimension order from left->right for the C-API (e.g. `array[dim1][dim2]…[dimN]`), and document order in the XML attributes.
+
+_[Example: A 2D matrix_
+[latexmath]
+++++
+A = \left( \begin{array}{cc} a_{11}&a_{12}\\
+                             a_{21}&a_{22}\\
+                             a_{31}&a_{32}\\
+            \end{array} \right)
+++++
+_is serialized as follows:_
+[frame="none",grid="none"]
+|========================================
+|_A[0][0]=a11_ | _memory  address: A_   |
+|_A[0][1]=a12_ | _memory  address: A+1_ |
+|_A[1][0]=a21_ | _memory  address: A+2_ |
+|_A[1][1]=a22_ | _memory  address: A+3_ |
+|_A[2][0]=a31_ | _memory  address: A+4_ |
+|_A[2][1]=a32_ | _memory  address: A+5_ |
+|========================================
+_]_
 
 The actual values of the variables that are defined in the `modelDescription.xml`
 file can be inquired after calling `fmi3EnterInitializationMode` with the following functions:
@@ -646,27 +665,28 @@ file can be inquired after calling `fmi3EnterInitializationMode` with the follow
 [source, C]
 ----
 fmi3Status fmi3GetReal   (fmi3Component c, const fmi3ValueReference vr[],
-                          size_t nvr, fmi3Real value[]);
+                          size_t nvr, fmi3Real value[], size_t nValues);
 fmi3Status fmi3GetInteger(fmi3Component c, const fmi3ValueReference vr[],
-                          size_t nvr, fmi3Integer value[]);
+                          size_t nvr, fmi3Integer value[], size_t nValues);
 fmi3Status fmi3GetBoolean(fmi3Component c, const fmi3ValueReference vr[],
-                          size_t nvr, fmi3Boolean value[]);
+                          size_t nvr, fmi3Boolean value[], size_t nValues);
 fmi3Status fmi3GetString (fmi3Component c, const fmi3ValueReference vr[],
-                          size_t nvr, fmi3String value[]);
+                          size_t nvr, fmi3String value[], size_t nValues);
 ----
 
 [role=indented2]
 Get actual values of variables by providing their variable references.
 _[These functions are especially used to get the actual values of output variables if a model is connected with other models.
-Since state derivatives are also `ScalarVariable`pass:[s],
+Since state derivatives are also `Variable`pass:[s],
 it is possible to get the value of a state derivative.
 This is useful when connecting FMUs together.
 Furthermore, the actual value of every variable defined in the `modelDescription.xml` file
 can be determined at the actually defined time instant (see section 2.2.7).]_
 
 [role=indented2]
-- Argument `"vr"` is a vector of `"nvr"` value handles that define the variables that shall be inquired.
-- Argument `"value"` is a vector with the actual values of these variables.
+- Argument `vr` is a vector of `nvr` value handles that define the variables that shall be inquired.
+- Argument `value` is a vector with the actual values of these variables.
+- Argument `nValues` provides the number of values in the `value` vector which is only equal to `nvr` if all `valueReference`pass:[s] point to scalar variables.
 - The strings returned by `fmi3GetString` must be copied in the target environment
 because the allocated memory for these strings might be deallocated by the next call to
 any of the fmi3 interface functions or it might be an internal string buffer that is reused.
@@ -680,13 +700,13 @@ It is also possible to [underline]#set# the values of [underline]#certain# varia
 [source, C]
 ----
 fmi3Status fmi3SetReal   (fmi3Component c, const fmi3ValueReference vr[],
-                          size_t nvr, const fmi3Real value[]);
+                          size_t nvr, const fmi3Real value[], size_t nValues);
 fmi3Status fmi3SetInteger(fmi3Component c, const fmi3ValueReference vr[],
-                          size_t nvr, const fmi3Integer value[]);
+                          size_t nvr, const fmi3Integer value[], size_t nValues);
 fmi3Status fmi3SetBoolean(fmi3Component c, const fmi3ValueReference vr[],
-                          size_t nvr, const fmi3Boolean value[]);
+                          size_t nvr, const fmi3Boolean value[], size_t nValues);
 fmi3Status fmi3SetString (fmi3Component c, const fmi3ValueReference vr[],
-                          size_t nvr, const fmi3String value[]);
+                          size_t nvr, const fmi3String value[], size_t nValues);
 ----
 
 [role=indented2]
@@ -695,9 +715,10 @@ Set parameters, inputs, and start values, and re-initialize caching of variables
 as well as section 3.2.3 in case of ModelExchange and section 4.2.4 in case of CoSimulation).
 
 [role=indented2]
-- Argument `"vr"` is a vector of `"nvr"` value handles that define the variables that shall be set.
-- Argument `"value"` is a vector with the actual values of these variables.
-- All strings passed as arguments to `fmi3etString` must be copied inside this function,
+- Argument `vr` is a vector of `nvr` value handles that define the variables that shall be set.
+- Argument `value` is a vector with the actual values of these variables.
+- Argument `nValues` provides the number of values in the `value` vector which is only equal to `nvr` if all `valueReference`pass:[s] point to scalar variables.
+- All strings passed as arguments to `fmi3SetString` must be copied inside this function,
 because there is no guarantee of the lifetime of strings when this function returns.
 - Note, `fmi3Status = fmi3Discard` is possible for the `fmi3SetXXX` functions.
 
@@ -801,14 +822,23 @@ This function can be used to construct the desired partial derivative matrices.
 [source, C]
 ----
 fmi3Status fmi3GetDirectionalDerivative(fmi3Component c,
-                      const fmi3ValueReference vUnknown_ref[], size_t nUnknown,
-                      const fmi3ValueReference vKnown_ref[] , size_t nKnown,
-                      const fmi3Real dvKnown[],
-                            fmi3Real dvUnknown[])
+                      const fmi3ValueReference vrUnknown[], size_t nUnknown,
+                      const fmi3ValueReference vrKnown[] , size_t nKnown,
+                      const fmi3Real dvKnown[], size_t nDvKnown,
+                            fmi3Real dvUnknown[], size_t nDvUnknown)
 ----
 
 [role=indented2]
 This function computes the directional derivatives of an FMU.
+
+[role=indented2]
+- Argument `vrUnknown` contains the `valueReference`pass:[s] of the unknown variables. The number of `valueReference`pass:[s] is given by the argument `nUnknown`.
+-	Argument `vrKnown` contains the `valueReference`pass:[s] of the known variables. The number of `valueReference`pass:[s] is given by the argument `nKnown`.
+-	Arguments `dvKnown` and `dvUnknown` contain the serialized values of the referenced Variables (serializiation of values as defined in section 2.1.7).
+- Argument `nDvKnown` provides the number of values in `dvKnown` which is only equal to `nKnown` if all `valueReference`pass:[s] of `vrKnown` point to scalar variables.
+- Argument `nDvUnknown` provides the number of values in `dvUnknown` which is only equal to `nUnknown` if all `valueReference`pass:[s] of `vrUnknown` point to scalar variables.
+
+[role=indented2]
 An FMU has different Modes and in every Mode an FMU might be described by different equations and different unknowns.
 The precise definitions are given in the mathematical descriptions of Model Exchange (section 3.1) and Co-Simulation (section 4.1).
 In every Mode, the general form of the FMU equations are:
@@ -978,3 +1008,96 @@ the elements of the resulting directional derivative vector are copied into
 their correct locations of the partial derivative matrix._
 
 _More details and implementational notes are available from (Akesson et.al. 2012).]_
+
+==== Getting Number of Event Indicators
+
+The number of event indicators can change during simulation if it depends on one or more tunable structural parameters and can be retrieved after instantiating the FMU by calling:
+
+[source, C]
+----
+fmi3Status fmi3GetNumberOfEventIndicators(fmi3Component c, size_t *nz)
+----
+
+[role=indented2]
+This function returns the number of event indicators.  The dependency of the number of event indicators on structural parameters must be specified in the `ModelStructure` in the element `NumberOfEventIndicators`. This element is optional but necessary if the number of event indicators depends on structural parameters. If the `NumberOfEventIndicators` element is not present or its dependencies list is empty, the number of event indicators does not depend on structural parameters, i.e. it is constant.
+
+[role=indented2]
+The `numberOfEventIndicators` attribute of the `fmiModelDescription` element holds the number of event indicators if all structural parameters are unchanged, i.e. set to their start value.
+
+[role=indented2]
+- Argument `nz` points to the `size_t` variable that will receive the number of event indicators.
+
+==== Getting Number of States
+
+The number of states can change during simulation if it depends on one or more tunable structural parameters and can be retrieved after instantiating the FMU by calling:
+
+[source, C]
+----
+fmi3Status fmi3GetNumberOfContinousStates(fmi3Component c, size_t *nz)
+----
+
+[role=indented2]
+This function returns the number of states.
+
+[role=indented2]
+- Argument `nz` points to the `size_t` variable that will receive the number of states.
+
+==== Getting Number of Variable Dependencies and Variable Dependencies
+
+The sparseness information within arrays is not given in the xml description. The sparseness muss be retrieved during run-time using the C-API functions. Zeros in the Jacobian are not necessarily due to the structure of the model. Zero in the Jacobian might be due to the current operating point (current state, current inputs) and not due to a structural independence.
+
+The variable dependency information in the XML description does not resolve to dependencies of individual array elements, nor does it take into account changing dependencies due to resizing of arrays via structural parameters. An FMU can indicate via the `providesPerElementDependencies` capability flag that it is able to provide detailed dependency information at runtime through the following C-API. Note that these functions are only defined if the `providesPerElementDependencies` capability flag is true.
+
+The number of dependencies of a given variable, which may change if structural parameters are changed, can be retrieved by calling the following function:
+
+[source, C]
+----
+fmi3Status fmi3GetNumberOfVariableDependencies(fmi3Component c, 
+                                               const fmi3ValueReference vr,
+                                               size_t *nDependencies)
+----
+
+[role=indented2]
+This function returns the number of dependencies for a given variable.
+
+[role=indented2]
+- Argument `vr` specifies the `valueReference` of the variable for which the number of dependencies should be returned.
+- Argument `nDependencies` points to the `size_t` variable that will receive the number of dependencies.
+
+The actual dependencies (of type `fmi3DependencyKind`) can be retrieved by calling the function `fmi3GetVariableDependencies`:
+
+[source, C]
+----
+typedef enum fmi3DependencyKind {
+/* fmi3Independent = 0, not needed for this function but reserved for future use */
+   fmi3Constant = 1,
+   fmi3Fixed = 2,
+   fmi3Tunable = 3,
+   fmi3Discrete = 4,
+   fmi3Dependent = 5
+} fmi3DependencyKind; 
+
+fmi3Status fmi3GetVariableDependencies(fmi3Component c,
+                                       const fmi3ValueReference vrDependent,
+                                       size_t elementIndexDependent[],
+                                       fmi3ValueReference vrIndependent[],
+                                       size_t elementIndexIndependent[],
+                                       fmi3DependencyKind dependencyType[],
+                                       size_t nDependencies)
+----
+
+[role=indented2]
+This function returns the dependency information for a single variable.
+
+[role=indented2]
+- Argument `vrDependent` specifies the `valueReference` of the variable for which the dependencies should be returned.
+- Argument `nDependencies` specifies the number of dependencies that the calling environment allocated space for in the result buffers, and should correspond to the returned by calling `fmi3GetNumberOfVariableDependencies`.
+- Argument `elementIndexDependent` must point to a buffer of `size_t` values of size `nDependencies` allocated by the calling environment. It is filled in by this function with the element index of the dependent variable that dependency information is provided for. The element indices start with 1. Using the element index 0 means all elements of the variable. (Note: If an array has more than one dimension the indices are serialized in the same order as defined for values).
+- Argument `vrIndependent` must point to a buffer of `fmi3ValueReference` values of size `nDependencies` allocated by the calling environment. It is filled in by this function with the value reference of the independent variable that this dependency entry is dependent upon.
+- Argument `elementIndexIndependent` must point to a buffer of `size_t` values of size `nDependencies` allocated by the calling environment. It is filled in by this function with the element index of the independent variable that this dependency entry is dependent upon. The element indices start with 1. Using the element index 0 means all elements of the variable. (Note: If an array has more than one dimension the indices are serialized in the same order as defined for values).
+- Argument `dependencyType` must point to a buffer of `fmi3DependencyKind` values of size `nDependencies` allocated by the calling environment. It is filled in by this function with 
+the enumeration value describing the dependency of this dependency entry.
+
+If this function is called before the `fmi3ExitInitializationMode()` call, it returns the initial dependencies.
+If this function is called after the `fmi3ExitInitializationMode()` call, it returns the run-time dependencies.
+The retrieved dependency information of one variable becomes invalid as soon as a structural parameter linked to the variable or to any of its depending variables are set. As a consequence, if you change structural parameters affecting B or A, the dependency of B becomes invalid. The dependency information must change only if structural parameters are changed.
