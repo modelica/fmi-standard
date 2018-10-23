@@ -147,6 +147,7 @@ fmi3String              : pointer to a vector of fmi3Char characters
                           ('\0' terminated, UTF8 encoded)
 fmi3Byte                : smallest addressable unit of the machine
                           (typically one byte)
+fmi3Binary              : pointer to a vector of fmi3Byte bytes (out-of-band length terminated)
 ----
 
 [source, C]
@@ -211,6 +212,8 @@ typedef const fmi3Char* fmi3String; // Data type for character strings
                                     // ('\0' terminated, UTF8 encoded)
 typedef char fmi3Byte;    // Data type for the smallest addressable
                           // unit, typically one byte
+typedef const fmi3Byte* fmi3Binary; // Data type for binary data,
+                                    // out-of-band length terminated
 #define fmi3True 1
 #define fmi3False 0
 ----
@@ -224,13 +227,13 @@ In most cases, the definition above will be used.
 If the target environment has different definitions and the FMU is distributed in binary format,
 it must be newly compiled and linked with this target header file.
 
-If an `fmi3String` variable is passed as [underline]#input# argument to an FMI function and the FMU needs to use the string later,
-the FMI function must copy the string before it returns and store it in the internal FMU memory,
-because there is no guarantee for the lifetime of the string after the function has returned.
+If an `fmi3String` or an `fmi3Binary` variable is passed as [underline]#input# argument to an FMI function and the FMU needs to use the string/binary later,
+the FMI function must copy the string/binary before it returns and store it in the internal FMU memory,
+because there is no guarantee for the lifetime of the string/binary after the function has returned.
 
-If an `fmi3String` variable is passed as [underline]#output# argument from an FMI function and the string shall be used in the target environment,
-the target environment must copy the whole string (not only the pointer).
-The memory of this string may be deallocated by the next call to any of the FMI interface functions. (The string memory might also be just a buffer, that is reused.)
+If an `fmi3String` or an `fmi3Binary` variable is passed as [underline]#output# argument from an FMI function and the string/binary shall be used in the target environment,
+the target environment must copy the whole string/binary (not only the pointer).
+The memory of this string/binary may be deallocated by the next call to any of the FMI interface functions (the string/binary memory might also be just a buffer, that is reused).
 
 
 ==== Status Returned by Functions
@@ -672,6 +675,10 @@ fmi3Status fmi3GetBoolean(fmi3Component c, const fmi3ValueReference vr[],
                           size_t nvr, fmi3Boolean value[], size_t nValues);
 fmi3Status fmi3GetString (fmi3Component c, const fmi3ValueReference vr[],
                           size_t nvr, fmi3String value[], size_t nValues);
+fmi3Status fmi3GetBinary (fmi3Component c, const fmi3ValueReference vr[],
+                          size_t nvr,
+                          size_t size[], fmi3Binary value[],
+                          size_t nValues);
 ----
 
 [role=indented2]
@@ -686,12 +693,13 @@ can be determined at the actually defined time instant (see section 2.2.7).]_
 [role=indented2]
 - Argument `vr` is a vector of `nvr` value handles that define the variables that shall be inquired.
 - Argument `value` is a vector with the actual values of these variables.
-- Argument `nValues` provides the number of values in the `value` vector which is only equal to `nvr` if all `valueReference`pass:[s] point to scalar variables.
-- The strings returned by `fmi3GetString` must be copied in the target environment
+- Argument `size` is a vector with the actual sizes of the values for binary variables.
+- Argument `nValues` provides the number of values in the `value` vector (and `size` vector, where applicable) which is only equal to `nvr` if all `valueReference`pass:[s] point to scalar variables.
+- The strings returned by `fmi3GetString`, as well as the binary values returned by `fmi3GetBinary`, must be copied in the target environment
 because the allocated memory for these strings might be deallocated by the next call to
 any of the fmi3 interface functions or it might be an internal string buffer that is reused.
 - For ModelExchange: `fmi3Status = fmi3Discard` is possible for `fmi3GetReal` only,
-but not for `fmi3GetInteger`, `fmi3GetBoolean`, `fmi3GetString`,
+but not for `fmi3GetInteger`, `fmi3GetBoolean`, `fmi3GetString`, `fmi3GetBinary`, 
 because these are discrete-time variables and their values can only change at
 an event instant where `fmi3Discard` does not make sense.
 
@@ -707,6 +715,10 @@ fmi3Status fmi3SetBoolean(fmi3Component c, const fmi3ValueReference vr[],
                           size_t nvr, const fmi3Boolean value[], size_t nValues);
 fmi3Status fmi3SetString (fmi3Component c, const fmi3ValueReference vr[],
                           size_t nvr, const fmi3String value[], size_t nValues);
+fmi3Status fmi3SetBinary (fmi3Component c, const fmi3ValueReference vr[],
+                          size_t nvr,
+                          const size_t size[],const fmi3Binary value[],
+                          size_t nValues);
 ----
 
 [role=indented2]
@@ -717,9 +729,10 @@ as well as section 3.2.3 in case of ModelExchange and section 4.2.4 in case of C
 [role=indented2]
 - Argument `vr` is a vector of `nvr` value handles that define the variables that shall be set.
 - Argument `value` is a vector with the actual values of these variables.
+- Argument `size` is a vector with the actual sizes of the values of binary variables.
 - Argument `nValues` provides the number of values in the `value` vector which is only equal to `nvr` if all `valueReference`pass:[s] point to scalar variables.
-- All strings passed as arguments to `fmi3SetString` must be copied inside this function,
-because there is no guarantee of the lifetime of strings when this function returns.
+- All strings passed as arguments to `fmi3SetString`, as well as all binary values passed as arguments to `fmi3SetBinary`, must be copied inside these functions,
+because there is no guarantee of the lifetime of strings or binary values, when these functions return.
 - Note, `fmi3Status = fmi3Discard` is possible for the `fmi3SetXXX` functions.
 
 For co-simulation FMUs,
