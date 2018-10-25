@@ -126,10 +126,10 @@ typedef enum {
 
 typedef enum {
      /* fmi3Independent = 0, not needed but reserved for future use */
-     fmi3Constant = 1,
-     fmi3Fixed = 2,
-     fmi3Tunable = 3,
-     fmi3Discrete = 4,
+     fmi3Constant  = 1,
+     fmi3Fixed     = 2,
+     fmi3Tunable   = 3,
+     fmi3Discrete  = 4,
      fmi3Dependent = 5
 } fmi3DependencyKind;
 
@@ -139,20 +139,20 @@ typedef void  (*fmi3CallbackFreeMemory)     (fmi3ComponentEnvironment environmen
 typedef void  (*fmi3StepFinished)           (fmi3ComponentEnvironment environment, fmi3Status status);
 
 typedef struct {
-   const fmi3CallbackLogger         logger;
-   const fmi3CallbackAllocateMemory allocateMemory;
-   const fmi3CallbackFreeMemory     freeMemory;
-   const fmi3StepFinished           stepFinished;
-   const fmi3ComponentEnvironment   componentEnvironment;
+    const fmi3CallbackLogger         logger;
+    const fmi3CallbackAllocateMemory allocateMemory;
+    const fmi3CallbackFreeMemory     freeMemory;
+    const fmi3StepFinished           stepFinished;
+    const fmi3ComponentEnvironment   componentEnvironment;
 } fmi3CallbackFunctions;
 
 typedef struct {
-   fmi3Boolean newDiscreteStatesNeeded;
-   fmi3Boolean terminateSimulation;
-   fmi3Boolean nominalsOfContinuousStatesChanged;
-   fmi3Boolean valuesOfContinuousStatesChanged;
-   fmi3Boolean nextEventTimeDefined;
-   fmi3Real    nextEventTime;
+    fmi3Boolean newDiscreteStatesNeeded;
+    fmi3Boolean terminateSimulation;
+    fmi3Boolean nominalsOfContinuousStatesChanged;
+    fmi3Boolean valuesOfContinuousStatesChanged;
+    fmi3Boolean nextEventTimeDefined;
+    fmi3Real    nextEventTime;
 } fmi3EventInfo;
 
 /* reset alignment policy to the one set before reading this file */
