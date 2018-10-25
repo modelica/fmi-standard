@@ -50,7 +50,7 @@
    - Nov. 14, 2011: First public Version
 
 
-   Copyright © 2011 MODELISAR consortium,
+   Copyright ï¿½ 2011 MODELISAR consortium,
                2012-2018 Modelica Association Project "FMI"
                All rights reserved.
    This file is licensed by the copyright holders under the BSD 2-Clause License
@@ -102,7 +102,6 @@ extern "C" {
 /* Include stddef.h, in order that size_t etc. is defined */
 #include <stddef.h>
 
-
 /* Type definitions */
 typedef enum {
     fmi3OK,
@@ -134,10 +133,10 @@ typedef enum {
      fmi3Dependent = 5
 } fmi3DependencyKind;
 
-typedef void      (*fmi3CallbackLogger)          (fmi3ComponentEnvironment, fmi3String, fmi3Status, fmi3String, fmi3String, ...);
-typedef void*     (*fmi3CallbackAllocateMemory)  (fmi3ComponentEnvironment, size_t, size_t);
-typedef void      (*fmi3CallbackFreeMemory)      (fmi3ComponentEnvironment, void*);
-typedef void      (*fmi3StepFinished)            (fmi3ComponentEnvironment, fmi3Status);
+typedef void  (*fmi3CallbackLogger)         (fmi3ComponentEnvironment environment, fmi3String instanceName, fmi3Status status, fmi3String category, fmi3String message, ...);
+typedef void* (*fmi3CallbackAllocateMemory) (fmi3ComponentEnvironment environment, size_t nobj, size_t size);
+typedef void  (*fmi3CallbackFreeMemory)     (fmi3ComponentEnvironment environment, void* obj);
+typedef void  (*fmi3StepFinished)           (fmi3ComponentEnvironment environment, fmi3Status status);
 
 typedef struct {
    const fmi3CallbackLogger         logger;
@@ -156,12 +155,10 @@ typedef struct {
    fmi3Real    nextEventTime;
 } fmi3EventInfo;
 
-
 /* reset alignment policy to the one set before reading this file */
 #if defined _MSC_VER || defined __GNUC__
 #pragma pack(pop)
 #endif
-
 
 /* Define fmi3 function pointer types to simplify dynamic loading */
 
@@ -170,93 +167,90 @@ Types for Common Functions
 ****************************************************/
 
 /* Inquire version numbers of header files and setting logging status */
-   typedef const char* fmi3GetTypesPlatformTYPE(void);
-   typedef const char* fmi3GetVersionTYPE(void);
-   typedef fmi3Status  fmi3SetDebugLoggingTYPE(fmi3Component, fmi3Boolean, size_t, const fmi3String[]);
+typedef const char* fmi3GetTypesPlatformTYPE(void);
+typedef const char* fmi3GetVersionTYPE(void);
+typedef fmi3Status  fmi3SetDebugLoggingTYPE(fmi3Component component, fmi3Boolean loggingOn, size_t nCategories, const fmi3String categories[]);
 
 /* Creation and destruction of FMU instances and setting debug status */
-   typedef fmi3Component fmi3InstantiateTYPE (fmi3String, fmi3Type, fmi3String, fmi3String, const fmi3CallbackFunctions*, fmi3Boolean, fmi3Boolean);
-   typedef void          fmi3FreeInstanceTYPE(fmi3Component);
+typedef fmi3Component fmi3InstantiateTYPE(fmi3String instanceName, fmi3Type fmiType, fmi3String guid, fmi3String resourceLocation, const fmi3CallbackFunctions* callbacks, fmi3Boolean visible, fmi3Boolean loggingOn);
+
+typedef void fmi3FreeInstanceTYPE(fmi3Component component);
 
 /* Enter and exit initialization mode, terminate and reset */
-   typedef fmi3Status fmi3SetupExperimentTYPE        (fmi3Component, fmi3Boolean, fmi3Real, fmi3Real, fmi3Boolean, fmi3Real);
-   typedef fmi3Status fmi3EnterInitializationModeTYPE(fmi3Component);
-   typedef fmi3Status fmi3ExitInitializationModeTYPE (fmi3Component);
-   typedef fmi3Status fmi3TerminateTYPE              (fmi3Component);
-   typedef fmi3Status fmi3ResetTYPE                  (fmi3Component);
+typedef fmi3Status fmi3SetupExperimentTYPE        (fmi3Component component, fmi3Boolean toleranceDefined, fmi3Real tolerance, fmi3Real startTime, fmi3Boolean stopTimeDefined, fmi3Real stopTime);
+typedef fmi3Status fmi3EnterInitializationModeTYPE(fmi3Component component);
+typedef fmi3Status fmi3ExitInitializationModeTYPE (fmi3Component component);
+typedef fmi3Status fmi3TerminateTYPE              (fmi3Component component);
+typedef fmi3Status fmi3ResetTYPE                  (fmi3Component component);
 
 /* Getting and setting variable values */
-   typedef fmi3Status fmi3GetRealTYPE   (fmi3Component, const fmi3ValueReference[], size_t, fmi3Real   [], size_t);
-   typedef fmi3Status fmi3GetIntegerTYPE(fmi3Component, const fmi3ValueReference[], size_t, fmi3Integer[], size_t);
-   typedef fmi3Status fmi3GetBooleanTYPE(fmi3Component, const fmi3ValueReference[], size_t, fmi3Boolean[], size_t);
-   typedef fmi3Status fmi3GetStringTYPE (fmi3Component, const fmi3ValueReference[], size_t, fmi3String [], size_t);
-   typedef fmi3Status fmi3GetBinaryTYPE (fmi3Component, const fmi3ValueReference[], size_t, size_t [], fmi3Binary [], size_t);
+typedef fmi3Status fmi3GetRealTYPE   (fmi3Component component, const fmi3ValueReference valueReferences[], size_t nValueReferences, fmi3Real    values[], size_t nValues);
+typedef fmi3Status fmi3GetIntegerTYPE(fmi3Component component, const fmi3ValueReference valueReferences[], size_t nValueReferences, fmi3Integer values[], size_t nValues);
+typedef fmi3Status fmi3GetBooleanTYPE(fmi3Component component, const fmi3ValueReference valueReferences[], size_t nValueReferences, fmi3Boolean values[], size_t nValues);
+typedef fmi3Status fmi3GetStringTYPE (fmi3Component component, const fmi3ValueReference valueReferences[], size_t nValueReferences, fmi3String  values[], size_t nValues);
+typedef fmi3Status fmi3GetBinaryTYPE (fmi3Component component, const fmi3ValueReference valueReferences[], size_t nValueReferences, size_t valueSizes[], fmi3Binary values[], size_t nValues);
 
-   typedef fmi3Status fmi3SetRealTYPE   (fmi3Component, const fmi3ValueReference[], size_t, const fmi3Real   [], size_t);
-   typedef fmi3Status fmi3SetIntegerTYPE(fmi3Component, const fmi3ValueReference[], size_t, const fmi3Integer[], size_t);
-   typedef fmi3Status fmi3SetBooleanTYPE(fmi3Component, const fmi3ValueReference[], size_t, const fmi3Boolean[], size_t);
-   typedef fmi3Status fmi3SetStringTYPE (fmi3Component, const fmi3ValueReference[], size_t, const fmi3String [], size_t);
-   typedef fmi3Status fmi3SetBinaryTYPE (fmi3Component, const fmi3ValueReference[], size_t, const size_t [], const fmi3Binary [], size_t);
+typedef fmi3Status fmi3SetRealTYPE   (fmi3Component component, const fmi3ValueReference valueReferences[], size_t nValueReferences, const fmi3Real    values[], size_t nValues);
+typedef fmi3Status fmi3SetIntegerTYPE(fmi3Component component, const fmi3ValueReference valueReferences[], size_t nValueReferences, const fmi3Integer values[], size_t nValues);
+typedef fmi3Status fmi3SetBooleanTYPE(fmi3Component component, const fmi3ValueReference valueReferences[], size_t nValueReferences, const fmi3Boolean values[], size_t nValues);
+typedef fmi3Status fmi3SetStringTYPE (fmi3Component component, const fmi3ValueReference valueReferences[], size_t nValueReferences, const fmi3String  values[], size_t nValues);
+typedef fmi3Status fmi3SetBinaryTYPE (fmi3Component component, const fmi3ValueReference valueReferences[], size_t nValueReferences, const size_t valueSizes[], const fmi3Binary values[], size_t nValues);
 
 /* Getting Variable Dependency Information */
-   typedef fmi3Status fmi3GetNumberOfVariableDependenciesTYPE(fmi3Component, fmi3ValueReference, size_t*);
-   typedef fmi3Status fmi3GetVariableDependenciesTYPE        (fmi3Component, fmi3ValueReference, size_t [], fmi3ValueReference [], size_t [], fmi3DependencyKind [], size_t);
+typedef fmi3Status fmi3GetNumberOfVariableDependenciesTYPE(fmi3Component component, fmi3ValueReference valueReference, size_t* nDependencies);
+typedef fmi3Status fmi3GetVariableDependenciesTYPE(fmi3Component component, fmi3ValueReference valueReferenceOfDependentVariable, size_t elementIndexOfDependentVariable[], fmi3ValueReference valueReferencesOfIndependentVariables[], size_t elementIndicesOfIndependentVariables[], fmi3DependencyKind dependencyKinds[], size_t nDependencies);
 
 /* Getting and setting the internal FMU state */
-   typedef fmi3Status fmi3GetFMUstateTYPE           (fmi3Component, fmi3FMUstate*);
-   typedef fmi3Status fmi3SetFMUstateTYPE           (fmi3Component, fmi3FMUstate);
-   typedef fmi3Status fmi3FreeFMUstateTYPE          (fmi3Component, fmi3FMUstate*);
-   typedef fmi3Status fmi3SerializedFMUstateSizeTYPE(fmi3Component, fmi3FMUstate, size_t*);
-   typedef fmi3Status fmi3SerializeFMUstateTYPE     (fmi3Component, fmi3FMUstate, fmi3Byte[], size_t);
-   typedef fmi3Status fmi3DeSerializeFMUstateTYPE   (fmi3Component, const fmi3Byte[], size_t, fmi3FMUstate*);
+typedef fmi3Status fmi3GetFMUstateTYPE           (fmi3Component component, fmi3FMUstate* state);
+typedef fmi3Status fmi3SetFMUstateTYPE           (fmi3Component component, fmi3FMUstate  state);
+typedef fmi3Status fmi3FreeFMUstateTYPE          (fmi3Component component, fmi3FMUstate* state);
+typedef fmi3Status fmi3SerializedFMUstateSizeTYPE(fmi3Component component, fmi3FMUstate state, size_t* size);
+typedef fmi3Status fmi3SerializeFMUstateTYPE     (fmi3Component component, fmi3FMUstate state, fmi3Byte serializedState[], size_t size);
+typedef fmi3Status fmi3DeSerializeFMUstateTYPE   (fmi3Component component, const fmi3Byte serializedState[], size_t size, fmi3FMUstate* state);
 
 /* Getting partial derivatives */
-   typedef fmi3Status fmi3GetDirectionalDerivativeTYPE(fmi3Component, const fmi3ValueReference[], size_t,
-                                                                   const fmi3ValueReference[], size_t,
-                                                                   const fmi3Real[], size_t, fmi3Real[], size_t);
+typedef fmi3Status fmi3GetDirectionalDerivativeTYPE(fmi3Component component, const fmi3ValueReference valueReferencesOfUnknowns[], size_t nUnknowns, const fmi3ValueReference valueReferencesOfKnowns[], size_t nKnowns, const fmi3Real derivativesOfKnowns[], size_t nDerivativesOfKnowns, fmi3Real derivativesOfUnknowns[], size_t nDerivativesOfUnknowns);
 
 /***************************************************
 Types for Functions for FMI3 for Model Exchange
 ****************************************************/
 
 /* Enter and exit the different modes */
-   typedef fmi3Status fmi3EnterEventModeTYPE         (fmi3Component);
-   typedef fmi3Status fmi3NewDiscreteStatesTYPE      (fmi3Component, fmi3EventInfo*);
-   typedef fmi3Status fmi3EnterContinuousTimeModeTYPE(fmi3Component);
-   typedef fmi3Status fmi3CompletedIntegratorStepTYPE(fmi3Component, fmi3Boolean, fmi3Boolean*, fmi3Boolean*);
+typedef fmi3Status fmi3EnterEventModeTYPE         (fmi3Component component);
+typedef fmi3Status fmi3NewDiscreteStatesTYPE      (fmi3Component component, fmi3EventInfo* fmi2eventInfo);
+typedef fmi3Status fmi3EnterContinuousTimeModeTYPE(fmi3Component component);
+typedef fmi3Status fmi3CompletedIntegratorStepTYPE(fmi3Component component, fmi3Boolean noSetFMUStatePriorToCurrentPoint, fmi3Boolean* enterEventMode, fmi3Boolean* terminateSimulation);
 
 /* Providing independent variables and re-initialization of caching */
-   typedef fmi3Status fmi3SetTimeTYPE            (fmi3Component, fmi3Real);
-   typedef fmi3Status fmi3SetContinuousStatesTYPE(fmi3Component, const fmi3Real[], size_t);
+typedef fmi3Status fmi3SetTimeTYPE            (fmi3Component component, fmi3Real time);
+typedef fmi3Status fmi3SetContinuousStatesTYPE(fmi3Component component, const fmi3Real x[], size_t nx);
 
 /* Evaluation of the model equations */
-   typedef fmi3Status fmi3GetDerivativesTYPE               (fmi3Component, fmi3Real[], size_t);
-   typedef fmi3Status fmi3GetEventIndicatorsTYPE           (fmi3Component, fmi3Real[], size_t);
-   typedef fmi3Status fmi3GetContinuousStatesTYPE          (fmi3Component, fmi3Real[], size_t);
-   typedef fmi3Status fmi3GetNominalsOfContinuousStatesTYPE(fmi3Component, fmi3Real[], size_t);
+typedef fmi3Status fmi3GetDerivativesTYPE               (fmi3Component component, fmi3Real dx[], size_t nx);
+typedef fmi3Status fmi3GetEventIndicatorsTYPE           (fmi3Component component, fmi3Real  z[], size_t nz);
+typedef fmi3Status fmi3GetContinuousStatesTYPE          (fmi3Component component, fmi3Real  x[], size_t nx);
+typedef fmi3Status fmi3GetNominalsOfContinuousStatesTYPE(fmi3Component component, fmi3Real nominals[], size_t nx);
 
-   typedef fmi3Status fmi3GetNumberOfEventIndicatorsTYPE   (fmi3Component, size_t*);
-   typedef fmi3Status fmi3GetNumberOfContinuousStatesTYPE  (fmi3Component, size_t*);
-
+typedef fmi3Status fmi3GetNumberOfEventIndicatorsTYPE   (fmi3Component component, size_t* nz);
+typedef fmi3Status fmi3GetNumberOfContinuousStatesTYPE  (fmi3Component component, size_t* nx);
 
 /***************************************************
 Types for Functions for FMI3 for Co-Simulation
 ****************************************************/
 
 /* Simulating the slave */
-   typedef fmi3Status fmi3SetRealInputDerivativesTYPE (fmi3Component, const fmi3ValueReference [], size_t, const fmi3Integer [], const fmi3Real [], size_t);
-   typedef fmi3Status fmi3GetRealOutputDerivativesTYPE(fmi3Component, const fmi3ValueReference [], size_t, const fmi3Integer [], fmi3Real [], size_t);
+typedef fmi3Status fmi3SetRealInputDerivativesTYPE (fmi3Component component, const fmi3ValueReference valueReferences[], size_t nValueReferences, const fmi3Integer order[], const fmi3Real values[], size_t nValues);
+typedef fmi3Status fmi3GetRealOutputDerivativesTYPE(fmi3Component component, const fmi3ValueReference valueReferences[], size_t nValueReferences, const fmi3Integer order[], fmi3Real values[], size_t nValues);
 
-   typedef fmi3Status fmi3DoStepTYPE     (fmi3Component, fmi3Real, fmi3Real, fmi3Boolean);
-   typedef fmi3Status fmi3CancelStepTYPE (fmi3Component);
+typedef fmi3Status fmi3DoStepTYPE     (fmi3Component component, fmi3Real currentCommunicationPoint, fmi3Real communicationStepSize, fmi3Boolean noSetFMUStatePriorToCurrentPoint);
+typedef fmi3Status fmi3CancelStepTYPE (fmi3Component component);
 
 /* Inquire slave status */
-   typedef fmi3Status fmi3GetStatusTYPE       (fmi3Component, const fmi3StatusKind, fmi3Status* );
-   typedef fmi3Status fmi3GetRealStatusTYPE   (fmi3Component, const fmi3StatusKind, fmi3Real*   );
-   typedef fmi3Status fmi3GetIntegerStatusTYPE(fmi3Component, const fmi3StatusKind, fmi3Integer*);
-   typedef fmi3Status fmi3GetBooleanStatusTYPE(fmi3Component, const fmi3StatusKind, fmi3Boolean*);
-   typedef fmi3Status fmi3GetStringStatusTYPE (fmi3Component, const fmi3StatusKind, fmi3String* );
-
+typedef fmi3Status fmi3GetStatusTYPE       (fmi3Component component, const fmi3StatusKind kind, fmi3Status*  value);
+typedef fmi3Status fmi3GetRealStatusTYPE   (fmi3Component component, const fmi3StatusKind kind, fmi3Real*    value);
+typedef fmi3Status fmi3GetIntegerStatusTYPE(fmi3Component component, const fmi3StatusKind kind, fmi3Integer* value);
+typedef fmi3Status fmi3GetBooleanStatusTYPE(fmi3Component component, const fmi3StatusKind kind, fmi3Boolean* value);
+typedef fmi3Status fmi3GetStringStatusTYPE (fmi3Component component, const fmi3StatusKind kind, fmi3String*  value);
 
 #ifdef __cplusplus
 }  /* end of extern "C" { */

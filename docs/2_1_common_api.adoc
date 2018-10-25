@@ -243,12 +243,14 @@ This section defines the `status` flag (an enumeration of type `fmi3Status` defi
 
 [source, C]
 ----
-typedef enum { fmi3OK,
-               fmi3Warning,
-               fmi3Discard,
-               fmi3Error,
-               fmi3Fatal,
-               fmi3Pending } fmi3Status;
+typedef enum {
+  fmi3OK,
+  fmi3Warning,
+  fmi3Discard,
+  fmi3Error,
+  fmi3Fatal,
+  fmi3Pending
+} fmi3Status;
 ----
 
 Status returned by functions.
@@ -344,19 +346,20 @@ This section documents functions that deal with instantiation, destruction and l
 [source, C]
 ----
 fmi3Component fmi3Instantiate(fmi3String  instanceName,
-                              fmi3Type    fmuType,
-                              fmi3String fmuGUID,
-                              fmi3String fmuResourceLocation,
-                              const fmi3CallbackFunctions* functions,
+                              fmi3Type    fmiType,
+                              fmi3String  guid,
+                              fmi3String  resourceLocation,
+                              const fmi3CallbackFunctions* callbacks,
                               fmi3Boolean visible,
                               fmi3Boolean loggingOn);
 ----
 
 [source, C]
 ----
-typedef enum {fmi3ModelExchange,
-              fmi3CoSimulation
-             }fmi3Type;
+typedef enum {
+  fmi3ModelExchange,
+  fmi3CoSimulation
+} fmi3Type;
 ----
 
 The function returns a new instance of an FMU.
@@ -424,16 +427,16 @@ Which `LogCategories` the FMU sets is unspecified.]_
 [source, C]
 ----
 typedef struct {
-     void  (*logger)(fmi3ComponentEnvironment componentEnvironment,
-                          fmi3String instanceName,
-                          fmi3Status status,
-                          fmi3String category,
-                          fmi3String message, ...);
-     void* (*allocateMemory)(size_t nobj, size_t size);
-     void  (*freeMemory)    (void* obj);
-     void (*stepFinished)   (fmi3ComponentEnvironment componentEnvironment,
+    void  (*logger)         (fmi3ComponentEnvironment environment,
+                             fmi3String instanceName,
+                             fmi3Status status,
+                             fmi3String category,
+                             fmi3String message, ...);
+    void* (*allocateMemory) (size_t nobj, size_t size);
+    void  (*freeMemory)     (void* obj);
+    void  (*stepFinished)   (fmi3ComponentEnvironment environment,
                              fmi3Status status);
-     fmi3ComponentEnvironment componentEnvironment;
+    fmi3ComponentEnvironment environment;
 } fmi3CallbackFunctions;
 ----
 
@@ -518,7 +521,7 @@ If a pointer to a function is provided, it must be called by the FMU after a com
 
 [source, C]
 ----
-void fmi3FreeInstance(fmi3Component c);
+void fmi3FreeInstance(fmi3Component component);
 ----
 
 Disposes the given instance, unloads the loaded model,
@@ -528,9 +531,11 @@ If a null pointer is provided for `"c"`, the function call is ignored (does not 
 
 [source, C]
 ----
-fmi3Status fmi3SetDebugLogging(fmi3Component c, fmi3Boolean loggingOn,
-                               size_t nCategories,
-                               const fmi3String categories[]);
+fmi3Status fmi3SetDebugLogging(
+  fmi3Component component,
+  fmi3Boolean loggingOn,
+  size_t nCategories,
+  const fmi3String categories[]);
 ----
 
 If `loggingOn=fmi3True`, debug logging is enabled, otherwise it is switched off.
@@ -550,7 +555,7 @@ This section documents functions that deal with initialization, termination, and
 
 [source, C]
 ----
-fmi3Status fmi3SetupExperiment(fmi3Component c,
+fmi3Status fmi3SetupExperiment(fmi3Component component,
                                fmi3Boolean   toleranceDefined,
                                fmi3Real      tolerance,
                                fmi3Real      startTime,
@@ -592,7 +597,7 @@ has to return `fmi3Status = fmi3Error`.
 
 [source, C]
 ----
-fmi3Status fmi3EnterInitializationMode(fmi3Component c);
+fmi3Status fmi3EnterInitializationMode(fmi3Component component);
 ----
 
 Informs the FMU to enter Initialization Mode.
@@ -606,7 +611,7 @@ in order that `startTime` is defined.
 
 [source, C]
 ----
-fmi3Status fmi3ExitInitializationMode(fmi3Component c);
+fmi3Status fmi3ExitInitializationMode(fmi3Component component);
 ----
 
 Informs the FMU to exit Initialization Mode.
@@ -616,7 +621,7 @@ that is, all continuous-time and active discrete-time equations are available.
 
 [source, C]
 ----
-fmi3Status fmi3Terminate(fmi3Component c);
+fmi3Status fmi3Terminate(fmi3Component component);
 ----
 
 Informs the FMU that the simulation run is terminated.
@@ -626,7 +631,7 @@ It is not allowed to call this function after one of the functions returned with
 
 [source, C]
 ----
-fmi3Status fmi3Reset(fmi3Component c);
+fmi3Status fmi3Reset(fmi3Component component);
 ----
 
 Is called by the environment to reset the FMU after a simulation run.
@@ -667,18 +672,25 @@ file can be inquired after calling `fmi3EnterInitializationMode` with the follow
 
 [source, C]
 ----
-fmi3Status fmi3GetReal   (fmi3Component c, const fmi3ValueReference vr[],
-                          size_t nvr, fmi3Real value[], size_t nValues);
-fmi3Status fmi3GetInteger(fmi3Component c, const fmi3ValueReference vr[],
-                          size_t nvr, fmi3Integer value[], size_t nValues);
-fmi3Status fmi3GetBoolean(fmi3Component c, const fmi3ValueReference vr[],
-                          size_t nvr, fmi3Boolean value[], size_t nValues);
-fmi3Status fmi3GetString (fmi3Component c, const fmi3ValueReference vr[],
-                          size_t nvr, fmi3String value[], size_t nValues);
-fmi3Status fmi3GetBinary (fmi3Component c, const fmi3ValueReference vr[],
-                          size_t nvr,
-                          size_t size[], fmi3Binary value[],
-                          size_t nValues);
+fmi3Status fmi3GetReal   (fmi3Component component,
+  const fmi3ValueReference valueReferences[], size_t nValueReferences,
+  fmi3Real values[], size_t nValues);
+
+fmi3Status fmi3GetInteger(fmi3Component component,
+  const fmi3ValueReference valueReferences[], size_t nValueReferences,
+  fmi3Integer values[], size_t nValues);
+
+fmi3Status fmi3GetBoolean(fmi3Component component,
+  const fmi3ValueReference valueReferences[], size_t nValueReferences,
+  fmi3Boolean values[], size_t nValues);
+
+fmi3Status fmi3GetString (fmi3Component component,
+  const fmi3ValueReference valueReferences[], size_t nValueReferences,
+  fmi3String  values[], size_t nValues);
+
+fmi3Status fmi3GetBinary (fmi3Component component,
+  const fmi3ValueReference valueReferences[], size_t nValueReferences,
+  size_t valueSizes[], fmi3Binary values[], size_t nValues);
 ----
 
 [role=indented2]
@@ -699,7 +711,7 @@ can be determined at the actually defined time instant (see section 2.2.7).]_
 because the allocated memory for these strings might be deallocated by the next call to
 any of the fmi3 interface functions or it might be an internal string buffer that is reused.
 - For ModelExchange: `fmi3Status = fmi3Discard` is possible for `fmi3GetReal` only,
-but not for `fmi3GetInteger`, `fmi3GetBoolean`, `fmi3GetString`, `fmi3GetBinary`, 
+but not for `fmi3GetInteger`, `fmi3GetBoolean`, `fmi3GetString`, `fmi3GetBinary`,
 because these are discrete-time variables and their values can only change at
 an event instant where `fmi3Discard` does not make sense.
 
@@ -707,18 +719,26 @@ It is also possible to [underline]#set# the values of [underline]#certain# varia
 
 [source, C]
 ----
-fmi3Status fmi3SetReal   (fmi3Component c, const fmi3ValueReference vr[],
-                          size_t nvr, const fmi3Real value[], size_t nValues);
-fmi3Status fmi3SetInteger(fmi3Component c, const fmi3ValueReference vr[],
-                          size_t nvr, const fmi3Integer value[], size_t nValues);
-fmi3Status fmi3SetBoolean(fmi3Component c, const fmi3ValueReference vr[],
-                          size_t nvr, const fmi3Boolean value[], size_t nValues);
-fmi3Status fmi3SetString (fmi3Component c, const fmi3ValueReference vr[],
-                          size_t nvr, const fmi3String value[], size_t nValues);
-fmi3Status fmi3SetBinary (fmi3Component c, const fmi3ValueReference vr[],
-                          size_t nvr,
-                          const size_t size[],const fmi3Binary value[],
-                          size_t nValues);
+typedef fmi3Status fmi3SetReal   (fmi3Component component,
+  const fmi3ValueReference valueReferences[],
+  size_t nValueReferences,
+  const fmi3Real values[], size_t nValues);
+
+typedef fmi3Status fmi3SetInteger(fmi3Component component,
+  const fmi3ValueReference valueReferences[], size_t nValueReferences,
+  const fmi3Integer values[], size_t nValues);
+
+typedef fmi3Status fmi3SetBoolean(fmi3Component component,
+  const fmi3ValueReference valueReferences[], size_t nValueReferences,
+  const fmi3Boolean values[], size_t nValues);
+
+typedef fmi3Status fmi3SetString (fmi3Component component,
+  const fmi3ValueReference valueReferences[], size_t nValueReferences,
+  const fmi3String  values[], size_t nValues);
+
+typedef fmi3Status fmi3SetBinary (fmi3Component component,
+  const fmi3ValueReference valueReferences[], size_t nValueReferences,
+  const size_t valueSizes[], const fmi3Binary values[], size_t nValues);
 ----
 
 [role=indented2]
@@ -774,9 +794,9 @@ in other words, from the steady-state initialization.]_
 
 [source, C]
 ----
-fmi3Status fmi3GetFMUstate (fmi3Component c, fmi3FMUstate* FMUstate);
-fmi3Status fmi3SetFMUstate (fmi3Component c, fmi3FMUstate  FMUstate);
-fmi3Status fmi3FreeFMUstate(fmi3Component c, fmi3FMUstate* FMUstate);
+fmi3Status fmi3GetFMUstate (fmi3Component component, fmi3FMUstate* state);
+fmi3Status fmi3SetFMUstate (fmi3Component component, fmi3FMUstate  state);
+fmi3Status fmi3FreeFMUstate(fmi3Component component, fmi3FMUstate* state);
 ----
 
 `fmi3GetFMUstate` makes a copy of the internal FMU state and returns a pointer to this copy (`FMUstate`).
@@ -800,13 +820,13 @@ in the XML file is explicitly set to `true` (see sections 3.3.1 and 4.3.1).
 
 [source, C]
 ----
-mi2Status fmi3SerializedFMUstateSize(fmi3Component c, fmi3FMUstate FMUstate,
+mi2Status fmi3SerializedFMUstateSize(fmi3Component component, fmi3FMUstate state,
                                      size_t *size);
-fmi3Status fmi3SerializeFMUstate    (fmi3Component c, fmi3FMUstate FMUstate,
+fmi3Status fmi3SerializeFMUstate    (fmi3Component component, fmi3FMUstate state,
                                      fmi3Byte serializedState[], size_t size);
-fmi3Status fmi3DeSerializeFMUstate  (fmi3Component c,
+fmi3Status fmi3DeSerializeFMUstate  (fmi3Component component,
                                      const fmi3Byte serializedState[],
-                                     size_t size, fmi3FMUstate* FMUstate);
+                                     size_t size, fmi3FMUstate* state);
 ----
 
 `fmi3SerializedFMUstateSize` returns the `size` of the byte vector,
@@ -834,11 +854,12 @@ This function can be used to construct the desired partial derivative matrices.
 
 [source, C]
 ----
-fmi3Status fmi3GetDirectionalDerivative(fmi3Component c,
-                      const fmi3ValueReference vrUnknown[], size_t nUnknown,
-                      const fmi3ValueReference vrKnown[] , size_t nKnown,
-                      const fmi3Real dvKnown[], size_t nDvKnown,
-                            fmi3Real dvUnknown[], size_t nDvUnknown)
+fmi3Status fmi3GetDirectionalDerivative(
+  fmi3Component component,
+  const fmi3ValueReference valueReferencesOfUnknowns[], size_t nUnknowns,
+  const fmi3ValueReference valueReferencesOfKnowns[], size_t nKnowns,
+  const fmi3Real derivativesOfKnowns[], size_t nDerivativesOfKnowns,
+  fmi3Real derivativesOfUnknowns[], size_t nDerivativesOfUnknowns)
 ----
 
 [role=indented2]
@@ -1028,7 +1049,7 @@ The number of event indicators can change during simulation if it depends on one
 
 [source, C]
 ----
-fmi3Status fmi3GetNumberOfEventIndicators(fmi3Component c, size_t *nz)
+fmi3Status fmi3GetNumberOfEventIndicators(fmi3Component component, size_t *nz)
 ----
 
 [role=indented2]
@@ -1046,7 +1067,7 @@ The number of states can change during simulation if it depends on one or more t
 
 [source, C]
 ----
-fmi3Status fmi3GetNumberOfContinousStates(fmi3Component c, size_t *nz)
+fmi3Status fmi3GetNumberOfContinousStates(fmi3Component component, size_t *nz)
 ----
 
 [role=indented2]
@@ -1065,8 +1086,8 @@ The number of dependencies of a given variable, which may change if structural p
 
 [source, C]
 ----
-fmi3Status fmi3GetNumberOfVariableDependencies(fmi3Component c, 
-                                               const fmi3ValueReference vr,
+fmi3Status fmi3GetNumberOfVariableDependencies(fmi3Component component,
+                                               const fmi3ValueReference valueReference,
                                                size_t *nDependencies)
 ----
 
@@ -1083,32 +1104,32 @@ The actual dependencies (of type `fmi3DependencyKind`) can be retrieved by calli
 ----
 typedef enum fmi3DependencyKind {
 /* fmi3Independent = 0, not needed for this function but reserved for future use */
-   fmi3Constant = 1,
-   fmi3Fixed = 2,
-   fmi3Tunable = 3,
-   fmi3Discrete = 4,
-   fmi3Dependent = 5
-} fmi3DependencyKind; 
+   fmi3Constant    = 1,
+   fmi3Fixed       = 2,
+   fmi3Tunable     = 3,
+   fmi3Discrete    = 4,
+   fmi3Dependent   = 5
+} fmi3DependencyKind;
 
-fmi3Status fmi3GetVariableDependencies(fmi3Component c,
-                                       const fmi3ValueReference vrDependent,
-                                       size_t elementIndexDependent[],
-                                       fmi3ValueReference vrIndependent[],
-                                       size_t elementIndexIndependent[],
-                                       fmi3DependencyKind dependencyType[],
-                                       size_t nDependencies)
+fmi3Status fmi3GetVariableDependencies(
+  fmi3Component component,
+  fmi3ValueReference valueReferenceOfDependentVariable,
+  size_t elementIndexOfDependentVariable[],
+  fmi3ValueReference valueReferencesOfIndependentVariables[],
+  size_t elementIndicesOfIndependentVariables[],
+  fmi3DependencyKind dependencyKinds[], size_t nDependencies)
 ----
 
 [role=indented2]
 This function returns the dependency information for a single variable.
 
 [role=indented2]
-- Argument `vrDependent` specifies the `valueReference` of the variable for which the dependencies should be returned.
+- Argument `valueReferenceOfDependentVariable` specifies the `valueReference` of the variable for which the dependencies should be returned.
 - Argument `nDependencies` specifies the number of dependencies that the calling environment allocated space for in the result buffers, and should correspond to the returned by calling `fmi3GetNumberOfVariableDependencies`.
-- Argument `elementIndexDependent` must point to a buffer of `size_t` values of size `nDependencies` allocated by the calling environment. It is filled in by this function with the element index of the dependent variable that dependency information is provided for. The element indices start with 1. Using the element index 0 means all elements of the variable. (Note: If an array has more than one dimension the indices are serialized in the same order as defined for values).
-- Argument `vrIndependent` must point to a buffer of `fmi3ValueReference` values of size `nDependencies` allocated by the calling environment. It is filled in by this function with the value reference of the independent variable that this dependency entry is dependent upon.
-- Argument `elementIndexIndependent` must point to a buffer of `size_t` values of size `nDependencies` allocated by the calling environment. It is filled in by this function with the element index of the independent variable that this dependency entry is dependent upon. The element indices start with 1. Using the element index 0 means all elements of the variable. (Note: If an array has more than one dimension the indices are serialized in the same order as defined for values).
-- Argument `dependencyType` must point to a buffer of `fmi3DependencyKind` values of size `nDependencies` allocated by the calling environment. It is filled in by this function with 
+- Argument `elementIndexOfDependentVariable` must point to a buffer of `size_t` values of size `nDependencies` allocated by the calling environment. It is filled in by this function with the element index of the dependent variable that dependency information is provided for. The element indices start with 1. Using the element index 0 means all elements of the variable. (Note: If an array has more than one dimension the indices are serialized in the same order as defined for values).
+- Argument `valueReferencesOfIndependentVariables` must point to a buffer of `fmi3ValueReference` values of size `nDependencies` allocated by the calling environment. It is filled in by this function with the value reference of the independent variable that this dependency entry is dependent upon.
+- Argument `elementIndicesOfIndependentVariables` must point to a buffer of `size_t` values of size `nDependencies` allocated by the calling environment. It is filled in by this function with the element index of the independent variable that this dependency entry is dependent upon. The element indices start with 1. Using the element index 0 means all elements of the variable. (Note: If an array has more than one dimension the indices are serialized in the same order as defined for values).
+- Argument `dependencyKinds` must point to a buffer of `fmi3DependencyKind` values of size `nDependencies` allocated by the calling environment. It is filled in by this function with
 the enumeration value describing the dependency of this dependency entry.
 
 If this function is called before the `fmi3ExitInitializationMode()` call, it returns the initial dependencies.
