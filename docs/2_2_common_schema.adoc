@@ -8,12 +8,12 @@ The structure of this XML file is defined with the schema file `"fmiModelDescrip
 This schema file utilizes the following helper schema files:
 
 [role=indented2]
-`fmi2Annotation.xsd` +
-`fmi2AttributeGroups.xsd` +
-`fmi2ScalarVariable.xsd` +
-`fmi2Type.xsd` +
-`fmi2VariableDependency.xsd` +
-`fmi2Unit.xsd`
+`fmi3Annotation.xsd` +
+`fmi3AttributeGroups.xsd` +
+`fmi3ScalarVariable.xsd` +
+`fmi3Type.xsd` +
+`fmi3VariableDependency.xsd` +
+`fmi3Unit.xsd`
 
 In this section these schema files are discussed.
 The normative definition are the above mentioned schema files
@@ -26,7 +26,7 @@ All data from the XML file is only defined via "attributes" and not via "element
 Therefore, only an "attribute" handler needs to be defined for a SAX parser.].
 Below, optional elements are marked with a "dashed" box.
 The required data types (like: xs:normalizedString) are defined in the XML-schema standard: http://www.w3.org/TR/XMLschema-2/.
-The types used in the fmi2 schema files are:
+The types used in the fmi3 schema files are:
 
 [cols="1,3,1"]
 |====
@@ -57,6 +57,10 @@ a number of this type should be stored on an XML file with at least *16* signifi
 
 |xs:normalizedString
 |String without carriage return, line feed, and tab characters
+|char*
+
+|xs:hexBinary
+|Arbitrary hex-encoded binary data
 |char*
 
 |xs:dateTime
@@ -242,7 +246,7 @@ If 1 or more units are defined, this element must be present.].
 A `Unit` is defined by its `name` attribute such as "N.m" or "N*m" or "Nm",
 which must be unique with respect to all other defined elements of the `UnitDefinitions` list.
 If a variable is associated with a `Unit`,
-then the value of the variable has to be provided with the `fmi2SetXXX` functions or else is returned by the `fmi2GetXXX` functions with respect to this `Unit`.
+then the value of the variable has to be provided with the `fmi3SetXXX` functions or else is returned by the `fmi3GetXXX` functions with respect to this `Unit`.
 _[The purpose of the name is to uniquely identify a unit and,
 for example, use it to display the unit in menus or in plots.
 Since there is no standard to represent units in strings,
@@ -370,7 +374,7 @@ _The `BaseUnit` definitions can be utilized for different purposes (the followin
 _When two signals v1 and v2 are connected together,
 and on at least one of the signals no `BaseUnit` element is defined,
 then the connection equation "v2 = v1" holds (if v1 is an output of an FMU and v2 is an input of another FMU,
-with `fmi2GetXXX` the value of v1 is inquired and used as value for v2 by calling `fmi2SetXXX`)._
+with `fmi3GetXXX` the value of v1 is inquired and used as value for v2 by calling `fmi3SetXXX`)._
 
 _When two signals v1 and v2 are connected together,
 and for both of them `BaseUnit` elements are defined,
@@ -480,7 +484,7 @@ Example for a definition:_
 ----
 _]_
 
-The schema definition is present in a separate file `"fmi2Unit.xsd`".
+The schema definition is present in a separate file `"fmi3Unit.xsd`".
 
 ==== Definition of Types (TypeDefinitions)
 
@@ -488,14 +492,14 @@ Element *"TypeDefinitions"* of `fmiModelDescription` is defined as:
 
 image::images/TypeDefinitions_schema.png[width=90%, align="center"]
 
-This element consists of a set of `"SimpleType"` definitions according to schema `"fmi2SimpleType"` in file `"fmi2Type.xsd"`.
+This element consists of a set of `"SimpleType"` definitions according to schema `"fmi3SimpleType"` in file `"fmi3Type.xsd"`.
 One `"SimpleType"` has a type `"name"` and `"description"` as attributes.
 Attribute "name" must be unique with respect to all other elements of the `TypeDefinitions` list.
 Furthermore,
 `"name"` of a `"SimpleType"` must be different to all `"name"` attributes of `ScalarVariable`pass:[s] _[if the same names would be used,
 then this would nearly always give problems when importing the FMU in an environment such as Modelica,
 where a type name cannot be used as instance name]_.
-Additionally, one of the elements `Real`, `Integer`, `Boolean`, `String`,
+Additionally, one of the elements `Real`, `Integer`, `Boolean`, `String`, `Binary`, 
 or `Enumeration` must be present.
 They have the following definitions:
 
@@ -503,7 +507,7 @@ image::images/Real_schema.png[width=50%, align="center"]
 
 image::images/Integer_schema.png[width=50%, align="center"]
 
-_[The attributes of "Real" and "Integer" are collected in the attribute groups "fmi2RealAttributes" and "fmi2IntegerAttributes" in file "fmi2AttributeGroups.xsd",
+_[The attributes of "Real" and "Integer" are collected in the attribute groups "fmi3RealAttributes" and "fmi3IntegerAttributes" in file "fmi3AttributeGroups.xsd",
 since these attributes are reused in the `ScalarVariable` element definitions below.]_
 
 image::images/Enumeration_schema.png[width=80%, align="center"]
@@ -534,6 +538,11 @@ then `displayUnit` is ignored.
 It is an error if `displayUnit` is defined in element `Real`,
 but `unit` is not, or unit is not defined under `<UnitDefinitions><Unit>`.
 
+|mimeType
+|Indicates the type of data passed as a binary. Defaults to
+`application/octet-stream`, which is unspecific. Implementations can
+use this information to provide guidance to the user about valid/useful
+connections.
 |relativeQuantity
 |If this attribute is `true`,
 then the `"offset"` of `"displayUnit"` must be ignored.
@@ -577,8 +586,8 @@ An `Enumeration` element must have at least one Item.
 |====
 
 _[Attributes `min` and `max` can be set for variables of type Real, Integer or Enumeration.
-The question is how `fmi2SetReal`, `fmi2SetInteger`, `fmi2GetReal`,
-`fmi2GetInteger` shall utilize this definition.
+The question is how `fmi3SetReal`, `fmi3SetInteger`, `fmi3GetReal`,
+`fmi3GetInteger` shall utilize this definition.
 There are several conflicting requirements:_ +
 _Avoiding forbidden regions
 (for example, if "u" is an input and "sqrt(u)" is computed in the FMU,
@@ -587,7 +596,7 @@ _Numerical algorithms
 (ODE-solver, optimizers. nonlinear solvers) do not guarantee constraints.
 If a variable is outside of the bounds, the solver tries to bring it back into the bounds.
 As a consequence,
-calling fmi2GetReal during an iteration of such a solver might return values that are not in the defined min/max region.
+calling fmi3GetReal during an iteration of such a solver might return values that are not in the defined min/max region.
 After the iteration is finalized,
 it is only guaranteed that a value is within its bounds up to a certain numerical precision._ +
 _In debug mode checks on min/max should be performed.
@@ -598,26 +607,26 @@ The environment is free to utilize this information
 In any case,
 it is expected that the FMU handles variables appropriately where the region definition is critical.
 For example,
-dividing by an input (so the input should not be in a small range of zero) or taking the square root of an input (so the input should not be negative) may either result in fmi2Error,
+dividing by an input (so the input should not be in a small range of zero) or taking the square root of an input (so the input should not be negative) may either result in fmi3Error,
 or the FMU is able to handle this situation in other ways._
 
 _If the FMU is generated so that min/max shall be checked whenever meaningful
 (for example, for debug purposes), then the following strategy should be used:_
 
-_If `fmi2SetReal` or `fmi2SetInteger` is called violating the min/max attribute settings of the corresponding variable,
+_If `fmi3SetReal` or `fmi3SetInteger` is called violating the min/max attribute settings of the corresponding variable,
 the following actions are performed:_
 
-- _On a fixed or tunable parameter `fmi2Status = fmi2Discard` is returned._
+- _On a fixed or tunable parameter `fmi3Status = fmi3Discard` is returned._
 - _On an input, the FMU decides what to return (If no computation is possible,
-it could return `fmi2Status =  fmi2Discard`,
-in other situations it may return `fmi2Warning` or `fmi2Error`,
-or `fmi2OK`, if it is uncritical)._
+it could return `fmi3Status =  fmi3Discard`,
+in other situations it may return `fmi3Warning` or `fmi3Error`,
+or `fmi3OK`, if it is uncritical)._
 
 _If an FMU defines min/max values for Integer and Enumerations (local and output variables),
-then the expected behavior of the FMU is that `fmi2GetInteger` returns values in the defined range._
+then the expected behavior of the FMU is that `fmi3GetInteger` returns values in the defined range._
 
 _If an FMU defines min/max values for Reals,
-then the expected behavior of the FMU is that `fmi2GetReal` returns values at the solution (accepted steps of the integrators) in the defined range with a certain uncertainty related to the tolerances of the numerical algorithms.]_
+then the expected behavior of the FMU is that `fmi3GetReal` returns values at the solution (accepted steps of the integrators) in the defined range with a certain uncertainty related to the tolerances of the numerical algorithms.]_
 
 ==== Definition of Log Categories (LogCategories)
 
@@ -651,19 +660,19 @@ then an element Category with this name should be added to `LogCategories` _[To 
 |Log the dynamic selection of states.
 
 |`logStatusWarning`
-|Log messages when returning fmi2Warning status from any function.
+|Log messages when returning fmi3Warning status from any function.
 
 |`logStatusDiscard`
-|Log messages when returning fmi2Discard status from any function.
+|Log messages when returning fmi3Discard status from any function.
 
 |`logStatusError`
-|Log messages when returning fmi2Error status from any function.
+|Log messages when returning fmi3Error status from any function.
 
 |`logStatusFatal`
-|Log messages when returning fmi2Fatal status from any function.
+|Log messages when returning fmi3Fatal status from any function.
 
 |`logStatusPending`
-|Log messages when returning fmi2Pending status from any function.
+|Log messages when returning fmi3Pending status from any function.
 
 |logAll
 |Log all messages.
@@ -681,7 +690,7 @@ _[Note that since element `<LogCategories>` is optional,
 an FMU does not need to expose its log categories.]_
 
 . _The log output is drastically reduced,
-because via `fmi2SetDebugLogging` exactly the categories are set that shall be logged and therefore the FMU only has to print the messages with the corresponding categories to the `"logger"` function.
+because via `fmi3SetDebugLogging` exactly the categories are set that shall be logged and therefore the FMU only has to print the messages with the corresponding categories to the `"logger"` function.
 In FMI 1.0, it was necessary to provide all log output of the FMU to the `"logger"` and then a filter in the `"logger"` could select what to show to the end-user.
 The approach introduced in FMI 2.0 is therefore much more efficient.]_
 
@@ -722,7 +731,7 @@ This `ScalarVariable` `index` is used in element `ModelStructure` to uniquely an
 A `ScalarVariable` represents a variable of primitive type, like a real or integer variable.
 For simplicity,
 only scalar variables are supported in the schema file in this version and structured entities (like arrays or records) have to be mapped to scalars.
-The schema definition is present in a separate file `fmi2ScalarVariable.xsd`.
+The schema definition is present in a separate file `fmi3ScalarVariable.xsd`.
 The attributes of `ScalarVariable` are:
 
 image::images/ScalarVariable_schema.png[width=90%, align="center"]
@@ -778,9 +787,9 @@ If no variable is defined as `"independent"`,
 it is implicitly present with name = `"time"` and `unit = "s"`.
 If one variable is defined as `"independent"`,
 it must be defined as `"Real"` without a `"start"` attribute.
-It is not allowed to call function `fmi2SetReal` on an `"independent"` variable.
-Instead, its value is initialized with `fmi2SetupExperiment` and after initialization set by `fmi2SetTime` for ModelExchange and by arguments `currentCommunicationPoint` and `communicationStepSize` of `fmi2DoStep` for CoSimulation.
-_[The actual value can be inquired with `fmi2GetReal`.]_
+It is not allowed to call function `fmi3SetReal` on an `"independent"` variable.
+Instead, its value is initialized with `fmi3SetupExperiment` and after initialization set by `fmi3SetTime` for ModelExchange and by arguments `currentCommunicationPoint` and `communicationStepSize` of `fmi3DoStep` for CoSimulation.
+_[The actual value can be inquired with `fmi3GetReal`.]_
 
 The default of causality is `"local"`. +
 A continuous-time state must have `causality = "local"` or `"output"`, see also section 2.2.8.
@@ -796,13 +805,13 @@ whereas a `"local"` variable should be imported in a `protected` section of the 
 |Enumeration that defines the time dependency of the variable,
 in other words, it defines the time instants when a variable can change its value.
 _[The purpose of this attribute is to define when a result value needs to be inquired and to be stored.
-For example, discrete variables change their values only at event instants (ModelExchange) or at a communication point (CoSimulation) and it is therefore only necessary to inquire them with `fmi2GetXXX` and store them at event times.]_
+For example, discrete variables change their values only at event instants (ModelExchange) or at a communication point (CoSimulation) and it is therefore only necessary to inquire them with `fmi3GetXXX` and store them at event times.]_
 Allowed values of this enumeration:
 
 - `"constant"`: The value of the variable never changes.
 
 - `"fixed"`: The value of the variable is fixed after initialization,
-in other words, after `fmi2ExitInitializationMode` was called the variable value does not change anymore.
+in other words, after `fmi3ExitInitializationMode` was called the variable value does not change anymore.
 
 - `"tunable"`: The value of the variable is constant between `external events` (ModelExchange) and between _Communication Points_ (CoSimulation) due to changing variables with `causality = "parameter"` or `"input"` and `variability = "tunable"`.
 Whenever a parameter or input signal with `variability = "tunable"` changes,
@@ -847,15 +856,15 @@ and the FMU is tested by providing the start value as constant input.
 If the input variable is iteration variable of this algebraic loop,
 then initialization starts with its start value.]_
 
-If `fmiSetXXX` is not called on a variable with `causality = "input"`, then the FMU must use the start value as value of this input.
+If `fmi3SetXXX` is not called on a variable with `causality = "input"`, then the FMU must use the start value as value of this input.
 
 2+|`canHandleMultipleSetPerTimeInstant`
 |
 |Only for ModelExchange (if only CoSimulation FMU, this attribute must not be present.
 If both ModelExchange and CoSimulation FMU, this attribute is ignored for CoSimulation): +
 Only for variables with `variability = "input"`: +
-If present with `value = false`, then only one `fmi2SetXXX` call is allowed at one super dense time instant (model evaluation) on this variable.
-That is, this input is not allowed to appear in a (real) algebraic loop requiring multiple calls of `fmi2SetXXX` on this variable
+If present with `value = false`, then only one `fmi3SetXXX` call is allowed at one super dense time instant (model evaluation) on this variable.
+That is, this input is not allowed to appear in a (real) algebraic loop requiring multiple calls of `fmi3SetXXX` on this variable
 _[for example, due to a Newton iteration]_. +
 _[This flag must be set by FMUs where (internal) discrete-time states are directly updated when assigned (xd := f(xd) instead of xd = f(previous(xd)),
 and at least one output depends on this input and on discrete states._ +
@@ -867,24 +876,24 @@ For example,
 there is no mechanism in the Modelica language to formulate connection restrictions for C functions (the FMU) called in a Modelica model.]_
 |====
 
-*fmi2SetXXX* can be called on any variable with `variability ≠ "constant"` *before initialization* (before calling `fmi2EnterInitializationMode`)
+*fmi3SetXXX* can be called on any variable with `variability ≠ "constant"` *before initialization* (before calling `fmi3EnterInitializationMode`)
 
 - if `initial = "exact"` or `"approx"` _[in order to set the corresponding `start` value.]_
 
-*fmi2SetXXX* can be called on any variable with `variability ≠ "constant"` *during initialization* (after calling `fmi2EnterInitializationMode` and before `fmi2ExitInitializationMode` is called)
+*fmi3SetXXX* can be called on any variable with `variability ≠ "constant"` *during initialization* (after calling `fmi3EnterInitializationMode` and before `fmi3ExitInitializationMode` is called)
 
 - if `initial = "exact"` _[in order to set the corresponding `start` value]_, or
 
 - if `causality = "input"` _[in order to provide new values for inputs]_,
 
-*fmi2SetXXX* can be called on any variable *for ModelExchange* *at an event instant* (after calling `fmi2EnterEventMode` and before `fmi2EnterContinuousTimeMode` is called),
+*fmi3SetXXX* can be called on any variable *for ModelExchange* *at an event instant* (after calling `fmi3EnterEventMode` and before `fmi3EnterContinuousTimeMode` is called),
 and *for Co-Simulation at every communication point*,
 
 - if `causality = "parameter"` and `variability = "tunable"` _[in order to change the value of the tunable parameter at an event instant or at a communication point]_, or
 
 - if causality = "input" _[in order to provide new values for inputs]_
 
-*fmi2SetXXX* can be called on any variable for *ModelExchange in Continuous-Time Mode*
+*fmi3SetXXX* can be called on any variable for *ModelExchange in Continuous-Time Mode*
 
 - if `causality = "input"` and `variability = "continuous"` +
 _[in order to provide new values for inputs during continuous integration]_
@@ -986,9 +995,9 @@ it is neither allowed to define a value for `initial` nor a value for start.
 (2) If `causality = "input"`,
 it is not allowed to define a value for `initial` and a value for start must be defined.
 (3) If \(C) and `initial = "exact"`,
-then the variable is explicitly defined by its start value in Initialization Mode (so directly after calling `fmi2ExitInitializationMode`,
+then the variable is explicitly defined by its start value in Initialization Mode (so directly after calling `fmi3ExitInitializationMode`,
 the value of the variable is either the start value stored in element `<ScalarVariable><XXX start=YYY/>`
-or the value provided by `fmiSetXXX`,
+or the value provided by `fmi3SetXXX`,
 if this function was called on this variable).]_
 
 The following combinations of variability/causality settings are allowed:
@@ -1190,10 +1199,10 @@ With this interpretation, changing parameters online is "clean",
 as long as these changes appear at an event instant._
 
 _FMI for Co-Simulation:_
-_Changing of tunable parameters is allowed before an `fmi2DoStep` call (so, whenever an input can be set with `fmi2SetXXX`) and before `fmi2ExitInitializationMode` is called (that is before and during Initialization Mode).
+_Changing of tunable parameters is allowed before an `fmi3DoStep` call (so, whenever an input can be set with `fmi3SetXXX`) and before `fmi3ExitInitializationMode` is called (that is before and during Initialization Mode).
 The FMU internally carries out event handling if necessary.]_
 
-Variables of the same base type (like `fmi2Real`) that have identical `valueReference` definitions are called "alias" variables.
+Variables of the same base type (like `fmi3Real`) that have identical `valueReference` definitions are called "alias" variables.
 The main purpose of "alias" variables is to enhance efficiency.
 If two variables `a` and `b` are alias variables,
 then this is only allowed if the behavior of the FMU would be exactly the same
@@ -1201,8 +1210,8 @@ if `a` and `b` were not treated as alias variables (that is,
 had different `valueReference`pass:[s]).
 This requirement leads naturally to the following restrictions:
 
-. Variables `a` and `b` that can both be set with `fmi2SetXXX`,
-or variable `a` that can be set with `fmiSetXXX` and variable `b` that is defined with `causality = "independent"`,
+. Variables `a` and `b` that can both be set with `fmi3SetXXX`,
+or variable `a` that can be set with `fmi3SetXXX` and variable `b` that is defined with `causality = "independent"`,
 cannot be alias variables [since these variables are `"independent"` variables and alias means that there is a constraint equation between variables (= the values are the same),
 these variables are no longer `"independent"`. +
 For example, if variables `a` and `b` have `causality = "parameter"`,
@@ -1265,11 +1274,11 @@ because the Enumeration items are defined in `TypeDefinitions / SimpleType`.
 |`start`
 |Initial or guess value of variable.
 *This value is also stored in the C functions*.
-_[Therefore, calling_ `fmi2SetXXX` _to set start values is only necessary,
+_[Therefore, calling_ `fmi3SetXXX` _to set start values is only necessary,
 if a different value as stored in the XML file is desired.]_ The interpretation of start is defined by `ScalarVariable / initial`.
-A different start value can be provided with an `fmi2SetXXX` function before `fmi2ExitInitializationMode` is called (but not for variables with `variability = "constant"`).
+A different start value can be provided with an `fmi3SetXXX` function before `fmi3ExitInitializationMode` is called (but not for variables with `variability = "constant"`).
 
-_[The standard approach is to set the start value before `fmi2EnterInitializationMode`.
+_[The standard approach is to set the start value before `fmi3EnterInitializationMode`.
 However, if the initialization shall be modified in the calling environment
 (for example, changing from initialization of states to steady-state initialization),
 it is also possible to use the start value as iteration variable of an algebraic loop: using an additional condition in the environment,
@@ -1364,7 +1373,7 @@ or when computing the partial derivative of the derivatives with respect to the 
 
 image::images/ModelStructure_schema.png[width=80%]
 
-`fmi2VariableDependency` is defined as:
+`fmi3VariableDependency` is defined as:
 
 image::images/Unknown_schema.png[width=80%]
 
@@ -1453,7 +1462,7 @@ The functional dependency is defined as:
 [blue]#latexmath:[\color{blue}{\dot{\mathbf{v}}_{initialUnknowns} := \mathbf{f}_{init}(\mathbf{u}_c, \mathbf{u}_d, t_0, \mathbf{v}_{initial = exact})}]#
 
 Since, outputs, continuous-time states and state derivatives are either present as `Knowns` (if `initial = "exact"`) or as `Unknowns` (if `initial = "approx"` or `"calculated"`),
-they can be inquired with `fmiGetXXX` in InitializationMode.
+they can be inquired with `fmi3GetXXX` in InitializationMode.
 
 _[Example: Assume an FMU is defined in the following way:_
 
@@ -1487,7 +1496,7 @@ where
 but change their values in other Modes _[for example, fixed parameters in Continuous-Time Mode]_.
 
 Attribute `dependencies` of `Unknown` defines the dependency of latexmath:[\color{blue}{v_{unknown}}] with respect to latexmath:[\color{blue}{\mathbf{v}_{known}}]. +
-_[If, for example, a continuous-time output_ latexmath:[\color{blue}{y_{2}}] _is a function of the continuous-time inputs_ latexmath:[\color{blue}{u_{3}}] _and_ latexmath:[\color{blue}{u_{5}}], _and these inputs have changed, then_ `fmi2SetXXX` _on_ latexmath:[\color{blue}{u_{3}}] _and_ latexmath:[\color{blue}{u_{5}}] _must always be called before calling_ `fmi2GetXXX` _on_ latexmath:[\color{blue}{y_{2}}] _.]_
+_[If, for example, a continuous-time output_ latexmath:[\color{blue}{y_{2}}] _is a function of the continuous-time inputs_ latexmath:[\color{blue}{u_{3}}] _and_ latexmath:[\color{blue}{u_{5}}], _and these inputs have changed, then_ `fmi3SetXXX` _on_ latexmath:[\color{blue}{u_{3}}] _and_ latexmath:[\color{blue}{u_{5}}] _must always be called before calling_ `fmi3GetXXX` _on_ latexmath:[\color{blue}{y_{2}}] _.]_
 |====
 
 Element `Unknown` in `Outputs`,
@@ -1547,19 +1556,19 @@ must have the same number of list elements.
 Only for Real unknowns latexmath:[\color{blue}{v_{\text{unknown}}}]:
 
 `= "constant"`: constant factor,
-latexmath:[\color{blue}{c \cdot v_{known,i}}] where latexmath:[\color{blue}{c}] is an expression that is evaluated before `fmi2EnterInitializationMode` is called.
+latexmath:[\color{blue}{c \cdot v_{known,i}}] where latexmath:[\color{blue}{c}] is an expression that is evaluated before `fmi3EnterInitializationMode` is called.
 
 Only for Real unknowns latexmath:[\color{blue}{v_{\text{unknown}}}] in Event and Continuous-Time Mode (ModelExchange) and at _Communication Points_ (CoSimulation),
 and not for `InitialUnknowns` for Initialization Mode:
 
 `= "fixed"`: fixed factor,
-latexmath:[\color{blue}{p \cdot v_{known,i}}] where latexmath:[\color{blue}{p}] is an expression that is evaluated before `fmi2ExitInitializationMode` is called.
+latexmath:[\color{blue}{p \cdot v_{known,i}}] where latexmath:[\color{blue}{p}] is an expression that is evaluated before `fmi3ExitInitializationMode` is called.
 
 `= "tunable"`: tunable factor,
-latexmath:[\color{blue}{p \cdot v_{known,i}}] where latexmath:[\color{blue}{p}] is an expression that is evaluated before `fmi2ExitInitializationMode` is called and in Event Mode due to an external event (ModelExchange) or at a Communication Point (CoSimulation)
+latexmath:[\color{blue}{p \cdot v_{known,i}}] where latexmath:[\color{blue}{p}] is an expression that is evaluated before `fmi3ExitInitializationMode` is called and in Event Mode due to an external event (ModelExchange) or at a Communication Point (CoSimulation)
 
 `= "discrete"`: discrete factor,
-latexmath:[\color{blue}{d \cdot v_{known,i}}] where latexmath:[\color{blue}{d}] is an expression that is evaluated before `fmi2ExitInitializationMode` is called and in Event Mode due to an external or internal event or at a Communication Point (CoSimulation).
+latexmath:[\color{blue}{d \cdot v_{known,i}}] where latexmath:[\color{blue}{d}] is an expression that is evaluated before `fmi3ExitInitializationMode` is called and in Event Mode due to an external or internal event or at a Communication Point (CoSimulation).
 
 If `dependenciesKind` is present,
 `dependencies` must be present and must have the same number of list elements.
