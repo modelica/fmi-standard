@@ -6,9 +6,9 @@
 /* This header file must be utilized when compiling an FMU or an FMI master.
    It declares data and function types for FMI 3.0-wg003.3
 
-   Copyright � 2011 MODELISAR consortium,
-               2012-2018 Modelica Association Project "FMI"
-               All rights reserved.
+   Copyright (C) 2011 MODELISAR consortium,
+                 2012-2018 Modelica Association Project "FMI"
+                 All rights reserved.
    This file is licensed by the copyright holders under the BSD 2-Clause License
    (http://www.opensource.org/licenses/bsd-license.html):
 
