@@ -1,19 +1,14 @@
 === FMI Application Programming Interface
 
-This section contains the interface description to access the in/output
-data and status information of a co-simulation slave from a C program.
+This section contains the interface description to access the in/output data and status information of a co-simulation slave from a C program.
 
 ==== Transfer of Input / Output Values and Parameters
 
-Input and output variables and variables are transferred via the
-`fmi3GetXXX` and `fmi3SetXXX` functions, defined in section 2.1.7.
+Input and output variables and variables are transferred via the `fmi3GetXXX` and `fmi3SetXXX` functions, defined in section 2.1.7.
 
-In order to enable the slave to interpolate the continuous real inputs
-between communication steps, the derivatives of the inputs with respect
-to time can be provided.
+In order to enable the slave to interpolate the continuous real inputs between communication steps, the derivatives of the inputs with respect to time can be provided.
 Also, higher derivatives can be set to allow higher order interpolation.
-Whether a slave is able to interpolate and
-therefore needs this information is provided by the capability attribute `canInterpolateInputs`.
+Whether a slave is able to interpolate and therefore needs this information is provided by the capability attribute `canInterpolateInputs`.
 
 [source, C]
 ----
@@ -23,29 +18,21 @@ fmi3Status fmi3SetRealInputDerivatives(fmi3Component c,
           const fmi3Real value[]);
 ----
 
-[role=indented2]
 Sets the n-th time derivative of real input variables.
 Argument `"vr"` is a vector of value references that define the variables whose derivatives shall be set.
-The array `"order"` contains the orders of the respective derivative (1 means the first derivative,
-0 is not allowed).
+The array `"order"` contains the orders of the respective derivative (1 means the first derivative, 0 is not allowed).
 Argument "value" is a vector with the values of the derivatives.
 `"nvr"` is the dimension of the vectors. +
 Restrictions on using the function are the same as for the `fmi3SetReal` function.
 
-[role=indented2]
-Inputs and their derivatives are set with respect to the beginning of a
-communication time step.
+Inputs and their derivatives are set with respect to the beginning of a communication time step.
 
-[role=indented2]
 To allow interpolation/approximation of the real output variables between communication steps (if they are used as inputs for other slaves), the derivatives of the outputs with respect to time can be read.
 Whether the slave is able to provide the derivatives of outputs is given by the unsigned integer capability flag `MaxOutputDerivativeOrder`.
 It delivers the maximum order of the output derivative.
-If the actual order is lower (because the order of integration algorithm is low),
-the retrieved value is 0.
+If the actual order is lower (because the order of integration algorithm is low), the retrieved value is 0.
 
-[role=indented2]
-_[Example: If the internal polynomial is of order 1 and the master
-inquires the second derivative of an output, the slave will return zero.]_
+_[Example: If the internal polynomial is of order 1 and the master inquires the second derivative of an output, the slave will return zero.]_
 
 The derivatives can be retrieved by:
 
@@ -57,20 +44,16 @@ fmi3Status fmi3GetRealOutputDerivatives (fmi3Component c, +
           fmi3Real value[]);
 ----
 
-[role=indented2]
 Retrieves the n-th derivative of output values.
 Argument `"vr"` is a vector of `"nvr"` value references that define the variables whose derivatives shall be retrieved.
-The array `order` contains the order of the respective derivative (1 means the first derivative,
-0 is not allowed).
+The array `order` contains the order of the respective derivative (1 means the first derivative, 0 is not allowed).
 Argument `"value"` is a vector with the actual values of the derivatives. +
 Restrictions on using the function are the same as for the `fmi3GetReal` function.
 
-[role=indented2]
 The returned outputs correspond to the current slave time.
 E.g. after a successful `fmi3DoStep(...)` the returned values are related to the end of the communication time step.
 
-This standard supports polynomial interpolation and extrapolation as well as more sophisticated signal extrapolation schemes like rational extrapolation,
-see the companion document "FunctionalMockupInterface-ImplementationHints.pdf".
+This standard supports polynomial interpolation and extrapolation as well as more sophisticated signal extrapolation schemes like rational extrapolation, see the companion document "FunctionalMockupInterface-ImplementationHints.pdf".
 
 ==== Computation
 
@@ -84,26 +67,19 @@ fmi3Status fmi3DoStep(fmi3Component c,
           fmi3Boolean noSetFMUStatePriorToCurrentPoint);
 ----
 
-[role=indented2]
 The computation of a time step is started. +
 Argument `currentCommunicationPoint` is the current communication point of the master (latexmath:[tc_i]) and argument `communicationStepSize` is the communication step size (latexmath:[hc_i]).
 The latter must be latexmath:[> 0.0].
 The slave must integrate until time instant latexmath:[tc_{i+1} = tc_i + hc_i].
-_[The calling environment defines the communication points and `fmi3DoStep` must
-synchronize to these points by always integrating exactly to latexmath:[tc_i + hc_i].
+_[The calling environment defines the communication points and `fmi3DoStep` must synchronize to these points by always integrating exactly to latexmath:[tc_i + hc_i].
 It is up to `fmi3DoStep` how to achieve this.]_
-At the first call to `fmi3DoStep` after `fmi3ExitInitializationMode` was called
-`currentCommunicationPoint` must be equal to `startTime` as set with `fmi3SetupExperiment`.
+At the first call to `fmi3DoStep` after `fmi3ExitInitializationMode` was called `currentCommunicationPoint` must be equal to `startTime` as set with `fmi3SetupExperiment`.
 _[Formally, argument `currentCommunicationPoint` is not needed.
-It is present in order to handle a mismatch between the master and the FMU state of the slave: The `currentCommunicationPoint` and the FMU state of the slaves defined by former_ `fmi3DoStep` _or_
-`fmi3SetFMUState` _calls have to be consistent with respect to each other.
-For example, if the slave does not use the update formula for the independent variable as required above,_ latexmath:[tc_{i+1} = tc_i + hc_i] _(using argument_ latexmath:[tc_i] = `currentCommunicationPoint` _of_ `fmi3DoStep`) _but uses internally an own update formula,
-such as_ latexmath:[tc_{s,i+1} = tc_{s,i} + hc_{s,i}] _then the slave could use as time increment_ latexmath:[\text{hc}_{s,i} := (tc_i - tc_{s,i}) + hc_i] _(instead of_ latexmath:[\text{hc}_{s,i} := hc_i] _) to avoid a mismatch between the master time_ latexmath:[tc_{i+1}] _and the slave internal time_ latexmath:[tc_{s,i+1}] _for large i.]_
+It is present in order to handle a mismatch between the master and the FMU state of the slave: The `currentCommunicationPoint` and the FMU state of the slaves defined by former_ `fmi3DoStep` _or_ `fmi3SetFMUState` _calls have to be consistent with respect to each other.
+For example, if the slave does not use the update formula for the independent variable as required above,_ latexmath:[tc_{i+1} = tc_i + hc_i] _(using argument_ latexmath:[tc_i] = `currentCommunicationPoint` _of_ `fmi3DoStep`) _but uses internally an own update formula, such as_ latexmath:[tc_{s,i+1} = tc_{s,i} + hc_{s,i}] _then the slave could use as time increment_ latexmath:[\text{hc}_{s,i} := (tc_i - tc_{s,i}) + hc_i] _(instead of_ latexmath:[\text{hc}_{s,i} := hc_i] _) to avoid a mismatch between the master time_ latexmath:[tc_{i+1}] _and the slave internal time_ latexmath:[tc_{s,i+1}] _for large i.]_
 
-[role=indented2]
 Argument `noSetFMUStatePriorToCurrentPoint` is `fmi3True` if `fmi3SetFMUState` will no longer be called for time instants prior to `currentCommunicationPoint` in this simulation run _[the slave can use this flag to flush a result buffer]_.
 
-[role=indented2]
 The function returns: +
 `fmi3OK` - if the communication step was computed successfully until its end. +
 `fmi3Discard` - if the slave computed successfully only a subinterval of the communication step.
@@ -128,7 +104,6 @@ It is not allowed to call any other function during a pending `fmi3DoStep`.
 fmi3Status fmi3CancelStep(fmi3Component c);
 ----
 
-[role=indented2]
 Can be called if `fmi3DoStep` returned `fmi3Pending` in order to stop the current asynchronous execution.
 The master calls this function if, for example, the co-simulation run is stopped by the user or one of the slaves.
 Afterwards it is only allowed to call `fmi3Reset` or `fmi3FreeInstance`.
@@ -137,8 +112,7 @@ It depends on the capabilities of the slave which parameter constellations and c
 
 ==== Retrieving Status Information from the Slave
 
-Status information is retrieved from the slave by the following
-functions:
+Status information is retrieved from the slave by the following functions:
 
 [source, C]
 ----
@@ -154,7 +128,6 @@ fmi3Status fmi3GetStringStatus (fmi3Component c, const fmi3StatusKind s,
                                 fmi3String* value);
 ----
 
-[role=indented2]
 Informs the master about the actual status of the simulation run.
 Which status information is to be returned is specified by the argument `fmi3StatusKind`.
 It depends on the capabilities of the slave which status information can be given by the slave (see 4.3.1).
@@ -169,7 +142,6 @@ typedef enum {fmi3DoStepStatus,
              } fmi3StatusKind;
 ----
 
-[role=indented2]
 Defines which status is inquired.
 
 The following status information can be retrieved from a slave:
@@ -208,34 +180,26 @@ The following state machine defines the supported calling sequences.
 .Calling sequence of Co-Simulation C functions in form of an UML 2.0 state machine.
 image:images/figure11.png[]
 
-Each state of the state machine corresponds to a certain phase of a
-simulation as follows:
+Each state of the state machine corresponds to a certain phase of a simulation as follows:
 
-*instantiated*: +
-In this state,
-start and guess values (= variables that have `initial` = `"exact"` or `"approx`") can be set.
+instantiated::
+In this state, start and guess values (= variables that have `initial` = `"exact"` or `"approx"`) can be set.
 
-*Initialization Mode:* +
+Initialization Mode::
 In this state, equations are active to determine all outputs (and optionally other variables exposed by the exporting tool).
-The variables that can be retrieved by `fmi3GetXXX` calls are (1) defined in the XML file
-under `<ModelStructure><InitialUnknowns>`, and (2) variables with `causality` = `"output"`.
-Variables with `initial` = `"exact"`,
-as well as variables with `variability` = `"input"` can be set.
+The variables that can be retrieved by `fmi3GetXXX` calls are (1) defined in the XML file under `<ModelStructure><InitialUnknowns>`, and (2) variables with `causality` = `"output"`.
+Variables with `initial` = `"exact"`, as well as variables with `variability` = `"input"` can be set.
 
-*slaveInitialized*: +
+slaveInitialized::
 In this state, the slave is initialized and the co-simulation computation is performed. The calculation until the next communication point is performed with function `fmi3DoStep`. Depending on the return value, the slave is in a different state (step complete, step failed, step canceled).
 
-*terminated*: +
+terminated::
 In this state, the solution at the final time of the simulation can be retrieved.
 
-Note that in Initialization Mode input variables can be set with `fmi3SetXXX` and output variables can be retrieved
-with `fmi3GetXXX` interchangeably according to the model structure defined
-under element `<ModelStructure><InitialUnknowns>` in the XML file.
-_[For example, if one output `y1` depends on two inputs `u1`, `u2`,
-then these two inputs must be set, before `y1` can be retrieved.
+Note that in Initialization Mode input variables can be set with `fmi3SetXXX` and output variables can be retrieved with `fmi3GetXXX` interchangeably according to the model structure defined under element `<ModelStructure><InitialUnknowns>` in the XML file.
+_[For example, if one output `y1` depends on two inputs `u1`, `u2`, then these two inputs must be set, before `y1` can be retrieved.
 If additionally an output `y2` depends on an input `u3`, then `u3` can be set and `y2` can be retrieved afterwards.
-As a result, artificial or "real" algebraic loops over connected FMUs in
-Initialization Mode can be handled by using appropriate numerical algorithms.]_
+As a result, artificial or "real" algebraic loops over connected FMUs in Initialization Mode can be handled by using appropriate numerical algorithms.]_
 
 There is the additional restriction in `slaveInitialized` state that it is not allowed to call `fmi3GetXXX` functions after `fmi3SetXXX` functions without an `fmi3DoStep` call in between.
 
@@ -330,12 +294,9 @@ retrieved values are useable for debugging only
 
 ==== Pseudo-code Example
 
-In the following example,
-the usage of the FMI functions is sketched in order to clarify the typical calling sequence of the functions in a simulation environment.
-The example is given in a mix of pseudo-code and C,
-in order to keep it small and understandable.
-We consider two slaves,
-where both have one continuous real input and one continuous real output which are connected in the following way:
+In the following example, the usage of the FMI functions is sketched in order to clarify the typical calling sequence of the functions in a simulation environment.
+The example is given in a mix of pseudo-code and C, in order to keep it small and understandable.
+We consider two slaves, where both have one continuous real input and one continuous real output which are connected in the following way:
 
 .Connection graph of the slaves.
 [caption="Figure 12: "]
