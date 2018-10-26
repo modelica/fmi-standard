@@ -6,42 +6,6 @@
    This header file must be utilized both by the model and
    by the simulation engine.
 
-   Revisions:
-   - Jul.  2, 2018: Changed fmi2 to fmi3 prefixes, merged binary type FCP-004
-   - Apr.  8, 2018: Draft changes for FCP-004 Opaque Binary Types
-   - Nov. 16, 2017: Draft changes for FCP-004 Opaque Binary Types
-   - Nov.  5, 2017: Draft changes for FCP-004 Opaque Binary Types
-   - Apr.  9, 2014: all prefixes "fmi" renamed to "fmi2" (decision from April 8)
-   - Mar   31, 2014: New datatype fmiChar introduced.
-   - Feb.  17, 2013: Changed fmiTypesPlatform from "standard32" to "default".
-                     Removed fmiUndefinedValueReference since no longer needed
-                     (because every state is defined in ScalarVariables).
-   - March 20, 2012: Renamed from fmiPlatformTypes.h to fmiTypesPlatform.h
-   - Nov.  14, 2011: Use the header file "fmiPlatformTypes.h" for FMI 2.0
-                     both for "FMI for model exchange" and for "FMI for co-simulation"
-                     New types "fmiComponentEnvironment", "fmiState", and "fmiByte".
-                     The implementation of "fmiBoolean" is change from "char" to "int".
-                     The #define "fmiPlatform" changed to "fmiTypesPlatform"
-                     (in order that #define and function call are consistent)
-   - Oct.   4, 2010: Renamed header file from "fmiModelTypes.h" to fmiPlatformTypes.h"
-                     for the co-simulation interface
-   - Jan.   4, 2010: Renamed meModelTypes_h to fmiModelTypes_h (by Mauss, QTronic)
-   - Dec.  21, 2009: Changed "me" to "fmi" and "meModel" to "fmiComponent"
-                     according to meeting on Dec. 18 (by Martin Otter, DLR)
-   - Dec.   6, 2009: Added meUndefinedValueReference (by Martin Otter, DLR)
-   - Sept.  9, 2009: Changes according to FMI-meeting on July 21:
-                     Changed "version" to "platform", "standard" to "standard32",
-                     Added a precise definition of "standard32" as comment
-                     (by Martin Otter, DLR)
-   - July  19, 2009: Added "me" as prefix to file names, added meTrue/meFalse,
-                     and changed meValueReferenced from int to unsigned int
-                     (by Martin Otter, DLR).
-   - March  2, 2009: Moved enums and function pointer definitions to
-                     ModelFunctions.h (by Martin Otter, DLR).
-   - Dec.  3, 2008 : First version by Martin Otter (DLR) and
-                     Hans Olsson (Dynasim).
-
-
    Copyright � 2008-2011 MODELISAR consortium,
                2012-2018 Modelica Association Project "FMI"
                All rights reserved.
