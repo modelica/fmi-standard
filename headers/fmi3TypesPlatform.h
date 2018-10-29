@@ -68,21 +68,38 @@ fmi3String              : a pointer to a vector of fmi3Char characters
 fmi3Byte                : smallest addressable unit of the machine, typically one byte.
 fmi3Binary              : a pointer to a vector of fmi3Byte bytes
 */
-typedef void*           fmi3Component;               /* Pointer to FMU instance       */
-typedef void*           fmi3ComponentEnvironment;    /* Pointer to FMU environment    */
-typedef void*           fmi3FMUstate;                /* Pointer to internal FMU state */
+
+// tag::Component[]
+typedef void*           fmi3Component;             // Pointer to FMU instance
+// end::Component[]
+
+// tag::Component[]
+typedef void*           fmi3ComponentEnvironment;  // Pointer to FMU environment
+// end::Component[]
+
+// tag::Component[]
+typedef void*           fmi3FMUstate;              // Pointer to internal FMU state
+// end::Component[]
+
+// tag::Component[]
 typedef unsigned int    fmi3ValueReference;
-typedef double          fmi3Real   ;
-typedef int             fmi3Integer;
-typedef int             fmi3Boolean;
-typedef char            fmi3Char;
-typedef const fmi3Char* fmi3String;
-typedef char            fmi3Byte;
-typedef const fmi3Byte* fmi3Binary;
+// end::Component[]
+
+// tag::VariableTypes[]
+typedef double          fmi3Real;     // Data type for floating point real numbers
+typedef int             fmi3Integer;  // Data type for signed integer numbers
+typedef int             fmi3Boolean;  // Data type for Boolean numbers
+                                      // (only two values: fmi3False, fmi3True)
+typedef char            fmi3Char;     // Data type for one character
+typedef const fmi3Char* fmi3String;   // Data type for character strings
+typedef char            fmi3Byte;     // ('\0' terminated, UTF8 encoded)
+                                      // unit, typically one byte
+typedef const fmi3Byte* fmi3Binary;   // Data type for the smallest addressable
+                                      // out-of-band length terminated
 
 /* Values for fmi3Boolean  */
 #define fmi3True  1
 #define fmi3False 0
-
+// end::VariableTypes[]
 
 #endif /* fmi3TypesPlatform_h */
