@@ -128,7 +128,7 @@ Types for Common Functions
 /* Inquire version numbers of header files and setting logging status */
 typedef const char* fmi3GetTypesPlatformTYPE(void);
 typedef const char* fmi3GetVersionTYPE(void);
-typedef fmi3Status  fmi3SetDebugLoggingTYPE(fmi3Component, fmi3Boolean, size_t, const fmi3String[]);
+typedef fmi3Status  fmi3SetDebugLoggingTYPE(fmi3Component c, fmi3Boolean loggingOn, size_t nCategories, const fmi3String categories[]);
 
 /* Creation and destruction of FMU instances and setting debug status */
 typedef fmi3Component fmi3InstantiateTYPE (fmi3String instanceName, fmi3Type fmuType, fmi3String fmuGUID, fmi3String fmuResourceLocation, const fmi3CallbackFunctions* functions, fmi3Boolean visible, fmi3Boolean loggingOn);
