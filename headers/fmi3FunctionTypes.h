@@ -146,7 +146,7 @@ typedef fmi3Status fmi3GetRealTYPE   (fmi3Component c, const fmi3ValueReference 
 typedef fmi3Status fmi3GetIntegerTYPE(fmi3Component c, const fmi3ValueReference vr[], size_t nvr, fmi3Integer value[], size_t nValues);
 typedef fmi3Status fmi3GetBooleanTYPE(fmi3Component c, const fmi3ValueReference vr[], size_t nvr, fmi3Boolean value[], size_t nValues);
 typedef fmi3Status fmi3GetStringTYPE (fmi3Component c, const fmi3ValueReference vr[], size_t nvr, fmi3String  value[], size_t nValues);
-typedef fmi3Status fmi3GetBinaryTYPE (fmi3Component c, const fmi3ValueReference vr[], size_t nvr, size_t [], fmi3Binary value[], size_t nValues);
+typedef fmi3Status fmi3GetBinaryTYPE (fmi3Component c, const fmi3ValueReference vr[], size_t nvr, size_t size[], fmi3Binary value[], size_t nValues);
 
 typedef fmi3Status fmi3SetRealTYPE   (fmi3Component c, const fmi3ValueReference vr[], size_t nvr, const fmi3Real    value[], size_t nValues);
 typedef fmi3Status fmi3SetIntegerTYPE(fmi3Component c, const fmi3ValueReference vr[], size_t nvr, const fmi3Integer value[], size_t nValues);
