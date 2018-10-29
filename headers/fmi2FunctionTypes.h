@@ -7,6 +7,7 @@
    It declares data and function types for FMI 2.0
 
    Revisions:
+   - Sep.  6, 2018: Parameter names added to function prototypes
    - Apr.  9, 2014: all prefixes "fmi" renamed to "fmi2" (decision from April 8)
    - Apr.  3, 2014: Added #include <stddef.h> for size_t definition
    - Mar. 27, 2014: Added #include "fmiTypesPlatform.h" (#179)
@@ -46,9 +47,9 @@
    - Nov. 14, 2011: First public Version
 
 
-   Copyright © 2011 MODELISAR consortium,
-               2012-2013 Modelica Association Project "FMI"
-               All rights reserved.
+   Copyright (C) 2011 MODELISAR consortium,
+                 2012-2013 Modelica Association Project "FMI"
+                 All rights reserved.
    This file is licensed by the copyright holders under the BSD 2-Clause License
    (http://www.opensource.org/licenses/bsd-license.html):
 
@@ -121,10 +122,16 @@ typedef enum {
     fmi2Terminated
 } fmi2StatusKind;
 
-typedef void      (*fmi2CallbackLogger)        (fmi2ComponentEnvironment, fmi2String, fmi2Status, fmi2String, fmi2String, ...);
-typedef void*     (*fmi2CallbackAllocateMemory)(size_t, size_t);
-typedef void      (*fmi2CallbackFreeMemory)    (void*);
-typedef void      (*fmi2StepFinished)          (fmi2ComponentEnvironment, fmi2Status);
+typedef void      (*fmi2CallbackLogger)        (fmi2ComponentEnvironment componentEnvironment,
+                                                fmi2String instanceName,
+                                                fmi2Status status,
+                                                fmi2String category,
+                                                fmi2String message,
+                                                ...);
+typedef void*     (*fmi2CallbackAllocateMemory)(size_t nobj, size_t size);
+typedef void      (*fmi2CallbackFreeMemory)    (void* obj);
+typedef void      (*fmi2StepFinished)          (fmi2ComponentEnvironment componentEnvironment,
+                                                fmi2Status status);
 
 typedef struct {
    const fmi2CallbackLogger         logger;
@@ -135,7 +142,7 @@ typedef struct {
 } fmi2CallbackFunctions;
 
 typedef struct {
-	 fmi2Boolean newDiscreteStatesNeeded;
+   fmi2Boolean newDiscreteStatesNeeded;
    fmi2Boolean terminateSimulation;
    fmi2Boolean nominalsOfContinuousStatesChanged;
    fmi2Boolean valuesOfContinuousStatesChanged;
@@ -157,64 +164,83 @@ Types for Common Functions
 ****************************************************/
 
 /* Inquire version numbers of header files and setting logging status */
-   typedef const char* fmi2GetTypesPlatformTYPE(void);
-   typedef const char* fmi2GetVersionTYPE(void);
-   typedef fmi2Status  fmi2SetDebugLoggingTYPE(fmi2Component, fmi2Boolean, size_t, const fmi2String[]);
+    typedef const char* fmi2GetTypesPlatformTYPE(void);
+    typedef const char* fmi2GetVersionTYPE(void);
+    typedef fmi2Status  fmi2SetDebugLoggingTYPE(fmi2Component c,
+                                                fmi2Boolean loggingOn,
+                                                size_t nCategories,
+                                                const fmi2String categories[]);
 
 /* Creation and destruction of FMU instances and setting debug status */
-   typedef fmi2Component fmi2InstantiateTYPE (fmi2String, fmi2Type, fmi2String, fmi2String, const fmi2CallbackFunctions*, fmi2Boolean, fmi2Boolean);
-   typedef void          fmi2FreeInstanceTYPE(fmi2Component);
+    typedef fmi2Component fmi2InstantiateTYPE(fmi2String instanceName,
+                                              fmi2Type fmuType,
+                                              fmi2String fmuGUID,
+                                              fmi2String fmuResourceLocation,
+                                              const fmi2CallbackFunctions* functions,
+                                              fmi2Boolean visible,
+                                              fmi2Boolean loggingOn);
+   typedef void          fmi2FreeInstanceTYPE(fmi2Component c);
 
 /* Enter and exit initialization mode, terminate and reset */
-   typedef fmi2Status fmi2SetupExperimentTYPE        (fmi2Component, fmi2Boolean, fmi2Real, fmi2Real, fmi2Boolean, fmi2Real);
-   typedef fmi2Status fmi2EnterInitializationModeTYPE(fmi2Component);
-   typedef fmi2Status fmi2ExitInitializationModeTYPE (fmi2Component);
-   typedef fmi2Status fmi2TerminateTYPE              (fmi2Component);
-   typedef fmi2Status fmi2ResetTYPE                  (fmi2Component);
+    typedef fmi2Status fmi2SetupExperimentTYPE       (fmi2Component c,
+                                                      fmi2Boolean toleranceDefined,
+                                                      fmi2Real tolerance,
+                                                      fmi2Real startTime,
+                                                      fmi2Boolean stopTimeDefined,
+                                                      fmi2Real stopTime);
+   typedef fmi2Status fmi2EnterInitializationModeTYPE(fmi2Component c);
+   typedef fmi2Status fmi2ExitInitializationModeTYPE (fmi2Component c);
+   typedef fmi2Status fmi2TerminateTYPE              (fmi2Component c);
+   typedef fmi2Status fmi2ResetTYPE                  (fmi2Component c);
 
 /* Getting and setting variable values */
-   typedef fmi2Status fmi2GetRealTYPE   (fmi2Component, const fmi2ValueReference[], size_t, fmi2Real   []);
-   typedef fmi2Status fmi2GetIntegerTYPE(fmi2Component, const fmi2ValueReference[], size_t, fmi2Integer[]);
-   typedef fmi2Status fmi2GetBooleanTYPE(fmi2Component, const fmi2ValueReference[], size_t, fmi2Boolean[]);
-   typedef fmi2Status fmi2GetStringTYPE (fmi2Component, const fmi2ValueReference[], size_t, fmi2String []);
+   typedef fmi2Status fmi2GetRealTYPE   (fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Real    value[]);
+   typedef fmi2Status fmi2GetIntegerTYPE(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Integer value[]);
+   typedef fmi2Status fmi2GetBooleanTYPE(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Boolean value[]);
+   typedef fmi2Status fmi2GetStringTYPE (fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2String  value[]);
 
-   typedef fmi2Status fmi2SetRealTYPE   (fmi2Component, const fmi2ValueReference[], size_t, const fmi2Real   []);
-   typedef fmi2Status fmi2SetIntegerTYPE(fmi2Component, const fmi2ValueReference[], size_t, const fmi2Integer[]);
-   typedef fmi2Status fmi2SetBooleanTYPE(fmi2Component, const fmi2ValueReference[], size_t, const fmi2Boolean[]);
-   typedef fmi2Status fmi2SetStringTYPE (fmi2Component, const fmi2ValueReference[], size_t, const fmi2String []);
+   typedef fmi2Status fmi2SetRealTYPE   (fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Real    value[]);
+   typedef fmi2Status fmi2SetIntegerTYPE(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Integer value[]);
+   typedef fmi2Status fmi2SetBooleanTYPE(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Boolean value[]);
+   typedef fmi2Status fmi2SetStringTYPE (fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2String  value[]);
 
 /* Getting and setting the internal FMU state */
-   typedef fmi2Status fmi2GetFMUstateTYPE           (fmi2Component, fmi2FMUstate*);
-   typedef fmi2Status fmi2SetFMUstateTYPE           (fmi2Component, fmi2FMUstate);
-   typedef fmi2Status fmi2FreeFMUstateTYPE          (fmi2Component, fmi2FMUstate*);
-   typedef fmi2Status fmi2SerializedFMUstateSizeTYPE(fmi2Component, fmi2FMUstate, size_t*);
-   typedef fmi2Status fmi2SerializeFMUstateTYPE     (fmi2Component, fmi2FMUstate, fmi2Byte[], size_t);
-   typedef fmi2Status fmi2DeSerializeFMUstateTYPE   (fmi2Component, const fmi2Byte[], size_t, fmi2FMUstate*);
+   typedef fmi2Status fmi2GetFMUstateTYPE           (fmi2Component c, fmi2FMUstate* FMUstate);
+   typedef fmi2Status fmi2SetFMUstateTYPE           (fmi2Component c, fmi2FMUstate  FMUstate);
+   typedef fmi2Status fmi2FreeFMUstateTYPE          (fmi2Component c, fmi2FMUstate* FMUstate);
+   typedef fmi2Status fmi2SerializedFMUstateSizeTYPE(fmi2Component c, fmi2FMUstate  FMUstate, size_t* size);
+   typedef fmi2Status fmi2SerializeFMUstateTYPE     (fmi2Component c, fmi2FMUstate  FMUstate, fmi2Byte[], size_t size);
+   typedef fmi2Status fmi2DeSerializeFMUstateTYPE   (fmi2Component c, const fmi2Byte serializedState[], size_t size, fmi2FMUstate* FMUstate);
 
 /* Getting partial derivatives */
-   typedef fmi2Status fmi2GetDirectionalDerivativeTYPE(fmi2Component, const fmi2ValueReference[], size_t,
-                                                                   const fmi2ValueReference[], size_t,
-                                                                   const fmi2Real[], fmi2Real[]);
+    typedef fmi2Status fmi2GetDirectionalDerivativeTYPE(fmi2Component c,
+                                                        const fmi2ValueReference vUnknown_ref[], size_t nUnknown,
+                                                        const fmi2ValueReference vKnown_ref[],   size_t nKnown,
+                                                        const fmi2Real dvKnown[],
+                                                        fmi2Real dvUnknown[]);
 
 /***************************************************
 Types for Functions for FMI2 for Model Exchange
 ****************************************************/
 
 /* Enter and exit the different modes */
-   typedef fmi2Status fmi2EnterEventModeTYPE         (fmi2Component);
-   typedef fmi2Status fmi2NewDiscreteStatesTYPE      (fmi2Component, fmi2EventInfo*);
-   typedef fmi2Status fmi2EnterContinuousTimeModeTYPE(fmi2Component);
-   typedef fmi2Status fmi2CompletedIntegratorStepTYPE(fmi2Component, fmi2Boolean, fmi2Boolean*, fmi2Boolean*);
+   typedef fmi2Status fmi2EnterEventModeTYPE         (fmi2Component c);
+   typedef fmi2Status fmi2NewDiscreteStatesTYPE      (fmi2Component c, fmi2EventInfo* fmi2eventInfo);
+   typedef fmi2Status fmi2EnterContinuousTimeModeTYPE(fmi2Component c);
+   typedef fmi2Status fmi2CompletedIntegratorStepTYPE(fmi2Component c,
+                                                      fmi2Boolean   noSetFMUStatePriorToCurrentPoint,
+                                                      fmi2Boolean*  enterEventMode,
+                                                      fmi2Boolean*  terminateSimulation);
 
 /* Providing independent variables and re-initialization of caching */
-   typedef fmi2Status fmi2SetTimeTYPE            (fmi2Component, fmi2Real);
-   typedef fmi2Status fmi2SetContinuousStatesTYPE(fmi2Component, const fmi2Real[], size_t);
+   typedef fmi2Status fmi2SetTimeTYPE            (fmi2Component c, fmi2Real time);
+   typedef fmi2Status fmi2SetContinuousStatesTYPE(fmi2Component c, const fmi2Real x[], size_t nx);
 
 /* Evaluation of the model equations */
-   typedef fmi2Status fmi2GetDerivativesTYPE               (fmi2Component, fmi2Real[], size_t);
-   typedef fmi2Status fmi2GetEventIndicatorsTYPE           (fmi2Component, fmi2Real[], size_t);
-   typedef fmi2Status fmi2GetContinuousStatesTYPE          (fmi2Component, fmi2Real[], size_t);
-   typedef fmi2Status fmi2GetNominalsOfContinuousStatesTYPE(fmi2Component, fmi2Real[], size_t);
+   typedef fmi2Status fmi2GetDerivativesTYPE               (fmi2Component c, fmi2Real derivatives[],     size_t nx);
+   typedef fmi2Status fmi2GetEventIndicatorsTYPE           (fmi2Component c, fmi2Real eventIndicators[], size_t ni);
+   typedef fmi2Status fmi2GetContinuousStatesTYPE          (fmi2Component c, fmi2Real x[],               size_t nx);
+   typedef fmi2Status fmi2GetNominalsOfContinuousStatesTYPE(fmi2Component c, fmi2Real x_nominal[],       size_t nx);
 
 
 /***************************************************
@@ -222,18 +248,26 @@ Types for Functions for FMI2 for Co-Simulation
 ****************************************************/
 
 /* Simulating the slave */
-   typedef fmi2Status fmi2SetRealInputDerivativesTYPE (fmi2Component, const fmi2ValueReference [], size_t, const fmi2Integer [], const fmi2Real []);
-   typedef fmi2Status fmi2GetRealOutputDerivativesTYPE(fmi2Component, const fmi2ValueReference [], size_t, const fmi2Integer [], fmi2Real []);
-
-   typedef fmi2Status fmi2DoStepTYPE     (fmi2Component, fmi2Real, fmi2Real, fmi2Boolean);
-   typedef fmi2Status fmi2CancelStepTYPE (fmi2Component);
+    typedef fmi2Status fmi2SetRealInputDerivativesTYPE (fmi2Component c,
+                                                        const fmi2ValueReference vr[], size_t nvr,
+                                                        const fmi2Integer order[],
+                                                        const fmi2Real value[]);
+    typedef fmi2Status fmi2GetRealOutputDerivativesTYPE(fmi2Component c,
+                                                        const fmi2ValueReference vr[], size_t nvr,
+                                                        const fmi2Integer order[],
+                                                        fmi2Real value[]);
+    typedef fmi2Status fmi2DoStepTYPE   (fmi2Component c,
+                                         fmi2Real      currentCommunicationPoint,
+                                         fmi2Real      communicationStepSize,
+                                         fmi2Boolean   noSetFMUStatePriorToCurrentPoint);
+   typedef fmi2Status fmi2CancelStepTYPE(fmi2Component c);
 
 /* Inquire slave status */
-   typedef fmi2Status fmi2GetStatusTYPE       (fmi2Component, const fmi2StatusKind, fmi2Status* );
-   typedef fmi2Status fmi2GetRealStatusTYPE   (fmi2Component, const fmi2StatusKind, fmi2Real*   );
-   typedef fmi2Status fmi2GetIntegerStatusTYPE(fmi2Component, const fmi2StatusKind, fmi2Integer*);
-   typedef fmi2Status fmi2GetBooleanStatusTYPE(fmi2Component, const fmi2StatusKind, fmi2Boolean*);
-   typedef fmi2Status fmi2GetStringStatusTYPE (fmi2Component, const fmi2StatusKind, fmi2String* );
+   typedef fmi2Status fmi2GetStatusTYPE       (fmi2Component c, const fmi2StatusKind s, fmi2Status*  value);
+   typedef fmi2Status fmi2GetRealStatusTYPE   (fmi2Component c, const fmi2StatusKind s, fmi2Real*    value);
+   typedef fmi2Status fmi2GetIntegerStatusTYPE(fmi2Component c, const fmi2StatusKind s, fmi2Integer* value);
+   typedef fmi2Status fmi2GetBooleanStatusTYPE(fmi2Component c, const fmi2StatusKind s, fmi2Boolean* value);
+   typedef fmi2Status fmi2GetStringStatusTYPE (fmi2Component c, const fmi2StatusKind s, fmi2String*  value);
 
 
 #ifdef __cplusplus
