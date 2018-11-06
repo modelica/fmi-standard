@@ -106,7 +106,7 @@ typedef void  (*fmi3CallbackLogger)         (fmi3ComponentEnvironment componentE
                                              fmi3String instanceName,
                                              fmi3Status status,
                                              fmi3String category,
-                                             fmi3String message, ...);
+                                             fmi3String message);
 typedef void* (*fmi3CallbackAllocateMemory) (fmi3ComponentEnvironment componentEnvironment,
                                              size_t nobj,
                                              size_t size);
