@@ -484,7 +484,7 @@ typedef fmi3Status fmi3GetDoubleStatusTYPE (fmi3Component c,
                                             const fmi3StatusKind s,
                                             fmi3Double* value);
 
-typedef fmi3Status fmi3GetIntegerStatusTYPE(fmi3Component c,
+typedef fmi3Status fmi3GetInt32StatusTYPE  (fmi3Component c,
                                             const fmi3StatusKind s,
                                             fmi3Int32* value);
 
