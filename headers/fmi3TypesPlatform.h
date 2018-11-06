@@ -48,6 +48,9 @@ terms of this license.
 the modified file must also be provided under this license).
 */
 
+/* Include the integer type definitions */
+#include <stdint.h>
+
 /* Platform (unique identification of this header file) */
 #define fmi3TypesPlatform "default"
 
