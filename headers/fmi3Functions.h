@@ -117,14 +117,30 @@ Common Functions
 #define fmi3ExitInitializationMode   fmi3FullName(fmi3ExitInitializationMode)
 #define fmi3Terminate                fmi3FullName(fmi3Terminate)
 #define fmi3Reset                    fmi3FullName(fmi3Reset)
-#define fmi3GetReal                  fmi3FullName(fmi3GetReal)
-#define fmi3GetInteger               fmi3FullName(fmi3GetInteger)
-#define fmi3GetBoolean               fmi3FullName(fmi3GetBoolean)
+#define fmi3GetFloat                 fmi3FullName(fmi3GetFloat)
+#define fmi3GetDouble                fmi3FullName(fmi3GetDouble)
+#define fmi3GetInt8                  fmi3FullName(fmi3GetInt8)
+#define fmi3GetUInt8                 fmi3FullName(fmi3GetUInt8)
+#define fmi3GetInt16                 fmi3FullName(fmi3GetInt16)
+#define fmi3GetUInt16                fmi3FullName(fmi3GetUInt16)
+#define fmi3GetInt32                 fmi3FullName(fmi3GetInt32)
+#define fmi3GetUInt32                fmi3FullName(fmi3GetUInt32)
+#define fmi3GetInt64                 fmi3FullName(fmi3GetInt64)
+#define fmi3GetUInt64                fmi3FullName(fmi3GetUInt64)
+#define fmi3GetBool                  fmi3FullName(fmi3GetBool)
 #define fmi3GetString                fmi3FullName(fmi3GetString)
 #define fmi3GetBinary                fmi3FullName(fmi3GetBinary)
-#define fmi3SetReal                  fmi3FullName(fmi3SetReal)
-#define fmi3SetInteger               fmi3FullName(fmi3SetInteger)
-#define fmi3SetBoolean               fmi3FullName(fmi3SetBoolean)
+#define fmi3SetFloat                 fmi3FullName(fmi3SetFloat)
+#define fmi3SetDouble                fmi3FullName(fmi3SetDouble)
+#define fmi3SetInt8                  fmi3FullName(fmi3SetInt8)
+#define fmi3SetUInt8                 fmi3FullName(fmi3SetUInt8)
+#define fmi3SetInt16                 fmi3FullName(fmi3SetInt16)
+#define fmi3SetUInt16                fmi3FullName(fmi3SetUInt16)
+#define fmi3SetInt32                 fmi3FullName(fmi3SetInt32)
+#define fmi3SetUInt32                fmi3FullName(fmi3SetUInt32)
+#define fmi3SetInt64                 fmi3FullName(fmi3SetInt64)
+#define fmi3SetUInt64                fmi3FullName(fmi3SetUInt64)
+#define fmi3SetBool                  fmi3FullName(fmi3SetBool)
 #define fmi3SetString                fmi3FullName(fmi3SetString)
 #define fmi3SetBinary                fmi3FullName(fmi3SetBinary)
 #define fmi3GetNumberOfVariableDependencies fmi3FullName(fmi3GetNumberOfVariableDependencies)
@@ -158,14 +174,14 @@ Functions for FMI3 for Model Exchange
 Functions for FMI3 for Co-Simulation
 ****************************************************/
 
-#define fmi3SetRealInputDerivatives      fmi3FullName(fmi3SetRealInputDerivatives)
-#define fmi3GetRealOutputDerivatives     fmi3FullName(fmi3GetRealOutputDerivatives)
+#define fmi3SetInputDerivatives          fmi3FullName(fmi3SetInputDerivatives)
+#define fmi3GetOutputDerivatives         fmi3FullName(fmi3GetOutputDerivatives)
 #define fmi3DoStep                       fmi3FullName(fmi3DoStep)
 #define fmi3CancelStep                   fmi3FullName(fmi3CancelStep)
 #define fmi3GetStatus                    fmi3FullName(fmi3GetStatus)
-#define fmi3GetRealStatus                fmi3FullName(fmi3GetRealStatus)
-#define fmi3GetIntegerStatus             fmi3FullName(fmi3GetIntegerStatus)
-#define fmi3GetBooleanStatus             fmi3FullName(fmi3GetBooleanStatus)
+#define fmi3GetDoubleStatus              fmi3FullName(fmi3GetDoubleStatus)
+#define fmi3GetInt32Status               fmi3FullName(fmi3GetInt32Status)
+#define fmi3GetBoolStatus                fmi3FullName(fmi3GetBoolStatus)
 #define fmi3GetStringStatus              fmi3FullName(fmi3GetStringStatus)
 
 /* Version number */
@@ -192,15 +208,32 @@ FMI3_Export fmi3TerminateTYPE               fmi3Terminate;
 FMI3_Export fmi3ResetTYPE                   fmi3Reset;
 
 /* Getting and setting variables values */
-FMI3_Export fmi3GetRealTYPE    fmi3GetReal;
-FMI3_Export fmi3GetIntegerTYPE fmi3GetInteger;
-FMI3_Export fmi3GetBooleanTYPE fmi3GetBoolean;
+FMI3_Export fmi3GetFloatTYPE   fmi3GetFloat;
+FMI3_Export fmi3GetDoubleTYPE  fmi3GetDouble;
+FMI3_Export fmi3GetInt8TYPE    fmi3GetInt8;
+FMI3_Export fmi3GetUInt8TYPE   fmi3GetUInt8;
+FMI3_Export fmi3GetInt16TYPE   fmi3GetInt16;
+FMI3_Export fmi3GetUInt16TYPE  fmi3GetUInt16;
+FMI3_Export fmi3GetInt32TYPE   fmi3GetInt32;
+FMI3_Export fmi3GetUInt32TYPE  fmi3GetUInt32;
+FMI3_Export fmi3GetInt64TYPE   fmi3GetInt64;
+FMI3_Export fmi3GetUInt64TYPE  fmi3GetUInt64;
+FMI3_Export fmi3GetBoolTYPE    fmi3GetBool;
 FMI3_Export fmi3GetStringTYPE  fmi3GetString;
 FMI3_Export fmi3GetBinaryTYPE  fmi3GetBinary;
-
-FMI3_Export fmi3SetRealTYPE    fmi3SetReal;
-FMI3_Export fmi3SetIntegerTYPE fmi3SetInteger;
-FMI3_Export fmi3SetBooleanTYPE fmi3SetBoolean;
+FMI3_Export fmi3SetFloatTYPE   fmi3SetFloat;
+FMI3_Export fmi3SetDoubleTYPE  fmi3SetDouble;
+FMI3_Export fmi3SetInt8TYPE    fmi3SetInt8;
+FMI3_Export fmi3SetUInt8TYPE   fmi3SetUInt8;
+FMI3_Export fmi3SetInt16TYPE   fmi3SetInt16;
+FMI3_Export fmi3SetUInt16TYPE  fmi3SetUInt16;
+FMI3_Export fmi3SetInt32TYPE   fmi3SetInt32;
+FMI3_Export fmi3SetUInt32TYPE  fmi3SetUInt32;
+FMI3_Export fmi3SetInt64TYPE   fmi3SetInt64;
+FMI3_Export fmi3SetUInt64TYPE  fmi3SetUInt64;
+FMI3_Export fmi3SetBoolTYPE    fmi3SetBool;
+FMI3_Export fmi3SetStringTYPE  fmi3SetString;
+FMI3_Export fmi3SetBinaryTYPE  fmi3SetBinary;
 FMI3_Export fmi3SetStringTYPE  fmi3SetString;
 FMI3_Export fmi3SetBinaryTYPE  fmi3SetBinary;
 
@@ -246,17 +279,17 @@ Functions for FMI3 for Co-Simulation
 ****************************************************/
 
 /* Simulating the slave */
-FMI3_Export fmi3SetRealInputDerivativesTYPE  fmi3SetRealInputDerivatives;
-FMI3_Export fmi3GetRealOutputDerivativesTYPE fmi3GetRealOutputDerivatives;
+FMI3_Export fmi3SetInputDerivativesTYPE  fmi3SetInputDerivatives;
+FMI3_Export fmi3GetOutputDerivativesTYPE fmi3GetOutputDerivatives;
 
 FMI3_Export fmi3DoStepTYPE     fmi3DoStep;
 FMI3_Export fmi3CancelStepTYPE fmi3CancelStep;
 
 /* Inquire slave status */
 FMI3_Export fmi3GetStatusTYPE        fmi3GetStatus;
-FMI3_Export fmi3GetRealStatusTYPE    fmi3GetRealStatus;
-FMI3_Export fmi3GetIntegerStatusTYPE fmi3GetIntegerStatus;
-FMI3_Export fmi3GetBooleanStatusTYPE fmi3GetBooleanStatus;
+FMI3_Export fmi3GetDoubleStatusTYPE  fmi3GetDoubleStatus;
+FMI3_Export fmi3GetInt32StatusTYPE   fmi3GetInt32Status;
+FMI3_Export fmi3GetBoolStatusTYPE    fmi3GetBoolStatus;
 FMI3_Export fmi3GetStringStatusTYPE  fmi3GetStringStatus;
 
 #ifdef __cplusplus

@@ -59,9 +59,17 @@ fmi3Component           : an opaque object pointer
 fmi3ComponentEnvironment: an opaque object pointer
 fmi3FMUstate            : an opaque object pointer
 fmi3ValueReference      : value handle type
-fmi3Real                : double precision floating-point data type
-fmi3Integer             : basic signed integer data type
-fmi3Boolean             : datatype to be used with fmi3True and fmi3False
+fmi3Float               : single precision floating point (32-bit)
+fmi3Double              : double precision floating point (64-bit)
+fmi3Int8                : 8-bit signed integer
+fmi3UInt8               : 8-bit unsigned integer
+fmi3Int16               : 16-bit signed integer
+fmi3UInt16              : 16-bit unsigned integer
+fmi3Int32               : 32-bit signed integer
+fmi3UInt32              : 32-bit unsigned integer
+fmi3Int64               : 64-bit signed integer
+fmi3UInt64              : 64-bit unsigned integer
+fmi3Bool                : datatype to be used with fmi3True and fmi3False
 fmi3Char                : character data type (size of one character)
 fmi3String              : a pointer to a vector of fmi3Char characters
                           ('\0' terminated, UTF8 encoded)
@@ -86,19 +94,27 @@ typedef unsigned int    fmi3ValueReference;        /* Handle to the value of a v
 /* end::ValueReference[] */
 
 /* tag::VariableTypes[] */
-typedef double          fmi3Real;     /* Data type for floating point real numbers */
-typedef int             fmi3Integer;  /* Data type for signed integer numbers */
-typedef int             fmi3Boolean;  /* Data type for Boolean numbers
+typedef    float        fmi3Float;    /* single precision floating point (32-bit) */
+typedef   double        fmi3Double;   /* double precision floating point (64-bit) */
+typedef   int8_t        fmi3Int8;     /* 8-bit signed integer */
+typedef  uint8_t        fmi3UInt8;    /* 8-bit unsigned integer */
+typedef  int16_t        fmi3Int16;    /* 16-bit signed integer */
+typedef uint16_t        fmi3UInt16;   /* 16-bit unsigned integer */
+typedef  int16_t        fmi3Int32;    /* 32-bit signed integer */
+typedef uint16_t        fmi3UInt32;   /* 32-bit unsigned integer */
+typedef  int16_t        fmi3Int64;    /* 64-bit signed integer */
+typedef uint16_t        fmi3UInt64;   /* 64-bit unsigned integer */
+typedef      int        fmi3Bool;     /* Data type for Boolean numbers
                                          (only two values: fmi3False, fmi3True) */
 typedef char            fmi3Char;     /* Data type for one character */
-typedef const fmi3Char* fmi3String;   /* Data type for character strings 
-					 ('\0' terminated, UTF8 encoded) */
+typedef const fmi3Char* fmi3String;   /* Data type for character strings
+                                         ('\0' terminated, UTF8 encoded) */
 typedef char            fmi3Byte;     /* Smallest addressable unit of the machine
-					 (typically one byte) */
+                                         (typically one byte) */
 typedef const fmi3Byte* fmi3Binary;   /* Data type for binary data
                                          (out-of-band length terminated) */
 
-/* Values for fmi3Boolean  */
+/* Values for fmi3Bool */
 #define fmi3True  1
 #define fmi3False 0
 /* end::VariableTypes[] */
