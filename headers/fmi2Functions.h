@@ -100,11 +100,13 @@
                     meeting with additional improvements (by Martin Otter, DLR).
    - Dec. 3 , 2008: First version by Martin Otter (DLR) and Hans Olsson (Dynasim).
 
+
    Copyright (C) 2008-2011 MODELISAR consortium,
-                 2012-2013 Modelica Association Project "FMI"
+                 2012-2018 Modelica Association Project "FMI"
                  All rights reserved.
-   This file is licensed by the copyright holders under the BSD 2-Clause License
-   (http://www.opensource.org/licenses/bsd-license.html):
+
+   This file is licensed by the copyright holders under the 2-Clause BSD License
+   (https://opensource.org/licenses/BSD-2-Clause):
 
    ----------------------------------------------------------------------------
    Redistribution and use in source and binary forms, with or without
@@ -112,12 +114,10 @@
 
    - Redistributions of source code must retain the above copyright notice,
      this list of conditions and the following disclaimer.
+
    - Redistributions in binary form must reproduce the above copyright notice,
      this list of conditions and the following disclaimer in the documentation
      and/or other materials provided with the distribution.
-   - Neither the name of the copyright holders nor the names of its
-     contributors may be used to endorse or promote products derived
-     from this software without specific prior written permission.
 
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -131,13 +131,6 @@
    OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
    ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
    ----------------------------------------------------------------------------
-
-   with the extension:
-
-   You may distribute or publicly perform any modification only under the
-   terms of this license.
-   (Note, this means that if you distribute a modified file,
-    the modified file must also be provided under this license).
 */
 
 #ifdef __cplusplus
