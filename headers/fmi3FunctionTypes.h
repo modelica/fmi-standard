@@ -122,7 +122,7 @@ typedef struct {
     fmi3Boolean nominalsOfContinuousStatesChanged;
     fmi3Boolean valuesOfContinuousStatesChanged;
     fmi3Boolean nextEventTimeDefined;
-    fmi3Double  nextEventTime;  /* next event if nextEventTimeDefined=fmi3True */
+    fmi3Float64 nextEventTime;  /* next event if nextEventTimeDefined=fmi3True */
 } fmi3EventInfo;
 /* end::EventInfo[] */
 
@@ -172,10 +172,10 @@ typedef void fmi3FreeInstanceTYPE(fmi3Component c);
 /* tag::SetupExperiment[] */
 typedef fmi3Status fmi3SetupExperimentTYPE(fmi3Component c,
                                            fmi3Boolean toleranceDefined,
-                                           fmi3Double tolerance,
-                                           fmi3Double startTime,
+                                           fmi3Float64 tolerance,
+                                           fmi3Float64 startTime,
                                            fmi3Boolean stopTimeDefined,
-                                           fmi3Double stopTime);
+                                           fmi3Float64 stopTime);
 /* end::SetupExperiment[] */
 
 /* tag::EnterInitializationMode[] */
@@ -196,13 +196,13 @@ typedef fmi3Status fmi3ResetTYPE(fmi3Component c);
 
 /* Getting and setting variable values */
 /* tag::Getters[] */
-typedef fmi3Status fmi3GetFloatTYPE  (fmi3Component c,
+typedef fmi3Status fmi3GetFloat32TYPE(fmi3Component c,
                                       const fmi3ValueReference vr[], size_t nvr,
-                                      fmi3Float value[], size_t nValues);
+                                      fmi3Float32 value[], size_t nValues);
 
-typedef fmi3Status fmi3GetDoubleTYPE (fmi3Component c,
+typedef fmi3Status fmi3GetFloat64TYPE(fmi3Component c,
                                       const fmi3ValueReference vr[], size_t nvr,
-                                      fmi3Double value[], size_t nValues);
+                                      fmi3Float64 value[], size_t nValues);
 
 typedef fmi3Status fmi3GetInt8TYPE   (fmi3Component c,
                                       const fmi3ValueReference vr[], size_t nvr,
@@ -250,13 +250,13 @@ typedef fmi3Status fmi3GetBinaryTYPE (fmi3Component c,
 /* end::Getters[] */
 
 /* tag::Setters[] */
-typedef fmi3Status fmi3SetFloatTYPE  (fmi3Component c,
+typedef fmi3Status fmi3SetFloat32TYPE(fmi3Component c,
                                       const fmi3ValueReference vr[], size_t nvr,
-                                      const fmi3Float value[], size_t nValues);
+                                      const fmi3Float32 value[], size_t nValues);
 
-typedef fmi3Status fmi3SetDoubleTYPE (fmi3Component c,
+typedef fmi3Status fmi3SetFloat64TYPE(fmi3Component c,
                                       const fmi3ValueReference vr[], size_t nvr,
-                                      const fmi3Double value[], size_t nValues);
+                                      const fmi3Float64 value[], size_t nValues);
 
 typedef fmi3Status fmi3SetInt8TYPE   (fmi3Component c,
                                       const fmi3ValueReference vr[], size_t nvr,
@@ -353,9 +353,9 @@ typedef fmi3Status fmi3GetDirectionalDerivativeTYPE(fmi3Component c,
                                                     size_t nUnknown,
                                                     const fmi3ValueReference vrKnown[],
                                                     size_t nKnown,
-                                                    const fmi3Double dvKnown[],
+                                                    const fmi3Float64 dvKnown[],
                                                     size_t nDvKnown,
-                                                    fmi3Double dvUnknown[],
+                                                    fmi3Float64 dvUnknown[],
                                                     size_t nDvUnknown);
 /* end::GetDirectionalDerivative[] */
 
@@ -388,12 +388,12 @@ typedef fmi3Status fmi3CompletedIntegratorStepTYPE(fmi3Component c,
 /* Providing independent variables and re-initialization of caching */
 
 /* tag::SetTime[] */
-typedef fmi3Status fmi3SetTimeTYPE(fmi3Component c, fmi3Double time);
+typedef fmi3Status fmi3SetTimeTYPE(fmi3Component c, fmi3Float64 time);
 /* end::SetTime[] */
 
 /* tag::SetContinuousStates[] */
 typedef fmi3Status fmi3SetContinuousStatesTYPE(fmi3Component c,
-                                               const fmi3Double x[],
+                                               const fmi3Float64 x[],
                                                size_t nx);
 /* end::SetContinuousStates[] */
 
@@ -401,23 +401,23 @@ typedef fmi3Status fmi3SetContinuousStatesTYPE(fmi3Component c,
 
 /* tag::GetDerivatives[] */
 typedef fmi3Status fmi3GetDerivativesTYPE(fmi3Component c,
-                                          fmi3Double derivatives[],
+                                          fmi3Float64 derivatives[],
                                           size_t nx);
 /* end::GetDerivatives[] */
 
 /* tag::GetEventIndicators[] */
 typedef fmi3Status fmi3GetEventIndicatorsTYPE(fmi3Component c,
-                                              fmi3Double eventIndicators[],
+                                              fmi3Float64 eventIndicators[],
                                               size_t ni);
 /* end::GetEventIndicators[] */
 
 /* tag::GetContinuousStates[] */
-typedef fmi3Status fmi3GetContinuousStatesTYPE(fmi3Component c, fmi3Double x[], size_t nx);
+typedef fmi3Status fmi3GetContinuousStatesTYPE(fmi3Component c, fmi3Float64 x[], size_t nx);
 /* end::GetContinuousStates[] */
 
 /* tag::GetNominalsOfContinuousStates[] */
 typedef fmi3Status fmi3GetNominalsOfContinuousStatesTYPE(fmi3Component c,
-                                                         fmi3Double x_nominal[],
+                                                         fmi3Float64 x_nominal[],
                                                          size_t nx);
 /* end::GetNominalsOfContinuousStates[] */
 
@@ -440,7 +440,7 @@ typedef fmi3Status fmi3SetInputDerivativesTYPE(fmi3Component c,
                                                const fmi3ValueReference vr[],
                                                size_t nvr,
                                                const fmi3Int32 order[],
-                                               const fmi3Double value[],
+                                               const fmi3Float64 value[],
                                                size_t nValues);
 /* end::SetInputDerivatives[] */
 
@@ -449,14 +449,14 @@ typedef fmi3Status fmi3GetOutputDerivativesTYPE(fmi3Component c,
                                                 const fmi3ValueReference vr[],
                                                 size_t nvr,
                                                 const fmi3Int32 order[],
-                                                fmi3Double value[],
+                                                fmi3Float64 value[],
                                                 size_t nValues);
 /* end::GetOutputDerivatives[] */
 
 /* tag::DoStep[] */
 typedef fmi3Status fmi3DoStepTYPE(fmi3Component c,
-                                  fmi3Double currentCommunicationPoint,
-                                  fmi3Double communicationStepSize,
+                                  fmi3Float64 currentCommunicationPoint,
+                                  fmi3Float64 communicationStepSize,
                                   fmi3Boolean noSetFMUStatePriorToCurrentPoint);
 /* end::DoStep[] */
 
@@ -473,7 +473,7 @@ typedef fmi3Status fmi3GetStatusTYPE       (fmi3Component c,
 
 typedef fmi3Status fmi3GetDoubleStatusTYPE (fmi3Component c,
                                             const fmi3StatusKind s,
-                                            fmi3Double* value);
+                                            fmi3Float64* value);
 
 typedef fmi3Status fmi3GetInt32StatusTYPE  (fmi3Component c,
                                             const fmi3StatusKind s,

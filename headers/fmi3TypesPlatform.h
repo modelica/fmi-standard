@@ -53,8 +53,8 @@ fmi3Component           : an opaque object pointer
 fmi3ComponentEnvironment: an opaque object pointer
 fmi3FMUstate            : an opaque object pointer
 fmi3ValueReference      : value handle type
-fmi3Float               : single precision floating point (32-bit)
-fmi3Double              : double precision floating point (64-bit)
+fmi3Float32             : single precision floating point (32-bit)
+fmi3Float64             : double precision floating point (64-bit)
 fmi3Int8                : 8-bit signed integer
 fmi3UInt8               : 8-bit unsigned integer
 fmi3Int16               : 16-bit signed integer
@@ -88,8 +88,8 @@ typedef unsigned int    fmi3ValueReference;        /* Handle to the value of a v
 /* end::ValueReference[] */
 
 /* tag::VariableTypes[] */
-typedef float           fmi3Float;    /* Single precision floating point (32-bit) */
-typedef double          fmi3Double;   /* Double precision floating point (64-bit) */
+typedef float           fmi3Float32;  /* Single precision floating point (32-bit) */
+typedef double          fmi3Float64;  /* Double precision floating point (64-bit) */
 typedef   int8_t        fmi3Int8;     /* 8-bit signed integer */
 typedef  uint8_t        fmi3UInt8;    /* 8-bit unsigned integer */
 typedef  int16_t        fmi3Int16;    /* 16-bit signed integer */
