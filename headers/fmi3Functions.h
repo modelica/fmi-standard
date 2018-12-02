@@ -199,8 +199,8 @@ FMI3_Export fmi3TerminateTYPE               fmi3Terminate;
 FMI3_Export fmi3ResetTYPE                   fmi3Reset;
 
 /* Getting and setting variables values */
-FMI3_Export fmi3GetFloatTYPE   fmi3GetFloat;
-FMI3_Export fmi3GetDoubleTYPE  fmi3GetDouble;
+FMI3_Export fmi3GetFloat32TYPE fmi3GetFloat32;
+FMI3_Export fmi3GetFloat64TYPE fmi3GetFloat64;
 FMI3_Export fmi3GetInt8TYPE    fmi3GetInt8;
 FMI3_Export fmi3GetUInt8TYPE   fmi3GetUInt8;
 FMI3_Export fmi3GetInt16TYPE   fmi3GetInt16;
@@ -212,8 +212,8 @@ FMI3_Export fmi3GetUInt64TYPE  fmi3GetUInt64;
 FMI3_Export fmi3GetBooleanTYPE fmi3GetBoolean;
 FMI3_Export fmi3GetStringTYPE  fmi3GetString;
 FMI3_Export fmi3GetBinaryTYPE  fmi3GetBinary;
-FMI3_Export fmi3SetFloatTYPE   fmi3SetFloat;
-FMI3_Export fmi3SetDoubleTYPE  fmi3SetDouble;
+FMI3_Export fmi3SetFloat32TYPE fmi3SetFloat32;
+FMI3_Export fmi3SetFloat64TYPE fmi3SetFloat64;
 FMI3_Export fmi3SetInt8TYPE    fmi3SetInt8;
 FMI3_Export fmi3SetUInt8TYPE   fmi3SetUInt8;
 FMI3_Export fmi3SetInt16TYPE   fmi3SetInt16;
