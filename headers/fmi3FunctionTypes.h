@@ -107,11 +107,11 @@ typedef void  (*fmi3StepFinished)           (fmi3ComponentEnvironment componentE
                                              fmi3Status status);
 
 typedef struct {
-    const fmi3CallbackLogger         logger;
-    const fmi3CallbackAllocateMemory allocateMemory;
-    const fmi3CallbackFreeMemory     freeMemory;
-    const fmi3StepFinished           stepFinished;
-    const fmi3ComponentEnvironment   componentEnvironment;
+    fmi3CallbackLogger         logger;
+    fmi3CallbackAllocateMemory allocateMemory;
+    fmi3CallbackFreeMemory     freeMemory;
+    fmi3StepFinished           stepFinished;
+    fmi3ComponentEnvironment   componentEnvironment;
 } fmi3CallbackFunctions;
 /* end::CallbackFunctions[] */
 
