@@ -170,7 +170,7 @@ Functions for FMI3 for Co-Simulation
 #define fmi3DoStep                       fmi3FullName(fmi3DoStep)
 #define fmi3CancelStep                   fmi3FullName(fmi3CancelStep)
 #define fmi3GetStatus                    fmi3FullName(fmi3GetStatus)
-#define fmi3GetDoubleStatus              fmi3FullName(fmi3GetDoubleStatus)
+#define fmi3GetFloat64Status             fmi3FullName(fmi3GetFloat64Status)
 #define fmi3GetInt32Status               fmi3FullName(fmi3GetInt32Status)
 #define fmi3GetBooleanStatus             fmi3FullName(fmi3GetBooleanStatus)
 #define fmi3GetStringStatus              fmi3FullName(fmi3GetStringStatus)
@@ -278,7 +278,7 @@ FMI3_Export fmi3CancelStepTYPE fmi3CancelStep;
 
 /* Inquire slave status */
 FMI3_Export fmi3GetStatusTYPE        fmi3GetStatus;
-FMI3_Export fmi3GetDoubleStatusTYPE  fmi3GetDoubleStatus;
+FMI3_Export fmi3GetFloat64StatusTYPE fmi3GetFloat64Status;
 FMI3_Export fmi3GetInt32StatusTYPE   fmi3GetInt32Status;
 FMI3_Export fmi3GetBooleanStatusTYPE fmi3GetBooleanStatus;
 FMI3_Export fmi3GetStringStatusTYPE  fmi3GetStringStatus;

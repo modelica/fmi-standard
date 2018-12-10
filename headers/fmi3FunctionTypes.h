@@ -471,7 +471,7 @@ typedef fmi3Status fmi3GetStatusTYPE       (fmi3Component c,
                                             const fmi3StatusKind s,
                                             fmi3Status* value);
 
-typedef fmi3Status fmi3GetFloat64StatusTYPE (fmi3Component c,
+typedef fmi3Status fmi3GetFloat64StatusTYPE(fmi3Component c,
                                             const fmi3StatusKind s,
                                             fmi3Float64* value);
 
