@@ -85,7 +85,7 @@ The master can try to repeat the step with other input values and/or a different
 _[The master should stop the simulation run immediatlely.]_ See section 2.1.3 for details. +
 `fmi3Pending` - this status is returned if the slave executes the function asynchronously.
 That means the slave starts the computation but returns immediately.
-The master has to call `fmi3GetStatus(...,fmi3DoStep,...)` to find out if the slave is done.
+The master has to call `fmi3GetDoStepPendingStatus` to find out if the slave is done.
 An alternative is to wait until the callback function `fmi3StepFinished` is called by the slave.
 `fmi3CancelStep` can be called to cancel the current computation.
 It is not allowed to call any other function during a pending `fmi3DoStep`.
@@ -108,49 +108,21 @@ Status information is retrieved from the slave by the following functions:
 
 [source, C]
 ----
-include::../headers/fmi3FunctionTypes.h[tags=GetStatus]
+include::../headers/fmi3FunctionTypes.h[tags=GetDoStepPendingStatus]
 ----
 
-Informs the master about the actual status of the simulation run.
-Which status information is to be returned is specified by the argument `fmi3StatusKind`.
-It depends on the capabilities of the slave which status information can be given by the slave (see 4.3.1).
-If a status is required which cannot be retrieved by the slave it returns `fmi3Discard`.
+Can be called when the `fmi3DoStep` function returned `fmi3Pending`.
+`status` is the result of the asynchronously executed `fmi3DoStep` call or `fmi3Pending` if the computation is not finished.
+`message` is a pointer to string which informs about the status of the currently running asynchronous `fmi3DoStep` computation.
 
 [source, C]
 ----
-include::../headers/fmi3FunctionTypes.h[tags=StatusKind]
+include::../headers/fmi3FunctionTypes.h[tags=GetDoStepDiscardedStatus]
 ----
 
-Defines which status is inquired.
-
-The following status information can be retrieved from a slave:
-
-[options="header", cols="3,2,7"]
-|====
-| Status |Type of retrieved value |Description
-
-|`fmi3DoStepStatus`
-|`fmi3Status`
-|Can be called when the `fmi3DoStep` function returned `fmi3Pending`.
-The function delivers `fmi3Pending` if the computation is not finished.
-Otherwise the function returns the result of the asynchronously executed `fmi3DoStep` call.
-
-|`fmi3PendingStatus`
-|`fmi3String`
-|Can be called when the `fmi3DoStep` function returned `fmi3Pending`.
-The function delivers a string which informs about the status of the currently running asynchronous `fmi3DoStep` computation.
-
-|`fmi3LastSuccessfulTime`
-|`fmi3Real`
-|Returns the end time of the last successfully completed communication step.
 Can be called after `fmi3DoStep` returned `fmi3Discard`.
-
-|`fmi3Terminated`
-|`fmi3Boolean`
-|Returns true, if the slave wants to terminate the simulation.
-Can be called after `fmi3DoStep` returned `fmi3Discard`.
-Use `fmi3LastSuccessfulTime` to determine the time instant at which the slave terminated.
-|====
+`terminate` is true if the slave wants to terminate the simulation.
+`lastSuccessfulTime` is the time instant at which the slave stopped the `fmi3DoStep` call.
 
 ==== State Machine of Calling Sequence from Master to Slave
 
@@ -252,11 +224,6 @@ The allowed function calls in the respective states are summarized in the follow
 |fmi3GetRealOutputDerivatives {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |x |  |8 |x |x |7 |
 |fmi3DoStep                   {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |x |  |  |  |  |  |
 |fmi3CancelStep               {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |  |x |  |  |  |  |
-|fmi3GetStatus                {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |x |x |x |  |x |  |
-|fmi3GetRealStatus            {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |x |x |x |  |x |  |
-|fmi3GetIntegerStatus         {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |x |x |x |  |x |  |
-|fmi3GetBooleanStatus         {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |x |x |x |  |x |  |
-|fmi3GetStringStatus          {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |x |x |x |  |x |  |
 |====
 
 *x* means: call is allowed in the corresponding state +
@@ -341,7 +308,6 @@ tc = startTime; //Current master time
 
 while ((tc < stopTime) && (status == fmi3OK))
 {
-
     //retrieve outputs
     s1_fmi3GetReal(s1, ..., 1, &y1);
     s2_fmi3GetReal(s2, ..., 1, &y2);
@@ -354,7 +320,7 @@ while ((tc < stopTime) && (status == fmi3OK))
     status = s1_fmi3DoStep(s1, tc, h, fmi3True);
     switch (status) {
     case fmi3Discard:
-      fmi3GetBooleanStatus(s1, fmi3Terminated, &boolVal);
+      s1_fmi3GetDoStepDiscardedStatus(s1, &boolVal, &lastSuccessfulTime);
       if (boolVal == fmi3True)
             printf("Slave s1 wants to terminate simulation.");
     case fmi3Error:
