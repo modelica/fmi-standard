@@ -72,15 +72,6 @@ typedef enum {
 } fmi3Type;
 /* end::Type[] */
 
-/* tag::StatusKind[] */
-typedef enum {
-    fmi3DoStepStatus,
-    fmi3PendingStatus,
-    fmi3LastSuccessfulTime,
-    fmi3Terminated
-} fmi3StatusKind;
-/* end::StatusKind[] */
-
 /* tag::DependencyKind[] */
 typedef enum {
     /* fmi3Independent = 0, not needed but reserved for future use */
@@ -466,27 +457,17 @@ typedef fmi3Status fmi3CancelStepTYPE(fmi3Component c);
 
 /* Inquire slave status */
 
-/* tag::GetStatus[] */
-typedef fmi3Status fmi3GetStatusTYPE       (fmi3Component c,
-                                            const fmi3StatusKind s,
-                                            fmi3Status* value);
+/* tag::GetDoStepPendingStatus[] */
+typedef fmi3Status fmi3GetDoStepPendingStatusTYPE(fmi3Component c,
+                                                  fmi3Status* status,
+                                                  fmi3String* message);
+/* end::GetDoStepPendingStatus[] */
 
-typedef fmi3Status fmi3GetFloat64StatusTYPE(fmi3Component c,
-                                            const fmi3StatusKind s,
-                                            fmi3Float64* value);
-
-typedef fmi3Status fmi3GetInt32StatusTYPE  (fmi3Component c,
-                                            const fmi3StatusKind s,
-                                            fmi3Int32* value);
-
-typedef fmi3Status fmi3GetBooleanStatusTYPE(fmi3Component c,
-                                            const fmi3StatusKind s,
-                                            fmi3Boolean* value);
-
-typedef fmi3Status fmi3GetStringStatusTYPE (fmi3Component c,
-                                            const fmi3StatusKind s,
-                                            fmi3String* value);
-/* end::GetStatus[] */
+/* tag::GetDoStepDiscardedStatus[] */
+typedef fmi3Status fmi3GetDoStepDiscardedStatusTYPE(fmi3Component c,
+                                                    fmi3Boolean* terminate,
+                                                    fmi3Float64* lastSuccessfulTime);
+/* end::GetDoStepDiscardedStatus[] */
 
 #ifdef __cplusplus
 }  /* end of extern "C" { */

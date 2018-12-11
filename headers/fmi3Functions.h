@@ -169,11 +169,8 @@ Functions for FMI3 for Co-Simulation
 #define fmi3GetOutputDerivatives         fmi3FullName(fmi3GetOutputDerivatives)
 #define fmi3DoStep                       fmi3FullName(fmi3DoStep)
 #define fmi3CancelStep                   fmi3FullName(fmi3CancelStep)
-#define fmi3GetStatus                    fmi3FullName(fmi3GetStatus)
-#define fmi3GetFloat64Status             fmi3FullName(fmi3GetFloat64Status)
-#define fmi3GetInt32Status               fmi3FullName(fmi3GetInt32Status)
-#define fmi3GetBooleanStatus             fmi3FullName(fmi3GetBooleanStatus)
-#define fmi3GetStringStatus              fmi3FullName(fmi3GetStringStatus)
+#define fmi3GetDoStepPendingStatus       fmi3FullName(fmi3GetDoStepPendingStatus)
+#define fmi3GetDoStepDiscardedStatus     fmi3FullName(fmi3GetDoStepDiscardedStatus)
 
 /* Version number */
 #define fmi3Version "3.0-wg003.3"
@@ -277,11 +274,8 @@ FMI3_Export fmi3DoStepTYPE     fmi3DoStep;
 FMI3_Export fmi3CancelStepTYPE fmi3CancelStep;
 
 /* Inquire slave status */
-FMI3_Export fmi3GetStatusTYPE        fmi3GetStatus;
-FMI3_Export fmi3GetFloat64StatusTYPE fmi3GetFloat64Status;
-FMI3_Export fmi3GetInt32StatusTYPE   fmi3GetInt32Status;
-FMI3_Export fmi3GetBooleanStatusTYPE fmi3GetBooleanStatus;
-FMI3_Export fmi3GetStringStatusTYPE  fmi3GetStringStatus;
+FMI3_Export fmi3GetDoStepPendingStatusTYPE   fmi3GetDoStepPendingStatus;
+FMI3_Export fmi3GetDoStepDiscardedStatusTYPE fmi3GetDoStepDiscardedStatus;
 
 #ifdef __cplusplus
 }  /* end of extern "C" { */
