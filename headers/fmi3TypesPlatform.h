@@ -42,34 +42,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /* Include the integer type definitions */
 #include <stdint.h>
 
-/* Platform (unique identification of this header file) */
-#define fmi3TypesPlatform "default"
-
-/*
-Type definitions of variables passed as arguments
-Version "default" means:
-
-fmi3Component           : an opaque object pointer
-fmi3ComponentEnvironment: an opaque object pointer
-fmi3FMUstate            : an opaque object pointer
-fmi3ValueReference      : value handle type
-fmi3Float32             : single precision floating point (32-bit)
-fmi3Float64             : double precision floating point (64-bit)
-fmi3Int8                : 8-bit signed integer
-fmi3UInt8               : 8-bit unsigned integer
-fmi3Int16               : 16-bit signed integer
-fmi3UInt16              : 16-bit unsigned integer
-fmi3Int32               : 32-bit signed integer
-fmi3UInt32              : 32-bit unsigned integer
-fmi3Int64               : 64-bit signed integer
-fmi3UInt64              : 64-bit unsigned integer
-fmi3Boolean             : datatype to be used with fmi3True and fmi3False
-fmi3Char                : character data type (size of one character)
-fmi3String              : a pointer to a vector of fmi3Char characters
-                          ('\0' terminated, UTF8 encoded)
-fmi3Byte                : smallest addressable unit of the machine (typically one byte)
-fmi3Binary              : a pointer to a vector of fmi3Byte bytes (out-of-band length terminated)
-*/
 
 /* tag::Component[] */
 typedef void*           fmi3Component;             /* Pointer to FMU instance */

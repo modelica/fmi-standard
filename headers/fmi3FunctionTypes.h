@@ -128,10 +128,7 @@ typedef struct {
 Types for Common Functions
 ****************************************************/
 
-/* Inquire version numbers of header files and setting logging status */
-/* tag::GetTypesPlatform[] */
-typedef const char* fmi3GetTypesPlatformTYPE(void);
-/* end::GetTypesPlatform[] */
+/* Inquire version numbers and setting logging status */
 
 /* tag::GetVersion[] */
 typedef const char* fmi3GetVersionTYPE(void);
