@@ -98,7 +98,6 @@ Macros to construct the real function name (prepend function name by FMI3_FUNCTI
 /***************************************************
 Common Functions
 ****************************************************/
-#define fmi3GetTypesPlatform         fmi3FullName(fmi3GetTypesPlatform)
 #define fmi3GetVersion               fmi3FullName(fmi3GetVersion)
 #define fmi3SetDebugLogging          fmi3FullName(fmi3SetDebugLogging)
 #define fmi3Instantiate              fmi3FullName(fmi3Instantiate)
@@ -179,8 +178,7 @@ Functions for FMI3 for Co-Simulation
 Common Functions
 ****************************************************/
 
-/* Inquire version numbers of header files */
-FMI3_Export fmi3GetTypesPlatformTYPE fmi3GetTypesPlatform;
+/* Inquire version numbers and set debug logging */
 FMI3_Export fmi3GetVersionTYPE       fmi3GetVersion;
 FMI3_Export fmi3SetDebugLoggingTYPE  fmi3SetDebugLogging;
 
