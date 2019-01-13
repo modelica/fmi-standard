@@ -143,13 +143,26 @@ Common Functions
 #define fmi3DeSerializeFMUstate      fmi3FullName(fmi3DeSerializeFMUstate)
 #define fmi3GetDirectionalDerivative fmi3FullName(fmi3GetDirectionalDerivative)
 
-/***************************************************
-Functions for FMI3 for Model Exchange
-****************************************************/
-
+/*FMI30 Events&Multirate start*/
+#define fmi3SetClock                      fmi3FullName(fmi3SetClock)
+#define fmi3GetClock                      fmi3FullName(fmi3GetClock)
+#define fmi3GetInterval	                  fmi3FullName(fmi3GetInterval)
+#define fmi3SetInterval	                  fmi3FullName(fmi3SetInterval)
 #define fmi3EnterEventMode                fmi3FullName(fmi3EnterEventMode)
 #define fmi3NewDiscreteStates             fmi3FullName(fmi3NewDiscreteStates)
 #define fmi3EnterContinuousTimeMode       fmi3FullName(fmi3EnterContinuousTimeMode)
+/*FMI30 Events&Multirate end*/
+
+
+
+/***************************************************
+Functions for FMI3 for Model Exchange
+****************************************************/
+/*FMI3 Events&Multirate start*/
+/*#define fmi3EnterEventMode                fmi3FullName(fmi3EnterEventMode)
+#define fmi3NewDiscreteStates             fmi3FullName(fmi3NewDiscreteStates)
+#define fmi3EnterContinuousTimeMode       fmi3FullName(fmi3EnterContinuousTimeMode)*/
+/*FMI3 Events&Multirate end*/
 #define fmi3CompletedIntegratorStep       fmi3FullName(fmi3CompletedIntegratorStep)
 #define fmi3SetTime                       fmi3FullName(fmi3SetTime)
 #define fmi3SetContinuousStates           fmi3FullName(fmi3SetContinuousStates)
@@ -167,12 +180,19 @@ Functions for FMI3 for Co-Simulation
 #define fmi3SetInputDerivatives          fmi3FullName(fmi3SetInputDerivatives)
 #define fmi3GetOutputDerivatives         fmi3FullName(fmi3GetOutputDerivatives)
 #define fmi3DoStep                       fmi3FullName(fmi3DoStep)
+/*FMI3 Events&Multirate start*/
+#define fmi3SetFeatureUse		         fmi3FullName(fmi3SetFeatureUse)
+#define fmi3ActivateModelPartition       fmi3FullName(fmi3ActivateModelPartition)
+#define fmi3BreakStep                    fmi3FullName(fmi3BreakStep)
+/*FMI3 Events&Multirate end*/
 #define fmi3CancelStep                   fmi3FullName(fmi3CancelStep)
 #define fmi3GetDoStepPendingStatus       fmi3FullName(fmi3GetDoStepPendingStatus)
 #define fmi3GetDoStepDiscardedStatus     fmi3FullName(fmi3GetDoStepDiscardedStatus)
 
 /* Version number */
+/*FMI3 Events&Multirate start*/
 #define fmi3Version "3.0-wg003.3"
+/*FMI3 Events&Multirate end */
 
 /***************************************************
 Common Functions
@@ -238,14 +258,26 @@ FMI3_Export fmi3DeSerializeFMUstateTYPE    fmi3DeSerializeFMUstate;
 /* Getting partial derivatives */
 FMI3_Export fmi3GetDirectionalDerivativeTYPE fmi3GetDirectionalDerivative;
 
+/* FMI3 Events&Multirate start */
+FMI3_Export fmi3SetClockTYPE 			  	fmi3SetClock;
+FMI3_Export fmi3GetClockTYPE 			  	fmi3GetClock;
+FMI3_Export fmi3GetIntervalTYPE 			fmi3GetInterval;
+FMI3_Export fmi3SetIntervalTYPE 			fmi3SetInterval;
+FMI3_Export fmi3EnterEventModeTYPE          fmi3EnterEventMode;
+FMI3_Export fmi3NewDiscreteStatesTYPE       fmi3NewDiscreteStates;
+FMI3_Export fmi3EnterContinuousTimeModeTYPE fmi3EnterContinuousTimeMode;
+/* FMI3 Events&Multirate end */
+ 
 /***************************************************
 Functions for FMI3 for Model Exchange
 ****************************************************/
 
+/*FMI30 Events&Multirate start*/
 /* Enter and exit the different modes */
-FMI3_Export fmi3EnterEventModeTYPE               fmi3EnterEventMode;
+/*FMI3_Export fmi3EnterEventModeTYPE               fmi3EnterEventMode;
 FMI3_Export fmi3NewDiscreteStatesTYPE            fmi3NewDiscreteStates;
-FMI3_Export fmi3EnterContinuousTimeModeTYPE      fmi3EnterContinuousTimeMode;
+FMI3_Export fmi3EnterContinuousTimeModeTYPE      fmi3EnterContinuousTimeMode;*/
+/*FMI30 Events&Multirate end*/
 FMI3_Export fmi3CompletedIntegratorStepTYPE      fmi3CompletedIntegratorStep;
 
 /* Providing independent variables and re-initialization of caching */
@@ -268,8 +300,16 @@ Functions for FMI3 for Co-Simulation
 FMI3_Export fmi3SetInputDerivativesTYPE  fmi3SetInputDerivatives;
 FMI3_Export fmi3GetOutputDerivativesTYPE fmi3GetOutputDerivatives;
 
-FMI3_Export fmi3DoStepTYPE     fmi3DoStep;
-FMI3_Export fmi3CancelStepTYPE fmi3CancelStep;
+/*FMI30 Events&Multirate start*/
+FMI3_Export fmi3SetFeatureUseTYPE     		   fmi3SetFeatureUse;
+FMI3_Export fmi3ActivateModelPartitionTYPE     fmi3ActivateModelPartition;
+/*FMI30 Events&Multirate end*/
+FMI3_Export fmi3DoStepTYPE      			   fmi3DoStep;
+
+/*FMI30 Events&Multirate start*/
+FMI3_Export fmi3BreakStepTYPE 				   fmi3BreakStep;
+/*FMI30 Events&Multirate end*/
+FMI3_Export fmi3CancelStepTYPE 				   fmi3CancelStep;
 
 /* Inquire slave status */
 FMI3_Export fmi3GetDoStepPendingStatusTYPE   fmi3GetDoStepPendingStatus;
