@@ -89,7 +89,7 @@ typedef enum {
 
 /* tag::IntermediateStepInfo[] */
 typedef struct{
-	fmi3Real	intermediateStepTime; 
+	fmi3Float64	intermediateStepTime; 
 	fmi3Boolean	eventOccurred;
 	fmi3Boolean	clocksTicked;
 	fmi3Boolean	breakStepResponse;
@@ -496,8 +496,11 @@ typedef fmi3Status fmi3DoStepTYPE(fmi3Component c,
 
 /* tag::CancelStep[] */
 typedef fmi3Status fmi3CancelStepTYPE(fmi3Component c);
-typedef fmi3Status fmi3BreakStepTYPE (fmi3Component c, fmi3Real breakTime);
 /* end::CancelStep[] */
+
+/* tag::fmi3BreakStep[] */
+typedef fmi3Status fmi3BreakStepTYPE (fmi3Component c, fmi3Float64 breakTime);
+/* end::fmi3BreakStep[] */
 
 /* Inquire slave status */
 
