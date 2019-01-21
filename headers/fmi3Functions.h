@@ -301,7 +301,6 @@ FMI3_Export fmi3SetInputDerivativesTYPE  fmi3SetInputDerivatives;
 FMI3_Export fmi3GetOutputDerivativesTYPE fmi3GetOutputDerivatives;
 
 /*FMI30 Events&Multirate start*/
-FMI3_Export fmi3SetFeatureUseTYPE     		   fmi3SetFeatureUse;
 FMI3_Export fmi3ActivateModelPartitionTYPE     fmi3ActivateModelPartition;
 /*FMI30 Events&Multirate end*/
 FMI3_Export fmi3DoStepTYPE      			   fmi3DoStep;

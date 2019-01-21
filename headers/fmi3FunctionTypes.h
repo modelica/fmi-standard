@@ -94,7 +94,7 @@ typedef struct{
 	fmi3Boolean	clocksTicked;
 	fmi3Boolean	breakStepResponse;
 	fmi3Boolean	intermediateOutputValueAvailable;
-	fmi3Boolean	canDoEarlyReturn
+	fmi3Boolean	canDoEarlyReturn;
 } fmi3IntermediateStepInfo;
 /* end::IntermediateStepInfo[] */
 
@@ -112,7 +112,9 @@ typedef void  (*fmi3CallbackFreeMemory)     (fmi3ComponentEnvironment componentE
 typedef void  (*fmi3StepFinished)           (fmi3ComponentEnvironment componentEnvironment,
                                              fmi3Status status);
 /*FMI3 Events&Multirate start*/
-fmi3Status (*fmi3IntermediateStepFinished) (fmi3ComponentEnvironment componentEnvironment, fmi3IntermediateStepInfo* intermediateStepInfo, fmi3Boolean* earlyReturn);
+typedef fmi3Status (*fmi3IntermediateStepFinished) (fmi3ComponentEnvironment componentEnvironment,
+	                                        fmi3IntermediateStepInfo* intermediateStepInfo, 
+	                                        fmi3Boolean* earlyReturn);
 typedef void 	  (*fmi3StartPreemptionLock)   ();
 typedef void 	  (*fmi3StopPreemptionLock)    ();
 /*FMI3 Events&Multirate end*/
@@ -174,7 +176,7 @@ typedef fmi3Component fmi3InstantiateTYPE(fmi3String  instanceName,
                                           fmi3String  fmuResourceLocation,
                                           const fmi3CallbackFunctions* functions,
                                           fmi3Boolean visible,
-                                          fmi3Boolean loggingOn
+                                          fmi3Boolean loggingOn,
 										  fmi3Boolean intermediateOutputValuesOn);
 /* end::Instantiate[] */
 
@@ -263,11 +265,11 @@ typedef fmi3Status fmi3GetBinaryTYPE (fmi3Component c,
                                       size_t size[], fmi3Binary value[], size_t nValues);
 /*FMI3 Events&Multirate start*/
 typedef fmi3Status fmi3GetClockTYPE	 (fmi3Component c, 
-									  const fmi3valueReference vr[], size_t nvr, 
+									  const fmi3ValueReference vr[], size_t nvr, 
 									  fmi3Boolean value[]);
 
 typedef fmi3Status fmi3GetIntervalTYPE(fmi3Component c, 
-									   const fmi3valueReference vr[], size_t nvr, 
+									   const fmi3ValueReference vr[], size_t nvr, 
 									   fmi3Float64 interval[]);
 /*FMI3 Events&Multirate end*/
 /* end::Getters[] */
@@ -325,12 +327,12 @@ typedef fmi3Status fmi3SetBinaryTYPE (fmi3Component c,
                                       const fmi3ValueReference vr[], size_t nvr,
                                       const size_t size[], const fmi3Binary value[], size_t nValues);
 /*FMI3 Events&Multirate start*/
-typedef fmiStatus fmi3SetClockTYPE 	 (fmi3Component c, 
+typedef fmi3Status fmi3SetClockTYPE 	 (fmi3Component c, 
 									  const fmi3ValueReference vr[], size_t nvr, 
 									  const fmi3Boolean value[], const fmi3Boolean *subactive);
 
-fmi3Status fmi3SetIntervalTYPE		 (fmi3Component c, 
-  									  const fmi3valueReference vr[], size_t nvr, 
+typedef fmi3Status fmi3SetIntervalTYPE		 (fmi3Component c, 
+  									  const fmi3ValueReference vr[], size_t nvr, 
 									  fmi3Float64 interval[]);
 /*FMI3 Events&Multirate end*/
 /* end::Setters[] */
@@ -490,9 +492,15 @@ typedef fmi3Status fmi3GetOutputDerivativesTYPE(fmi3Component c,
 typedef fmi3Status fmi3DoStepTYPE(fmi3Component c,
                                   fmi3Float64 currentCommunicationPoint,
                                   fmi3Float64 communicationStepSize,
-                                  fmi3Boolean noSetFMUStatePriorToCurrentPoint
+                                  fmi3Boolean noSetFMUStatePriorToCurrentPoint,
 								  fmi3Boolean* earlyReturn);
 /* end::DoStep[] */
+
+/* tag::ActivateModelPartition[] */
+typedef fmi3Status fmi3ActivateModelPartitionTYPE(fmi3Component  c,
+	fmi3ValueReference clockReference,
+	fmi3Float64  activationTime);
+/* end::ActivateModelPartition[] */
 
 /* tag::CancelStep[] */
 typedef fmi3Status fmi3CancelStepTYPE(fmi3Component c);
