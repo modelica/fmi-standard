@@ -1,4 +1,5 @@
 === FMI Description Schema
+:stem: latexmath
 
 All static information related to an FMU is stored in the text file `modelDescription.xml`
 in XML format.
@@ -527,6 +528,65 @@ _If `fmi3SetReal` or `fmi3SetInteger` is called violating the min/max attribute 
 _If an FMU defines min/max values for Integer and Enumerations (local and output variables), then the expected behavior of the FMU is that `fmi3GetInteger` returns values in the defined range._
 
 _If an FMU defines min/max values for Reals, then the expected behavior of the FMU is that `fmi3GetReal` returns values at the solution (accepted steps of the integrators) in the defined range with a certain uncertainty related to the tolerances of the numerical algorithms.]_
+
+==== Definition of Clocks
+The “ModelVariables” element consists of an ordered set of “Variable” elements (see figure above). A “Variable” represents one function type, like a real or integer variable. The schema definition is present in a separate file “fmiVariable.xsd”.  
+Clocks are integrated in the element “ModelVariables” of fmiModelDescription as a “Variable” element with the base type “fmi3Clock”.
+The attributes of “Variable” are extended with the attributes “previous” and “clockReference ”: 
+
+[cols="1,2"]
+|===
+|*Attribute-Name*
+|*Description*
+
+|clockReference
+|The additional optional attribute “clockReference” is used to define the clocks this variable is assigned to. Please note that this attribute can be used for all variable sub types with restrictions based on the clockType attribute. The “clockReference” holds the “valueReference” information of the variable that defines the clock.
+
+Clock (clockType = “STClock”): If present, the variable is a clocked variable associated uniquely with the clock referenced by valueReference and defined in element ModelVariables. It is not possible to associate more than one clock to a variable (based on clockReference).
+
+Communication Point Clock (clockType = “CPClock”): If present, the variable is associated with the clock referenced by valueReference and defined in element “ModelVariables”. It is possible to associate multiple clocks to a variable (based on clockReference). Variables that are assigned to a CommunicationPointClock are not necessarily “clocked”. Such variables can be Continuous-time or Discrete-time variables.
+If triggered clocks and inferred clocks are defined in the modelDescription.xml it is possible to define a tick relationship from a triggered clock to an aperiodic inferred clock. For aperiodic inferred clocks that do not have the clockType = “STClock” a list of valueReferences of triggered clocks of the same FMU can be provided. If a triggered clock of this valueReference list ticks the master has to create a tick for the acociated aperiodic infrerred clock. It is not allowed to combine triggered clocks with a periodic or strict periodic inferred clocks based on clockReference.
+
+|previous
+|If present, this variable is a discrete-time state xd. The value of xd at the previous super-dense time instant is stored in the variable with valueReference previous. The previous variable must have initial=exact and a start value defined.
+[For example, if there are 10 Variables and previous = 3 for Variable 8, then at a super-dense time instant Variable 8 holds the value of this discrete state at the actual time instant and Variable 3 holds the value of this state from the previous super-dense time instant.]
+
+|variability 
+|This new base type can only be used together with variability = “clock” defined via the variability attribute of the element “Variable”. It is not allowed to use the variability “clock” with other available variable base types (e.g. fmi3Real, fmi3Integer, …).
+
+|causality
+|The two clock variants can be defined via the attribute “causality” of the “Variable” element. The clock variant inferred clock is defined with causality = “inferred” and the clock variant triggered clock is defined with causality = “triggered”.
+
+|valueReference
+|Clocks are identified based on their valueReference, e.g. a clock is referenced in API-function calls with its valueReference information. Therefore the clock valueReference has to be unique for an FMU. Note that the attribute valueReference information of the clock variable is used to accociate the clock to other variables (see clockReference). It is therefore not possible to use clocks in FMI 3.0 arrays, since array elements do not have individual valueReferences. 
+
+|initial
+|For causality = “inferred” the value equals “exact” and it is required to provide a start value for describing the expected initial contidion of master clocks for that FMU. The master can choose different start values if it is not possible to fulfill the conditions in a simulation setup. For causality = triggered initial attribute value equals “calculated” and no start value is provided.
+
+|canHandleMultipleSetPerTimeInstant
+|This attribute should not be used for Co-Simulation – we do not change the current use of this flag.  Flag is meant for inputs, a clock is not an input
+|===
+
+Attribute “name” and “description” is used as described in element “Variable” 
+[#ModelVariables]
+image:images/new_variable_attributes.png[]
+
+*Clock Definitions*
+The variable sub type fmi3Clock provides additional attributes for defining clocks. 
+Clocks based on synchroneous theory are defined based on the mandatory attribute “clockType” with clockType = “STClock”. 
+For FMI for Co-Simulation discrete parts that do not necessarily apply to synchroneous theory or continuous parts of the FMU can also be associated to model partitions that define the sampling points (i.e. communication points) for the variables of these model partitions. Inferred clocks that are defined for such cases have the clockType attribute value “CPClock” and have to be ignored for FMI for Model Exchange. 
+
+The clocks are ordered descending based on their priorities. It is nevertheless possible to define multiple clocks with the same priority. In this case no ordering is defined for clocks of the same priority. If a computational order information is needed, different priorities have to be defined. The priority of a clock has to be defined via the integer attribute “priority” – smaller values have a higher priority. For periodic clocks it is recommended to derive the priorities based on a rate monotonic scheduling scheme (smallest period leads to highest priority (smallest priority value)). 
+
+[#TypeDefinitions]
+image:images/new_clock_variable.png[]
+
+Triggered or inferred periodic clocks are defined with unsignedLong valued _intervalCounter_ and _resolution_ (interval = intervalCounter / resolution).
+The initial tick of periodic clocks may be delayed with shiftCounter (default 0). This results in the actual
+
+_offset = interval * shiftCounter / resolution_.
+
+The meaning of the attributes is defined in section 2.1.8.1 (Mathematical Definition). If the optional attributes _interval_, _intervalCounter_, _shiftCounter_ and _resolution_ are not present, then this clock is not periodic. If the optional attribute _strict_ is set to true, then the the FMU and/or environment have to respect the predefined interval and offset. If the optional attribute _strict_ is set to false another interval or offset can be used, based on requirements derived from the current co-simulation setup.
 
 ==== Definition of Log Categories (LogCategories)
 
@@ -1481,6 +1541,91 @@ If an FMU is imported in an environment and such an iteration is set up, then th
 - _For standard Co-Simulation FMUs, it is common that no algebraic loops over the input/output variables nor over start-values is supported.
 In such a case, all `dependencies` lists for output variables under the `InitialUnknowns` element should be defined as empty lists defining that the setting of inputs and/or of start values does not influence the outputs.
 As a result, it is not possible to formulate algebraic loops of connected FMUs during InitializationMode.]_
+
+The ModelStructure is extended with the “DiscreteStates” element: 
+
+[#ModelStructure]
+image:images/extended_ModelStructure.png[]
+
+ModelStructure consists of the following elements (see also figure above): 
+
+[cols="1,2"]
+|===
+|*Element Name*
+|*Description*
+
+|DiscreteStates
+|Ordered list of all exposed discrete states, in other words a list of Variable indices. Every corresponding Variable may have attribute previous defined. Discrete states must have a clockReference attribute.
+[There are three cases: 
+(1) discrete states are not exposed, like in FMI 2.0,
+(2) discrete states are exposed through modelDescription with previous values,
+(3) discrete are exposed without previous values.
+It could be a combination of all three in one FMU. Discussion and conclusion:
+Introduce a flag “hasInternalState”, see also #148.]
+ [Need to clarify causality of discrete states (local, output?) and if fmi3SetReal is allowed for continuous states, see #243.]
+Attribute dependencies defines the dependencies of the discrete states from the known inputs, continuous-time states and previous discrete-time states.
+
+|...
+|...
+|===
+
+[Example: One periodic clocks with 2 ms and one non-periodic clock, both inferred,  can be defined in the following way (variable v1 is on the non-periodic inferred clock):
+]
+
+==== FMI Application Programming Interface for setting/getting Clock activation state
+A clock is activated by the environment for the current time instant by the function _fmi3SetClock()_, and the status of a clock can be inquired with the function _fmi3GetClock()_: 
+
+:: _fmiStatus fmi3SetClock (fmi3Component c, const fmi3valueReference vr[],
+                        size_t nvr, const fmi3Boolean value[],
+                        const fmi3Boolean *subactive);_
+
+Set the clock activation status by providing the indices of the corresponding clocks with respect to the xml element _“<ModelStructure><Clocks>”_ and values. A clock is activated at the current time instant if active[i] = fmi3True, otherwise the clock is deactivated. The clocked partition is evaluated in subactive mode (only output equations) if the argument subactive is non NULL and subactive[i] = fmi3True. The parameter “subactive” has no meaning for CommunicationPointClocks (fmi3CPClock) and is ignored for such clocks. 
+
+:: _fmiStatus fmi3GetClock (fmi3Component c, const fmi3valueReference vr[],
+                        size_t nvr, fmi3Boolean value[]);_
+                        
+Inquire whether a set of clocks is active by providing the indices of the corresponding clocks with respect to the xml element _“<ModelStructure><Clocks>”_. A clock is active at the current time instant if active[i] = fmi3True, otherwise the clock is not active. It is allowed to call this function within the callback function _fmi3IntermediateStepFinished()_.  
+Please note that it is required for an FMU to internally set back the activation state of a triggered clock to _fmi3False_ after _fmi3GetClock()_ is called for such a clock and _fmuType_ is set to _fmi3ScheduledExecutionSimulation_. See 4.4.5 
+
+A clock interval is set by the environment for the current time instant by the function _fmi3SetInterval()_, and it can be inquired with the function _fmi3GetInterval()_:
+
+[horizontal]
+:: _fmi3Status fmi3SetInterval(fmi3Component c, const fmi3valueReference vr[],
+                         size_t nvr, fmi3Real interval[]);_
+
+                         
+Set the interval value between the previous and the present tick of the clock.
+
+:: fmi3Status fmi3GetInterval(fmi3Component c, const fmi3valueReference vr[],
+                         size_t nvr, fmi3Real interval[]);
+
+Inquire the interval value for the provided clocks (periodic or non-periodic). If the clocks are non-periodic, the interval has to be inquired at every clock tick, to define the follow-up clock tick. 
+
+The following table summarizes the use of the API functions by the environment for different kind of clocks: 
+
+[cols="1,2,3"]
+|===
+|*API function*
+|*Triggered clock*
+|*Inferred Clock*
+
+|_fmi3GetClock_
+|Call during event mode 
+|Call during event mode 
+
+|_fmi3SetClock_
+|Call only if recomputations of clock state are needed during event mode. 
+|Call after entering event mode. 
+Repeated calls if recomputations of clock state are needed during event mode.
+
+|_fmi3GetInterval_
+|Call during event mode 
+|Call during event mode 
+
+|_fmi3SetInterval_
+|Don’t call. 
+|Call after first clock activation.
+|===
 
 ==== Variable Naming Conventions (variableNamingConvention)
 
