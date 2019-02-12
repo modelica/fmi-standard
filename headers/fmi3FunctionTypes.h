@@ -145,7 +145,7 @@ typedef fmi3Status  fmi3SetDebugLoggingTYPE(fmi3Component c,
 /* tag::Instantiate[] */
 typedef fmi3Component fmi3InstantiateTYPE(fmi3String  instanceName,
                                           fmi3Type    fmuType,
-                                          fmi3String  fmuGUID,
+                                          fmi3String  instantiationToken,
                                           fmi3String  fmuResourceLocation,
                                           const fmi3CallbackFunctions* functions,
                                           fmi3Boolean visible,
