@@ -70,6 +70,7 @@ typedef enum {
     fmi3ModelExchange,
     fmi3CoSimulation,
 	/*FMI30 Events&Multirate start*/
+	fmi3EarlyReturn,
 	fmi3ClockedCoSimulation,
 	fmi3ScheduledExecutionSimulation
 	/*FMI30 Events&Multirate end*/
