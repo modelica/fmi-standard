@@ -113,9 +113,13 @@ typedef void  (*fmi3CallbackFreeMemory)     (fmi3ComponentEnvironment componentE
 typedef void  (*fmi3StepFinished)           (fmi3ComponentEnvironment componentEnvironment,
                                              fmi3Status status);
 /*FMI3 Events&Multirate start*/
+
+/* tag::IntermediateStepFinished[] */
 typedef fmi3Status (*fmi3IntermediateStepFinished) (fmi3ComponentEnvironment componentEnvironment,
 	                                        fmi3IntermediateStepInfo* intermediateStepInfo, 
 	                                        fmi3Boolean* earlyReturn);
+/* end::IntermediateStepFinished[] */
+
 typedef void 	  (*fmi3StartPreemptionLock)   ();
 typedef void 	  (*fmi3StopPreemptionLock)    ();
 /*FMI3 Events&Multirate end*/
@@ -507,9 +511,9 @@ typedef fmi3Status fmi3ActivateModelPartitionTYPE(fmi3Component  c,
 typedef fmi3Status fmi3CancelStepTYPE(fmi3Component c);
 /* end::CancelStep[] */
 
-/* tag::fmi3BreakStep[] */
+/* tag::BreakStep[] */
 typedef fmi3Status fmi3BreakStepTYPE (fmi3Component c, fmi3Float64 breakTime);
-/* end::fmi3BreakStep[] */
+/* end::BreakStep[] */
 
 /* Inquire slave status */
 
