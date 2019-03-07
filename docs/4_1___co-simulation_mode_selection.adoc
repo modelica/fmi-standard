@@ -1,3 +1,82 @@
-== Co-Simulation Mode Selection
+== Co-Simulation Feature Selection
+
+The following co-simulation `fmuType` are supported in FMI 3.0
+
+1. Co-Simulation (fmi3CoSimulation, section 4.2)
+2. Early Return (fmi3EarlyReturn, section 4.3)
+3. Clocked Co-Simulation (fmi3ClockedCoSimulation, section 4.4)
+4. Scheduled Execution Simulation (fmi3ScheduledExecutionSimulation, section 4.5)
+
+Each `fmuType` defines a specific set of features. 
+In each co-simulation `fmuType` also the intermediate output value option (4.6) can be activated, if the FMU and the master supports this.
+
+The enumeration `fmi3Type` is defined as follows:
+
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tag=Type]
+----
+
+Please refer to the folowing sections for information about the co-simulation `fmuTypes`. 
+
+Whether an FMU supports an `fmuType` can be read from the modelDescription.XML.
+The description is provided in the XML schema sections for the fmuTypes. 
+
+It is required that the co-simulation master signals to the FMU which features shall be used for the current use of the FMU.
+The master must set the function parameter `fmuType` in `fmi3Instantiate` for that purpose. 
+Please note that the master can only activate co-simulation features for an FMU that the FMU defines as supported via modelDescription.xml.
+
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tag=Instantiate]
+----
+
+For details about this function please refer to section 2.1.
+For details about the intermediate variable access functionality related to the parameter `intermediateVariableAccessOn` can be found in section 4.6.
+
+The return value NULL signals that the selected feature can not be activated for that FMU.
+A non-NULL return value signals that the FMU supports the selected features.
 
 
+
+
+=== Multiple Co-Simulation fmuType Support in one FMU
+
+An FMU should support multiple co-simulation `fmuType` so it can be used in differently capable co-simulation master implementations and for different use cases. That improves the reusability of FMUs.   
+A common application of this multiple `fmuType` support is the reuse of FMUs for real-time and non-real-time simulations. 
+
+If the FMU is exported to support the `fmuType` `fmi3ScheduledExecutionSimulation` the support of the following fmuTypes has to be provided:
+
+. `fmi3ClockedCoSimulation`, 
+
+and the support of the following fmuTypes should be provided, if possible:
+
+. `fmi3EarlyReturn`,
+. `fmi3CoSimulation`.
+
+If the FMU is exported to support the `fmuType` `fmi3ClockedCoSimulation` the support of the following fmuTypes should be provided, if possible: 
+
+. `fmi3EarlyReturn`, 
+. `fmi3CoSimulation`.
+
+If the FMU is exported to support the `fmuType` `fmi3EarlyReturn` the support of the following `fmuType` has to be provided: 
+
+. `fmi3CoSimulation`.
+
+The described multi `fmuType` support is based on wrapping functionality into the `fmi3DoStep()` via emulating missing features of the `fmuType` the FMU has been originally exported for.
+
+If the FMU can not provide a wrapping for a co-simulation `fmuType` it has to refuse this `fmuType` via return NULL in `fmi3Instantiate()`.
+
+For assessing in which co-simulation setups the FMU can be used it is required to have an information about the wrapping capabilities of an FMU before run-time. 
+
+If the FMU can provide an emulation of inferred clock tick occurences it has to include the flag `canEmulateInferredClockTicks` equals true in the modelDescription.XML. 
+The default value for `canEmulateInferredClockTicks` is false. 
+If `canEmulateInferredClockTicks` equals false and the modelDescription.XML contains inferred clocks, the importing tool has the information that this FMU cannot be set to `fmuType` `fmi3CoSimulation` or `fmi3EarlyReturn`.
+
+
+_[Remark:_
+_Note that wrapping towards other co-simulation `fmuTypes` can influence the simulation results._ 
+_Depending on the model especially wrapping towards the `fmuType` fmi3CoSimulation may result in divergent simulation results._
+_Especially aperiodic inferred clocks can not always be sufficiently emulated in `fmuTypes` that do not directly support clocks._
+_Therefore it is recommended that the FMU provides logging information to the user about the influence of wrapping `fmuTypes`, if non-optimal `fmuType` are used by the simulation environment.
+]_
