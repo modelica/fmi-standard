@@ -89,7 +89,7 @@ This is the root-level schema file and contains the following definition (the fi
 Data is defined by attributes to these elements):
 
 [[system_overview]]
-image:images/fmiModelDescription_schema.png[]
+image::images/fmiModelDescription_schema.png[]
 
 On the top level, the schema consists of the following elements (see xref:system_overview[figure above]
 footnote:[Note, elements `<ModelVariables>` and `<ModelStructure>` are mandatory,
@@ -141,7 +141,7 @@ The details of these elements are defined in <<ModelExchange>> and <<CoSimulatio
 
 The XML attributes of `fmiModelDescription` are:
 
-image:images/fmiModelDescription_schema_2.png[width=80%, align="center"]
+image::images/fmiModelDescription_schema_2.png[width=80%, align="center"]
 
 [cols="1,3",options="header"]
 |====
@@ -589,6 +589,226 @@ image::images/DefaultExperiment_schema.png[width=70%, align="center"]
 A tool may ignore this information.
 However, it is convenient for a user that `startTime`, `stopTime`, `tolerance` and `stepSize` have already a meaningful default value for the model at hand.
 Furthermore, for CoSimulation the `stepSize` defines the preferred `communicationStepSize`.
+
+==== Definition of Terminals (Terminals)
+
+===== Rationale
+
+Both, the terminals and the graphical representation are fully optional and can be ignored by any importing tool. The graphical representation of a terminal or FMU ModelVariable is separate from the terminal definitions.
+
+Definition "Terminal": A terminal is...
+
+* a structured interface for connections to other models
+* a sequence of TerminalMemberVariables which have a variableKind
+* intended to be used for signal flow between models, parameter propagation, and compatibility checks of the model configuration
+
+This specification just provides predefined variable matching rules for connections and predefined variable kinds to describe the member variables. Domain specific terminals and their member variables can be provided by other standards.
+
+CoSimulation errors are not addressed by this FCP. The CoSimulation algorithm has to be chosen and implemented by the importing tool. Features that might be required for specific CoSimulation algorithms had to be implemented by the FMU exporting tool.
+
+Algebraic loops in systems of connected ModelExchange FMUs are not discussed or resolved by this FCP. It is not required that the causality of the terminal member variables in connected terminals matches. Sophisticated, domain specific terminals and connection rules can be developed using the terminal information from this FCP.
+
+
+
+===== Terminals
+
+Element `Terminals` of `fmiModelDescription` is defined as:
+
+image::images/fmiModelDescription_Terminals_Schema.png[width=70%, align="center"]
+
+All instances of `Terminal` are listed in the `Terminals` sequence. In addition to that vendor anntotations can be provided:
+
+image::images/fmiModelDescription_Terminals_Terminal_Schema.png[width=70%, align="center"]
+
+The attribute `name` of the Terminal element is the instance name of the terminal. 
+The terminal name may contain dots, to enable structured terminals.
+If the structured naming convention is used, then it is suggested that this name is equal to the prefix of the member variables. 
+
+The attribute `matchingRule` describes the rules for variable matching in a connection. 
+There are three predefined matching rules: plug, bus, and sequence. 
+Other standards may define new matching rules. 
+Vendor specific rules should start with "__vendorName_".
+
+[cols="1,3",options="header"]
+|====
+|_Matching Type_
+|_Description_
+
+|"plug"
+|Matching of the variables is based on memberName.
+It is intended that an importing tool shall not ignore terminal member variables.
+
+_[If a derivative of an output is provided as another output using the derivative attribute, then the importing tool may ignore this terminal member variable]_
+
+_[Examples: Modelica connectors and Simpack Markers]_
+
+|"bus"
+|Matching of the variables is based on memberName.
+
+It is intended that an importing tool may ignore some or all terminal member variables.
+
+_[Examples: Modelica expandable connectors and Simulink buses]_
+
+|"sequence"
+|Matching of the variables is based on the order of the terminal member variables
+
+|====
+
+
+
+`terminalKind` is an optional attribute. Other standards may define new terminalKinds. 
+It is recommended that other terminalKinds refer to the predefined matchingRules.
+Vendor specific terminal kinds should start with "__vendorName_".
+
+_[Example: StandardXXX_Mechanical_Translational, ____vendorNameA_customTypeA, ____VendorNameB_customLibrary_customTypeB]_
+
+Inputs must not appear in more than one terminal. 
+
+_[Not all variables with the prefix "<terminalName>." are part of the terminal with the name "<terminalName>". 
+So for instance it is possible to have a global parameter which is part of a terminal. 
+It might be handled similar to an alias variable.]_
+
+
+===== Terminal Member Variable
+
+//image::images/fmi3Terminal_Terminal_Schema.png[width=70%, pdfwidth=70%, align="center"]
+
+image::images/fmi3Terminal_TerminalMemberVariable_Schema.png[width=70%, pdfwidth=70%, align="center"]
+
+The string `variableKind` is used to provide general information about the variable. This information defines how the connection of this variable has to be implemented (e.g. inflow variable).
+
+`memberName` is the representation in name-based matching tools. 
+The attribute has to be provided to identify aliases (local variables, calculatedParameters). 
+The member name may contain dots, to enable structured terminals.
+
+Suggested variable naming scheme for the structured naming convention:
+<ModelVariable name> = <terminal name>.<memberName> 
+
+Suggested variable naming scheme for the non-structured naming convention:
+<ModelVariable name> = <memberName>
+
+_[If a tool applies sequence based variable matching, then it still makes sense to provide the information, how these terminals should be imported into tools with name-based variable matching.]_
+
+_[The variability of the member variables is not restricted, i.e. a fixed variable might be connected to a tunable variable.
+The variable type of the member variables is not restricted, a Real might be connected to an Integer.
+However, it is suggested that the variable types and variabilities are equal.]_
+
+
+The predefined variable kinds are:
+[cols="1,3",options="header"]
+|====
+|_variableKind_
+|_Description_
+
+|"common"
+|Common signal flow.
+
+Intended for input and output.
+
+|"equalityRelation"
+|Direction of propagation could be defined on system level.
+
+Intended for parameter and calculatedParameter.
+
+|"equalAssert"
+|The exporting tool suggests that a connection is invalid if these values in connected terminals are different. This could be implemented as assertion. This feature can be used for compatibility checks for terminals.
+
+Intended for parameter, calculatedParameter and local variables.
+
+|"in/outflow"
+|Variables which fulfill Kirchhoff’s current law Intended for input and output. Only for Real variables.
+
+|"in/outStream"
+|Variables which fulfill the balance equation for transported quantities.
+
+Intended for input and output. Only for Real variables.
+
+
+|====
+
+If a stream variable is present, then only one flow variable is allowed. 
+The order of the inStream variables must be equal to the order of the outStream variables. I.e. the first inStream variable belongs to the first outStream variable.
+
+_[In Modelica the inStream variable is not directly visible, the value can only be accessed using “inStream()”, therefore an additional ModelVariable has to be added during the export. 
+It is suggested that Modelica tools exporting an FMU derive the member name for the inStream variable according to the scheme “<outStream name>_inStream”. 
+E.g. if the outStream name is “h_outflow” then the inStream name should be “h_outflow_inStream”.]_
+
+
+
+
+==== Definition of a Graphical Representation (GraphicalRepresentation)
+
+===== Rationale
+
+The graphical representation of models and terminals are needed in order to more easily comprehend the meaning of connected FMUs and to help an importing tool to display the terminals and the FMU icon in the way the exporter intended.
+
+
+
+image::images/GraphicalRepresentation.svg[width=70%, align="center"]
+
+
+There is an optional `CoordinateSystem` defining the extent of the whole icon (graphical items may exceed that rect), an optional element `Icon` defining an image source, and a `Terminal` sequence.
+The element `GraphicalRepresentation` of `fmiModelDescription` is defined as:
+
+image::images/fmiModelDescription_GraphicalRepresentation_Schema.png[width=70%, pdfwidth=70%, align="center"]
+
+===== CoordinateSystem
+
+image::images/fmiModelDescription_GraphicalRepresentation_CoordinateSystem_Schema.png[width=70%, pdfwidth=70%, align="center"]
+
+The CoordinateSystem element and its defined extent is used as reference for other graphical items. It also provides a scaling factor to millimeter.
+
+
+The coordinate system is defined by the coordinates of two points, the left (x1) lower (y1) corner and the right (x2) upper (y2) corner, where the coordinates of the first point shall be less than the coordinates of the second point _[a first quadrant coordinate system]_. 
+The x-axis directed to the right, the y-axis is directed upwards.
+
+The exporting tool should define how the coordinate system unit relates to mm display or print out size.  However, an importing tool might choose to use the factor from the default coordinate system extent to the actual coordinate system extent to calculate a scaling factor, to match the default icon size in the importing tool.
+
+The area defined by the coordinate system suggested to be used as “clickable icon size” in other tools. Terminals might be placed outside of this area, so the visible bounding box has to be determined by the importing tool.
+
+The coordinate system default is x1=-100, y1=-100, x2=100, y2=100. This extent is used if the CoordinateSystem element is missing. The default suggestedScalingFactorTo_mm is 0.1. So the default coordinate system display size should be 20mm width and 20mm height.
+
+The fmu icon and all graphical representations provide the position and extent with the attributes x1, y1, x2, y2. The values of these attributes directly relate to this coordinate system and are not normalized.
+
+===== Icon
+
+image::images/fmiModelDescription_GraphicalRepresentation_Icon_Schema.png[width=70%, pdfwidth=70%, align="center"]
+
+In the Icon element the FMU icon without terminals is defined, its extent and position.
+
+The iconSource_PNG attribute is mandatory to simplify the import in other tools, so a PNG file has to be provided in any case. 
+Optionally an SVG file can be provided. This enables high quality rendering and printing in importing tools.
+
+
+===== Terminals
+
+image::images/fmiModelDescription_GraphicalRepresentation_Terminal_Schema.png[width=70%, pdfwidth=70%, align="center"]
+
+
+For “complex terminals” (terminals which are listed in the Terminals element) the name of the terminal in the GraphicalRepresentation is equal to the name of the terminal in the Terminals element (e.g. “port_a”). 
+If the graphical representation is used for a ModelVariable (e.g. a Real input “u”) which is not in the Terminals element, then the name is equal to the name of the ModelVariable.
+
+The iconSource_PNG is mandatory for a terminal, optionally an SVG file can be provided. 
+The default connection stroke size and color can be provided, to define the intended connection line layout in the importing tool. 
+The stroke color is given in RGB values from 0 to 255. E.g.: “255 255 0”.
+
+The VendorAnnotations element can be used by vendors to store additional information for the graphical representation. 
+It is suggested that Modelica tools store the Modelica annotation of the connector under the tool name “Modelica3Annotation”.
+
+There is no restriction on the variable type, variability or causality for the graphical representation of a ModelVariable.
+
+===== Placement, Extent, and Painting Order of Graphical Items
+
+The clickable icon size is defined by the CoordinateSystem element. 
+The FMU icon itself may exceed this extent (or bounding box).
+The bounding box of the terminals is given by the extent in the terminals element. 
+Their location is neither limited to the extent of the icon nor the extent of the coordinate system. 
+However, an importing tool has to determine the outer bounding box enclosing all graphical items.
+
+Transparent SVG or PNG files are allowed and wanted. The order of the elements in the XML file defines the order of painting. 
+The first element in the GraphicalRepresentation is painted first and therefore behind the others, the last element is painted last and because of that in front of the others. 
+So the FMU icon should be placed first, terminal below.
+
 
 ==== Definition of Vendor Annotations (VendorAnnotations)
 
