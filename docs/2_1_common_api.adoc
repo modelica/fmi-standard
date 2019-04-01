@@ -1,4 +1,4 @@
-=== FMI Application Programming Interface
+=== FMI Application Programming Interface [[fmi-application-programming-interface]]
 :stem: latexmath
 
 This section contains the common interface definitions to execute functions of an FMU from a C program.
@@ -7,7 +7,7 @@ Note that he following general properties hold for an FMU:
 
 - FMI functions of one instance do not need to be thread-safe. +
 _[For example, if the functions of one instance of an FMU are accessed from more than one thread;
-the multi-threaded environment that uses the FMU must guarantee that the calling sequences of functions defined in section 3.2.3 and section 4.2.4. are used.
+the multi-threaded environment that uses the FMU must guarantee that the calling sequences of functions defined in <<state-machine-model-exchange>> and <<state-machine-co-simulation>>. are used.
 The FMU itself does not implement any services to support this.]_
 
 - FMI functions must not change global settings which affect other processes/threads.
@@ -19,7 +19,7 @@ For x86 CPUs, the floating point control word is set using the `fldcw` instructi
 This can be used to switch on additional exceptions such as "floating point division by zero".
 An FMU might temporarily change the floating point control word and get notified on floating point exceptions internally, but has to restore the flag and clear the floating point status word before return of the respective FMI function.]_
 
-==== Header Files and Naming of Functions
+==== Header Files and Naming of Functions [[header-files-and-naming-of-functions]]
 
 Three header files are provided that define the interface of an FMU.
 In all header files the convention is used that all C function and type definitions start with the prefix "[underline]#fmi3#":
@@ -42,9 +42,11 @@ _[Example for a definition in this header file: +
 `typedef fmi3Status fmi3SetTimeTYPE(fmi3Component, fmi3Real);`]_
 
 `fmi3Functions.h`::
-contains the function prototypes of an FMU that can be accessed in simulation environments and that are defined in chapters 2, 3, and 4.
+contains the function prototypes of an FMU that can be accessed in simulation environments and that are defined in <<fmi-common-concepts>>, <<fmi-for-model-exchange>> and
+<<fmi-for-co-simulation>>.
+
 This header file includes `fmi3TypesPlatform.h` and `fmi3FunctionTypes.h`.
-The header file version number for which the model was compiled, can be inquired in the target simulator with `fmi3GetVersion` (see section 2.1.4). +
+The header file version number for which the model was compiled, can be inquired in the target simulator with `fmi3GetVersion` (see <<inquire-platform-and-version-number>>). +
 _[Example for a definition in this header file_ footnote:[For Microsoft and Cygwin compilers; `FMI3_Export` is defined as `pass:[__]declspec(dllexport)` and for Gnu-Compilers `FMI3_Export` is defined as `pass:[__]attribute__ ( ( visibility("default") ) )` in order to export the name for dynamic loading.
 Otherwise it is an empty definition.]: +
 _`FMI3_Export fmi3SetTimeTYPE fmi3SetTime;`]_
@@ -73,7 +75,7 @@ A function that is defined as `fmi3GetReal` is changed by the macros to a functi
 - If the FMU is shipped with C source code or with static link library: +
 The constructed function name is `MyModel_fmi3GetReal`.
 In other words the function name is prefixed with the model name and an `pass:[_]`.
-As `FMI3_FUNCTION_PREFIX` the `modelIdentifier` attribute defined in `<fmiModelDescription><ModelExchange>`, or `<fmiModelDescription><CoSimulation>` is used, together with `pass:[_]` at the end (see sections 3.3.1 and 4.3.1).
+As `FMI3_FUNCTION_PREFIX` the `modelIdentifier` attribute defined in `<fmiModelDescription><ModelExchange>`, or `<fmiModelDescription><CoSimulation>` is used, together with `pass:[_]` at the end (see <<ModelExchange>> and <<CoSimulation>>).
 A simulation environment can therefore construct the relevant function names by generating code for the actual function call.
 In case of a static link library, the name of the library is MyModel.lib on Windows and libMyModel.a on Linux; in other words the `modelIdentifier` attribute is used as library name.
 
@@ -82,7 +84,7 @@ The constructed function name is `fmi3GetReal`, in other words, it is not change
 A simulation environment will then dynamically load this library and will explicitly import the function symbols by providing the FMI function names as strings.
 The name of the library is `MyModel.dll` on Windows or `MyModel.so` on Linux; in other words the `modelIdentifier` attribute is used as library name.
 
-_[An FMU can be optionally shipped so that it basically contains only the communication to another tool (needsExecutionTool = true, see section 4.3.1).
+_[An FMU can be optionally shipped so that it basically contains only the communication to another tool (needsExecutionTool = true, see <<CoSimulation>>).
 This is particularily common for co-simulation tasks.
 In FMI 1.0, the function names are always prefixed with the model name and therefore a DLL/Shared Object has to be generated for every model.
 FMI 2.0 improves this situation since model names are no longer used as prefix in case of DLL/Shared Objects: Therefore one DLL/Shared Object can be used for all models in case of tool coupling.
@@ -117,7 +119,7 @@ include::../headers/fmi3TypesPlatform.h[tags=ComponentEnvironment]
 ----
 
 This is a pointer to a data structure in the simulation environment that calls the FMU.
-Using this pointer, data from the `modelDescription.xml` file _[for example, mapping of `valueReference`pass:[s] to variable names]_ can be transferred between the simulation environment and the `logger` function (see section 2.1.5).
+Using this pointer, data from the `modelDescription.xml` file _[for example, mapping of `valueReference`pass:[s] to variable names]_ can be transferred between the simulation environment and the `logger` function (see <<creation-destruction-and-logging>>).
 
 [source, C]
 ----
@@ -125,7 +127,7 @@ include::../headers/fmi3TypesPlatform.h[tags=FMUstate]
 ----
 
 This is a pointer to a data structure in the FMU that saves the internal FMU state of the actual or a previous time instant.
-This allows to restart a simulation from a previous FMU state (see section 2.1.8).
+This allows to restart a simulation from a previous FMU state (see <<get-set-fmu-state>>).
 
 [source, C]
 ----
@@ -141,7 +143,7 @@ An `fmi3ValueReference` references one such scalar.
 The coding of `fmi3ValueReference` is a "secret" of the environment that generated the FMU.
 The interface to the equations only provides access to variables via this handle.
 Extracting concrete information about a variable is specific to the used environment that reads the Model Description File in which the value handles are defined.
-If a function in the following sections is called with a wrong `fmi3ValueReference` value _[for example, setting a constant with a `fmi3SetReal` function call]_, then the function has to return with an error ( `fmi3Status = fmi3Error`, see section 2.1.3).
+If a function in the following sections is called with a wrong `fmi3ValueReference` value _[for example, setting a constant with a `fmi3SetReal` function call]_, then the function has to return with an error ( `fmi3Status = fmi3Error`, see <<status-returned-by-functions>>).
 
 [source, C]
 ----
@@ -163,7 +165,8 @@ If an `fmi3String` or an `fmi3Binary` variable is passed as [underline]#output# 
 the target environment must copy the whole string/binary (not only the pointer).
 The memory of this string/binary may be deallocated by the next call to any of the FMI interface functions (the string/binary memory might also be just a buffer, that is reused).
 
-==== Status Returned by Functions
+==== Status Returned by Functions [[status-returned-by-functions]]
+
 This section defines the `status` flag (an enumeration of type `fmi3Status` defined in file `fmi3FunctionTypes.h` ) that is returned by all functions to indicate the success of the function call:
 
 [source, C]
@@ -216,9 +219,9 @@ It is not possible to call any other function for any of the FMU instances.
 this status is returned only from the co-simulation interface, if the slave executes the function in an asynchronous way.
 That means the slave starts to compute but returns immediately.
 The master has to call `fmi3GetDoStepPendingStatus` to determine if the slave has finished the computation.
-Can be returned only by `fmi3DoStep` and `fmi3GetDoStepPendingStatus` (see section 4.2.3).
+Can be returned only by `fmi3DoStep` and `fmi3GetDoStepPendingStatus` (see <<retrieving-status-from-slave>>).
 
-==== Inquire Platform and Version Number of Header Files
+==== Inquire Platform and Version Number of Header Files [[inquire-platform-and-version-number]]
 
 This section documents functions to inquire information about the header files used to compile its functions.
 
@@ -231,7 +234,7 @@ Returns the version of the `fmi3Functions.h` header file which was used to compi
 The function returns `fmi3Version` which is defined in this header file.
 The standard header file as documented in this specification has version `"3.0"` (so this function usually returns `"3.0"`).
 
-==== Creation, Destruction and Logging of FMU Instances
+==== Creation, Destruction and Logging of FMU Instances [[creation-destruction-and-logging]]
 
 This section documents functions that deal with instantiation, destruction and logging of FMUs.
 
@@ -261,13 +264,13 @@ _[If only one FMU is simulated, as instanceName attribute `modelName` or `<Model
 Argument `fmuType` defines the type of the FMU:
 
 `fmi3ModelExchange`::
-FMU with initialization and events; between events simulation of continuous systems is performed with external integrators from the environment (see section 3).
+FMU with initialization and events; between events simulation of continuous systems is performed with external integrators from the environment (see <<fmi-for-model-exchange>>).
 
 `fmi3CoSimulation`::
-Black box interface for co-simulation (see section 4).
+Black box interface for co-simulation (see <<fmi-for-co-simulation>>).
 
-Argument `instantiationToken` can be used by the FMU to check that the `modelDescription.xml` file (see section 2.3) is compatible with the implementation of the FMU.
-It is an opaque string generated by the FMU exporter that is stored in the xml file as mandatory attribute instantiationToken (see section 2.2.1).
+Argument `instantiationToken` can be used by the FMU to check that the `modelDescription.xml` file (see <<fmu-distribution>>) is compatible with the implementation of the FMU.
+It is an opaque string generated by the FMU exporter that is stored in the xml file as mandatory attribute instantiationToken (see <<fmiModelDescription>>).
 It must be passed unchanged to the FMU, this argument must not be null.
 
 Argument `fmuResourceLocation` is a URI according to the http://datatracker.ietf.org/doc/rfc3986/[IETF RFC3986] syntax to indicate the location to the `resources` directory of the unzipped FMU archive.
@@ -315,7 +318,7 @@ If `logger` is called with `status = fmi3OK`, then the message is a pure informa
 `instanceName` is the instance name of the model that calls this function.
 `category` is the category of the message.
 The meaning of `category` is defined by the modeling environment that generated the FMU.
-Depending on this modeling environment, none, some or all allowed values of `category` for this FMU are defined in the `modelDescription.xml` file via element `<fmiModelDescription><LogCategories>`, see section 2.2.4.
+Depending on this modeling environment, none, some or all allowed values of `category` for this FMU are defined in the `modelDescription.xml` file via element `<fmiModelDescription><LogCategories>`, see <<definition-of-log-categories>>.
 Only messages are provided by function `logger` that have a category according to a call to `fmi3SetDebugLogging` (see below).
 Argument `message` is a string that contains the message.
 _[Typically, this function prints the message and stores it optionally in a log file.]_
@@ -324,14 +327,14 @@ All string-valued arguments passed by the FMU to the `logger` may be deallocated
 The environment must therefore create copies of these strings if it needs to access these strings later. +
 The `logger` function will append a line break to each message when writing messages after each other to a terminal or a file (the messages may also be shown in other ways, for example, as separate text-boxes in a GUI).
 The caller may include line-breaks (using "\n") within the message, but should avoid trailing line breaks. +
-Variables are referenced in a message with `\#<Type><ValueReference>#` where <Type> is "r" for `fmi3Real`, "i" for `fmi3Integer`, "b" for `fmi3Boolean` and "s" for `fmi3String`.
-If character `pass:[#]` shall be included in the message, it has to be prefixed with `pass:[#]`, so `#` is an escape character.
+Variables can be referenced in a message with `pass:[#]<ValueReference>pass:[#]`.
+If the character `pass:[#]` shall be included in the message, it has to be prefixed with `pass:[#]`, so `pass:[#]` is an escape character.
 +
 _[Example:_ +
-_A message of the form "\#r1365#" must be larger than zero (used in IO channel ##4)"_ +
-_might be changed by the `logger` function to_ +
-_`"body.m must be larger than zero (used in IO channel #4)"`_ +
-_if `"body.m"` is the name of the `fmi3Real` variable with `fmi3ValueReference = 1365`.]_
+_The message_ `\#1365# must be larger than zero (used in IO channel ##4)` +
+_might be changed by the_ `logger` _function to_ +
+`body.m must be larger than zero (used in IO channel #4)` +
+_if `body.m` is the name of the variable with value reference 1365.]_
 
 Function `allocateMemory`::
 Pointer to a function that is called in the FMU if memory needs to be allocated.
@@ -370,7 +373,7 @@ If `loggingOn=fmi3True`, debug logging is enabled, otherwise it is switched off.
 If `loggingOn=fmi3True` and `nCategories > 0`, then only debug messages according to the `categories` argument shall be printed via the `logger` function.
 Vector `categories` has `nCategories` elements.
 The allowed values of `categories` are defined by the modeling environment that generated the FMU.
-Depending on the generating modeling environment, none, some or all allowed values for `categories` for this FMU are defined in the `modelDescription.xml` file via element `fmiModelDescription.LogCategories`, see section 2.2.4.
+Depending on the generating modeling environment, none, some or all allowed values for `categories` for this FMU are defined in the `modelDescription.xml` file via element `fmiModelDescription.LogCategories`, see <<definition-of-log-categories>>.
 
 ==== Initialization, Termination, and Resetting an FMU
 
@@ -405,7 +408,7 @@ include::../headers/fmi3FunctionTypes.h[tags=EnterInitializationMode]
 ----
 
 Informs the FMU to enter Initialization Mode.
-Before calling this function, all variables with attribute `<ScalarVariable initial = "exact"` or `"approx">` can be set with the `fmi3SetXXX` functions (the `ScalarVariable` attributes are defined in the Model Description File, see section 2.2.7).
+Before calling this function, all variables with attribute `<ScalarVariable initial = "exact"` or `"approx">` can be set with the `fmi3SetXXX` functions (the `ScalarVariable` attributes are defined in the Model Description File, see <<definition-of-model-variables>>).
 Setting other variables is not allowed.
 Furthermore, `fmi3SetupExperiment` must be called at least once before calling `fmi3EnterInitializationMode`, in order that `startTime` is defined.
 
@@ -437,7 +440,7 @@ The FMU goes into the same state as if `fmi3Instantiate` would have been called.
 All variables have their default values.
 Before starting a new run, `fmi3SetupExperiment` and `fmi3EnterInitializationMode` have to be called.
 
-==== Getting and Setting Variable Values
+==== Getting and Setting Variable Values [[get-and-set-variable-values]]
 
 All variable values of an FMU are identified with a variable handle called "value reference".
 The handle is defined in the `modelDescription.xml` file (as attribute `valueReference` in element `Variable`).
@@ -476,7 +479,7 @@ Get actual values of variables by providing their variable references.
 _[These functions are especially used to get the actual values of output variables if a model is connected with other models.
 Since state derivatives are also `Variable`pass:[s], it is possible to get the value of a state derivative.
 This is useful when connecting FMUs together.
-Furthermore, the actual value of every variable defined in the `modelDescription.xml` file can be determined at the actually defined time instant (see section 2.2.7).]_
+Furthermore, the actual value of every variable defined in the `modelDescription.xml` file can be determined at the actually defined time instant (see <<definition-of-model-variables>>).]_
 
 - Argument `vr` is a vector of `nvr` value handles that define the variables that shall be inquired.
 
@@ -497,7 +500,7 @@ It is also possible to [underline]#set# the values of [underline]#certain# varia
 include::../headers/fmi3FunctionTypes.h[tags=Setters]
 ----
 
-Set parameters, inputs, and start values, and re-initialize caching of variables that depend on these variables (see section 2.2.7 for the exact rules on which type of variables `fmi3SetXXX` can be called, as well as section 3.2.3 in case of ModelExchange and section 4.2.4 in case of CoSimulation).
+Set parameters, inputs, and start values, and re-initialize caching of variables that depend on these variables (see <<definition-of-model-variables>> for the exact rules on which type of variables `fmi3SetXXX` can be called, as well as <<state-machine-model-exchange>> in case of ModelExchange and <<state-machine-co-simulation>> in case of CoSimulation).
 
 - Argument `vr` is a vector of `nvr` value handles that define the variables that shall be set.
 
@@ -511,12 +514,12 @@ Set parameters, inputs, and start values, and re-initialize caching of variables
 
 - Note, `fmi3Status = fmi3Discard` is possible for the `fmi3SetXXX` functions.
 
-For co-simulation FMUs, additional functions are defined in section 4.2.1 to set and inquire derivatives of variables with respect to time in order to allow interpolation.
+For co-simulation FMUs, additional functions are defined in <<transfer-of-input-output-and-parameters>> to set and inquire derivatives of variables with respect to time in order to allow interpolation.
 
-==== Operation on Clocks
+==== Operation on Clocks [[operation-on-clocks]]
 In the following section the operations on clocks are described. Clocks are defined for the evaluation of *clocked model partitions* and the related definition of suitable *communication points*. This change proposal offers two types of clocks, desinged to address similar use cases with differences in details. One clock type (Synchrounous Clocks) complies with the limitations imposed by the synchronous clock theory, the other clock type (Communication Point Clocks) is a general purpose co-simulation clock for providing suitable communication points for the timed evaluation of model partitions.  Please note that therefore the term clock and clocked is used in both cases but has a more general meaning in this FCP. Both clock types can handle two different variants, the *inferred clocks* and the *triggered clocks*. First the two different clock types are presented with the mathematical definition of their use cases. After that the two clock variants are described. The section ends with a short description of connecting clocked FMUs.  
 
-===== Clock Types for Evaluation of Clocked Model Partitions
+===== Clock Types for Evaluation of Clocked Model Partitions [[clock-types-for-evaluation-of-clocked-model-partitions]]
 *Synchrounous Clocks*
 A set of equations that are associated to a clock and are executed when the corresponding clock is active, is called a clocked partition. A clocked partition is mathematically defined as: 
 [stem]
@@ -559,7 +562,7 @@ y_j=g_j(x_{j-1},u_j,t_j)
 
 Please note that CommunicationPointClocks can also be defined for continuous or piecewise continuous parts of the model.  
 
-===== Variants of Clocks
+===== Variants of Clocks [[variants-of-clocks]]
 This section gives a definition of the two clock variants. Furthermore the periodic clock tick is described which is used by both variants.  
 
 *Triggered Clocks*
@@ -623,7 +626,7 @@ If triggered clocks and inferred clocks are defined it is possible to define a t
 [#Example Use Case]
 image:images/example_usecase.png[]
 
-===== Connecting Clocked FMUs
+===== Connecting Clocked FMUs [[connecting-clocked-fmus]]
 When connecting imported FMUs together, input and output variables can readily be connected together only when they are defined on a clock with identical properties. If this is not possible, an explicit cast of one clock to another clock is typically defined in the environment.
 
 The environment can evaluate required clock adaptions/casts for connections basing on the clockReference attribute of assigned variables [i.e. the variables that are assigned to a clock based on modelDescription.xml information].
@@ -631,7 +634,8 @@ The environment can evaluate required clock adaptions/casts for connections basi
 [Example: Elementary blocks like a PI controller will have all variables on an inferred clock with identical properties. Connecting such blocks together will therefore be possible without computationally expensive clock cast operations (and the environment can readily do the computation of assigned variables of the connected blocks based on the same clock).]   
 
 [#GetSetCompleteFMUState]
-==== Getting and Setting the Complete FMU State
+==== Getting and Setting the Complete FMU State [[get-set-fmu-state]]
+
 
 The FMU has an internal state consisting of all values that are needed to continue a simulation.
 This internal state consists especially of the values of the continuous-time states, iteration variables, parameter values, input values, delay buffers, file identifiers, and FMU internal status information.
@@ -670,7 +674,7 @@ If a null pointer is provided, the call is ignored.
 The function returns a null pointer in argument `FMUstate`.
 
 These functions are only supported by the FMU,
-if the optional capability flag `canGetAndSetFMUstate` in `<fmiModelDescription> <ModelExchange / CoSimulation>` in the XML file is explicitly set to `true` (see sections 3.3.1 and 4.3.1).
+if the optional capability flag `canGetAndSetFMUstate` in `<fmiModelDescription> <ModelExchange / CoSimulation>` in the XML file is explicitly set to `true` (see <<ModelExchange>> and <<CoSimulation>>).
 
 [source, C]
 ----
@@ -687,7 +691,7 @@ _[The simulation is restarted at this state, when calling `fmi3SetFMUState` with
 
 These functions are only supported by the FMU,
 if the optional capability flags `canGetAndSetFMUstate` and `canSerializeFMUstate` in
-`<fmiModelDescription><ModelExchange / CoSimulation>` in the XML file are explicitly set to `true` (see sections 3.3.1 and 4.3.1).
+`<fmiModelDescription><ModelExchange / CoSimulation>` in the XML file are explicitly set to `true` (see <<ModelExchange>> and <<CoSimulation>>).
 
 ==== Getting Partial Derivatives
 
@@ -706,12 +710,12 @@ This function computes the directional derivatives of an FMU.
 
 - Argument `vrUnknown` contains the `valueReference`pass:[s] of the unknown variables. The number of `valueReference`pass:[s] is given by the argument `nUnknown`.
 -	Argument `vrKnown` contains the `valueReference`pass:[s] of the known variables. The number of `valueReference`pass:[s] is given by the argument `nKnown`.
--	Arguments `dvKnown` and `dvUnknown` contain the serialized values of the referenced Variables (serializiation of values as defined in section 2.1.7).
+-	Arguments `dvKnown` and `dvUnknown` contain the serialized values of the referenced Variables (serializiation of values as defined in <<get-and-set-variable-values>>).
 - Argument `nDvKnown` provides the number of values in `dvKnown` which is only equal to `nKnown` if all `valueReference`pass:[s] of `vrKnown` point to scalar variables.
 - Argument `nDvUnknown` provides the number of values in `dvUnknown` which is only equal to `nUnknown` if all `valueReference`pass:[s] of `vrUnknown` point to scalar variables.
 
 An FMU has different Modes and in every Mode an FMU might be described by different equations and different unknowns.
-The precise definitions are given in the mathematical descriptions of Model Exchange (section 3.1) and Co-Simulation (section 4.1).
+The precise definitions are given in the mathematical descriptions of Model Exchange (<<math-model-exchange>>) and Co-Simulation (<<math-co-simulation>>).
 In every Mode, the general form of the FMU equations are:
 
 [latexmath]
@@ -734,7 +738,7 @@ If `<ModelStructure><Derivatives>` is present, also the variables listed here as
 
 * latexmath:[\color{blue}{\mathbf{v}_{known}}] is the vector of Real input variables of function *h*
 that changes its value in the actual Mode.
-Details are described in the description of element `dependencies` in section 2.2.8.
+Details are described in the description of element `dependencies` in <<ModelStructure>>.
 _[For example continuous-time inputs in Continuous-Time Mode.
 If a variable with `causality = "independent"` is explicitly defined under `ScalarVariable`pass:[s], a directional derivative with respect to this variable can be computed.
 If such a variable is not defined, the directional derivative with respect to the independent variable cannot be calculated]._
