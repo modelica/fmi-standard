@@ -94,7 +94,7 @@ typedef struct{
 	fmi3Boolean	eventOccurred;
 	fmi3Boolean	clocksTicked;
 	fmi3Boolean	breakStepResponse;
-	fmi3Boolean	intermediateOutputValueAvailable;
+	fmi3Boolean	intermediateOutputValuesAvailable;
 	fmi3Boolean	canDoEarlyReturn;
 } fmi3IntermediateStepInfo;
 /* end::IntermediateStepInfo[] */
@@ -276,6 +276,11 @@ typedef fmi3Status fmi3GetClockTYPE	 (fmi3Component c,
 typedef fmi3Status fmi3GetIntervalTYPE(fmi3Component c, 
 									   const fmi3ValueReference vr[], size_t nvr, 
 									   fmi3Float64 interval[]);
+									   
+typedef fmi3Status fmi3GetIntervalTYPE(fmi3Component c, 
+									   const fmi3ValueReference vr[], size_t nvr, 
+									   fmi3UInt64 intervalCounter[], fmi3UInt64 resolution[]);															   
+									   
 /*FMI3 Events&Multirate end*/
 /* end::Getters[] */
 
@@ -339,6 +344,10 @@ typedef fmi3Status fmi3SetClockTYPE 	 (fmi3Component c,
 typedef fmi3Status fmi3SetIntervalTYPE		 (fmi3Component c, 
   									  const fmi3ValueReference vr[], size_t nvr, 
 									  fmi3Float64 interval[]);
+									  
+typedef fmi3Status fmi3SetIntervalTYPE		 (fmi3Component c, 
+  									  const fmi3ValueReference vr[], size_t nvr, 
+									  fmi3UInt64 intervalCounter[], fmi3UInt64 resolution[]);
 /*FMI3 Events&Multirate end*/
 /* end::Setters[] */
 
