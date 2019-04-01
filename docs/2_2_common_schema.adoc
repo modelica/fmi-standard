@@ -554,7 +554,8 @@ If triggered clocks and inferred clocks are defined in the modelDescription.xml 
 [For example, if there are 10 Variables and previous = 3 for Variable 8, then at a super-dense time instant Variable 8 holds the value of this discrete state at the actual time instant and Variable 3 holds the value of this state from the previous super-dense time instant.]
 
 |variability 
-|This new base type can only be used together with variability = “clock” defined via the variability attribute of the element “Variable”. It is not allowed to use the variability “clock” with other available variable base types (e.g. fmi3Real, fmi3Integer, …).
+|Variables of type clocks require variability = ?clock? defined via the variability attribute of the element ?Variable?. 
+It is not allowed to use the variability ?clock? with other available variable base types (e.g. fmi3Float64, fmi3Int32, ?). 
 
 |causality
 |The two clock variants can be defined via the attribute “causality” of the “Variable” element. The clock variant inferred clock is defined with causality = “inferred” and the clock variant triggered clock is defined with causality = “triggered”.
@@ -563,7 +564,10 @@ If triggered clocks and inferred clocks are defined in the modelDescription.xml 
 |Clocks are identified based on their valueReference, e.g. a clock is referenced in API-function calls with its valueReference information. Therefore the clock valueReference has to be unique for an FMU. Note that the attribute valueReference information of the clock variable is used to accociate the clock to other variables (see clockReference). It is therefore not possible to use clocks in FMI 3.0 arrays, since array elements do not have individual valueReferences. 
 
 |initial
-|For causality = “inferred” the value equals “exact” and it is required to provide a start value for describing the expected initial contidion of master clocks for that FMU. The master can choose different start values if it is not possible to fulfill the conditions in a simulation setup. For causality = triggered initial attribute value equals “calculated” and no start value is provided.
+|If causality equals `inferred` the value equals `exact` and it is required to provide a start value for describing the expected initial contidion of master clocks for that FMU. 
+The master can choose different start values if it is not possible to fulfill the conditions in a simulation setup. 
+If causality equals `triggered` the initial attribute value equals `calculated` and no start value is provided.
+If an inferred clock has `fmi3True` as an start value the master should activate the clock the first time it enters event mode. 
 
 |canHandleMultipleSetPerTimeInstant
 |This attribute should not be used for Co-Simulation – we do not change the current use of this flag.  Flag is meant for inputs, a clock is not an input
@@ -1582,13 +1586,18 @@ A clock is activated by the environment for the current time instant by the func
                         size_t nvr, const fmi3Boolean value[],
                         const fmi3Boolean *subactive);_
 
-Set the clock activation status by providing the indices of the corresponding clocks with respect to the xml element _“<ModelStructure><Clocks>”_ and values. A clock is activated at the current time instant if active[i] = fmi3True, otherwise the clock is deactivated. The clocked partition is evaluated in subactive mode (only output equations) if the argument subactive is non NULL and subactive[i] = fmi3True. The parameter “subactive” has no meaning for CommunicationPointClocks (fmi3CPClock) and is ignored for such clocks. 
+Set the clock activation status by providing the value references of the corresponding clock variables and their values. 
+A clock is activated at the current time instant if active[i] = fmi3True, otherwise the clock is deactivated.
+The clocked partition is evaluated in subactive mode (only output equations) if the argument subactive is non NULL and subactive[i] = fmi3True. 
+The parameter `subactive` has no meaning for CommunicationPointClocks (fmi3CPClock) and is ignored for such clocks.
 
 :: _fmiStatus fmi3GetClock (fmi3Component c, const fmi3valueReference vr[],
                         size_t nvr, fmi3Boolean value[]);_
                         
-Inquire whether a set of clocks is active by providing the indices of the corresponding clocks with respect to the xml element _“<ModelStructure><Clocks>”_. A clock is active at the current time instant if active[i] = fmi3True, otherwise the clock is not active. It is allowed to call this function within the callback function _fmi3IntermediateStepFinished()_.  
-Please note that it is required for an FMU to internally set back the activation state of a triggered clock to _fmi3False_ after _fmi3GetClock()_ is called for such a clock and _fmuType_ is set to _fmi3ScheduledExecutionSimulation_. See 4.4.5 
+Inquire whether a set of clocks is active by providing the value references of the corresponding clock varaibels. 
+A clock is active at the current time instant if active[i] = fmi3True, otherwise the clock is not active. It is also allowed to call this function within the callback function _fmi3IntermediateStepFinished()_.  
+Please note that it is required for an FMU to internally set back the activation state of a triggered clock to _fmi3False_ after _fmi3GetClock()_ is called for such a clock and _fmuType_ is set to _fmi3ScheduledExecutionSimulation_. 
+See 4.4.5 
 
 A clock interval is set by the environment for the current time instant by the function _fmi3SetInterval()_, and it can be inquired with the function _fmi3GetInterval()_:
 
@@ -1596,13 +1605,17 @@ A clock interval is set by the environment for the current time instant by the f
 :: _fmi3Status fmi3SetInterval(fmi3Component c, const fmi3valueReference vr[],
                          size_t nvr, fmi3Real interval[]);_
 
+fmi3Status fmi3SetIntervalTYPE		 (fmi3Component c,  const fmi3ValueReference vr[], size_t nvr, fmi3UInt64 intervalCounter[], fmi3UInt64 resolution[]);
+
                          
-Set the interval value between the previous and the present tick of the clock.
+Both functions set the interval value between the previous and the present tick of the clock. It is not allowed to call fmi3SetInterval for clock variables with attribute ?strict? equals true.
 
 :: fmi3Status fmi3GetInterval(fmi3Component c, const fmi3valueReference vr[],
                          size_t nvr, fmi3Real interval[]);
 
-Inquire the interval value for the provided clocks (periodic or non-periodic). If the clocks are non-periodic, the interval has to be inquired at every clock tick, to define the follow-up clock tick. 
+typedef fmi3Status fmi3GetIntervalTYPE(fmi3Component c, const fmi3ValueReference vr[], size_t nvr, fmi3UInt64 intervalCounter[], fmi3UInt64 resolution[]); 
+
+Both functions inquire the interval value for the provided clocks (periodic or non-periodic). If the clocks are non-periodic, the interval has to be inquired at every clock tick, to define the follow-up clock tick. 
 
 The following table summarizes the use of the API functions by the environment for different kind of clocks: 
 

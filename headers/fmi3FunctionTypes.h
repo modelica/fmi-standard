@@ -94,8 +94,11 @@ typedef struct{
 	fmi3Boolean	eventOccurred;
 	fmi3Boolean	clocksTicked;
 	fmi3Boolean	breakStepResponse;
-	fmi3Boolean	intermediateOutputValuesAvailable;
+	fmi3Boolean	intermediateVariableSetAllowed;
+	fmi3Boolean	intermediateVariableGetAllowed;
+	fmi3Boolean	internalStepFinished;
 	fmi3Boolean	canDoEarlyReturn;
+	fmi3Boolean	willDoEarlyReturn;
 } fmi3IntermediateStepInfo;
 /* end::IntermediateStepInfo[] */
 
@@ -116,8 +119,7 @@ typedef void  (*fmi3StepFinished)           (fmi3ComponentEnvironment componentE
 
 /* tag::IntermediateStepFinished[] */
 typedef fmi3Status (*fmi3IntermediateStepFinished) (fmi3ComponentEnvironment componentEnvironment,
-	                                        fmi3IntermediateStepInfo* intermediateStepInfo, 
-	                                        fmi3Boolean* earlyReturn);
+	                                        fmi3IntermediateStepInfo* intermediateStepInfo);
 /* end::IntermediateStepFinished[] */
 
 typedef void 	  (*fmi3StartPreemptionLock)   ();
@@ -182,7 +184,7 @@ typedef fmi3Component fmi3InstantiateTYPE(fmi3String  instanceName,
                                           const fmi3CallbackFunctions* functions,
                                           fmi3Boolean visible,
                                           fmi3Boolean loggingOn,
-										  fmi3Boolean intermediateOutputValuesOn);
+										  fmi3Boolean intermediateVariableAccessOn);
 /* end::Instantiate[] */
 
 /* tag::FreeInstance[] */
@@ -520,9 +522,9 @@ typedef fmi3Status fmi3ActivateModelPartitionTYPE(fmi3Component  c,
 typedef fmi3Status fmi3CancelStepTYPE(fmi3Component c);
 /* end::CancelStep[] */
 
-/* tag::BreakStep[] */
-typedef fmi3Status fmi3BreakStepTYPE (fmi3Component c, fmi3Float64 breakTime);
-/* end::BreakStep[] */
+/* tag::DoEarlyReturn[] */
+typedef fmi3Status fmi3DoEarlyReturnTYPE (fmi3Component c, fmi3Float64 earlyReturnTime);
+/* end::DoEarlyReturn[] */
 
 /* Inquire slave status */
 
