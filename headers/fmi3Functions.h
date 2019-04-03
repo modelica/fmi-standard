@@ -183,10 +183,8 @@ Functions for FMI3 for Co-Simulation
 /*FMI3 Events&Multirate start*/
 #define fmi3SetFeatureUse		         fmi3FullName(fmi3SetFeatureUse)
 #define fmi3ActivateModelPartition       fmi3FullName(fmi3ActivateModelPartition)
-#define fmi3BreakStep                    fmi3FullName(fmi3BreakStep)
+#define fmi3DoEarlyReturn                fmi3FullName(fmi3DoEarlyReturn)
 /*FMI3 Events&Multirate end*/
-#define fmi3CancelStep                   fmi3FullName(fmi3CancelStep)
-#define fmi3GetDoStepPendingStatus       fmi3FullName(fmi3GetDoStepPendingStatus)
 #define fmi3GetDoStepDiscardedStatus     fmi3FullName(fmi3GetDoStepDiscardedStatus)
 
 /* Version number */
@@ -306,12 +304,10 @@ FMI3_Export fmi3ActivateModelPartitionTYPE     fmi3ActivateModelPartition;
 FMI3_Export fmi3DoStepTYPE      			   fmi3DoStep;
 
 /*FMI30 Events&Multirate start*/
-FMI3_Export fmi3BreakStepTYPE 				   fmi3BreakStep;
+FMI3_Export fmi3DoEarlyReturnTYPE 		      fmi3DoEarlyReturn;
 /*FMI30 Events&Multirate end*/
-FMI3_Export fmi3CancelStepTYPE 				   fmi3CancelStep;
 
 /* Inquire slave status */
-FMI3_Export fmi3GetDoStepPendingStatusTYPE   fmi3GetDoStepPendingStatus;
 FMI3_Export fmi3GetDoStepDiscardedStatusTYPE fmi3GetDoStepDiscardedStatus;
 
 #ifdef __cplusplus

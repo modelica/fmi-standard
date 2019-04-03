@@ -61,7 +61,6 @@ typedef enum {
     fmi3Discard,
     fmi3Error,
     fmi3Fatal,
-    fmi3Pending
 } fmi3Status;
 /* end::Status[] */
 
@@ -93,11 +92,9 @@ typedef struct{
 	fmi3Float64	intermediateStepTime; 
 	fmi3Boolean	eventOccurred;
 	fmi3Boolean	clocksTicked;
-	fmi3Boolean	breakStepResponse;
 	fmi3Boolean	intermediateVariableSetAllowed;
 	fmi3Boolean	intermediateVariableGetAllowed;
 	fmi3Boolean	internalStepFinished;
-	fmi3Boolean	canDoEarlyReturn;
 	fmi3Boolean	willDoEarlyReturn;
 } fmi3IntermediateStepInfo;
 /* end::IntermediateStepInfo[] */
@@ -518,21 +515,11 @@ typedef fmi3Status fmi3ActivateModelPartitionTYPE(fmi3Component  c,
 	fmi3Float64  activationTime);
 /* end::ActivateModelPartition[] */
 
-/* tag::CancelStep[] */
-typedef fmi3Status fmi3CancelStepTYPE(fmi3Component c);
-/* end::CancelStep[] */
-
 /* tag::DoEarlyReturn[] */
 typedef fmi3Status fmi3DoEarlyReturnTYPE (fmi3Component c, fmi3Float64 earlyReturnTime);
 /* end::DoEarlyReturn[] */
 
 /* Inquire slave status */
-
-/* tag::GetDoStepPendingStatus[] */
-typedef fmi3Status fmi3GetDoStepPendingStatusTYPE(fmi3Component c,
-                                                  fmi3Status* status,
-                                                  fmi3String* message);
-/* end::GetDoStepPendingStatus[] */
 
 /* tag::GetDoStepDiscardedStatus[] */
 typedef fmi3Status fmi3GetDoStepDiscardedStatusTYPE(fmi3Component c,
