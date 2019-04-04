@@ -95,6 +95,7 @@ typedef struct{
 	fmi3Boolean	intermediateVariableSetAllowed;
 	fmi3Boolean	intermediateVariableGetAllowed;
 	fmi3Boolean	internalStepFinished;
+    fmi3Boolean	canDoEarlyReturn;
 	fmi3Boolean	willDoEarlyReturn;
 } fmi3IntermediateStepInfo;
 /* end::IntermediateStepInfo[] */
