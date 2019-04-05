@@ -359,7 +359,7 @@ typedef fmi3Status fmi3EnterEventModeTYPE(fmi3Instance instance);
 
 /* tag::NewDiscreteStates[] */
 typedef fmi3Status fmi3NewDiscreteStatesTYPE(fmi3Instance instance,
-                                             fmi3EventInfo* fmi3eventInfo);
+                                             fmi3EventInfo* eventInfo);
 /* end::NewDiscreteStates[] */
 
 /* tag::EnterContinuousTimeMode[] */
