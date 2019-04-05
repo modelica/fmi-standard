@@ -311,27 +311,27 @@ typedef fmi3Status fmi3GetVariableDependenciesTYPE(fmi3Instance instance,
 
 /* Getting and setting the internal FMU state */
 
-/* tag::GetSetFreeFMUstate[] */
-typedef fmi3Status fmi3GetFMUstateTYPE (fmi3Instance instance, fmi3FMUstate* FMUstate);
-typedef fmi3Status fmi3SetFMUstateTYPE (fmi3Instance instance, fmi3FMUstate  FMUstate);
-typedef fmi3Status fmi3FreeFMUstateTYPE(fmi3Instance instance, fmi3FMUstate* FMUstate);
-/* end::GetSetFreeFMUstate[] */
+/* tag::GetSetFreeFMUState[] */
+typedef fmi3Status fmi3GetFMUStateTYPE (fmi3Instance instance, fmi3FMUState* FMUState);
+typedef fmi3Status fmi3SetFMUStateTYPE (fmi3Instance instance, fmi3FMUState  FMUState);
+typedef fmi3Status fmi3FreeFMUStateTYPE(fmi3Instance instance, fmi3FMUState* FMUState);
+/* end::GetSetFreeFMUState[] */
 
-/* tag::SerializedFMUstate[] */
-typedef fmi3Status fmi3SerializedFMUstateSizeTYPE(fmi3Instance instance,
-                                                  fmi3FMUstate  FMUstate,
+/* tag::SerializedFMUState[] */
+typedef fmi3Status fmi3SerializedFMUStateSizeTYPE(fmi3Instance instance,
+                                                  fmi3FMUState  FMUState,
                                                   size_t* size);
 
-typedef fmi3Status fmi3SerializeFMUstateTYPE     (fmi3Instance instance,
-                                                  fmi3FMUstate  FMUstate,
+typedef fmi3Status fmi3SerializeFMUStateTYPE     (fmi3Instance instance,
+                                                  fmi3FMUState  FMUState,
                                                   fmi3Byte serializedState[],
                                                   size_t size);
 
-typedef fmi3Status fmi3DeSerializeFMUstateTYPE   (fmi3Instance instance,
+typedef fmi3Status fmi3DeSerializeFMUStateTYPE   (fmi3Instance instance,
                                                   const fmi3Byte serializedState[],
                                                   size_t size,
-                                                  fmi3FMUstate* FMUstate);
-/* end::SerializedFMUstate[] */
+                                                  fmi3FMUState* FMUState);
+/* end::SerializedFMUState[] */
 
 /* Getting partial derivatives */
 
