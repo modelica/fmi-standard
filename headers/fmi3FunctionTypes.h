@@ -295,7 +295,7 @@ typedef fmi3Status fmi3SetBinaryTYPE (fmi3Instance instance,
 
 /* tag::GetNumberOfVariableDependencies[] */
 typedef fmi3Status fmi3GetNumberOfVariableDependenciesTYPE(fmi3Instance instance,
-                                                           fmi3ValueReference vr,
+                                                           fmi3ValueReference valueReference,
                                                            size_t* nDependencies);
 /* end::GetNumberOfVariableDependencies[] */
 
