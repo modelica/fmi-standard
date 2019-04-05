@@ -84,7 +84,7 @@ typedef enum {
 /* end::DependencyKind[] */
 
 /* tag::CallbackFunctions[] */
-typedef void  (*fmi3CallbackLogger)         (fmi3InstanceEnvironment instanceEnvironment,
+typedef void  (*fmi3CallbackLogMessage)     (fmi3InstanceEnvironment instanceEnvironment,
                                              fmi3String instanceName,
                                              fmi3Status status,
                                              fmi3String category,
@@ -98,7 +98,7 @@ typedef void  (*fmi3CallbackStepFinished)   (fmi3InstanceEnvironment instanceEnv
                                              fmi3Status status);
 
 typedef struct {
-    fmi3CallbackLogger         logger;
+    fmi3CallbackLogMessage     logMessage;
     fmi3CallbackAllocateMemory allocateMemory;
     fmi3CallbackFreeMemory     freeMemory;
     fmi3CallbackStepFinished   stepFinished;

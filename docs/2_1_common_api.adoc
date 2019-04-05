@@ -118,7 +118,7 @@ include::../headers/fmi3TypesPlatform.h[tags=ComponentEnvironment]
 ----
 
 This is a pointer to a data structure in the simulation environment that calls the FMU.
-Using this pointer, data from the `modelDescription.xml` file _[for example, mapping of `valueReference`pass:[s] to variable names]_ can be transferred between the simulation environment and the `logger` function (see <<creation-destruction-and-logging>>).
+Using this pointer, data from the `modelDescription.xml` file _[for example, mapping of `valueReference`pass:[s] to variable names]_ can be transferred between the simulation environment and the `logMessage` function (see <<creation-destruction-and-logging>>).
 
 [source, C]
 ----
@@ -181,7 +181,7 @@ all well.
 
 `fmi3Warning`::
 things are not quite right, but the computation can continue.
-Function `logger` was called in the model (see below), and it is expected that
+Function `logMessage` was called in the model (see below), and it is expected that
 this function has shown the prepared information message to the user.
 
 `fmi3Discard`::
@@ -196,8 +196,8 @@ For "model exchange": It is recommended to perform a smaller step size and evalu
 If this is not possible, the simulation has to be terminated. +
 For "co-simulation": `fmi3Discard` is returned also if the slave is not able to return the required status information.
 The master has to decide if the simulation run can be continued. +
-In both cases, function `logger` was called in the FMU (see below), and it is expected that this function has shown the prepared information message to the user if the FMU was called in debug mode (`loggingOn = fmi3True`).
-Otherwise, `logger` should not show a message.
+In both cases, function `logMessage` was called in the FMU (see below), and it is expected that this function has shown the prepared information message to the user if the FMU was called in debug mode (`loggingOn = fmi3True`).
+Otherwise, `logMessage` should not show a message.
 
 `fmi3Error`::
 the FMU encountered an error.
@@ -206,12 +206,12 @@ If one of the functions returns `fmi3Error`, it can be tried to restart the simu
 This can be done if the capability flag `canGetAndSetFMUstate` is true and `fmi3GetFMUstate` was called before in non-erroneous state.
 If not, the simulation cannot be continued and `fmi3FreeInstance` or `fmi3Reset` [.underline]#must# be called afterwards.footnote:[Typically, `fmi3Error` return is for non-numerical reasons, like "disk full". There might be cases where the environment can fix such errors (eventually with the help oft the user), and then simulation can continue at the last consistent state defined with `fmi3SetFMUstate`.] +
 Further processing is possible after this call; especially other FMU instances are not affected.
-Function `logger` was called in the FMU (see below), and it is expected that this function has shown the prepared information message to the user.
+Function `logMessage` was called in the FMU (see below), and it is expected that this function has shown the prepared information message to the user.
 
 `fmi3Fatal`::
 the model computations are irreparably corrupted for all FMU instances.
 _[For example, due to a run-time exception such as access violation or integer division by zero during the execution of an fmi function]_.
-Function `logger` was called in the FMU (see below), and it is expected that this function has shown the prepared information message to the user.
+Function `logMessage` was called in the FMU (see below), and it is expected that this function has shown the prepared information message to the user.
 It is not possible to call any other function for any of the FMU instances.
 
 `fmi3Pending`::
@@ -249,7 +249,7 @@ include::../headers/fmi3FunctionTypes.h[tags=Type]
 
 The function returns a new instance of an FMU.
 If a null pointer is returned, then instantiation failed.
-In that case, `functions->logger` is called with detailed information about the reason.
+In that case, `functions->logMessage` is called with detailed information about the reason.
 An FMU can be instantiated many times (provided capability flag `canBeInstantiatedOnlyOncePerProcess = false`).
 
 This function must be called successfully before any of the following functions can be called.
@@ -311,27 +311,27 @@ The `instanceEnvironment` pointer is also passed to the `stepFinished` function 
 In the default `fmi3FunctionTypes.h` file, typedefs for the function definitions are present to simplify the usage; this is non-normative.
 The functions have the following meaning:
 
-Function `logger`::
+Function `logMessage`::
 Pointer to a function that is called in the FMU, usually if an `fmi3XXX` function does not behave as desired.
-If `logger` is called with `status = fmi3OK`, then the message is a pure information message.
+If `logMessage` is called with `status = fmi3OK`, then the message is a pure information message.
 `instanceName` is the instance name of the model that calls this function.
 `category` is the category of the message.
 The meaning of `category` is defined by the modeling environment that generated the FMU.
 Depending on this modeling environment, none, some or all allowed values of `category` for this FMU are defined in the `modelDescription.xml` file via element `<fmiModelDescription><LogCategories>`, see <<definition-of-log-categories>>.
-Only messages are provided by function `logger` that have a category according to a call to `fmi3SetDebugLogging` (see below).
+Only messages are provided by function `logMessage` that have a category according to a call to `fmi3SetDebugLogging` (see below).
 Argument `message` is a string that contains the message.
 _[Typically, this function prints the message and stores it optionally in a log file.]_
 +
-All string-valued arguments passed by the FMU to the `logger` may be deallocated by the FMU directly after function `logger` returns.
+All string-valued arguments passed by the FMU to the `logMessage` may be deallocated by the FMU directly after function `logMessage` returns.
 The environment must therefore create copies of these strings if it needs to access these strings later. +
-The `logger` function will append a line break to each message when writing messages after each other to a terminal or a file (the messages may also be shown in other ways, for example, as separate text-boxes in a GUI).
+The `logMessage` function will append a line break to each message when writing messages after each other to a terminal or a file (the messages may also be shown in other ways, for example, as separate text-boxes in a GUI).
 The caller may include line-breaks (using "\n") within the message, but should avoid trailing line breaks. +
 Variables can be referenced in a message with `pass:[#]<ValueReference>pass:[#]`.
 If the character `pass:[#]` shall be included in the message, it has to be prefixed with `pass:[#]`, so `pass:[#]` is an escape character.
 +
 _[Example:_ +
 _The message_ `\#1365# must be larger than zero (used in IO channel ##4)` +
-_might be changed by the_ `logger` _function to_ +
+_might be changed by the_ `logMessage` _function to_ +
 `body.m must be larger than zero (used in IO channel #4)` +
 _if `body.m` is the name of the variable with value reference 1365.]_
 
@@ -369,7 +369,7 @@ include::../headers/fmi3FunctionTypes.h[tags=SetDebugLogging]
 ----
 
 If `loggingOn=fmi3True`, debug logging is enabled, otherwise it is switched off.
-If `loggingOn=fmi3True` and `nCategories > 0`, then only debug messages according to the `categories` argument shall be printed via the `logger` function.
+If `loggingOn=fmi3True` and `nCategories > 0`, then only debug messages according to the `categories` argument shall be printed via the `logMessage` function.
 Vector `categories` has `nCategories` elements.
 The allowed values of `categories` are defined by the modeling environment that generated the FMU.
 Depending on the generating modeling environment, none, some or all allowed values for `categories` for this FMU are defined in the `modelDescription.xml` file via element `fmiModelDescription.LogCategories`, see <<definition-of-log-categories>>.
