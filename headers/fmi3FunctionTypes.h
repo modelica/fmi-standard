@@ -234,7 +234,7 @@ typedef fmi3Status fmi3GetStringTYPE (fmi3Instance instance,
 
 typedef fmi3Status fmi3GetBinaryTYPE (fmi3Instance instance,
                                       const fmi3ValueReference valueReferences[], size_t nValueReferences,
-                                      size_t size[], fmi3Binary values[], size_t nValues);
+                                      size_t sizes[], fmi3Binary values[], size_t nValues);
 /* end::Getters[] */
 
 /* tag::Setters[] */
@@ -288,7 +288,7 @@ typedef fmi3Status fmi3SetStringTYPE (fmi3Instance instance,
 
 typedef fmi3Status fmi3SetBinaryTYPE (fmi3Instance instance,
                                       const fmi3ValueReference valueReferences[], size_t nValueReferences,
-                                      const size_t size[], const fmi3Binary values[], size_t nValues);
+                                      const size_t sizes[], const fmi3Binary values[], size_t nValues);
 /* end::Setters[] */
 
 /* Getting Variable Dependency Information */
