@@ -337,14 +337,14 @@ typedef fmi3Status fmi3DeSerializeFMUStateTYPE   (fmi3Instance instance,
 
 /* tag::GetDirectionalDerivative[] */
 typedef fmi3Status fmi3GetDirectionalDerivativeTYPE(fmi3Instance instance,
-                                                    const fmi3ValueReference vrUnknown[],
-                                                    size_t nUnknown,
-                                                    const fmi3ValueReference vrKnown[],
-                                                    size_t nKnown,
-                                                    const fmi3Float64 dvKnown[],
-                                                    size_t nDvKnown,
-                                                    fmi3Float64 dvUnknown[],
-                                                    size_t nDvUnknown);
+                                                    const fmi3ValueReference unknowns[],
+                                                    size_t nUnknowns,
+                                                    const fmi3ValueReference knowns[],
+                                                    size_t nKnowns,
+                                                    const fmi3Float64 derivativesOfKnowns[],
+                                                    size_t nDerivativesOfKnowns,
+                                                    fmi3Float64 derivativesOfUnknowns[],
+                                                    size_t nDerivativesOfUnknowns);
 /* end::GetDirectionalDerivative[] */
 
 /***************************************************
