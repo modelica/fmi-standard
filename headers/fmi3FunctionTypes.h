@@ -94,14 +94,14 @@ typedef void* (*fmi3CallbackAllocateMemory) (fmi3InstanceEnvironment instanceEnv
                                              size_t size);
 typedef void  (*fmi3CallbackFreeMemory)     (fmi3InstanceEnvironment instanceEnvironment,
                                              void* obj);
-typedef void  (*fmi3StepFinished)           (fmi3InstanceEnvironment instanceEnvironment,
+typedef void  (*fmi3CallbackStepFinished)   (fmi3InstanceEnvironment instanceEnvironment,
                                              fmi3Status status);
 
 typedef struct {
     fmi3CallbackLogger         logger;
     fmi3CallbackAllocateMemory allocateMemory;
     fmi3CallbackFreeMemory     freeMemory;
-    fmi3StepFinished           stepFinished;
+    fmi3CallbackStepFinished   stepFinished;
     fmi3InstanceEnvironment    instanceEnvironment;
 } fmi3CallbackFunctions;
 /* end::CallbackFunctions[] */
