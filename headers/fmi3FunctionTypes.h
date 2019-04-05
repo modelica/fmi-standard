@@ -301,11 +301,11 @@ typedef fmi3Status fmi3GetNumberOfVariableDependenciesTYPE(fmi3Instance instance
 
 /* tag::GetVariableDependencies[] */
 typedef fmi3Status fmi3GetVariableDependenciesTYPE(fmi3Instance instance,
-                                                   fmi3ValueReference vrDependent,
-                                                   size_t elementIndexDependent[],
-                                                   fmi3ValueReference vrIndependent[],
-                                                   size_t elementIndexIndependent[],
-                                                   fmi3DependencyKind dependencyType[],
+                                                   fmi3ValueReference dependent,
+                                                   size_t elementIndicesOfDependent[],
+                                                   fmi3ValueReference independents[],
+                                                   size_t elementIndicesOfIndependents[],
+                                                   fmi3DependencyKind dependencyKinds[],
                                                    size_t nDependencies);
 /* end::GetVariableDependencies[] */
 
