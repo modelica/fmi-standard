@@ -405,7 +405,7 @@ typedef fmi3Status fmi3GetContinuousStatesTYPE(fmi3Instance instance, fmi3Float6
 
 /* tag::GetNominalsOfContinuousStates[] */
 typedef fmi3Status fmi3GetNominalsOfContinuousStatesTYPE(fmi3Instance instance,
-                                                         fmi3Float64 x_nominal[],
+                                                         fmi3Float64 nominals[],
                                                          size_t nx);
 /* end::GetNominalsOfContinuousStates[] */
 
