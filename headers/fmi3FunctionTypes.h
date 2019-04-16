@@ -341,10 +341,10 @@ typedef fmi3Status fmi3GetDirectionalDerivativeTYPE(fmi3Instance instance,
                                                     size_t nUnknowns,
                                                     const fmi3ValueReference knowns[],
                                                     size_t nKnowns,
-                                                    const fmi3Float64 derivativesOfKnowns[],
-                                                    size_t nDerivativesOfKnowns,
-                                                    fmi3Float64 derivativesOfUnknowns[],
-                                                    size_t nDerivativesOfUnknowns);
+                                                    const fmi3Float64 deltaKnowns[],
+                                                    size_t nDeltaKnowns,
+                                                    fmi3Float64 deltaUnknowns[],
+                                                    size_t nDeltaOfUnknowns);
 /* end::GetDirectionalDerivative[] */
 
 /***************************************************
