@@ -177,7 +177,7 @@ typedef fmi3Status  fmi3SetDebugLoggingTYPE(fmi3Component c,
 /* tag::Instantiate[] */
 typedef fmi3Component fmi3InstantiateTYPE(fmi3String  instanceName,
                                           fmi3Type    fmuType,
-                                          fmi3String  fmuGUID,
+                                          fmi3String  fmuInstantiationToken,
                                           fmi3String  fmuResourceLocation,
                                           const fmi3CallbackFunctions* functions,
                                           fmi3Boolean visible,
@@ -273,11 +273,11 @@ typedef fmi3Status fmi3GetClockTYPE	 (fmi3Component c,
 									  const fmi3ValueReference vr[], size_t nvr, 
 									  fmi3Boolean value[]);
 
-typedef fmi3Status fmi3GetIntervalTYPE(fmi3Component c, 
+typedef fmi3Status fmi3GetIntervalDecimalTYPE(fmi3Component c, 
 									   const fmi3ValueReference vr[], size_t nvr, 
 									   fmi3Float64 interval[]);
 									   
-typedef fmi3Status fmi3GetIntervalTYPE(fmi3Component c, 
+typedef fmi3Status fmi3GetIntervalFractionTYPE(fmi3Component c, 
 									   const fmi3ValueReference vr[], size_t nvr, 
 									   fmi3UInt64 intervalCounter[], fmi3UInt64 resolution[]);															   
 									   
@@ -341,11 +341,11 @@ typedef fmi3Status fmi3SetClockTYPE 	 (fmi3Component c,
 									  const fmi3ValueReference vr[], size_t nvr, 
 									  const fmi3Boolean value[], const fmi3Boolean *subactive);
 
-typedef fmi3Status fmi3SetIntervalTYPE		 (fmi3Component c, 
+typedef fmi3Status fmi3SetIntervalDecimalTYPE		 (fmi3Component c, 
   									  const fmi3ValueReference vr[], size_t nvr, 
 									  fmi3Float64 interval[]);
 									  
-typedef fmi3Status fmi3SetIntervalTYPE		 (fmi3Component c, 
+typedef fmi3Status fmi3SetIntervalFractionTYPE		 (fmi3Component c, 
   									  const fmi3ValueReference vr[], size_t nvr, 
 									  fmi3UInt64 intervalCounter[], fmi3UInt64 resolution[]);
 /*FMI3 Events&Multirate end*/
