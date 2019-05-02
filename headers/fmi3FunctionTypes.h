@@ -111,8 +111,6 @@ typedef void* (*fmi3CallbackAllocateMemory) (fmi3ComponentEnvironment componentE
                                              size_t size);
 typedef void  (*fmi3CallbackFreeMemory)     (fmi3ComponentEnvironment componentEnvironment,
                                              void* obj);
-typedef void  (*fmi3StepFinished)           (fmi3ComponentEnvironment componentEnvironment,
-                                             fmi3Status status);
 /*FMI3 Events&Multirate start*/
 
 /* tag::IntermediateStepFinished[] */
@@ -128,7 +126,6 @@ typedef struct {
     fmi3CallbackLogger				logger;
     fmi3CallbackAllocateMemory		allocateMemory;
     fmi3CallbackFreeMemory			freeMemory;
-    fmi3StepFinished				stepFinished;
     fmi3ComponentEnvironment		componentEnvironment;
 /*FMI3 Events&Multirate start*/
     fmi3IntermediateStepFinished	intermediateStepFinished;
