@@ -517,11 +517,18 @@ Set parameters, inputs, and start values, and re-initialize caching of variables
 For co-simulation FMUs, additional functions are defined in <<transfer-of-input-output-and-parameters>> to set and inquire derivatives of variables with respect to time in order to allow interpolation.
 
 ==== Operation on Clocks [[operation-on-clocks]]
-In the following section the operations on clocks are described. Clocks are defined for the evaluation of *clocked model partitions* and the related definition of suitable *communication points*. This change proposal offers two types of clocks, desinged to address similar use cases with differences in details. One clock type (Synchrounous Clocks) complies with the limitations imposed by the synchronous clock theory, the other clock type (Communication Point Clocks) is a general purpose co-simulation clock for providing suitable communication points for the timed evaluation of model partitions.  Please note that therefore the term clock and clocked is used in both cases but has a more general meaning in this FCP. Both clock types can handle two different variants, the *inferred clocks* and the *triggered clocks*. First the two different clock types are presented with the mathematical definition of their use cases. After that the two clock variants are described. The section ends with a short description of connecting clocked FMUs.
+In the following section the operations on clocks are described. 
+Clocks are defined for the evaluation of *clocked model partitions* and the related definition of suitable *communication points*. 
+This change proposal offers two types of clocks, desinged to address similar use cases with differences in details. 
+One clock type (Synchrounous Clocks) complies with the limitations imposed by the synchronous clock theory, the other clock type (Communication Point Clocks) is a general purpose co-simulation clock for providing suitable communication points for the timed evaluation of model partitions. 
+Please note that therefore the term clock and clocked is used in both cases but has a more general meaning in this FCP. 
+Both clock types can handle two different variants, the *inferred clocks* and the *triggered clocks*. First the two different clock types are presented with the mathematical definition of their use cases. 
+After that the two clock variants are described. The section ends with a short description of connecting clocked FMUs.
 
 ===== Clock Types for Evaluation of Clocked Model Partitions [[clock-types-for-evaluation-of-clocked-model-partitions]]
 *Synchrounous Clocks*
-A set of equations that are associated to a clock and are executed when the corresponding clock is active, is called a clocked partition. A clocked partition is mathematically defined as:
+A set of equations that are associated to a clock and are executed when the corresponding clock is active, is called a clocked partition. 
+A clocked partition is mathematically defined as:
 [stem]
 ++++
 x_j=\begin{cases}
@@ -538,7 +545,13 @@ y_j=g_j(x_{j-1},u_j,t_j);
 \text{mit } j=0,1,2,...;x_{-1}=x_{start}
 ++++
 
-Variables _xj_ are called “states of a clocked partition”, or “discrete-time states” and _j_ is the _j+1th_ tick of the associated clock. Variables uj are the (external or local) inputs and yj are the (external or local) outputs of a clocked partition. A discrete-time state can be from any type of a Variable (with exception of a “Clock”) such as of type Real or Boolean. A clocked partition is not executed during initialization mode, but it is executed the first time at its first clock tick. The associated clock of the model partion is synchronous to its discrete-time states. Discrete-time states are listed in the ModelStructure and have the Variable xml-attribute _previous_ referring to the variable holding the previous value of the state. They can have initial values defined by xml-attributes _initial_ and _start_, or the initial values are computed internally as a function of parameters.
+Variables _xj_ are called `states of a clocked partition`, or `discrete-time states` and _j_ is the _j+1th_ tick of the associated clock. 
+Variables uj are the (external or local) inputs and yj are the (external or local) outputs of a clocked partition. 
+A discrete-time state can be from any type of a Variable (with exception of a `Clock`) such as of type Real or Boolean. 
+A clocked partition is not executed during initialization mode, but it is executed the first time at its first clock tick. 
+The associated clock of the model partion is synchronous to its discrete-time states. 
+Discrete-time states are listed in the ModelStructure and have the Variable xml-attribute _previous_ referring to the variable holding the previous value of the state. 
+They can have initial values defined by xml-attributes _initial_ and _start_, or the initial values are computed internally as a function of parameters.
 
 There are two kinds of evaluation modes:
 [start=1]
@@ -547,7 +560,8 @@ There are two kinds of evaluation modes:
 Modelica uses this mode for the first tick in clocked continuous equations. This mode can also be requested by the calling environment with fmi3SetClock, e.g. to form partial derivatives ∂yj/∂xj-1.
 
 *Communication Point Clocks*
-In addition to the above definition also a simplified clock definition used only in FMI for Co-Simulation is available that can be used to define the communication points of model partitions of the model (in the following such partitions are called model partitions). Such clocks are called CommunicationPointClocks (CPClocks). 
+In addition to the above definition also a simplified clock definition used only in FMI for Co-Simulation is available that can be used to define the communication points of model partitions of the model (in the following such partitions are called model partitions). 
+Such clocks are called CommunicationPointClocks (CPClocks). 
 These clocks are not compatible to synchronous clocks theory and must not be used together with synchronous clocks in one model.
 
 A model partition is mathematically defined as:
@@ -563,12 +577,15 @@ y_j=g_j(x_{j-1},u_j,t_j)
 Please note that CommunicationPointClocks can also be defined for continuous or piecewise continuous parts of the model.
 
 ===== Variants of Clocks [[variants-of-clocks]]
-This section gives a definition of the two clock variants. Furthermore the periodic clock tick is described which is used by both variants.
+This section gives a definition of the two clock variants. 
+Furthermore the periodic clock tick is described which is used by both variants.
 
 *Triggered Clocks*
-A triggered clock is a general clock that ticks when a time-, state- or step-event occurs in the continuous-model partition of the FMU (for CPClocks these triggered clock tick events can occour in all model partitions) and are identified based on their clockReference (see 2.2.3). It can be periodic or non-periodic. [Example: If “b = x > 0”, and a state event is defined when b changes from false to true, and b is defined as triggered clock, then this clock is active whenever x changes from negative to positive values.]
+A triggered clock is a general clock that ticks when a time-, state- or step-event occurs in the continuous-model partition of the FMU (for CPClocks these triggered clock tick events can occour in all model partitions) and are identified based on their clockReference (see 2.2.3). 
+It can be periodic or non-periodic. [Example: If `b = x > 0`, and a state event is defined when b changes from false to true, and b is defined as triggered clock, then this clock is active whenever x changes from negative to positive values.]
 
-Since triggered clocks are ticking based on model internal information it is required in case of FMI for Co-Simulation to signal the ticking of a triggered clock to the simulation environment during a _fmi3DoStep()_ computation. In most cases the signaling of a triggered clock tick is a “strong event” that requires creating a communication point for exchanging additional information (i.e. variable values) with the simulation environment. Additional cases need to be handled if a clock tick is not associated to an event that requires the creation of a communication point for the model partition that generated the event.
+Since triggered clocks are ticking based on model internal information it is required in case of FMI for Co-Simulation to signal the ticking of a triggered clock to the simulation environment during a _fmi3DoStep()_ computation. 
+In most cases the signaling of a triggered clock tick is a `strong event` that requires creating a communication point for exchanging additional information (i.e. variable values) with the simulation environment. Additional cases need to be handled if a clock tick is not associated to an event that requires the creation of a communication point for the model partition that generated the event.
 
 [Outside of the FMU it is not known in advance when this clock ticks. Instead, only when the clock is activated by the FMU, then the environment is informed that the clock ticks at this time instant.
 It is the task of the environment to handle the messaged events appropriately based on the clockReference information.
@@ -576,11 +593,12 @@ Example:
 ]
 
 *Inferred Clocks*
-An inferred clock is a periodic or non-periodic clock that is defined directly or indirectly by a clock outside of the FMU. Its interval is initialized by the environment.
+An inferred clock is a periodic or non-periodic clock that is defined directly or indirectly by a clock outside of the FMU. 
+Its interval is initialized by the environment.
 
 [Inside of the FMU it is not known in advance when this clock ticks. Instead, only when the clock is activated by the environment of the FMU, then the FMU is informed that the clock ticks at this time instant.
 Example:
-A clocked PI controller can be defined as FMU and the input and output signal of the controller can be defined to be on the same “Inferred” clock. In such a case, the environment deduces the clock ticks from the components that are connected to the PI controller (e.g. a component connected to the input, or to the output may define the relevant clock).
+A clocked PI controller can be defined as FMU and the input and output signal of the controller can be defined to be on the same `Inferred` clock. In such a case, the environment deduces the clock ticks from the components that are connected to the PI controller (e.g. a component connected to the input, or to the output may define the relevant clock).
 ]
 
 *Periodic Clock Ticks*
@@ -603,10 +621,16 @@ where:
 
 The interval ∆T and toffset for periodic clocks must be defined in the xml-file.
 
-If ∆T is fixed for an FMU and cannot be changed it is a strictly periodic clock. The clock is periodic, if ∆T can be defined before calling fmi3EnterInitializationMode. The clock is aperiodic if ∆T is not constant during a simulation run (fmi3SetInterval can be called during event mode).
+If ∆T is fixed for an FMU and cannot be changed it is a strictly periodic clock. 
+The clock is periodic, if ∆T can be defined before calling fmi3EnterInitializationMode. 
+The clock is aperiodic if ∆T is not constant during a simulation run (fmi3SetInterval can be called during event mode).
 
 *Clock Relationships for Communication Point Clocks*
-If triggered clocks and inferred clocks are defined it is possible to define a tick relationship from a triggered clock to an inferred clock. This is needed to allow for an external resource management to achieve an optimal control of model partitions. If a triggered clock ticks the associated inferred clock ticks at the same time instant. In that sense the triggered clocks and the associtated inferred clocks define a union of clocks. It is only meaningful to combine triggered clocks with an aperiodic inferred clock in that union.
+If triggered clocks and inferred clocks are defined it is possible to define a tick relationship from a triggered clock to an inferred clock. 
+This is needed to allow for an external resource management to achieve an optimal control of model partitions. 
+If a triggered clock ticks the associated inferred clock ticks at the same time instant. 
+In that sense the triggered clocks and the associtated inferred clocks define a union of clocks. 
+It is only meaningful to combine triggered clocks with an aperiodic inferred clock in that union.
 
 [cols="1,2"]
 |===
@@ -627,11 +651,13 @@ If triggered clocks and inferred clocks are defined it is possible to define a t
 image:images/example_usecase.png[]
 
 ===== Connecting Clocked FMUs [[connecting-clocked-fmus]]
-When connecting imported FMUs together, input and output variables can readily be connected together only when they are defined on a clock with identical properties. If this is not possible, an explicit cast of one clock to another clock is typically defined in the environment.
+When connecting imported FMUs together, input and output variables can readily be connected together only when they are defined on a clock with identical properties. 
+If this is not possible, an explicit cast of one clock to another clock is typically defined in the environment.
 
 The environment can evaluate required clock adaptions/casts for connections basing on the clockReference attribute of assigned variables [i.e. the variables that are assigned to a clock based on modelDescription.xml information].
 
-[Example: Elementary blocks like a PI controller will have all variables on an inferred clock with identical properties. Connecting such blocks together will therefore be possible without computationally expensive clock cast operations (and the environment can readily do the computation of assigned variables of the connected blocks based on the same clock).]
+[Example: Elementary blocks like a PI controller will have all variables on an inferred clock with identical properties. 
+Connecting such blocks together will therefore be possible without computationally expensive clock cast operations (and the environment can readily do the computation of assigned variables of the connected blocks based on the same clock).]
 
 [#GetSetCompleteFMUState]
 ==== Getting and Setting the Complete FMU State [[get-set-fmu-state]]
