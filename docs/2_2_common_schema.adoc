@@ -9,7 +9,7 @@ This schema file utilizes the following helper schema files:
 
 - `fmi3Annotation.xsd` +
 - `fmi3AttributeGroups.xsd` +
-- `fmi3ScalarVariable.xsd` +
+- `fmi3Variable.xsd` +
 - `fmi3Type.xsd` +
 - `fmi3VariableDependency.xsd` +
 - `fmi3Unit.xsd`
@@ -71,7 +71,7 @@ It is required that the encoding scheme is always UTF-8:
 
 [source, xml]
 ----
-<?xml version="1.0" encoding="UTF-8"?>
+include::examples/co_simulation.xml[lines=1]
 ----
 
 The FMI schema files (*.xsd) are also stored in "UTF-8". +
@@ -189,7 +189,7 @@ The format is a subset of "xs:dateTime" and should be: "YYYY-MM-DDThh:mm:ssZ" (w
 _[Example: "2009-12-08T14:33:22Z"]_.
 
 |`variableNamingConvention`
-|Defines whether the variable names in `ModelVariables / ScalarVariable / name` and in `TypeDefinitions / Type / name` follow a particular convention.
+|Defines whether the variable names in `ModelVariables / Variable / name` and in `TypeDefinitions / Type / name` follow a particular convention.
 For the details, see <<variableNamingConvention>>. Currently standardized are:
 
 - `flat`: A list of strings (the default).
@@ -402,24 +402,12 @@ T_F = (9/5) * (T_K - 273.15) + 32
 
 _and therefore, `factor = 1.8 (=9/5)` and `offset = -459.67 (= 32 - 273.15*9/5)`._
 
-_Both the `DisplayUnit.name` definitions as well as the `Unit.name` definitions are used in the `ScalarVariable` elements.
+_Both the `DisplayUnit.name` definitions as well as the `Unit.name` definitions are used in the `Variable` elements.
 Example for a definition:_
 
 [source, xml]
 ----
-<Unit name="rad/s">
-    <BaseUnit s="-1" rad="1"/>
-    <DisplayUnit name="deg/s" factor= "57.29577951308232"/>
-    <DisplayUnit name="rev/min" factor= "9.549296585513721"/>
-</Unit>
- <Unit name="bar">
-    <BaseUnit kg="1", m="-1", s="-2", factor="1.0e5", offset="0"/>
-</Unit>
- <Unit name="Re">
-    <BaseUnit/>    // unit = "1"
-                   //(dimensionless, all exponents of BaseUnit are zero)
- </Unit>
- <Unit name="Euro/PersonYear"/>  // no mapping to BaseUnit defined
+include::examples/unit_definition.xml[tags=UnitDefinitions]
 ----
 _]_
 
@@ -435,7 +423,7 @@ This element consists of a set of `SimpleType` definitions according to schema `
 One `SimpleType` has a type `name` and `description` as attributes.
 Attribute "name" must be unique with respect to all other elements of the `TypeDefinitions` list.
 Furthermore,
-`name` of a `SimpleType` must be different to all `name` attributes of `ScalarVariable`pass:[s] _[if the same names would be used, then this would nearly always give problems when importing the FMU in an environment such as Modelica, where a type name cannot be used as instance name]_.
+`name` of a `SimpleType` must be different to all `name` attributes of `Variable`pass:[s] _[if the same names would be used, then this would nearly always give problems when importing the FMU in an environment such as Modelica, where a type name cannot be used as instance name]_.
 Additionally, one of the elements `Real`, `Integer`, `Boolean`, `String`, `Binary`, or `Enumeration` must be present.
 They have the following definitions:
 
@@ -443,11 +431,11 @@ image::images/Real_schema.png[width=50%, align="center"]
 
 image::images/Integer_schema.png[width=50%, align="center"]
 
-_[The attributes of "Real" and "Integer" are collected in the attribute groups "fmi3RealAttributes" and "fmi3IntegerAttributes" in file "fmi3AttributeGroups.xsd", since these attributes are reused in the `ScalarVariable` element definitions below.]_
+_[The attributes of "Real" and "Integer" are collected in the attribute groups "fmi3RealAttributes" and "fmi3IntegerAttributes" in file "fmi3AttributeGroups.xsd", since these attributes are reused in the `Variable` element definitions below.]_
 
 image::images/Enumeration_schema.png[width=80%, align="center"]
 
-These definitions are used as default values in element `ScalarVariable`pass:[s] _[in order that, say, the definition of a "Torque" type does not have to be repeated over and over again]_.
+These definitions are used as default values in element `Variable`pass:[s] _[in order that, say, the definition of a "Torque" type does not have to be repeated over and over again]_.
 The attributes and elements have the following meaning:
 
 [cols="1,5",options="header"]
@@ -707,15 +695,31 @@ It provides the static information of all exposed variables and is defined as:
 
 image::images/ModelVariables_schema.png[width=100%, align="center"]
 
-The `ModelVariables` element consists of an ordered set of `ScalarVariable` elements (see figure above).
-The first element has `index = 1`,
-the second `index=2`, etc.
-This `ScalarVariable` `index` is used in element `ModelStructure` to uniquely and efficiently refer to `ScalarVariable` definitions.
-A `ScalarVariable` represents a variable of primitive type, like a real or integer variable.
-For simplicity,
-only scalar variables are supported in the schema file in this version and structured entities (like arrays or records) have to be mapped to scalars.
-The schema definition is present in a separate file `fmi3ScalarVariable.xsd`.
-The attributes of `ScalarVariable` are:
+The `ModelVariables` element consists of an ordered set of `Variable` elements (see figure above).
+`Variable` elements can uniformly represent variables of primitive (atomic) types, like single real or integer variables, or as well as arrays of an arbitrary (but fixed) number of dimensions. The schema definition is present in a separate file `fmi3Variable.xsd`.
+
+`Variable` elements representing array variables must contain a `Dimensions` element specifying the array dimensions.
+The `Dimensions` element contains a sequence of `Dimension` elements, each specifying the size of one dimension of the array:
+
+- If the `start` attribute of the `Dimension` element is present, it defines a constant size for this dimension, namely the integer value of the start attribute.
+The variability of the dimension size is constant in this case.
+
+- If the `valueReference` attribute of the `Dimension` element is present, it defines the size of this dimension to be the value of the `Variable` with the value reference given by the `valueReference` attribute.
+The referenced variable must be a variable of integer type, and must either be a constant (i.e. with `variability="constant"`) or a structural parameter (i.e. with `causality="structuralParameter"`).
+The `variability` of the dimension size is in this case the variability of the referenced variable.
+
+These two options are mutually exclusive, i.e. for each `Dimension` element either a `start` attribute or an `valueReference` attribute can be supplied, but not both.
+However different dimension sizes can be specified using different mechanisms and can have differing `variability` attributes.
+
+All initial dimension sizes (i.e. prior to any configuration or reconfiguration) must be positive integers (i.e. not zero), so that no dimension is initially vanished.
+Changes to dimension sizes are constrained by the `min`/`max` attributes of the referenced structural parameters, which can be any non-negative integer, including zero.
+Specifying a minimum size of zero on a structural parameter allows any related dimension sizes to be changed to zero in *Configuration Mode* or *Reconfiguration Mode*, thus causing the respective array size to go to zero, which leaves the respective array variable without any active elements.
+
+Changing any dimension of a variable in *Configuration Mode* or *Reconfiguration Mode* invalidates the variable’s current value (including its start value).
+It should be noted that changing a structural parameter might might affect dimension sizes of several variables.
+
+
+The attributes of `Variable` are:
 
 image::images/ScalarVariable_schema.png[width=90%, align="center"]
 
@@ -726,7 +730,7 @@ image::images/ScalarVariable_schema.png[width=90%, align="center"]
 
 |`name`
 |The full, [underline]#unique name# of the variable.
-Every variable is uniquely identified within an FMU instance by this name or by its `ScalarVariable index` (the element position in the `ModelVariables` list; the first list element has `index=1`).
+Every variable is uniquely identified within an FMU instance by this name.
 
 |`valueReference`
 |A handle of the variable to efficiently identify the variable value in the model interface.
@@ -760,15 +764,28 @@ The algebraic relationship to the inputs is defined via the `dependencies` attri
 - `"local"`: Local variable that is calculated from other variables or is a continuous-time state (see <<ModelStructure>>).
 It is not allowed to use the variable value in another model or slave.
 
-- `"independent""`: The independent variable (usually `time`).
+- `"independent"`: The independent variable (usually `time`).
 All variables are a function of this independent variable.
 `variability` must be `"continuous"`.
-At most one `ScalarVariable` of an FMU can be defined as `"independent"`.
+At most one `Variable` of an FMU can be defined as `"independent"`.
 If no variable is defined as `"independent"`, it is implicitly present with name = `time` and `unit = "s"`.
 If one variable is defined as `"independent"`, it must be defined as `Real` without a `start` attribute.
 It is not allowed to call function `fmi3SetReal` on an `"independent"` variable.
 Instead, its value is initialized with `fmi3SetupExperiment` and after initialization set by `fmi3SetTime` for ModelExchange and by arguments `currentCommunicationPoint` and `communicationStepSize` of `fmi3DoStep` for CoSimulation.
 _[The actual value can be inquired with `fmi3GetReal`.]_
+
+- `"structuralParameter"`: Independent parameter (a data value that is constant during the simulation and is provided by the environment and cannot be used in connections). `variability` must be `"fixed"` or `"tunable"`. `initial` must be `"exact"` or not present (meaning exact).
+This causality requires the `Variable` not to have a `Dimension` element.
+
+_[
+Example:
+<Variable name=“spD" valueReference="126" causality=“structuralParameter"
+  variability=“fixed">
+  <Integer start="3"/>
+</Variable>
+]_
+
+Structural parameters that are referenced in `Dimension` elements may have a `min` attribute with 0 but the `start` attribute, which is mandatory for structural parameters, must have a value larger than 0 for structural parameters used in `Dimension` elements. [This allows importing tools to ignore structural parameters because that start value reflects the internal default setting of that structural parameter.].
 
 The default of causality is `"local"`. +
 A continuous-time state must have `causality = "local"` or `output"`, see also <<ModelStructure>>.
@@ -861,10 +878,11 @@ _[in order to provide new values for inputs during continuous integration]_
 
 If `initial` is not present, its value is defined by the following tables based on the values of `causality` and `variability`:
 
-[cols="1,1,1,1,1,1,1,1,1"]
+[cols="1,1,1,1,1,1,1,1,1,1"]
 |====
 3.2+|
-6+^|*causality*
+7+^|*causality*
+^|*structual* *parameter*
 ^|*parameter*
 ^|*calculated* *parameter*
 ^|*input*
@@ -872,9 +890,10 @@ If `initial` is not present, its value is defined by the following tables based 
 ^|*local*
 ^|*independent*
 
-.5+^|*variability*
+.6+^|*variability*
 .3+^|data
 ^|*constant*
+^|[green]#(A) or --#
 ^|[red]#--#
 ^|[red]#--#
 ^|[red]#--#
@@ -884,6 +903,7 @@ If `initial` is not present, its value is defined by the following tables based 
 
 ^|*fixed*
 ^|[green]#(A)#
+^|[green]#(A)#
 ^|[maroon]#(B)#
 ^|[red]#--#
 ^|[red]#--#
@@ -891,6 +911,7 @@ If `initial` is not present, its value is defined by the following tables based 
 ^|[red]#--#
 
 ^|*tunable*
+^|[green]#(A)#
 ^|[green]#(A)#
 ^|[maroon]#(B)#
 ^|[red]#--#
@@ -902,12 +923,14 @@ If `initial` is not present, its value is defined by the following tables based 
 ^|*discrete*
 ^|[red]#--#
 ^|[red]#--#
+^|[red]#--#
 ^|[aqua]#(D)#
 ^|\(C)
 ^|\(C)
 ^|[red]#--#
 
 ^|*continuous*
+^|[red]#--#
 ^|[red]#--#
 ^|[red]#--#
 ^|[aqua]#(D)#
@@ -952,14 +975,15 @@ calculated
 
 _[Note: (1) If `causality = "independent"`, it is neither allowed to define a value for `initial` nor a value for start.
 (2) If `causality = "input"`, it is not allowed to define a value for `initial` and a value for start must be defined.
-(3) If \(C) and `initial = "exact"`, then the variable is explicitly defined by its start value in Initialization Mode (so directly after calling `fmi3ExitInitializationMode`, the value of the variable is either the start value stored in element `<ScalarVariable><XXX start=YYY/>` or the value provided by `fmi3SetXXX`, if this function was called on this variable).]_
+(3) If \(C) and `initial = "exact"`, then the variable is explicitly defined by its start value in Initialization Mode (so directly after calling `fmi3ExitInitializationMode`, the value of the variable is either the start value stored in element `<Variable><XXX start=YYY/>` or the value provided by `fmi3SetXXX`, if this function was called on this variable).]_
 
 The following combinations of variability/causality settings are allowed:
 
-[cols="1,1,1,1,1,1,1,1,1"]
+[cols="1,1,1,1,1,1,1,1,1,1"]
 |====
 3.2+|
-6+^|*causality*
+7+^|*causality*
+^|*structural* *parameter*
 ^|*parameter*
 ^|*calculated* *parameter*
 ^|*input*
@@ -967,9 +991,10 @@ The following combinations of variability/causality settings are allowed:
 ^|*local*
 ^|*independent*
 
-.5+^|*variability*
+.6+^|*variability*
 .3+^|data
 ^|*constant*
+^|[red]#--#
 ^|[red]#-- (a)#
 ^|[red]#-- (a)#
 ^|[red]#-- (a)#
@@ -978,6 +1003,7 @@ The following combinations of variability/causality settings are allowed:
 ^|[red]#-- (c)#
 
 ^|*fixed*
+^|[green]#(16)#
 ^|[green]#(1)#
 ^|[green]#(3)#
 ^|[red]#-- (d)#
@@ -986,6 +1012,7 @@ The following combinations of variability/causality settings are allowed:
 ^|[red]#-- (c)#
 
 ^|*tunable*
+^|[green]#(17)#
 ^|[green]#(2)#
 ^|[green]#(4)#
 ^|[red]#-- (d)#
@@ -997,12 +1024,14 @@ The following combinations of variability/causality settings are allowed:
 ^|*discrete*
 ^|[red]#-- (b)#
 ^|[red]#-- (b)#
+^|[red]#-- (b)#
 ^|[green]#(5)#
 ^|[green]#(8)#
 ^|[green]#(13)#
 ^|[red]#--(c)#
 
 ^|*continuous*
+^|[red]#-- (b)#
 ^|[red]#-- (b)#
 ^|[red]#-- (b)#
 ^|[green]#(6)#
@@ -1022,7 +1051,7 @@ _Discussion of the combinations that are [underline]#not allowed#_:
 |_The combinations `"constant" / "parameter"`, `"constant" / "calculatedParameter"` and `"constant" / "input"` do not make sense, since parameters and inputs are set from the environment, whereas a constant has always a value._
 
 ^|_[red]#(b)#_
-|_The combinations `"discrete / parameter"`, `"discrete / calculatedParameter"`, `"continuous / parameter"` and `"continuous" / "calculatedParameter"` do not make sense, since `causality = "parameter"` and `"calculatedParameter"` define variables that do not depend on time, whereas `"discrete"` and `"continuous"` define variables where the values can change during simulation._
+|_The combinations `"discrete / structuralParameter"`, `"discrete / parameter"`, `"discrete / calculatedParameter"`, `"continuous / structuralParameter", `"continuous / parameter"` and `"continuous" / "calculatedParameter"` do not make sense, since `causality = "structuralParameter"`, causality = "parameter"` and `"calculatedParameter"` define variables that do not depend on time, whereas `"discrete"` and `"continuous"` define variables where the values can change during simulation._
 
 ^|_[red]#(c)#_
 |_For an `"independent"` variable only `variability = "continuous"` makes sense._
@@ -1110,6 +1139,14 @@ The value of this local variable can only change during initialization and at ev
 |_continuous independent_
 |_All variables are a function of the continuous-time variable marked as `"independent"`.
 Usually, this is `time`_
+
+>|_[green]#(16)#_
+|_fixed structual parameter_
+|_Parameter used in  `Dimension` element;  can be changed before initialization in *Configuration Mode* state_
+
+>|_[green]#(17)#_
+|_tunable structual parameter_
+|_Parameter used in  `Dimension` element;  can be changed before initialization in *Configuration Mode* and in in *Reconfiguration Mode* state_
 |====
 
 _How to treat tunable variables:_
@@ -1120,14 +1157,14 @@ Even if this Dirac impulse would be modeled correctly by the modeling environmen
 Furthermore, in many cases the model equations are derived under the assumption of a constant value (like mass or capacity), and the model equations would be different if "p" would be time varying._
 
 _FMI for Model Exchange:_ +
-_Therefore, "tuning a parameter" during simulation does not mean to "change the parameter online" during simulation.
+_Therefore, "tuning a (structural) parameter" during simulation does not mean to "change the parameter online" during simulation.
 Instead, this is a short hand notation for:_
 
 . _Stop the simulation at an event instant (usually, a step event, in other words, after a successful integration step)._
 
-. _Change the values of the tunable parameters._
+. _Change the values of the tunable (structural) parameters. For tunable structural parameters, the *Reconfiguration Mode* state must be entered before and left afterwards._
 
-. _Compute all parameters that depend on the tunable parameters._
+. _Compute all parameters (and sizes of variables, states, derivatives, event indicators, ...) that depend on the tunable (structural) parameters._
 
 . _Newly start the simulation using as initial values the current values of all previous variables and the new values of the parameters._
 
@@ -1185,14 +1222,14 @@ The attributes are defined in <<definition-of-types>> (`TypeDefinitions`), excep
 |`declaredType`
 |If present, name of type defined with `TypeDefinitions / SimpleType`.
 The value defined in the corresponding `TypeDefinition` (see <<definition-of-types>>) is used as default.
-_[For example, if `min` is present both in `Real` (of `TypeDefinition`) and in `Real` (of `ScalarVariable`), then the `min` of `ScalarVariable` is actually used.]_
+_[For example, if `min` is present both in `Real` (of `TypeDefinition`) and in `Real` (of `Variable`), then the `min` of `Variable` is actually used.]_
 For `Real`, `Integer`, `Boolean`, `String`, this attribute is optional.
 For `Enumeration` it is required, because the Enumeration items are defined in `TypeDefinitions / SimpleType`.
 
 |`start`
 |Initial or guess value of variable.
 *This value is also stored in the C functions*.
-_[Therefore, calling_ `fmi3SetXXX` _to set start values is only necessary, if a different value as stored in the XML file is desired.]_ The interpretation of start is defined by `ScalarVariable / initial`.
+_[Therefore, calling_ `fmi3SetXXX` _to set start values is only necessary, if a different value as stored in the XML file is desired.]_ The interpretation of start is defined by `Variable / initial`.
 A different start value can be provided with an `fmi3SetXXX` function before `fmi3ExitInitializationMode` is called (but not for variables with `variability = "constant"`).
 
 _[The standard approach is to set the start value before `fmi3EnterInitializationMode`.
@@ -1213,13 +1250,13 @@ Variables with `causality = "parameter"` or `"input"`, as well as variables with
 - If `causality = "output"` or `"local"`, then the start value is either an `initial` or a `guess` value, depending on the setting of attribute `initial`.
 
 |`derivative`
-|If present, this variable is the derivative of variable with `ScalarVariable` index "derivative".
+|If present, this variable is the derivative of variable with `Variable` value reference  "derivative".
 _[For example,
-if there are 10 `ScalarVariable`pass:[s] and `derivative = 3` for `ScalarVariable` 8, then `ScalarVariable` 8 is the derivative of `ScalarVariable` 3 with respect to the independent variable (usually time).
+if there are 10 `Variable`pass:[s] and `derivative = 3` for `Variable` 8, then `Variable` 8 is the derivative of `Variable` 3 with respect to the independent variable (usually time).
 This information might be especially used if an input or an output is the derivative of another input or output, or to define the states.]_
 
 The state derivatives of an FMU are listed under element `<ModelStructure><Derivatives>`.
-All `ScalarVariable`pass:[s] listed in this element must have attribute `derivative` (in order that the continuous-time states are uniquely defined).
+All `Variable`pass:[s] listed in this element must have attribute `derivative` (in order that the continuous-time states are uniquely defined).
 
 |`reinit`
 |Only for ModelExchange (if only CoSimulation FMU, this attribute must not be present.
@@ -1258,7 +1295,8 @@ A Co- Simulation FMU does not need to expose these state derivatives.
 _[If a Co-Simulation FMU exposes its state derivatives, they are usually not utilized for the co-simulation, but, for example, to linearize the FMU at a communication point.]_
 
 The optional part defines in which way derivatives and outputs depend on inputs, and continuous-time states at the current super dense time instant (ModelExchange) or at the current Communication Point (CoSimulation).
-_[A simulation environment can utilize this information to improve the efficiency, for example, when connecting FMUs together, or when computing the partial derivative of the derivatives with respect to the states in the simulation engine.]_.
+_[The listed dependencies declare the dependencies between whole (multi-dimensional-)variables and not individual elements of the variables.]_
+_[A simulation environment can utilize this information to improve the efficiency, for example, when connecting FMUs together, or when computing the partial derivative of the derivatives with respect to the states in the simulation engine.]_
 
 `ModelStructure` has the following definition:
 
@@ -1285,7 +1323,7 @@ ModelStructure consists of the following elements (see also figures above; the s
 
 |`Outputs`
 |Ordered list of all outputs,
-in other words, a list of `ScalarVariable` indices where every corresponding `ScalarVariable` must have `causality = "output"` (and *every variable with `causality="output"` must be listed here*).
+in other words, a list of `Variable` value references where every corresponding `Variable` must have `causality = "output"` (and *every variable with `causality="output"` must be listed here*).
 _[Note that all output variables are listed here, especially discrete and continuous outputs.
 The ordering of the variables in this list is defined by the exporting tool.
 Usually, it is best to order according to the declaration order in the source model, since then the `Outputs` list does not change if the declaration order of outputs in the source model is not changed.
@@ -1295,13 +1333,13 @@ The functional dependency is defined as (dependencies of variables that are fixe
 [blue]#latexmath:[\color{blue}{(\mathbf{y}_c, \mathbf{y}_d) := \mathbf{f}_{output}(\mathbf{x}_c, \mathbf{u}_c, \mathbf{u}_d, t, \mathbf{p}_{tune})}]#
 
 |`Derivatives`
-|Ordered list of all state derivatives, in other words, a list of `ScalarVariable` `indices` where every corresponding `ScalarVariable` must be a state derivative.
+|Ordered list of all state derivatives, in other words, a list of `Variable` value references where every corresponding `Variable` must be a state derivative.
 _[Note that only continuous Real variables are listed here.
-If a state or a derivative of a state shall not be exposed from the FMU, or if states are not statically associated with a variable (due to dynamic state selection), then dummy `ScalarVariable`pass:[s] have to be introduced, for example, `x[4]`, or `xDynamicStateSet2[5]`.
+If a state or a derivative of a state shall not be exposed from the FMU, or if states are not statically associated with a variable (due to dynamic state selection), then dummy `Variable`pass:[s] have to be introduced, for example, `x[4]`, or `xDynamicStateSet2[5]`.
 The ordering of the variables in this list is defined by the exporting tool.
 Usually, it is best to order according to the declaration order of the states in the source model, since then the <Derivatives> list does not change if the declaration order of states in the source model is not changed.
 This is for example, important for linearization, in order that the interpretation of the state vector does not change for a re-exported FMU._].
-The corresponding continuous-time states are defined by attribute `derivative` of the corresponding `ScalarVariable` state derivative element.
+The corresponding continuous-time states are defined by attribute `derivative` of the corresponding `Variable` state derivative element.
 _[Note that higher order derivatives must be mapped to first order derivatives but the mapping definition can be preserved due to attribute `derivative`.
 Example: if_ latexmath:[\color{blue}{\frac{\text{ds}}{\text{dt}} = v,\ \frac{\text{dv}}{\text{dt}} =f(..)}] _,then_ latexmath:[\color{blue}{\left\{ v,\ \frac{\text{dv}}{\text{dt}} \right\}}] _ is the vector of state derivatives and attribute `derivative` of_ latexmath:[\color{blue}{v}] _references_ latexmath:[\color{blue}{s}] _,
 and attribute `derivative` of_ latexmath:[\color{blue}{\frac{\text{dv}}{\text{dt}}}] _references_ latexmath:[\color{blue}{v}] _.]_ +
@@ -1323,8 +1361,7 @@ This list consists of all variables with
 
 3. all continuous-time states and all state derivatives (defined with element `<Derivatives>` from `<ModelStructure>`) with `initial = "approx"` or `"calculated"` _[if a Co-Simulation FMU does not define the <Derivatives> element, (3) cannot be present]_.
 
-The resulting list is not allowed to have duplicates (for example, if a state is also an output, it is included only once in the list).
-The `Unknowns` in this list must be ordered according to their `ScalarVariable` index (for example, if for two variables A and B the `ScalarVariable` index of A is less than the index of B, then A must appear before B in `InitialUnknowns`). +
+The resulting list is not allowed to have duplicates (for example, if a state is also an output, it is included only once in the list). +
 Attribute `dependencies` defines the dependencies of the `Unknowns` from the `Knowns` in _Initialization Mode_ at the initial time.
 The functional dependency is defined as:
 
@@ -1343,7 +1380,7 @@ _Therefore, the initial state latexmath:[\color{blue}{\mathbf{x}_c(t_0)}] has `i
 The environment can still initialize this FMU in steady-state, by using latexmath:[\color{blue}{\mathbf{x}_c(t_0)}] as iteration variables and adding the equations latexmath:[\color{blue}{\mathbf{x}_c(t_0) = \mathbf{0}}] in the environment.]_
 
 |`Unknown`
-|An element of one of the lists above defining the unknown with a reference to the corresponding `ScalarVariable` element.
+|An element of one of the lists above defining the unknown with a reference to the corresponding `Variable` element.
 It is assumed that at a super-dense time instant latexmath:[\color{blue}{t = (t_R, t_I)}] (ModelExchange) and at a Communication Point (CoSimulation) the following relationship holds:
 
 latexmath:[\color{blue}{v_{unknown} = h(\mathbf{v}_{known}, \mathbf{v}_{freeze})}]
@@ -1367,16 +1404,15 @@ Element `Unknown` in `Outputs`, `Derivatives` and `InitialUnknowns` has the foll
 |_Attribute-Name_
 |_Description_
 
-|`index`
-|The `ScalarVariable` index of the `Unknown` latexmath:[\color{blue}{v_{\text{unknown}}}].
-_[For example, if there are 10 `ScalarVariable`pass:[s] and index = 3, then the third `ScalarVariable` is the unknown defined with this element.]_
+|`valueReference`
+|The `Variable` value reference of the `Unknown` latexmath:[\color{blue}{v_{\text{unknown}}}].
+
 
 |`dependencies`
 |Optional attribute defining the dependencies of the unknown latexmath:[\color{blue}{v_{\text{unknown}}}] (directly or indirectly via auxiliary variables) with respect to latexmath:[\color{blue}{\mathbf{v}_{\text{known}}}].
 If not present, it must be assumed that the `Unknown` depends on all `Knowns`.
 If present as empty list, the `Unknown` depends on none of the `Knowns`.
-Otherwise the `Unknown` depends on the `Knowns` defined by the given `ScalarVariable` indices.
-The indices are ordered according to magnitude, starting with the smallest index. +
+Otherwise the `Unknown` depends on the `Knowns` defined by the given `Variable` value references. +
 `Knowns` latexmath:[\color{blue}{\mathbf{v}_{\text{known}}}] in _Event_ and _Continuous-Time Mode_ (ModelExchange) and at _Communication Points_ (CoSimulation) for elements `Outputs`, `Derivatives`:
 
 - inputs (variables with `causality = "input"`)
@@ -1384,7 +1420,7 @@ The indices are ordered according to magnitude, starting with the smallest index
 - continuous-time states
 
 - independent variable (usually time; `causality = "independent"`).
-If an independent variable is not explicitly defined under `ScalarVariable`pass:[s], it is assumed that the `Unknown` depends explicitly on the independent variable.
+If an independent variable is not explicitly defined under `Variable`pass:[s], it is assumed that the `Unknown` depends explicitly on the independent variable.
 
 `Knowns` latexmath:[\color{blue}{\mathbf{v}_{\text{known}}}] in _Initialization Mode_ (for elements `InitialUnknowns`):
 
@@ -1394,7 +1430,7 @@ If an independent variable is not explicitly defined under `ScalarVariable`pass:
 _[for example, independent parameters or initial states.]_
 
 - independent variable (usually time; `causality = "independent"`).
-If an independent variable is not explicitly defined under `ScalarVariable`pass:[s], it is assumed that the `Unknown` depends explicitly on the independent variable.
+If an independent variable is not explicitly defined under `Variable`pass:[s], it is assumed that the `Unknown` depends explicitly on the independent variable.
 
 For Co-Simulation, `dependencies` does not list the dependency on continuous-time, if the capability flag `providesDirectionalDerivative` has a value of `"false"`.
 In other words, the respective partial derivatives cannot be computed.
@@ -1475,38 +1511,7 @@ _This equation system can be defined as:_
 
 [source, xml]
 ----
-<ModelVariables>
-   <ScalarVariable name="p"      , ...> … </ScalarVariable>  <!—index="1" -->
-   <ScalarVariable name="u1"     , ...> … </ScalarVariable>  <!—index="2" -->
-   <ScalarVariable name="u2"     , ...> … </ScalarVariable>  <!—index="3" -->
-   <ScalarVariable name="u3"     , ...> … </ScalarVariable>  <!—index="4" -->
-   <ScalarVariable name="x1"     , ...> … </ScalarVariable>  <!—index="5" -->
-   <ScalarVariable name="x2"     , ...> … </ScalarVariable>  <!—index="6" -->
-   <ScalarVariable name="x3"     , ...> … </ScalarVariable>  <!—index="7" -->
-   <ScalarVariable name="der(x1)", ...> … </ScalarVariable>  <!—index="8" -->
-   <ScalarVariable name="der(x2)", ...> … </ScalarVariable>  <!—index="9" -->
-   <ScalarVariable name="der(x3)", ...> … </ScalarVariable>  <!—index="10" -->
-   <ScalarVariable name="y"      , ...> … </ScalarVariable>  <!—index="11" -->
-</ModelVariables>
-
-<ModelStructure>
-   <Outputs>
-     <Unknown index="11" dependencies="6 7" />
-   </Outputs>
-   <Derivatives>
-     <Unknown index="8"  dependencies="6" />
-     <Unknown index="9"  dependencies="2 4 5 6"
-                         dependenciesKind="constant constant dependent fixed"/>
-     <Unknown index="10" dependencies="2 3 4 5 6" />
-   </Derivatives>
-
-   <InitialUnknowns>
-     <Unknown index="6" dependencies="2 4 5" />
-     <Unknown index="7" dependencies="2 4 5 11" />
-     <Unknown index="8" ... />
-     <Unknown index="10" ... />
-   </InitialUnknowns>
-</ModelStructure>
+include::examples/model_structure_example1.xml[tags=VariablesAndStructure]
 ----
 
 _Example 2:_
@@ -1519,16 +1524,12 @@ y = \left\{ \begin{matrix}
 \end{matrix}\right.
 ++++
 
-_where_ latexmath:[\color{blue}{u}] _is a continuous-time input with index="1" and_ latexmath:[\color{blue}{y}] _is a continuous-time output with index="2".
+_where_ latexmath:[\color{blue}{u}] _is a continuous-time input with `valueReference="1"` and_ latexmath:[\color{blue}{y}] _is a continuous-time output with `valueReference="2"`.
 The definition of the model structure is then:_
 
 [source, xml]
 ----
-<ModelStructure>
-  <Outputs>
-    <Unknown index="2" dependencies="1" dependenciesKind="discrete"/>
-  </Outputs>
-</ModelStructure>
+include::examples/model_structure_example2.xml[tags=ModelStructure]
 ----
 
 _[Note that_ latexmath:[\color{blue}{y = d \cdot u}] _where_ latexmath:[\color{blue}{d}] __changes only during Event Mode (__latexmath:[\color{blue}{d = 2 \cdot u}] _or_ latexmath:[\color{blue}{3 \cdot u\ }] _depending on relation_ latexmath:[\color{blue}{u > 0}] _that changes only at Event Mode).
@@ -1544,16 +1545,12 @@ y = \left\{ \begin{matrix}
 \end{matrix}\right.
 ++++
 
-_where_ latexmath:[\color{blue}{u}] _is a continuous-time input with index="1" and_ latexmath:[\color{blue}{y}] _is a continuous-time output with index="2".
+_where_ latexmath:[\color{blue}{u}] _is a continuous-time input with `valueReference="1"` and_ latexmath:[\color{blue}{y}] _is a continuous-time output with `valueReference="2"`.
 The definition of the model structure is then:_
 
 [source, xml]
 ----
-<ModelStructure>
-  <Outputs>
-    <Unknown index="2" dependencies="1" dependenciesKind="dependent"/>
-  </Outputs>
-</ModelStructure>
+include::examples/model_structure_example3.xml[tags=ModelStructure]
 ----
 
 _[Note that_ latexmath:[\color{blue}{y = c}] _where_ latexmath:[\color{blue}{c}] __changes only during Event Mode (__latexmath:[\color{blue}{c = 2}] _or_ latexmath:[\color{blue}{3\ }]__depending on relation__ latexmath:[\color{blue}{u > 0}] _that changes only at Event Mode).
@@ -1673,8 +1670,7 @@ Repeated calls if recomputations of clock state are needed during event mode.
 
 ==== Variable Naming Conventions (variableNamingConvention) [[variableNamingConvention]]
 
-
-With attribute `variableNamingConvention` of element `fmiModelDescription`, the convention is defined how the `ScalarVariable.name`pass:[s] have been constructed.
+With attribute `variableNamingConvention` of element `fmiModelDescription`, the convention is defined how the `Variable.name`pass:[s] have been constructed.
 If this information is known, the environment may be able to represent the names in a better way (for example, as a tree and not as a linear list).
 
 In the following definitions, the http://en.wikipedia.org/wiki/Extended_BNF[EBNF] is used:
@@ -1734,7 +1730,7 @@ arrayIndices    = "[" unsignedInteger {"," unsignedInteger} "]"
 unsignedInteger = digit { digit }
 ----
 
-The tree of names is mapped to an ordered list of `ScalarVariable.name`pass:[s] in http://en.wikipedia.org/wiki/Depth-first_search[depth-first] order.
+The tree of names is mapped to an ordered list of `Variable.name`pass:[s] in http://en.wikipedia.org/wiki/Depth-first_search[depth-first] order.
 Example:
 
 ----
@@ -1747,7 +1743,7 @@ vehicle
     temperature
 ----
 
-is mapped to the following list of `ScalarVariable.name`pass:[s]:
+is mapped to the following list of `Variable.name`pass:[s]:
 
 ----
 vehicle.transmission.ratio
@@ -1756,10 +1752,10 @@ vehicle.engine.inputSpeed
 vehicle.engine.temperature
 ----
 
-All array elements are given in a consecutive sequence of `ScalarVariable`pass:[s].
+All array elements are given in a consecutive sequence of `Variable`pass:[s].
 Elements of multi-dimensional arrays are ordered according to "row major" order that is elements of the last index are given in sequence.
 
-_[For example, the vector "centerOfMass" in body "arm1" is mapped to the following `ScalarVariable`pass:[s]:_
+_[For example, the vector "centerOfMass" in body "arm1" is mapped to the following `Variable`pass:[s]:_
 
 ----
 robot.arm1.centerOfMass[1]
@@ -1769,7 +1765,7 @@ robot.arm1.centerOfMass[3]
 
 _For example,
 a table T[4,3,2] (first dimension 4 entries, second dimension 3 entries,
-third dimension 2 entries) is mapped to the following `ScalarVariable`pass:[s]:_
+third dimension 2 entries) is mapped to the following `Variable`pass:[s]:_
 
 ----
 T[1,1,1]
