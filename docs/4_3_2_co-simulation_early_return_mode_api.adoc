@@ -69,29 +69,23 @@ Please note that, the co-simulation master can also call `fmi3EnterEventMode()` 
 // Irrelevant to this section, to be removed or rewritten?: `[` If an `{DOSTEP}` call of another FMU has already exceeded the time defined by `intermediateStepTime` from `fmi3IntermediateStepInfo` the master has to take care for a rollback of such `{DOSTEP}` to meet the intermediateStepTime for reaching a suitable Communication Point for all model partitions.`]`
 
 
-===== Handling a successful early-return by the master
+===== Handling a Successful Early-Return by the Master
 
 Once an FMU conducts a successful early-return and returns from `{DOSTEP}` with `earlyReturn = fmi3True`, the master should handle the event and resume the co-simulation.
-If an FMU provides the early-return capability, the master should indicate the FMU that this feature is also supported by the master. 
-The co-simulation master signals to the FMU that it supports and has recognized the early return co-simulation capabilities of the FMU by setting [ToBeDefined] in the `fmi3Instantiate()`.  
-If the master does not support the early-return, the FMU is expected to not sending a discontinuity event `eventOccurred` via the `fmi3IntermediateStepInfo` structure and in this case the FMU is imperatively ending `{DOSTEP}` computation at the next predefined communication point time (i.e., _currentCommunicationPoint_+ _communicationStepSize_).
+If an FMU provides the early-return capability, the master should indicate the FMU that the  early-return feature is also supported by the master. 
+The co-simulation master signals to the FMU that it supports and has recognized the early return co-simulation capabilities of the FMU by setting [TODO] in the `fmi3Instantiate()` function.  
+If the master does not support the early-return, the FMU is expected to not set the event flag `fmi3IntermediateStepInfo.eventOccurred` and in this case the FMU is imperatively ending `{DOSTEP}` computation at the next predefined communication instant (i.e., _currentCommunicationPoint_+ _communicationStepSize_).
 
-
-
-===== Retrieving Status Information from the Slave
-
-If `{DOSTEP}` returns with `earlyReturn = fmi3True` an internal event has occoured and event handling has to be done by the co-simulation master. 
+If the early-return is supported by both the FMU and the master, the co-simulation master is supposed to catch all events through the `fmi3NewDiscreteStates()` function and the `fmi3EventInfo` structure.
+The FMU stops computation at the first encountered triggered event (if any) and the event time is provided through `fmi3IntermediateStepInfo.intermediateStepTime`.
+If `{DOSTEP}` returns with `earlyReturn = fmi3True` and an event has happened, i.e., `fmi3IntermediateStepInfo.eventOccurred` is `fmi3True`, then an event handling has to be done by the co-simulation master. 
 In order to start event handling the co-simulation master has to call `fmi3EnterEventMode()` for that FMU to push the FMU into Event Mode. 
+ 
 
-If the fmuType is set to `fmi3EarlyReturnOn` then the co-simulation master is supposed to catch all events via the new `fmi3NewDiscreteStates()` function after it has received a `fmi3IntermediateStepInfo` with `eventOccurred` is `fmi3True` and `{DOSTEP}` returns with `earlyReturn = fmi3True`.
-The numerical solver in the FMU stops integration at the first encountered discontinuity event (if any) and the event time is given via the structure `fmi3IntermediateStepInfo`. Possibly, the co-simulation master can go on integration without rollback from this event time (except when the event is terminate).
+Note that `{DOSTEP}` does not always do an early return if `{IOVCALLBACK}` is called, only if either master requests an early return if `fmi3IntermediateStepInfo.canDoEarlyReturn` is `fmi3True` or the FMU signals an upcoming early return by setting `fmi3IntermediateStepInfo.willDoEarlyReturn` to `fmi3True`. 
 
-Possible return codes are exactly the same as those for the conventional `{DOSTEP}` function.
-
-Please note: `{DOSTEP}` does not always do an early return if `{IOVCALLBACK}` is called, only if a) master requests an early return if `canDoEarlyReturn` variable of `fmi3IntermediateStepInfo` is  `fmi3True` or b) the FMU signals an early return by itself by setting `willDoEarlyReturn = fmi3True` in the `fmi3IntermediateStepInfo` structure. 
-
-If the master requests an early return but the `{DOSTEP}` returns with `fmi3OK` and the _currentCommunicationPoint_ has passed the event time, the master can rollback the FMU and repeat the step with a suitable _communicationStepSize_, if the FMU is capable of rollbacks (`canGetAndSetFMUstate = true`).
-
+If the early-return request of the co-simulation master is ignored by the FMU, then `{DOSTEP}` returns with `earlyReturn = fmi3False`. 
+In this case, if the master needs a resynchronization of FMUs at an event time, but the _currentCommunicationPoint_ has passed the event time, the master needs to roll-back the FMU and repeat the step with a suitable _communicationStepSize_ (if the FMU supports the rollback).
 
 
 In Event Mode and only after `{DOSTEP}` returns with `earlyReturn = fmi3True` a `fmi3NewDiscreteStates()` call returns `fmi3EventInfo` structure as a return argument. 
@@ -106,13 +100,13 @@ This is the case when the model can report in advance the accurate time of the n
 
 
 The only possible return code for `fmi3NewDiscreteStates()` function in this case is `fmi3OK`.
-//MN: what about fmi3Error?
+//TODO: what about fmi3Error?
 
 
 In Event Mode it is allowed to `fmi3getXXX()` variable values of the FMU after the call of `fmi3NewDiscreteStates()` and it is allowed to `fmi3setXXX()` variable values before calling `fmi3NewDiscreteStates()`.  
 The FMU leaves Event Mode when the master calls `fmi3EnterStepMode()` for that FMU.
 
-It is not allowed to call `fmi3EnterEventMode()` or `fmi3EnterStepMode()` for an FMU if `canHandleEarlyReturn` is set to false.
+It is not allowed to call `fmi3EnterEventMode()` or `fmi3EnterStepMode()` for an FMU does not support early-return or clocks. 
 
 
 
@@ -129,4 +123,3 @@ See pseudocode:
 ----
 include::examples/pseudo_code_co_simulation_early_return.txt[]
 ----
-
