@@ -23,8 +23,8 @@ image::images/earlyreturn.png[width=100%, align="center"]
 
 {DOSTEP} routines run in parallel on different cores, so that each FMU starts integration from communication point latexmath:[t_{i}] to reach the next communication point latexmath:[t_{i+1}].
 Assuming an unexpected internal event is detected at latexmath:[t^{'}_{i+1}< t_{i+1}] during FMU~1~ integration, the Master is immediately informed thanks to the early-return feature. 
-//EDITQ: for the sake of good readability, it is imho ambiguous to use here "thanks to" "Early Return" because this is actually the name of the callback used to interrupt other FMUs running concurrently. instead I would say:
-//EDITQ: "the master is informed of an early return using `fmi3IntermediateStepFinished()` callback function" 
+//TODO: for the sake of good readability, it is imho ambiguous to use here "thanks to" "Early Return" because this is actually the name of the callback used to interrupt other FMUs running concurrently. instead I would say:
+//TODO: "the master is informed of an early return using `fmi3IntermediateStepFinished()` callback function" 
 So the Master would like now avoid others FMUs exceed the event time, since all FMUs should be resynchronized at the event time which will be the next new communication point.
 On the figure, ongoing FMU computations can be broken either immediately (refer to case 2 for FMU~3~) or at latexmath:[t^{'}_{i+1}] (refer to case 3 for FMU~4~). 
 Only FMU~2~ and FMU~3~ will be rolled back to latexmath:[t^{'}_{i+1}] by the Master as FMU~1~ and FMU~4~ have already reached the new communication point latexmath:[t^{'}_{i+1}].
@@ -41,5 +41,6 @@ include::../headers/fmi3FunctionTypes.h[tag=DoEarlyReturn]
 ----
 
 After returning from the callback function, if the `fmi3DoEarlyReturn()` has been invoked inside the callback function, the FMU stops the integration either exactly at `earlyReturnTime` (if `current-FMU-time {lt}= earlyReturnTime`) or immediately after the its next internal intermediate step (if `current-FMU-time {gt} earlyReturnTime`). 
-Afterwards, the FMU goes the `stepComplete` state and  `{DOSTEP}`  returns and signals an early-return to the master by setting `earlyReturn` variable to `fmi3True`.
-
+Afterwards, the FMU goes into the `stepComplete` state and  `{DOSTEP}`  returns and signals the premature stop (early-return) to the master by setting `earlyReturn` variable to `fmi3True`.
+// TODO: I propose to add the following line or clarification: 
+// TODO: Even if `current-FMU-time {lt}= earlyReturnTime`, there is no guarantee that FMU can stop exactly at earlyReturnTime. The only way to enforce this is to roll back and request a doStep of appropiate length to match earlyReturnTime
