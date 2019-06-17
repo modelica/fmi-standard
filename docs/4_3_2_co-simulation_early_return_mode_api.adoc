@@ -1,24 +1,31 @@
 ==== FMI Application Programming Interface
 :DOSTEP: fmi3DoStep()
+:IOVCALLBACK: fmi3IntermediateStepFinished()
 
-In order to support the early return in `fmi3DoStep` a capability flag in the XML file is required:
+The boolean capability flag `canHandleEarlyReturn` in the modelDescription XML file indicates whether `fmi3DoStep` supports the early-return feature.  
+The default value of this capability flag is false.
+Each time an internal discontinuity or an event happens inside an FMU with capability flag `canHandleEarlyReturn=true`, a triggered clock ticks and the callback function `{IOVCALLBACK}` is invoked by the FMU then the associated structure `fmi3IntermediateStepInfo` is sent back to the co-simulation master.
 
-`canHandleEarlyReturn`  = `true/false` with default value set to `false`
+===== Communication of event time and input/output values 
 
-Each time an internal discontinuity event takes place in an FMU with capability flag `canHandleEarlyReturn=true`, a triggered clock ticks and a callback function `fmi3IntermediateStepFinished()` is invoked by the FMU then the associated structure `fmi3IntermediateStepInfo` is sent back to the co-simulation master.
+In order to stablish a way to communicate the input and output and in particular the event time from the FMU to the co-simulation master, the `{IOVCALLBACK}` callback is used.
+[source, c]
+----
+include::../headers/fmi3FunctionTypes.h[tag=IntermediateStepFinished]
+----
+This callback allows internal events associated to triggered clock ticks be signaled from an FMU to the co-simulation master. 
+If `fmu3Type` is set to `fmi3CoSimulation`, the definition  of this callback is mandatory in `fmi3CallbackFunctions` in `fmi3Instantiate()`.
+It is only allowed to provide a NULL pointer, if the `fmu3Type` is set to  `fmi3ModelExchange`.
 
-
-===== Transfer of Input / Output Values and Parameters
-====== New structure
-For the signalling of triggered clock ticks and solver based discontinuty events the `fmi3IntermediateStepInfo` structure is used.
+The `fmi3IntermediateStepInfo`  argument in the `{IOVCALLBACK}` function is a structure which is used to signal triggered clock ticks and internal events to the master.
+Whenever the FMU invokes the `{IOVCALLBACK}` callback function, it fills the `fmi3IntermediateStepInfo` structure to pass information concerning the call to the co-simulation master.
+The structure is defined as follows:
 
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tag=IntermediateStepInfo]
 ----
-
-The structure fmi3IntermediateStepInfo is associated to the new `fmi3IntermediateStepFinished()` callback function:
-
+ 
 * 	`intermediateStepTime` is the simulation time at which the discontinuity has occurred within the FMU.
 `intermediateStepTime` is either the exact `earlyReturnTime` required by the master for the break or the closest time greater than the `earlyReturnTime` required by the master.
 If this time is not exactly the required `earlyReturnTime`, the master can rollback the FMU to precisely reach this event time. `intermediateStepTime` is also the time of intermediate steps of the internal FMU solver.
@@ -28,58 +35,48 @@ The following `fmi3Boolean` variables define the reasons of the discontinuity. S
 
 *	when `eventOccurred` is `fmi3True`, it means that `fmi3NewDiscreteStates()` function shall be called for gathering `fmi3eventInfo` related information about events e.g. caused by ticking triggered clocks at `intermediateStepTime;`
 
-*	when `clocksTicked`  is `fmi3True`, it means that `fmi3GetClock()` function shuold be called for gathering all clock related information about ticking triggered clocks at `intermediateStepTime;`. This variable is relevent only if fmuType is set to `fmi3ClockedCoSimulation`.
+*	when `clocksTicked`  is `fmi3True`, it means that `fmi3GetClock()` function should be called for gathering all clock related information about ticking triggered clocks at `intermediateStepTime;`. 
+This variable is relevant only if the master supports handling the clocks.
 
 *	when `intermediateVariableSetAllowed` is `fmi3True`, the FMU signals that intermediate output values can be collected by the co-simulation master.
 
 *	when `intermediateVariableGetAllowed` is `fmi3True`, the FMU signals that intermediate input values can be set by the co-simulation master.
 
-*   when `canDoEarlyReturn` is `fmi3True` the master can request the FMU to return early at the current `intermediateStepTime` time instant via calling `fmi3DoEarlyReturn()` within the callback function `fmi3IntermediateStepFinished()`. If `canDoEarlyReturn` is `fmi3False` the FMU will not do the early return, regardless of the master request.
+*   when `canDoEarlyReturn` is `fmi3True` the master can request the FMU to return early at the current `intermediateStepTime` time instant via calling `fmi3DoEarlyReturn()` within the callback function `{IOVCALLBACK}`. If `canDoEarlyReturn` is `fmi3False` the FMU will not do the early return, regardless of the master request.
 
 *   when `willDoEarlyReturn` is `fmi3True` the FMU informs the master that the FMU will return early at the current `intermediateStepTime` time instant.
  
-======= New callback functions
-
-Internal events associated to triggered clock ticks are signaled from the FMU to the co-simulation master by  the `fmi3IntermediateStepFinished()` callback function:
- 
-[source, c]
-----
-include::../headers/fmi3FunctionTypes.h[tag=IntermediateStepFinished]
-----
-
-It is only allowed to provide a NULL pointer for this callback function in `fmi3CallbackFunctions`, if the `fmu3Type` is set to  `fmi3ModelExchange` or `fmi3ClockedModelExchange` mode in `fmi3Instantiate()`.
 
 Note that only the first discontinuity event at a Newtonian time instant shall be signaled that way. But, there may be an event iteration at a Newtonian time instant and have super dense time instants.
  
-Based on the information delivered via `fmi3IntermediateStepInfo` in <<New structure>> section, additional information about the discontinuity at that time instant can be obtained via `fmi3NewDiscreteStates()` and/or `fmi3GetClock()` function (refer to Model Exchange for the prototyping of these functions, and to the following sections for allowed call sequences). 
-The return code for `fmi3NewDiscreteStates()` function in this case is `fmi3OK`. 
-//MN:WHY? what about fmi3Error, etc.?
+Based on the information delivered in `fmi3IntermediateStepInfo`, additional information about the discontinuity at that time instant can be obtained from the `fmi3EventInfo` structure after calling  `fmi3NewDiscreteStates()`  and/or `fmi3GetClock()`. 
 
-The co-simulation master can request the FMU to end the integration at this Newtonian time instant and do an early return via calling the function `fmi3DoEarlyReturn()` in the callback function `fmi3IntermediateStepFinished()`. 
-The co-simulation master is only allowed to call this function if the variable `canDoEarlyReturn` of `intermediateStepInfo` has the value `fmi3True`.
-If the FMU is able to do an early return, the return parameter value of `earlyReturn` of `{DOSTEP}` is `fmi3True`, otherwise `fmi3False`.
+===== Early-return requested by the co-simulation master
+The co-simulation master can request the FMU to end the `{DOSTEP}` at a Newtonian time instant and do an early return by calling the  `fmi3DoEarlyReturn()` function inside the callback function `{IOVCALLBACK}`. 
+The co-simulation master is only allowed to call this function, if the boolean variable `intermediateStepInfo.canDoEarlyReturn` is `fmi3True`.
+If the FMU is successful to do an early return, the return value of the `earlyReturn` argument in `{DOSTEP}` is `fmi3True`, otherwise `fmi3False`.
 
-If the FMU returns from `{DOSTEP}` with the `earlyReturn = fmi3True` the co-simulation master has to call `fmi3EnterEventMode()` for that FMU.
-The co-simulation master can also call `fmi3EnterEventMode()` before the next `{DOSTEP}` call if event handling is required due to FMU external events.
-
-`[` If an `{DOSTEP}` call of another FMU has already exceeded the time defined by `intermediateStepTime` from `fmi3IntermediateStepInfo` the master has to take care for a rollback of such `{DOSTEP}` to meet the intermediateStepTime for reaching a suitable Communication Point for all model partitions.`]`
-
-
-
-===== Computation
-
-The stop of calculation after a discontinuity event detected via the `fmi3IntermediateStepInfo` structure is a new FMU behavior that requires a new handling mode for `{DOSTEP}`. 
-The co-simulation master signals to the FMU that it supports and has recognized the early return co-simulation capabilities of the FMU via setting `fmi3Instantiate()` with fmuType equals _fmi3EarlyReturnOn_.  
-
-The FMU is expected to not sending a discontinuity event `eventOccurred` via the `fmi3IntermediateStepInfo` structure if the `fmuType` equals `fmi3CoSimulationOn` and in this case the FMU is imperatively ending `{DOSTEP}` computation at the next predefined communication point time (i.e., _currentCommunicationPoint_+ _communicationStepSize_).
-
-
-The function {DOSTEP} is extended by a new Boolean parameter variable earlyReturn for transporting the early return information. 
+The function `{DOSTEP}` has the following input and output arguments: 
 
 [source, c]
 ----
 include::../headers/fmi3FunctionTypes.h[tag=DoStep]
 ----
+
+If the FMU returns from `{DOSTEP}` with the `earlyReturn = fmi3True` the co-simulation master has to call `fmi3EnterEventMode()` for that FMU.
+Please note that, the co-simulation master can also call `fmi3EnterEventMode()` at communication instants to handle inferred events, as will be discussed in following sections.
+
+// Irrelevant to this section, to be removed or rewritten?: `[` If an `{DOSTEP}` call of another FMU has already exceeded the time defined by `intermediateStepTime` from `fmi3IntermediateStepInfo` the master has to take care for a rollback of such `{DOSTEP}` to meet the intermediateStepTime for reaching a suitable Communication Point for all model partitions.`]`
+
+
+===== Handling a successful early-return by the master
+
+Once an FMU conducts a successful early-return and returns from `{DOSTEP}` with `earlyReturn = fmi3True`, the master should handle the event and resume the co-simulation.
+If an FMU provides the early-return capability, the master should indicate the FMU that this feature is also supported by the master. 
+The co-simulation master signals to the FMU that it supports and has recognized the early return co-simulation capabilities of the FMU by setting [ToBeDefined] in the `fmi3Instantiate()`.  
+If the master does not support the early-return, the FMU is expected to not sending a discontinuity event `eventOccurred` via the `fmi3IntermediateStepInfo` structure and in this case the FMU is imperatively ending `{DOSTEP}` computation at the next predefined communication point time (i.e., _currentCommunicationPoint_+ _communicationStepSize_).
+
+
 
 ===== Retrieving Status Information from the Slave
 
@@ -91,7 +88,7 @@ The numerical solver in the FMU stops integration at the first encountered disco
 
 Possible return codes are exactly the same as those for the conventional `{DOSTEP}` function.
 
-Please note: `{DOSTEP}` does not always do an early return if `fmi3IntermediateStepFinished()` is called, only if a) master requests an early return if `canDoEarlyReturn` variable of `fmi3IntermediateStepInfo` is  `fmi3True` or b) the FMU signals an early return by itself by setting `willDoEarlyReturn = fmi3True` in the `fmi3IntermediateStepInfo` structure. 
+Please note: `{DOSTEP}` does not always do an early return if `{IOVCALLBACK}` is called, only if a) master requests an early return if `canDoEarlyReturn` variable of `fmi3IntermediateStepInfo` is  `fmi3True` or b) the FMU signals an early return by itself by setting `willDoEarlyReturn = fmi3True` in the `fmi3IntermediateStepInfo` structure. 
 
 If the master requests an early return but the `{DOSTEP}` returns with `fmi3OK` and the _currentCommunicationPoint_ has passed the event time, the master can rollback the FMU and repeat the step with a suitable _communicationStepSize_, if the FMU is capable of rollbacks (`canGetAndSetFMUstate = true`).
 
