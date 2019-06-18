@@ -146,8 +146,10 @@ Common Functions
 /*FMI30 Events&Multirate start*/
 #define fmi3SetClock                      fmi3FullName(fmi3SetClock)
 #define fmi3GetClock                      fmi3FullName(fmi3GetClock)
-#define fmi3GetInterval	                  fmi3FullName(fmi3GetInterval)
-#define fmi3SetInterval	                  fmi3FullName(fmi3SetInterval)
+#define fmi3GetIntervalDecimal            fmi3FullName(fmi3GetIntervalDecimal)
+#define fmi3SetIntervalDecimal            fmi3FullName(fmi3SetIntervalDecimal)
+#define fmi3GetIntervalFraction           fmi3FullName(fmi3GetIntervalFraction)
+#define fmi3SetIntervalFraction           fmi3FullName(fmi3SetIntervalFraction)
 #define fmi3EnterEventMode                fmi3FullName(fmi3EnterEventMode)
 #define fmi3NewDiscreteStates             fmi3FullName(fmi3NewDiscreteStates)
 #define fmi3EnterContinuousTimeMode       fmi3FullName(fmi3EnterContinuousTimeMode)
@@ -259,8 +261,10 @@ FMI3_Export fmi3GetDirectionalDerivativeTYPE fmi3GetDirectionalDerivative;
 /* FMI3 Events&Multirate start */
 FMI3_Export fmi3SetClockTYPE 			  	fmi3SetClock;
 FMI3_Export fmi3GetClockTYPE 			  	fmi3GetClock;
-FMI3_Export fmi3GetIntervalTYPE 			fmi3GetInterval;
-FMI3_Export fmi3SetIntervalTYPE 			fmi3SetInterval;
+FMI3_Export fmi3GetIntervalDecimalTYPE      fmi3GetIntervalDecimal;
+FMI3_Export fmi3SetIntervalDecimalTYPE      fmi3SetIntervalDecimal;
+FMI3_Export fmi3GetIntervalFractionTYPE     fmi3GetIntervalFraction;
+FMI3_Export fmi3SetIntervalFractionTYPE     fmi3SetIntervalFraction;
 FMI3_Export fmi3EnterEventModeTYPE          fmi3EnterEventMode;
 FMI3_Export fmi3NewDiscreteStatesTYPE       fmi3NewDiscreteStates;
 FMI3_Export fmi3EnterContinuousTimeModeTYPE fmi3EnterContinuousTimeMode;
