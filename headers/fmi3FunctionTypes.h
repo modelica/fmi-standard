@@ -68,11 +68,11 @@ typedef enum {
 typedef enum {
     fmi3ModelExchange,
     fmi3CoSimulation,
-	/*FMI30 Events&Multirate start*/
-	fmi3EarlyReturn,
-	fmi3ClockedCoSimulation,
-	fmi3ScheduledExecutionSimulation
-	/*FMI30 Events&Multirate end*/
+    /*FMI30 Events&Multirate start*/
+    fmi3EarlyReturn,
+    fmi3ClockedCoSimulation,
+    fmi3ScheduledExecutionSimulation
+    /*FMI30 Events&Multirate end*/
 } fmi3Type;
 /* end::Type[] */
 
@@ -89,14 +89,14 @@ typedef enum {
 
 /* tag::IntermediateStepInfo[] */
 typedef struct{
-	fmi3Float64	intermediateStepTime; 
-	fmi3Boolean	eventOccurred;
-	fmi3Boolean	clocksTicked;
-	fmi3Boolean	intermediateVariableSetAllowed;
-	fmi3Boolean	intermediateVariableGetAllowed;
-	fmi3Boolean	internalStepFinished;
-    fmi3Boolean	canDoEarlyReturn;
-	fmi3Boolean	willDoEarlyReturn;
+    fmi3Float64 intermediateStepTime; 
+    fmi3Boolean eventOccurred;
+    fmi3Boolean clocksTicked;
+    fmi3Boolean intermediateVariableSetAllowed;
+    fmi3Boolean intermediateVariableGetAllowed;
+    fmi3Boolean internalStepFinished;
+    fmi3Boolean canDoEarlyReturn;
+    fmi3Boolean willDoEarlyReturn;
 } fmi3IntermediateStepInfo;
 /* end::IntermediateStepInfo[] */
 
@@ -115,22 +115,22 @@ typedef void  (*fmi3CallbackFreeMemory)     (fmi3ComponentEnvironment componentE
 
 /* tag::IntermediateStepFinished[] */
 typedef fmi3Status (*fmi3IntermediateStepFinished) (fmi3ComponentEnvironment componentEnvironment,
-	                                        fmi3IntermediateStepInfo* intermediateStepInfo);
+                                                    fmi3IntermediateStepInfo* intermediateStepInfo);
 /* end::IntermediateStepFinished[] */
 
-typedef void 	  (*fmi3StartPreemptionLock)   ();
-typedef void 	  (*fmi3StopPreemptionLock)    ();
+typedef void       (*fmi3StartPreemptionLock)   ();
+typedef void       (*fmi3StopPreemptionLock)    ();
 /*FMI3 Events&Multirate end*/
 
 typedef struct {
-    fmi3CallbackLogger				logger;
-    fmi3CallbackAllocateMemory		allocateMemory;
-    fmi3CallbackFreeMemory			freeMemory;
-    fmi3ComponentEnvironment		componentEnvironment;
+    fmi3CallbackLogger              logger;
+    fmi3CallbackAllocateMemory      allocateMemory;
+    fmi3CallbackFreeMemory          freeMemory;
+    fmi3ComponentEnvironment        componentEnvironment;
 /*FMI3 Events&Multirate start*/
-    fmi3IntermediateStepFinished	intermediateStepFinished;
-    fmi3StartPreemptionLock			startPreemptionLock;
-    fmi3StopPreemptionLock			stopPreemptionLock;
+    fmi3IntermediateStepFinished    intermediateStepFinished;
+    fmi3StartPreemptionLock         startPreemptionLock;
+    fmi3StopPreemptionLock          stopPreemptionLock;
 /*FMI3 Events&Multirate end*/
 } fmi3CallbackFunctions;
 /* end::CallbackFunctions[] */
@@ -179,7 +179,7 @@ typedef fmi3Component fmi3InstantiateTYPE(fmi3String  instanceName,
                                           const fmi3CallbackFunctions* functions,
                                           fmi3Boolean visible,
                                           fmi3Boolean loggingOn,
-										  fmi3Boolean intermediateVariableAccessOn);
+                                          fmi3Boolean intermediateVariableAccessOn);
 /* end::Instantiate[] */
 
 /* tag::FreeInstance[] */
@@ -269,21 +269,21 @@ typedef fmi3Status fmi3GetBinaryTYPE (fmi3Component c,
 
 /*FMI3 Events&Multirate start*/
 /* tag::GetClock[] */
-typedef fmi3Status fmi3GetClockTYPE	 (fmi3Component c, 
-									  const fmi3ValueReference vr[], size_t nvr, 
-									  fmi3Boolean value[]);
+typedef fmi3Status fmi3GetClockTYPE(fmi3Component c, 
+                                    const fmi3ValueReference vr[], size_t nvr, 
+                                    fmi3Boolean value[]);
 /* end::GetClock[] */
 
 /* tag::GetInterval[] */
 typedef fmi3Status fmi3GetIntervalDecimalTYPE(fmi3Component c, 
-									   const fmi3ValueReference vr[], size_t nvr, 
-									   fmi3Float64 interval[]);
-									   
+                                              const fmi3ValueReference vr[], size_t nvr, 
+                                              fmi3Float64 interval[]);
+
 typedef fmi3Status fmi3GetIntervalFractionTYPE(fmi3Component c, 
-									   const fmi3ValueReference vr[], size_t nvr, 
-									   fmi3UInt64 intervalCounter[], fmi3UInt64 resolution[]);
+                                               const fmi3ValueReference vr[], size_t nvr, 
+                                               fmi3UInt64 intervalCounter[], fmi3UInt64 resolution[]);
 /* end::GetInterval[] */
-									   
+
 /*FMI3 Events&Multirate end*/
 
 /* tag::Setters[] */
@@ -342,19 +342,19 @@ typedef fmi3Status fmi3SetBinaryTYPE (fmi3Component c,
 
 /*FMI3 Events&Multirate start*/
 /* tag::SetClock[] */
-typedef fmi3Status fmi3SetClockTYPE 	 (fmi3Component c, 
-									  const fmi3ValueReference vr[], size_t nvr, 
-									  const fmi3Boolean value[], const fmi3Boolean *subactive);
+typedef fmi3Status fmi3SetClockTYPE(fmi3Component c,
+                                    const fmi3ValueReference vr[], size_t nvr,
+                                    const fmi3Boolean value[], const fmi3Boolean *subactive);
 /* end::SetClock[] */
 
 /* tag::SetInterval[] */
-typedef fmi3Status fmi3SetIntervalDecimalTYPE		 (fmi3Component c, 
-  									  const fmi3ValueReference vr[], size_t nvr, 
-									  fmi3Float64 interval[]);
-									  
-typedef fmi3Status fmi3SetIntervalFractionTYPE		 (fmi3Component c, 
-  									  const fmi3ValueReference vr[], size_t nvr, 
-									  fmi3UInt64 intervalCounter[], fmi3UInt64 resolution[]);
+typedef fmi3Status fmi3SetIntervalDecimalTYPE(fmi3Component c,
+                                              const fmi3ValueReference vr[], size_t nvr,
+                                              fmi3Float64 interval[]);
+
+typedef fmi3Status fmi3SetIntervalFractionTYPE(fmi3Component c,
+                                               const fmi3ValueReference vr[], size_t nvr,
+                                               fmi3UInt64 intervalCounter[], fmi3UInt64 resolution[]);
 /* end::SetInterval[] */
 /*FMI3 Events&Multirate end*/
 
@@ -389,15 +389,15 @@ typedef fmi3Status fmi3SerializedFMUstateSizeTYPE(fmi3Component c,
                                                   fmi3FMUstate  FMUstate,
                                                   size_t* size);
 
-typedef fmi3Status fmi3SerializeFMUstateTYPE     (fmi3Component c,
-                                                  fmi3FMUstate  FMUstate,
-                                                  fmi3Byte serializedState[],
-                                                  size_t size);
+typedef fmi3Status fmi3SerializeFMUstateTYPE(fmi3Component c,
+                                             fmi3FMUstate  FMUstate,
+                                             fmi3Byte serializedState[],
+                                             size_t size);
 
-typedef fmi3Status fmi3DeSerializeFMUstateTYPE   (fmi3Component c,
-                                                  const fmi3Byte serializedState[],
-                                                  size_t size,
-                                                  fmi3FMUstate* FMUstate);
+typedef fmi3Status fmi3DeSerializeFMUstateTYPE(fmi3Component c,
+                                               const fmi3Byte serializedState[],
+                                               size_t size,
+                                               fmi3FMUstate* FMUstate);
 /* end::SerializedFMUstate[] */
 
 /* Getting partial derivatives */
@@ -514,7 +514,7 @@ typedef fmi3Status fmi3DoStepTYPE(fmi3Component c,
                                   fmi3Float64 currentCommunicationPoint,
                                   fmi3Float64 communicationStepSize,
                                   fmi3Boolean noSetFMUStatePriorToCurrentPoint,
-								  fmi3Boolean* earlyReturn);
+                                  fmi3Boolean* earlyReturn);
 /* end::DoStep[] */
 
 /* tag::ActivateModelPartition[] */
@@ -524,7 +524,7 @@ typedef fmi3Status fmi3ActivateModelPartitionTYPE(fmi3Component  c,
 /* end::ActivateModelPartition[] */
 
 /* tag::DoEarlyReturn[] */
-typedef fmi3Status fmi3DoEarlyReturnTYPE (fmi3Component c, fmi3Float64 earlyReturnTime);
+typedef fmi3Status fmi3DoEarlyReturnTYPE(fmi3Component c, fmi3Float64 earlyReturnTime);
 /* end::DoEarlyReturn[] */
 
 /* Inquire slave status */

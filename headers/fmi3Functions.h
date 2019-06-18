@@ -183,7 +183,7 @@ Functions for FMI3 for Co-Simulation
 #define fmi3GetOutputDerivatives         fmi3FullName(fmi3GetOutputDerivatives)
 #define fmi3DoStep                       fmi3FullName(fmi3DoStep)
 /*FMI3 Events&Multirate start*/
-#define fmi3SetFeatureUse		         fmi3FullName(fmi3SetFeatureUse)
+#define fmi3SetFeatureUse                fmi3FullName(fmi3SetFeatureUse)
 #define fmi3ActivateModelPartition       fmi3FullName(fmi3ActivateModelPartition)
 #define fmi3DoEarlyReturn                fmi3FullName(fmi3DoEarlyReturn)
 /*FMI3 Events&Multirate end*/
@@ -259,8 +259,8 @@ FMI3_Export fmi3DeSerializeFMUstateTYPE    fmi3DeSerializeFMUstate;
 FMI3_Export fmi3GetDirectionalDerivativeTYPE fmi3GetDirectionalDerivative;
 
 /* FMI3 Events&Multirate start */
-FMI3_Export fmi3SetClockTYPE 			  	fmi3SetClock;
-FMI3_Export fmi3GetClockTYPE 			  	fmi3GetClock;
+FMI3_Export fmi3SetClockTYPE                fmi3SetClock;
+FMI3_Export fmi3GetClockTYPE                fmi3GetClock;
 FMI3_Export fmi3GetIntervalDecimalTYPE      fmi3GetIntervalDecimal;
 FMI3_Export fmi3SetIntervalDecimalTYPE      fmi3SetIntervalDecimal;
 FMI3_Export fmi3GetIntervalFractionTYPE     fmi3GetIntervalFraction;
@@ -305,14 +305,14 @@ FMI3_Export fmi3GetOutputDerivativesTYPE fmi3GetOutputDerivatives;
 /*FMI30 Events&Multirate start*/
 FMI3_Export fmi3ActivateModelPartitionTYPE     fmi3ActivateModelPartition;
 /*FMI30 Events&Multirate end*/
-FMI3_Export fmi3DoStepTYPE      			   fmi3DoStep;
+FMI3_Export fmi3DoStepTYPE                     fmi3DoStep;
 
 /*FMI30 Events&Multirate start*/
-FMI3_Export fmi3DoEarlyReturnTYPE 		      fmi3DoEarlyReturn;
+FMI3_Export fmi3DoEarlyReturnTYPE              fmi3DoEarlyReturn;
 /*FMI30 Events&Multirate end*/
 
 /* Inquire slave status */
-FMI3_Export fmi3GetDoStepDiscardedStatusTYPE fmi3GetDoStepDiscardedStatus;
+FMI3_Export fmi3GetDoStepDiscardedStatusTYPE   fmi3GetDoStepDiscardedStatus;
 
 #ifdef __cplusplus
 }  /* end of extern "C" { */
