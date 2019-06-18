@@ -1,33 +1,30 @@
-_Author: Manuel Brose_
-
-// To be modified: 
-//    `fmuType` --> `fmuType.CoSimulationType` according to 2019-05-29_WebEx slides 6+7
+// TODO: `fmuType` --> `fmuType.CoSimulationType` according to 2019-05-29_WebEx slides 6+7
 
 ==== FMI Application Programming Interface [[clocked-co-simulation-api]]
-// To be used in future?
-:DOSTEP: fmi3DoStep()
 :INSTANTIATE: fmi3Instantiate()
+:DOSTEP: fmi3DoStep()
+:NEWDISCRETESTATES: fmi3NewDiscreteStates()
 :SETCLOCK: fmi3SetClock()
 :GETCLOCK: fmi3GetClock()
 :SETINTERVAL: fmi3SetInterval()
 :GETINTERVAL: fmi3GetInterval()
-:NEWDISCRETESTATES: fmi3NewDiscreteStates()
 :ENTEREVENTMODE: fmi3EnterEventMode()
+:ENTERSTEPMODE: fmi3EnterStepMode()
 :INTERMEDIATESTEPPFINISHED: fmi3IntermediateStepFinished()
 
  
 In this section, signaling and retrieving clock tick as well as interface for supporting clocks in FMI for co-simulation will be discussed.
 If an FMU for Co-simulation declares clocks and clocked variables in the modelDescription XML file, it supports clocks.
-The co-simulation master should indicate the FMU that the master has recognized the clock capabilities of the FMU and supports the clock handling by setting [TODO] in `fmi3Instantiate()`.
+The co-simulation master should indicate the FMU that the master has recognized the clock capabilities of the FMU and supports the clock handling by setting #[TODO] in `{INSTANTIATE}`#.
 If no clock is defined by an FMU in _modelDescription.xml_, the master is not allowed to acknowledge the clock support.
 
 //  _[Please note: It is possible to define only inferred or only triggered clocks in the modelDescription.xml.]_  MN: Do we have any other clock types?
 
-If an FMU provides clocks, but the co-simulation master does not support or does not want to support early-return or clocks, the activation of model partitions inside of the FMU has to be handled internally within `fmi3DoStep()`. 
+If an FMU provides clocks, but the co-simulation master does not support or does not want to support early-return or clocks, the activation of model partitions inside of the FMU has to be handled internally within `{DOSTEP}`. 
 
 _[Please note: If aperiodic clocks are present in an FMU, but the master does not support clocks, this usually leads to simulation result errors for that FMU._
 _Therefore it is required to issue a warning log message so that the current simulation setting will lead to simulation errors._
-_In a such situation, it is recommended that the FMU tries to minimize this error by either provide and check the clock's activation state via corresponding `fmi3Boolean` inputs._
+_In such a situation, it is recommended that the FMU tries to minimize this error by either provide and check the clock's activation state via corresponding `fmi3Boolean` inputs._
 _That have to be defined in the modelDescription.xml if associated model partitions shall be activated based on external events or, alternatively, activate the associated model partitions based on FMU internal rules.]_
 
 
@@ -35,48 +32,48 @@ _That have to be defined in the modelDescription.xml if associated model partiti
 
 
 If the co-simulation master supports clocks, all inferred clocks of the model should be handled and inferred clock events should be scheduled. 
-At clock tick instants, the master should push the relevant FMUs into Event Mode by calling  `fmi3EnterEventMode()`. 
-Then `fmi3SetClock()` (and `fmi3SetInterval()` if necessary) should be invoked to indicate the enable ticked clocks. 
-Once the clock event is handled, the FMU should be pushed into Step-Mode by calling `fmi3EnterStepMode()`. 
-In step mode, the co-simulation master can calls `fmi3DoStep()` for the time interval from the current event time instant until the next inferred event instants. 
-Each clock, that ticks outside of the FMU, is activated for an FMU based on its _clockReference_ and an associated `fmi3SetClock()`.
-Please note that `fmi3SetClock()` can activate multiple clocks with each call.
+At clock tick instants, the master should push the relevant FMUs into Event Mode by calling `{ENTEREVENTMODE}`. 
+Then `{SETCLOCK}` (and `{SETINTERVAL}` if necessary) should be invoked to indicate the enable ticked clocks. 
+Once the clock event is handled, the FMU should be pushed into Step Mode by calling `{ENTERSTEPMODE}`. 
+In Step Mode, the co-simulation master can call `{DOSTEP}` for the time interval from the current event time instant until the next inferred event instants. 
+Each clock, that ticks outside of the FMU, is activated for an FMU based on its _clockReference_ and an associated `{SETCLOCK}`.
+Please note that `{SETCLOCK}` can activate multiple clocks with each call.
 
-Note that `fmi3DoStep()` may not reach the next inferred event instant, because an early return or a triggered clock may happen.
-As explained in the early-return section, the master checks the occurrence of triggered clocks through the `fmi3IntermediateStepFinished()` callback. 
-Once the FMU is pushed into Event-mode, the activation status of triggered clocks are checked by `fmi3GetClock()` function. 
+Note that `{DOSTEP}` may not reach the next inferred event instant, because an early return or a triggered clock may happen.
+As explained in the early-return section, the master checks the occurrence of triggered clocks through the `{INTERMEDIATESTEPPFINISHED}` callback. 
+Once the FMU is pushed into Event Mode, the activation status of triggered clocks are checked by `{GETCLOCK}` function. 
 
-The simulation master sets and gets clock variable values exactly similar to the FMI for ModelExchange, as defined in [TODO] in #section 4.2 + section "setting/getting clock activation state" in 2.2#.
+The simulation master sets and gets clock variable values exactly similar to the FMI for ModelExchange, as defined in #[TODO] section 4.2 + section "setting/getting clock activation state" in 2.2#.
 
 
 ===== Computation [[clocked-co-simulation-api-computation]]
 
-Similar to FMI for ModelExchange, in order to activate inferred or triggered clocks of an FMU, it is required to push the FMU into Event Mode by calling  `fmi3EnterEventMode()`.
-Note that if a triggered clock happens, i.e., if `fmi3DoStep()` returns with `earlyReturn` = `fmi3True` and `fmi3IntermediateStepInfo.eventOccurred` or `fmi3IntermediateStepInfo.clocksTicked`  is  `fmi3True`, a switch to Event Mode is mandatory.
+Similar to FMI for ModelExchange, in order to activate inferred or triggered clocks of an FMU, it is required to push the FMU into Event Mode by calling `{ENTEREVENTMODE}`.
+Note that if a triggered clock happens, i.e., if `{DOSTEP}` returns with `earlyReturn` = `fmi3True` and `fmi3IntermediateStepInfo.eventOccurred` or `fmi3IntermediateStepInfo.clocksTicked` is `fmi3True`, a switch to Event Mode is mandatory.
  
-In order to retrieve the state of triggered clocks, `fmi3GetClock()` and `fmi3GetInterval()` need to be called in the event mode.
-If the `fmi3DoStep()` return value is `fmi3OK` and `earlyReturn` = `fmi3False`, the calling of `fmi3GetClock()`, `fmi3GetInterval()`, `fmi3NewDiscreteStates()` is only meaningful after `fmi3SetClock()` in the case of super-dense time iterations are desired.
+In order to retrieve the state of triggered clocks, `{GETCLOCK}` and `{GETINTERVAL}` need to be called in the Event Mode.
+If the `{DOSTEP}` return value is `fmi3OK` and `earlyReturn` = `fmi3False`, the calling of `{GETCLOCK}`, `{GETINTERVAL}`, `{NEWDISCRETESTATES}` is only meaningful after `{SETCLOCK}` in the case of super-dense time iterations are desired.
 
-Similar to the ModelExchange case, the allowed call order is `fmi3GetClock()`, `fmi3GetInterval()`, `fmi3GetXXX()`, `fmi3SetXXX()`. 
+Similar to the ModelExchange case, the allowed call order is `{GETCLOCK}`, `{GETINTERVAL}`, `fmi3GetXXX()`, `fmi3SetXXX()`. 
 If a function is not required, its call can be omitted.
-If one of these functions returns a value other than  `fmi3OK` then the co-simulation should be stopped.  
+If one of these functions returns a value different than `fmi3OK` then the co-simulation should be stopped.  
 
-If after calling `fmi3NewDiscreteStates()`, the value of _fmi3EventInfo.terminateSimulation_ becomes `fmi3True`, the co-simulation should stopped.
-Once handling of the clock events finished, the master calls `fmi3EnterStepMode()` for that FMU to push it into step-mode.
-Note that, it is not allowed to call `fmi3EnterEventMode()` or `fmi3EnterStepMode()`, if the master or the FMU does not support clocks.  
+If `fmi3EventInfo.terminateSimulation` becomes `fmi3True` after calling `{NEWDISCRETESTATES}` then the co-simulation should be stopped. 
+Once handling of the clock events finished, the master calls `{ENTERSTEPMODE}` for that FMU to push it into Step Mode.
+Note that it is not allowed to call `{ENTEREVENTMODE}` or `{ENTERSTEPMODE}` if the master or the FMU does not support clocks.
 
-If the FMU defines an internal clock relationship between an aperiodic inferred clock and triggered clocks, (i.e., a triggered clock triggers the model partition associated with an inferred clock) the FMU performs an early return at the time instant of the tick of the triggered clock in such a union, [red]#see section 2.1.8.2 (Variants of Clocks)#.
+If the FMU defines an internal clock relationship between an aperiodic inferred clock and triggered clocks, (i.e., a triggered clock triggers the model partition associated with an inferred clock) the FMU performs an early return at the time instant of the tick of the triggered clock in such a union, #[TODO] see section 2.1.8.2 (Variants of Clocks)#.
 
-Usually the co-simulation master should be able to derive (but is not forced to do so) the correct communication point times for inferred clocks in advance and thus it should be able to set the proper `communicationStepSize` for `fmi3DoStep()`. 
+Usually the co-simulation master should be able to derive (but is not forced to do so) the correct communication point times for inferred clocks in advance and thus it should be able to set the proper `communicationStepSize` for `{DOSTEP}`. 
 This might not be possible if the ticking of an aperiodic inferred clock for an FMU depends on the ticking of an aperiodic triggered clock of another FMU.
 
-It is also possible that a triggered clock ticks as a function of an aperiodic inferred clock tick.  
-For example,  a triggered clock may tick one second after the tick of an aperiodic inferred clock. 
+It is also possible that a triggered clock ticks as a function of an aperiodic inferred clock tick.
+For example, a triggered clock may tick one second after the tick of an aperiodic inferred clock.
 
 
 ===== Retrieving Status Information from the Slave [[clocked-co-simulation-api-retrieving-status-information-from-slave]]
 
-[red]#"Dummy include"#
+//TODO: Same as section 4.2.2 (Retrieving Status Information from the Slave [[retrieving-status-from-slave]])?
 [source, C]
 ----
 //include::../headers/fmi3FunctionTypes.h[tags=GetDoStepDiscardedStatus]
@@ -89,7 +86,8 @@ The following state machine defines the supported calling sequences.
 
 .Calling sequence of clocked co-simulation mode.
 image::images/calling-sequence-co-simulation.svg[width=80%, align="center"]
-[red]#Are clocks necessary in the depiction of calling sequences?#
+//TODO: Are clocks necessary in the depiction of calling sequences?
+//TODO: Is there still the Reconfiguration Mode via fmi3EnterReconfigurationMode()?
 
 instantiated::
 
