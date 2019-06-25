@@ -196,16 +196,31 @@ The library names are defined in the `modelIdentifier` attribute of elements `fm
 The usual distribution of an FMU will be with DLLs/SharedObjects because then further automatic processing _[(for example, importing into another tool)]_ is possible. +
 If run-time libraries are needed by the FMU that have to be present on the target machine, then automatic processing is likely impossible.
 The requirements and the expected processing should be documented in the `documentation` directory in this case. +
-A source-based distribution might require manual interaction in order that it can be utilized.
+
+Whenever possible, a source-based distribution should not require manual interaction in order that it can be utilized.
 The intention is to support platforms that are not known in advance (such as HIL-platforms or micro-controllers).
 Typically, in such a case the complete source code in ANSI-C is provided (for example, one C source file that includes all other needed C files with the `#include` directive).
-All C source file names that need to be defined in a compiler directive have to be defined in the XML file under structure `<ModelExchange><SourceFiles>` and `<CoSimulation><SourceFiles>`.
+Exactly those source file names that need to be defined in a compiler directive have to be defined in the XML file under structure `<ModelExchange><SourceFiles>` and `<CoSimulation><SourceFiles>`.
 These files may include other files.
 `#include` directive with `""` should be used for header-filers distributed in the FMU instead of using `<...>`.
-If default options of the compiler are sufficient, it might then be possible to automatically process such source code FMUs.
-An exporting tool should give documentation on how to build an executable, either via a documentation file and/or via a template makefile for a particular platform, from which a user can construct the makefile for his/her target platform.
+
+If necessary, further information on include search paths, preprocessor definitions and additional static libraries have to be defined in the XML file under `<ModelExchange>` and `<CoSimulation>` (elements `<IncludeDirectories>`, `<PreProcessorDefinitions>` and `<Libraries>`). 
+If default options of the compiler are sufficient, it should then be possible to automatically process such source code FMUs.
+In some cases, the information provided by the FMU might not be sufficient. In these cases, an exporting tool should give documentation on how to build an executable, either via a documentation file and/or via a template makefile for a particular platform, from which a user can construct the makefile for his/her target platform.
 This documentation should be stored in the `documentation` directory, possibly with a link to the template makefile (stored in the `sources` directory).
 _[As template makefile, CMake (http://www.cmake.org), a cross- platform, open-source build system might be used.]_ +
+
+For Source Code FMUs, the importing tool must compile the source files that are listed in the `ModelDescription.xml` under the structure `<ModelExchange/CoSimulation><SourceFiles>`. Exactly those files must be considered that are valid for the corresponding platform. This can be read from the `platform` attribute of each `<ModelExchange/CoSimulation><SourceFiles><File>` element. If no platform information is specified for a source file, the file is assumed to be valid for all supported platforms. The supported platforms can be read from the `platformSupportLimitedTo` attribute of the `SourceFiles` element. If the `platformSupportLimitedTo` attribute is not provided, all platforms are supported (or at least the exporting tool knows of no restrictions).
+
+If an FMU contains source files in its sources folder, but the `SourceFiles` element is not available in the XML file, all source files should be compiled.
+
+Note: The exporting tool should fill out the `platformSupportLimitedTo` attribute if it is clear that the FMU is exclusively suitable for special platforms. The information can be helpful for the importing tool to decide if it actually makes sense to import and compile/link this FMU, i.e. errors during compiliation/linking that can hardly be interpreted by the user can be avoided.
+
+When compiling the source files the importing tool must consider the include directories and preprocessor definitions that are defined in the ModelDescription.xml under the structure `<ModelExchange/CoSimulation><IncludeDirectories>` and `<ModelExchange/CoSimulation><PreProcessorDefinitions>`. The importing tool should extend the header file path with the directories specified for the appropriate platform. The directory order as given in the XML file must be respected (first one wins).
+Furthermore, the preprocessor definitions given for the corresponding platform must be respected, i.e. the importing tool must define all necessary macros.
+If no platform information is provided for the include directories or the preprocessor definitions, it is assumed that all include directories and all preprocessor definitions must be considered.
+
+
 In directory `resources`, additional data can be provided in FMU specific formats, typically for tables and maps used in the FMU.
 This data must be read into the model at the latest during initialization (that is, before `fmi3ExitInitializationMode` is called).
 The actual file names in the ZIP file to access the data files can either be hard-coded in the generated FMU functions, or the file names can be provided as string parameters via the `fmi3SetString` function.
