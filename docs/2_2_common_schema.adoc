@@ -632,7 +632,7 @@ There is a sequence of terminal member variables and nested terminals in the `Te
 
 [cols="1,3",options="header"]
 |====
-|_Matching Rule_
+|_matchingRule_
 |_Description_
 
 |"plug"
@@ -670,8 +670,6 @@ _[A tool may choose to connect terminals with a different or unknown `terminalKi
 
 _[There is no special handling of derivatives. If a derivative is present as a terminal member variable then it is considered as normal member variable. Additional information about derivatives can provided using the `derivative` attribute]_
 
-//_[If a derivative of an output terminal member variable is provided as another output terminal member variable using the derivative attribute, then the importing tool may ignore this terminal member variable [TODO: better?: There is no special handling of derivatives. If a derivative is a terminal member variable, then the importing tool has to be treated like any another terminal member variable.]]_
-
 
 ===== Terminal Member Variable
 
@@ -682,18 +680,23 @@ image::images/fmi3Terminal_TerminalMemberVariable_Schema.png[width=50%, pdfwidth
 The normalized string `variableKind` is used to provide general information about the variable. This information defines how the connection of this variable has to be implemented (e.g. Kirchhoff's current law or common signal flow).
 
 The normalized string `memberName` is the representation in tools which apply name-based matching in connections. The member name has to be unique in a terminal.
-
-_[The attribute has to be provided to identify aliases (local variables, calculatedParameters).]_ 
-
 _[Tools which apply sequence based matching should also provide unique member names, so that all importing tools can use the same member names.]_
 
-_[Suggested variable naming scheme for the structured naming convention:
-<ModelVariable name> = <terminal name>.<memberName>]_ [TODO: Maybe add example for this? Also hierarchical terminal example]
+One ModelVariable can be part of several terminals except from variables with causality "input". 
+[TODO: actually not correct. can be considered as alias of an input. the importing tool has to detect that if one input is set (= one is connected to an output), then there is no degree of freedom left. if more terminals which have this input as terminal member variable are connected, then the information flow is similar to an output]
 
-_[Suggested variable naming scheme for the non-structured naming convention:
-<ModelVariable name> = <memberName>]_
+[TODO: can calculatedParameters have aliases?]
+//_[The attribute has to be provided to identify aliases (local variables, calculatedParameters).]_ 
 
-_[Matching is not restricted by variability, causality or variable type. Example: A fixed variable may be connected to a tunable variable, a variable of type Real may be connected to a variable of type Integer.
+_[The suggested variable naming scheme for the structured naming convention is <ModelVariable name> = <terminal name>.<memberName>._
+
+_Example 1: <ModelVariable name> is "portA.U", <terminal name> is "portA", <memberName> is "U"._
+
+_Example 2: <ModelVariable name> is "hierarchConn.innerConn.U", <outer terminal name> is "hierarchConn", <inner terminal name> is "innerConn", <memberName> is "U"._
+
+_The suggested variable naming scheme for the non-structured naming convention is <ModelVariable name> = <memberName>._
+
+_Matching is not restricted by variability, causality or variable type. Example: A fixed variable may be connected to a tunable variable, a variable of type Real may be connected to a variable of type Integer.
 However, it is recommended that the variable types and variabilities are equal.]_
 
 
@@ -704,82 +707,76 @@ The predefined variable kinds are:
 |_Description_
 
 |"signal"
-|The values in connected terminals must be equal.
+|The values in connected terminals are intended to be equal.
 
-Intended for input and output, parameter and calculatedParameter.
+Restricted to input and output, parameter and calculatedParameter.
 
 
 _[Example: Signal flow, parameter propagation, equality checks]_
-|"across"?
+|"across" [TODO: writeme]
 | Kirchhoff's voltage law
 |"inflow" / "outflow"
 |Variables which fulfill Kirchhoff’s current law.
 
-Intended for input and output.
+Restricted to input and output, parameter and calculatedParameter.
 
 _[Example: Electric current]_
 
-|"inStream" / "outStream"
-|Variables which fulfill the balance equation for transported quantities.
-
-Intended for input and output.
-
-_[Example: Specific enthalpy in a fluid domain terminal]_
-
 |====
 
-One ModelVariable can be part of several terminals except from variables with causality "input". 
-//Inputs must not appear in more than one terminal. [TODO: fixme?]
+
 
 ===== General remark on signal
 
-_[used for input output signal flow]_
+_[The signal `variableKind` can be applied for different use cases. The first use case is a signal flow from an output of one FMU to an input of another FMU. The output value has to be forwarded to the input._
 
-_[can be used for parameter propagation]_
+_The signal flow can cause algebraic loops. If variables in connected terminals have the causality output, then an importing tool may iterate an undefined input of an FMU to ensure that the connected output values are equal._
 
-_[Example: Medium name. constant+parameter, parameter+parameter...]_
+_Another use case is the parameter propagation. If a variable in both connected terminals has the causality parameter, then an importing tool could present only one of those parameters to the user, and propagate the value to the other FMU. If only one of the variables has causality parameter, and the other is a constant output or calculatedParameter, then the importing tool could also propagate the parameter value without presenting a parameter to the user. One example of use would be the name of a substance flowing through a pipe. If the fluid flows from one pipe FMU to another, the substance should be the same. This substance name could be propagated over several FMUs._
 
-_[can be used for used for equal assert]_
-
-_[Example: Cross sectional area calculated from geometry parameters...]_
-
+_Finally the `variableKind` "signal" can be applied to implement compatibility checks. If for example the causality of the variables in connected terminals have the variability constant, then the imporing tool can implement an equality assertion. This is also possible with calculated parameters. One example of use would be the cross sectional flow area in pipes which is calculated from geometry parameters. In some cases a change in the cross sectional flow area should be regarded in the momentum equation, and the connection has to be deemed incompatible.
+]_
 
 ===== General remark on inflow and outflow
 
-_[Flow variables have a direction and must fulfill a zero sum constraint i.e. the sum of all flow variables connected together must be zero (Kirchoff’s current law). In addition as different tools might have different direction definitions we have both inflow and outflow attributes. For variables with inflow a positive value means that the flow is inwards, and for outflow a positive value means that the flow is outwards. For the sake of simplicity in the following m ̇_i denotes an inflowing quantity:_
+_[Flow variables have a direction and must fulfill a zero sum constraint i.e. the sum of all flow variables connected together must be zero (Kirchoff’s current law). In addition as different tools might have different direction definitions we have both inflow and outflow attributes. For variables with inflow a positive value means that the flow is inwards, and for outflow a positive value means that the flow is outwards. For the sake of simplicity in the following latexmath:[\dot{m}_i] denotes an inflowing quantity:_
 
 _latexmath:[0 = \sum{\dot{m}_i}]_
 
 _Connecting a single output outflow to a single input inflow, or vice versa automatically fulfills the flow constraint, while connecting two single signals of the same flow type requires a negation of the signal.]_
 
 
+===== Terminal Stream Member Variable
 
-===== General remark on inStream and outStream
+The `TerminalStreamMemberVariable` is defined as:
 
-_[ See appendix D.3 of the Modelica specification
-. This concept allows only one flow variable per terminal. The concept is used for variables which have to fulfill the balance equation for transported quantities:_
+image::images/fmi3Terminal_TerminalStreamMemberVariable_Schema.png[width=50%, pdfwidth=50%, align="center"]
+
+This element is used for variables which fulfill the balance equation for transported quantities. It is restricted to input and output, parameter and calculatedParameter.
+
+The Stream concept is described in the appendix D.3 of the Modelica specification. Only one terminal member variable with the `variableKind` "inflow" or "outflow" per terminal is allowed. _[More sophisticated structures can be implemented using hierarchical terminals.]_
+
+The attribute `inStreamValueReference` and `outStreamValueReference` are used to identify the `ModelVariable`. If the referred model variables are arrays, then the length size has to be equal. A terminal may have more than one TerminalStreamMemberVariable. The `inStreamMemberName` and `outStreamMemberName` describe the terminal member name, similar to the `memberName` attribute in the `TerminalMemberVariable`.
+
+_[An example of use for stream is a gas mixture flow. The gas composition could be implemented as a mass fraction vector. The `outStreamValueReference` refers to latexmath:[portA.x_\textnormal{outStream}[]] and the `inStreamValueReference` refers to latexmath:[portA.x_\textnormal{inStream}[]]. The `inStreamMemberName` and `outStreamMemberName` are "latexmath:[x_\textnormal{inStream}[]]" and "latexmath:[x_\textnormal{outStream}[]]".
+]_
+
+_[Balance equation for transported quantities:_
 
 _latexmath:[0 = \sum{h_i\dot{m}_i}]
 latexmath:[0 = \sum{\dot{m}_i}\cdot
 \left\{\begin{array}{ll}
-h_{\textnormal{$i$, outStream}} &\textnormal{if $\dot{m}$ is outflowing through terminal $i$}\\
-h_{\textnormal{$i$, inStream}} &\textnormal{if $\dot{m}$ is inflowing through terminal $i$}
+q_{\textnormal{$i$, outStream}} &\textnormal{if $\dot{m}$ is outflowing through terminal $i$}\\
+q_{\textnormal{$i$, inStream}} &\textnormal{if $\dot{m}$ is inflowing through terminal $i$}
 \end{array}\right.]_
 
+_The latexmath:[q_\textnormal{$i$, outStream}] is the convective quantity in case the matter flows out of the FMU. latexmath:[q_\textnormal{$i$, inStream}] is the convective quantity in case the matter flows into the FMU. Both variables are present in the terminal. The outStream variable has the causality output or calculatedParameter because this information has to be provided by each FMU. The inStream variable has the causality input or parameter. To display the actual value in an importing tool, this actual value has to be selected depending on the sign of the terminal member variable with `variableKind` "inflow" or "outflow". However, calculating the actual value is not necessary._
 
-_The latexmath:[h_\textnormal{$i$, outStream}] is the convective quantity in case the mass flows out of the FMU. latexmath:[h_\textnormal{$i$, inStream}] is the convective quantity in case the mass flows into the FMU. Both variables are present in the terminal. Naturally the outflowing value is defined by the FMU itself and hence an output. The inflowing value is an input. Although both flow direction cases are always present, the actual value has to be selected by the importing tool. However, calculating the actual value is not necessary.]_
-
-_If only two terminals with a stream quantity are connected and their causality matches, then the inputs and outputs can be connected directly. The mass flow rate may have to be negated as mentioned above._
-
+_If only two terminals with a variable  are connected and their causality matches, then the values of the outStream variables can be forwarded to the corresponding inStream values._
 
 _In Modelica the inStream variable is not directly visible, the value can only be accessed using “inStream()”, therefore an additional ModelVariable has to be added during the export. 
-It is suggested that Modelica tools exporting an FMU derive the member name for the inStream variable according to the scheme “<outStream name>_inStream”. 
-E.g. if the outStream name is “h_outflow” then the inStream name should be “h_outflow_inStream”.]_
-
-
-If a member variable has the variableKind "inStream" or "outStream", then there must be one and only one member variable which has the variableKind "inflow" or "outflow". 
-
-The order of the inStream variables must be equal to the order of the outStream variables. _[I.e. the first inStream variable belongs to the first outStream variable.
+It is suggested that Modelica tools exporting an FMU derive the member name for the inStream variable according to the scheme "<outStream name>_inStream". 
+E.g. if the outStream name is "h_outflow" then the inStream name should be "h_outflow_inStream".]_
 
 ==== Definition of a Graphical Representation (GraphicalRepresentation)
 
