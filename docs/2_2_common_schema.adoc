@@ -594,19 +594,19 @@ Furthermore, for CoSimulation the `stepSize` defines the preferred `communicatio
 
 ===== Rationale
 
-Both, the terminals and the graphical representation are fully optional and can be ignored by any importing tool. The graphical representation of a terminal or FMU ModelVariable is separate from the terminal definitions.
+Terminals are fully optional and can be ignored by any importing tool.
 
 Definition "Terminal": A terminal is...
 
 * a structured interface for connections to other models
-* a sequence of `TerminalMemberVariable` each having a `variableKind`
 * intended to be used for signal flow between models, parameter propagation, and compatibility checks of the model configuration
+* a sequence of references to variables with connection meta data
 
-Predefined rules for variable matching in a connection are given below. Predefined variable kinds are used to describe how the member variables have to be handled. Domain specific terminals and their member variables can be provided by other standards.
+Predefined rules for variable matching in a connection are given below. Predefined variable kinds are used to describe how the member variables have to be handled. Domain specific connection rules, terminals and their member variables can be provided by other standards.
 
 _[CoSimulation errors are not addressed by the terminals. The CoSimulation algorithm has to be chosen and implemented by the importing tool. Features that might be required for specific CoSimulation algorithms had to be implemented by the FMU exporting tool.]_
 
-_[Algebraic loops in systems of connected ModelExchange FMUs are not addressed or resolved by the terminals. It is not required that the causality of the terminal member variables in connected terminals matches. Sophisticated, domain specific terminals and connection rules can be defined by other standards.]_
+_[Algebraic loops in systems of connected ModelExchange FMUs are not addressed or resolved by the terminals. It is not required that the causality of the terminal member variables in connected terminals match.]_
 
 
 
@@ -620,78 +620,80 @@ All instances of `Terminal` are listed in the `Terminals` sequence:
 
 image::images/fmiModelDescription_Terminals_Terminal_Schema.png[width=60%, pdfwidth=60%, align="center"]
 
-The attribute `name` of the `Terminal` element is the instance name of the terminal. 
-_[The terminal name may contain dots, to enable structured terminals.
-If the structured naming convention is used, then it is suggested that this name is equal to the prefix of the member variables.]_
+The normalized string attribute `name` of the `Terminal` element is the instance name of the terminal. The terminal name must be unique on each level.
+//_[The terminal name may contain dots, to enable structured terminals.]_
 
-The attribute `matchingRule` describes the rules for variable matching in a connection. 
+The normalized string attribute `matchingRule` describes the rules for variable matching in a connection. 
 There are three predefined matching rules: plug, bus, and sequence. 
 Other standards may define new matching rules. 
-_[Vendor specific rules should start with "_vendorName" or "_toolName" to avoid namespace clashes.]_
+_[It is recommended that vendor specific rules start with "_vendorName" or "_toolName" to avoid namespace clashes.]_
+
+There is a sequence of terminal member variables and nested terminals in the `Terminal` element. The member variables are the exchanged variables. The type of the nested terminals is `fmi3Terminal`, and they can be used to implement structured terminals.
 
 [cols="1,3",options="header"]
 |====
-|_Matching Type_
+|_Matching Rule_
 |_Description_
 
 |"plug"
-|Matching of the variables is based on memberName.
-It is intended that an importing tool shall not ignore terminal member variables.
-
-_[If a derivative of an output is provided as another output using the derivative attribute, then the importing tool may ignore this terminal member variable]_
+|Matching of the variables is based on `memberName`. An importing tool should connect terminals only if all member variables are present and match.
 
 _[Examples: Modelica connectors and Simpack Markers]_
 
 |"bus"
-|Matching of the variables is based on memberName.
-
-It is intended that an importing tool may ignore some or all terminal member variables.
+|Matching of the variables is based on `memberName`. An importing tool should connect terminals only if some or all terminal member variables are present and match.
 
 _[Examples: Modelica expandable connectors and Simulink buses]_
 
 |"sequence"
-|Matching of the variables is based on the order of the terminal member variables
+|Matching of the variables is based on the order of the terminal member variables. An importing tool should connect terminals only if the number of member variables matches.
+
+_[Examples: Amesim Physical Ports]_
 
 |====
 
 
 
-The string normalized string `terminalKind` is an optional attribute. Other standards may define more `terminalKinds`. 
-_[It is recommended that other `terminalKinds` refer to the predefined matchingRules.
+The normalized string `terminalKind` is an optional attribute. Other standards may define `terminalKinds`. It is intended that the `terminalKind` is used to define domain specific member variable sequences, member names and order, or high level restrictions for connections.
+
+_[Other `terminalKinds` should refer to the predefined matchingRules.
 Vendor specific terminal kinds should start with "_vendorName" or "_toolName" to avoid namespace clashes.]_
 
-_[Example: StandardXXX_Mechanical_Translational, _vendorNameA_customTypeA, _VendorNameB_customLibrary_customTypeB]_
+_[Examples for terminalKind: StandardXXX_Mechanical_Translational, 
+Modelica.Mechanics.Translational.Interfaces.Flange_a,
+_vendorNameA_customTypeA, _vendorNameB_customLibrary_customTypeB]_
 
-Inputs must not appear in more than one terminal. 
+_[The structured naming convention of the `ModelVariables` is independent from the terminal names and member variable names.]_
 
-_[Not all variables with the prefix "<terminalName>." are part of the terminal with the name "<terminalName>". 
-So for instance it is possible to have a global parameter which is part of a terminal. 
-It might be handled similar to an alias variable.]_
+
+_[A tool may choose to connect terminals with a different or unknown `terminalKind`, if the `matchingRule` matches.]_
+
+_[There is no special handling of derivatives. If a derivative is present as a terminal member variable then it is considered as normal member variable. Additional information about derivatives can provided using the `derivative` attribute]_
+
+//_[If a derivative of an output terminal member variable is provided as another output terminal member variable using the derivative attribute, then the importing tool may ignore this terminal member variable [TODO: better?: There is no special handling of derivatives. If a derivative is a terminal member variable, then the importing tool has to be treated like any another terminal member variable.]]_
 
 
 ===== Terminal Member Variable
 
 //image::images/fmi3Terminal_Terminal_Schema.png[width=70%, pdfwidth=70%, align="center"]
+The `TerminalMemberVariable` is defined as:
 
 image::images/fmi3Terminal_TerminalMemberVariable_Schema.png[width=50%, pdfwidth=50%, align="center"]
 
-The normalized string `variableKind` is used to provide general information about the variable. This information defines how the connection of this variable has to be implemented (e.g. kirchhoff's current law or common signal flow).
+The normalized string `variableKind` is used to provide general information about the variable. This information defines how the connection of this variable has to be implemented (e.g. Kirchhoff's current law or common signal flow).
 
 The normalized string `memberName` is the representation in tools which apply name-based matching in connections. 
 _[The attribute has to be provided to identify aliases (local variables, calculatedParameters).]_ 
-The member name may contain dots, to enable structured terminals.
+
 
 _[Suggested variable naming scheme for the structured naming convention:
-<ModelVariable name> = <terminal name>.<memberName>]_
+<ModelVariable name> = <terminal name>.<memberName>]_ [TODO: Maybe add example for this? Also hierarchical terminal example]
 
 _[Suggested variable naming scheme for the non-structured naming convention:
 <ModelVariable name> = <memberName>]_
 
-_[If a tool applies sequence based variable matching, then it still makes sense to provide the information, how these terminals should be imported into tools with name-based variable matching.]_
-
-_[The variability of the member variables is not restricted, i.e. a fixed variable might be connected to a tunable variable.
-The variable type of the member variables is not restricted, a Real might be connected to an Integer.
-However, it is suggested that the variable types and variabilities are equal.]_
+_[Matching is not restricted by variability, causality or variable type. Example: A fixed variable may be connected to a tunable variable, a variable of type Real may be connected to a variable of type Integer.
+However, it is recommended that the variable types and variabilities are equal.]_
 
 
 The predefined variable kinds are:
@@ -700,7 +702,7 @@ The predefined variable kinds are:
 |_variableKind_
 |_Description_
 
-|"common"
+|"common" / "variable" / "property" / "signal"
 |Common signal flow.
 
 Intended for input and output.
@@ -708,30 +710,69 @@ Intended for input and output.
 |"equalityRelation"
 |Direction of propagation could be defined on system level.
 
-Intended for parameter and calculatedParameter.
+Intended for parameter and calculatedParameter. 
+
+_[Example: Parameter propagation]_
 
 |"equalAssert"
 |The exporting tool suggests that a connection is invalid if these values in connected terminals are different. This could be implemented as assertion. This feature can be used for compatibility checks for terminals.
 
 Intended for parameter, calculatedParameter and local variables.
 
-|"in/outflow"
-|Variables which fulfill Kirchhoff’s current law Intended for input and output. Only for Real variables.
+_[Example: Compatibility checks]_
 
-|"in/outStream"
+|"inflow/outflow"
+|Variables which fulfill Kirchhoff’s current law.
+
+Intended for input and output.
+
+_[Example: Electric current]_
+
+|"inStream/outStream"
 |Variables which fulfill the balance equation for transported quantities.
 
-Intended for input and output. Only for Real variables.
+Intended for input and output.
 
+_[Example: Specific enthalpy in a fluid domain terminal]_
 
 |====
 
-If a stream variable is present, then only one flow variable is allowed. 
-The order of the inStream variables must be equal to the order of the outStream variables. I.e. the first inStream variable belongs to the first outStream variable.
+One ModelVariable can be part of several terminals except from variables with causality "input". 
+//Inputs must not appear in more than one terminal. [TODO: fixme?]
+
+
+
+[TODO: General sections put here?]
+===== General remark on inflow and outflow
+
+_[Flow variables have a direction and must fulfill a zero sum constraint i.e. the sum of all flow variables connected together must be zero (Kirchoff’s current law). In addition as different tools might have different direction definitions we have both inflow and outflow attributes. For variables with inflow a positive value means that the flow is inwards, and for outflow a positive value means that the flow is outwards. For the sake of simplicity in the following m ̇_i denotes an inflowing quantity:]_
+
+0=∑▒m ̇_i 
+
+_[Connecting a single output outflow to a single input inflow, or vice versa automatically fulfills the flow constraint, while connecting two single signals of the same flow type requires a negation of the signal.]_
+
+
+
+===== General remark on inStream and outStream
+
+appendix D.3 of the Modelica speicifcation
+_[The Stream concept is used to describe convective transport phenomena [Rüdiger Franke et al., 2009, Stream Connectors - An Extension of Modelica for Device-Oriented Modeling of Convective Transport Phenomena, Proceedings 7th Modelica Conference, Como, Italy, Sep. 20-22]. This concept allows only one flow variable per terminal. The concept is used for variables which have to fulfill the balance equation for transported quantities:]_
+
+∑▒〖h_i∙m ̇_i 〗=0
+0=∑▒〖m ̇_i∙{■(h_(i,"outflow" )  "if " m ̇" is outflowing through terminal i" @h_(i,inflow)  "if " m ̇" is inflowing through terminal i" )┤ 〗
+
+_[The h(i,"outflow" ) is the convective quantity in case the mass flows out of the FMU. h(i,inflow) is the convective quantity in case the mass flows into the FMU. Both variables are present in the terminal. Naturally the outflowing value is defined by the FMU itself and hence an output. The inflowing value is an input. Although both flow direction cases are always present, the actual value has to be selected by the importing tool. However, calculating the actual value is not necessary.]_
+
+_[If only two terminals with a stream quantity are connected and their causality matches, then the inputs and outputs can be connected directly. The mass flow rate may have to be negated as mentioned above.]_
+
 
 _[In Modelica the inStream variable is not directly visible, the value can only be accessed using “inStream()”, therefore an additional ModelVariable has to be added during the export. 
 It is suggested that Modelica tools exporting an FMU derive the member name for the inStream variable according to the scheme “<outStream name>_inStream”. 
 E.g. if the outStream name is “h_outflow” then the inStream name should be “h_outflow_inStream”.]_
+
+If a member variable has the variableKind "inStream" or "outStream", then there must be one and only one member variable which has the variableKind "inflow" or "outflow". 
+
+The order of the inStream variables must be equal to the order of the outStream variables. _[I.e. the first inStream variable belongs to the first outStream variable.]_
 
 
 
@@ -740,12 +781,15 @@ E.g. if the outStream name is “h_outflow” then the inStream name should be �
 
 ===== Rationale
 
-The graphical representation of models and terminals are needed in order to more easily comprehend the meaning of connected FMUs and to help an importing tool to display the terminals and the FMU icon in the way the exporter intended.
+The graphical representation of the FMU and terminals are needed in order to more easily comprehend the meaning of connected FMUs and to help an importing tool to display the terminals and the FMU icon in the way the exporter intended.
 
+The graphical representation is fully optional. The graphical representaiton of terminals is separate from the terminal definitions in the `Terminals` element.
 
+There are three optional elements in the `GraphicalRepresentation`:
 
-There is an optional `CoordinateSystem` defining the extent of the whole icon (graphical items may exceed that rect), an optional element `Icon` defining an image source, and a `Terminal` sequence.
-The element `GraphicalRepresentation` of `fmiModelDescription` is defined as:
+1. The `CoordinateSystem` defines the extent of the whole icon (graphical items may exceed that rect).
+2. The `Icon` defines an image source for the FMU.
+3. The `Terminal` sequence contains the graphical representation of the visible terminals.
 
 image::images/fmiModelDescription_GraphicalRepresentation_Schema.png[width=50%, pdfwidth=50%, align="center"]
 
@@ -754,7 +798,6 @@ image::images/fmiModelDescription_GraphicalRepresentation_Schema.png[width=50%, 
 image::images/fmiModelDescription_GraphicalRepresentation_CoordinateSystem_Schema.png[width=50%, pdfwidth=50%, align="center"]
 
 The `CoordinateSystem` element and its defined extent is used as reference for other graphical items. It also provides a scaling factor to millimeter.
-
 
 The coordinate system is defined by the coordinates of two points, the left lower (`x1`, `y1`) corner and the right upper (`x2`, `y2`) corner, where the coordinates of the first point shall be less than the coordinates of the second point _[a first quadrant coordinate system]_. 
 The x-axis directed to the right, the y-axis is directed upwards.
