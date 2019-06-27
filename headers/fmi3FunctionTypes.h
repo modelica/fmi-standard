@@ -128,13 +128,14 @@ typedef void  (*fmi3CallbackFreeMemory)     (fmi3ComponentEnvironment componentE
                                              void* obj);
 /*FMI3 Events&Multirate start*/
 
-/* tag::fmi3CallbackIntermediateUpdate[] */
+/* tag::CallbackIntermediateUpdate[] */
 typedef fmi3Status (*fmi3CallbackIntermediateUpdate) (fmi3ComponentEnvironment componentEnvironment,
                                                       fmi3IntermediateUpdateInfo* intermediateUpdateInfo);
-/* end::fmi3CallbackIntermediateUpdate[] */
-
-typedef void       (*fmi3StartPreemptionLock)   ();
-typedef void       (*fmi3StopPreemptionLock)    ();
+/* end::CallbackIntermediateUpdate[] */
+/* tag::PreemptionLock[] */
+typedef void       (*fmi3CallbackStartPreemptionLock)   ();
+typedef void       (*fmi3CallbackStopPreemptionLock)    ();
+/* end::PreemptionLock[] */
 /*FMI3 Events&Multirate end*/
 
 typedef struct {
@@ -143,9 +144,9 @@ typedef struct {
     fmi3CallbackFreeMemory          freeMemory;
     fmi3ComponentEnvironment        componentEnvironment;
 /*FMI3 Events&Multirate start*/
-    fmi3IntermediateStepFinished    intermediateStepFinished;
-    fmi3StartPreemptionLock         startPreemptionLock;
-    fmi3StopPreemptionLock          stopPreemptionLock;
+    fmi3CallbackIntermediateUpdate  intermediateUpdate;
+    fmi3CallbackStartPreemptionLock startPreemptionLock;
+    fmi3CallbackStopPreemptionLock  stopPreemptionLock;
 /*FMI3 Events&Multirate end*/
 } fmi3CallbackFunctions;
 /* end::CallbackFunctions[] */
