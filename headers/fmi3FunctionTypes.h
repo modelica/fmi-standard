@@ -67,14 +67,30 @@ typedef enum {
 /* tag::Type[] */
 typedef enum {
     fmi3ModelExchange,
-    fmi3CoSimulation,
-    /*FMI30 Events&Multirate start*/
-    fmi3EarlyReturn,
-    fmi3ClockedCoSimulation,
-    fmi3ScheduledExecutionSimulation
-    /*FMI30 Events&Multirate end*/
+    fmi3CoSimulation
 } fmi3Type;
 /* end::Type[] */
+
+ /*FMI30 Events&Multirate start*/
+/* tag::CoSimulationMode[] */
+typedef enum {
+    fmi3ModeCoSimulation,
+    fmi3ModeHybridCoSimulation,
+    fmi3ModeScheduledExecutionSimulation
+} fmi3CoSimulationMode;
+/* end::CoSimulationMode[] */
+
+/* tag::CoSimulationConfiguration[] */
+typedef struct{
+    fmi3Boolean intermediateVariableGet;
+	fmi3Boolean intermediateInternalVariableGet;
+	fmi3Boolean intermediateVariableSet;
+    fmi3CoSimulationMode coSimulationMode;
+} fmi3CoSimulationConfiguration;
+/* end::CoSimulationConfiguration[] */
+
+
+ /*FMI30 Events&Multirate end*/
 
 /* tag::DependencyKind[] */
 typedef enum {
@@ -87,18 +103,17 @@ typedef enum {
 } fmi3DependencyKind;
 /* end::DependencyKind[] */
 
-/* tag::IntermediateStepInfo[] */
+/* tag::IntermediateUpdateInfo[] */
 typedef struct{
-    fmi3Float64 intermediateStepTime; 
+    fmi3Float64 intermediateUpdateTime; 
     fmi3Boolean eventOccurred;
     fmi3Boolean clocksTicked;
     fmi3Boolean intermediateVariableSetAllowed;
     fmi3Boolean intermediateVariableGetAllowed;
-    fmi3Boolean internalStepFinished;
-    fmi3Boolean canDoEarlyReturn;
-    fmi3Boolean willDoEarlyReturn;
-} fmi3IntermediateStepInfo;
-/* end::IntermediateStepInfo[] */
+    fmi3Boolean intermediateStepFinished;
+    fmi3Boolean canReturnEarly;
+} fmi3IntermediateUpdateInfo;
+/* end::IntermediateUpdateInfo[] */
 
 /* tag::CallbackFunctions[] */
 typedef void  (*fmi3CallbackLogger)         (fmi3ComponentEnvironment componentEnvironment,
@@ -113,10 +128,10 @@ typedef void  (*fmi3CallbackFreeMemory)     (fmi3ComponentEnvironment componentE
                                              void* obj);
 /*FMI3 Events&Multirate start*/
 
-/* tag::IntermediateStepFinished[] */
-typedef fmi3Status (*fmi3IntermediateStepFinished) (fmi3ComponentEnvironment componentEnvironment,
-                                                    fmi3IntermediateStepInfo* intermediateStepInfo);
-/* end::IntermediateStepFinished[] */
+/* tag::fmi3CallbackIntermediateUpdate[] */
+typedef fmi3Status (*fmi3CallbackIntermediateUpdate) (fmi3ComponentEnvironment componentEnvironment,
+                                                      fmi3IntermediateUpdateInfo* intermediateUpdateInfo);
+/* end::fmi3CallbackIntermediateUpdate[] */
 
 typedef void       (*fmi3StartPreemptionLock)   ();
 typedef void       (*fmi3StopPreemptionLock)    ();
@@ -179,7 +194,7 @@ typedef fmi3Component fmi3InstantiateTYPE(fmi3String  instanceName,
                                           const fmi3CallbackFunctions* functions,
                                           fmi3Boolean visible,
                                           fmi3Boolean loggingOn,
-                                          fmi3Boolean intermediateVariableAccessOn);
+                                          const fmi3CoSimulationConfiguration* fmuCoSimulationConfiguration);
 /* end::Instantiate[] */
 
 /* tag::FreeInstance[] */
