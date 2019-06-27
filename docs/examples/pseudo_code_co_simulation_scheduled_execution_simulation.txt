@@ -2,24 +2,24 @@
 // Define callback
 
 // Global variables
-fmi3IntermediateStepInfo s1_intermediateStepInfo;
+fmi3IntermediateInfo s1_intermediateInfo;
 
 // Callback
 
-//Remark: 
-//pointer for intermediateStepInfo has to be unique for each model partition that calls s1_triggeredClock_intermediateStepFinished
-//currently no clockIndex information is transported with intermediateStepInfo. 
+//Remark:
+//pointer for intermediateInfo has to be unique for each model partition that calls s1_triggeredClock_intermediateUpdate
+//currently no clockIndex information is transported with intermediateInfo.
 //Thus it is required to a) that the FMU secures (via startPreemptionLock, stopPreemptionLock) the call of fmi3GetClock() b) fmi3GetClock() sets back the activation state of the triggered clock
-fmi3Status s1_triggeredClock_intermediateStepFinished(fmi3ComponentEnvironment componentEnvironment, fmi3IntermediateStepInfo* intermediateStepInfo, fmi3Boolean* earlyReturn)
+fmi3Status s1_triggeredClock_intermediateUpdate(fmi3ComponentEnvironment componentEnvironment, fmi3IntermediateInfo* intermediateInfo, fmi3Boolean* earlyReturn)
 {
 	//local variables;
 	fmi2Boolean triggered_clockStatesS1[];
 	fmi2Integer triggered_clockReferenceS1[];
 	size_t nclocks;
 
-	// Save intermediateStepInfo for later use
-	 s1_intermediateStepInfo = *intermediateStepInfo;
-	 if (s1_intermediateStepInfo.clocksTicked) 
+	// Save intermediateInfo for later use
+	 s1_intermediateInfo = *intermediateInfo;
+	 if (s1_intermediateInfo.clocksTicked) 
 	 {
 		s1_fmi3GetClocks(s1, triggered_clockReferenceS1, nclocks, triggered_clockStatesS1);
 		s1_fmi3GetReal/Integer/Boolean/String(s1, variables_associated_to_active_triggered_clock);
@@ -53,7 +53,7 @@ fmi3Status GlobalInitialize()
 	cbf1.freeMemory = free;
 	cbf1.stepFinished = NULL; // Synchronous execution
 	// Signal that early return is supported by master
-	cbf1.intermediateStepFinished = s1_triggeredClock_intermediateStepFinished;
+	cbf1.intermediateUpdate = s1_triggeredClock_intermediateUpdate;
 	cbf1.startPreemptionLock = startPreemptionLock(); // Preemption is OS specific
 	cbf1.stopPreemptionLock = stopPreemptionLock(); // Preemption is OS specific
 
