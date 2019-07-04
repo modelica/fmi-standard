@@ -65,7 +65,12 @@ In order for this to be possible,
 the names of the functions in different FMUs must be different, or function pointers must be used.
 To support the first variant macros are provided in `"fmi2Functions.h"` to build the actual
 function names by using a function prefix that depends on how the FMU is shipped.
-_[These macros can be modified to compile the shared library from the source code e.g. to simulate an FMU that has been exported on a different platform.]_
+_[These macros can be modified in a target specific variant of `"fmi2Functions.h"` to compile the shared library from the source code e.g. to simulate an FMU that has been exported on a different platform.]_
+
+An FMU C-file must include at the beginning a `define` of `FMI2_FUNCTION_PREFIX` as the `modelIdentifier` attribute defined in `<fmiModelDescription><ModelExchange>` or `<fmiModelDescription><CoSimulation>`together with `"pass:[_]"` at the end (see sections 3.3.1 and 4.3.1).
+
+This `define` must be directly follwed with an `#include "fmi2Functions.h"` statement.
+
 Typically, FMU functions are used as follows:
 
 [source, C]
@@ -88,16 +93,14 @@ A function that is defined as `fmi2GetReal` is changed by the macros to a functi
 - If the FMU is shipped with C source code or with static link library: +
 The constructed function name is `MyModel_fmi2GetReal`.
 In other words the function name is prefixed with the model name and an `"pass:[_]"`.
-As `FMI2_FUNCTION_PREFIX` the `modelIdentifier` attribute defined in `<fmiModelDescription><ModelExchange>`,
-or `<fmiModelDescription><CoSimulation>` is used,
-together with `"pass:[_]"` at the end (see sections 3.3.1 and 4.3.1).
 A simulation environment can therefore construct the relevant function names by
 generating code for the actual function call.
 In case of a static link library, the name of the library is MyModel.lib on Windows
 and libMyModel.a on Linux; in other words the `modelIdentifier` attribute is used as library name.
 
 - If the FMU is shipped with DLL/SharedObject: +
-The constructed function name is `fmi2GetReal`, in other words, it is not changed.
+The constructed function name is `fmi2GetReal`, in other words, it is not changed. 
+_[This can be realized in the case of a source code FMU with a target-specific version of `fmi2Functions.h` that modifies the macros.]_
 A simulation environment will then dynamically load this library and will explicitly import the function symbols by providing the FMI function names as strings.
 The name of the library is `MyModel.dll` on Windows or `MyModel.so` on Linux;
 in other words the `modelIdentifier` attribute is used as library name.
