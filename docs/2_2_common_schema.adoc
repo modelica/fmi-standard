@@ -145,8 +145,9 @@ such as stop time and relative tolerance.
 
 |`ModelStructure`
 |Defines the structure of the model.
-Especially, the ordered lists of outputs,
-continuous-time states and initial unknowns (the unknowns during Initialization Mode) are defined here.
+Especially, the ordered lists of all outputs,
+all continuous-time states and all initial unknowns (the unknowns during Initialization Mode) must be defined here.
+For more details on ModelStructure, see section <<Definition of the Model Structure (ModelStructure)>>.
 Furthermore, the dependency of the unkowns from the knowns can be optionally defined.
 _[This information can be,
 for example, used to compute efficiently a sparse Jacobian for simulation, or to utilize the input/output dependency in order to detect that in some cases there are actually no algebraic loops when connecting FMUs together]_.
@@ -872,6 +873,7 @@ there is no mechanism in the Modelica language to formulate connection restricti
 *fmi2SetXXX* can be called on any variable with `variability ≠ "constant"` *before initialization* (before calling `fmi2EnterInitializationMode`)
 
 - if `initial = "exact"` or `"approx"` _[in order to set the corresponding `start` value.]_
+_[Note that this prevents any changes to the input before `fmi2EnterInitializationMode` is called.]_
 
 *fmi2SetXXX* can be called on any variable with `variability ≠ "constant"` *during initialization* (after calling `fmi2EnterInitializationMode` and before `fmi2ExitInitializationMode` is called)
 
@@ -1212,7 +1214,7 @@ then the value references of `a` and `b` must be different.
 However, if variable a has `causality = "parameter"` and `b` has `causality = "calculatedParameter"` and `b := a`,
 then `a` and `b` can have the same value reference.].
 
-. At most one variable of the same alias set of variables with `variability = "constant"` can have a start attribute.
+. At most one variable of the same alias set of variables with `variability ≠ "constant"` can have a start attribute.
 [Since start variables are independent initial values.]
 
 . A variable with `variability = "constant"` can only be aliased to another variable with `variability = "constant"`.
@@ -1233,6 +1235,11 @@ even if the "alias" information shows that this is too conservative.
 For example, if it is stated that the output `y1` depends on input `u1` and the output `y2` depends on input `u2`,
 and `y1` is an alias to `y2`, then this definition is fine,
 although it can be deduced that in reality neither `y1` nor `y2` depend on any input.]._
+
+_[In case of different variability among the set of alias variables,
+and if that set of aliases does not contain an input or parameter,
+the variability should be the highest of the variables in the set, e.g. continuous > discrete > tunable >fixed.
+If the set includes a parameter or input the aliases will have the stated variability of that parameter or input]._
 
 Type specific properties are defined in the required choice element,
 where exactly one of `"Real"`, `"Integer"`, `"Boolean"`, `"String"`,
@@ -1267,8 +1274,13 @@ because the Enumeration items are defined in `TypeDefinitions / SimpleType`.
 |`start`
 |Initial or guess value of variable.
 *This value is also stored in the C functions*.
-_[Therefore, calling_ `fmi2SetXXX` _to set start values is only necessary,
-if a different value as stored in the XML file is desired.]_ The interpretation of start is defined by `ScalarVariable / initial`.
+
+_[Therefore, calling `fmi2SetXXX` to set start values is only necessary, if a different value as stored
+in the xml file is desired.
+WARNING: It is not recommended to change the start values in the modelDescription.xml file of an FMU, as this would break the consistency with the hard-coded start values in the C-Code.
+This could lead to unpredictable behaviour of the FMU in different importing tools, as it is not mandatory to call `fmi2SetXXX` to set start values during initialization. Instead it is recommended to use the SSP Standard to handle modified parameters of FMUs or different parameter sets.]_
+
+The interpretation of start is defined by `ScalarVariable / initial`.
 A different start value can be provided with an `fmi2SetXXX` function before `fmi2ExitInitializationMode` is called (but not for variables with `variability = "constant"`).
 
 _[The standard approach is to set the start value before `fmi2EnterInitializationMode`.
@@ -1415,6 +1427,8 @@ since then the <Derivatives> list does not change
 if the declaration order of states in the source model is not changed.
 This is for example, important for linearization,
 in order that the interpretation of the state vector does not change for a re-exported FMU._].
+The number of Unknown elements in the Derivatives element uniquely define the number of continuous time state variables,
+as required by the corresponding Model Exchange functions (integer argument "nx" of `fmi2GetContinuousStates`, `fmi2SetcontinuousStates`, `fmi2GetDerivatives`, `fmi2GetNominalsOfContinuousStates` see hereafter) that require it.
 The corresponding continuous-time states are defined by attribute `derivative` of the corresponding `ScalarVariable` state derivative element.
 _[Note that higher order derivatives must be mapped to first order derivatives but the mapping definition can be preserved due to attribute `derivative`.
 Example: if_ latexmath:[\color{blue}{\frac{\text{ds}}{\text{dt}} = v,\ \frac{\text{dv}}{\text{dt}} =f(..)}] _,then_ latexmath:[\color{blue}{\left\{ v,\ \frac{\text{dv}}{\text{dt}} \right\}}] _ is the vector of state derivatives and attribute `derivative` of_ latexmath:[\color{blue}{v}] _references_ latexmath:[\color{blue}{s}] _,
@@ -1463,14 +1477,14 @@ latexmath:[\color{blue}{(\mathbf{y}_{c+d}, \dot{\mathbf{x}}_c) := \mathbf{f}_{in
 
 latexmath:[\color{blue}{(\mathbf{y}_{c+d}, \dot{\mathbf{x}}_c) := \mathbf{f}_{sim}(\mathbf{x}_c, \mathbf{u}_{c+d}, t_i, \mathbf{p})}] +
 
-_Therefore, the initial state latexmath:[\color{blue}{\mathbf{x}_c(t_0)}] 
-has `initial = "exact"` and the initial state derivative 
-latexmath:[\color{blue}{\dot{\mathbf{x}}_c(t_0)}] 
+_Therefore, the initial state latexmath:[\color{blue}{\mathbf{x}_c(t_0)}]
+has `initial = "exact"` and the initial state derivative
+latexmath:[\color{blue}{\dot{\mathbf{x}}_c(t_0)}]
 has `initial = "calculated"`.
 The environment can still initialize this FMU in steady-state,
 by using
 latexmath:[\color{blue}{\mathbf{x}_c(t_0)}]
-as iteration variables and adding the equations latexmath:[\color{blue}{\mathbf{x}_c(t_0) = \mathbf{0}}] 
+as iteration variables and adding the equations latexmath:[\color{blue}{\mathbf{x}_c(t_0) = \mathbf{0}}]
 in the environment.]_
 
 |`Unknown`
@@ -1702,8 +1716,40 @@ The definition of the model structure is then:_
 ----
 
 _[Note that_ latexmath:[\color{blue}{y = c}] _where_ latexmath:[\color{blue}{c}] __changes only during Event Mode (__latexmath:[\color{blue}{c = 2}] _or_ latexmath:[\color{blue}{3\ }]__depending on relation__ latexmath:[\color{blue}{u > 0}] _that changes only at Event Mode).
-Therefore `dependenciesKind="dependent"` because it is not a linear relationship on_ latexmath:[\color{blue}{u}].]_
+Therefore `dependenciesKind="dependent"` because it is not a linear relationship on_ latexmath:[\color{blue}{u}].]
 
+_Example 4:_
+
+[latexmath]
+++++
+\frac{dx}{dt} = u, y = x
+++++
+
+_where_ latexmath:[\color{blue}{u}] _is a continuous-time input with index="1" and_ latexmath:[\color{blue}{y}] _is a continuous-time output with index="2",_ latexmath:[\color{blue}{x}] _is a continuous-time state with index="3"  and_ latexmath:[\color{blue}{\frac{dx}{dt}}] _is a continuous-time derivative with index="4"._
+The definition of the model structure is then:_
+[source, xml]
+----
+<ModelVariables>
+   <ScalarVariable name="u"     , ...> … </ScalarVariable>  <!—index="1" -->
+   <ScalarVariable name="y"     , ...> … </ScalarVariable>  <!—index="2" -->
+   <ScalarVariable name="x"     , ...> … </ScalarVariable>  <!—index="3" -->
+   <ScalarVariable name="der(x)", ...> … </ScalarVariable>  <!—index="4" -->
+</ModelVariables>
+
+<ModelStructure>
+   <Outputs>
+     <Unknown index="2" dependencies="3"  dependenciesKind="constant"/>
+   </Outputs>
+   <Derivatives>
+     <Unknown index="4"  dependencies="1"  dependenciesKind="constant"/>
+   </Derivatives>
+
+   <InitialUnknowns>
+     <Unknown index="2" dependencies="3" />
+     <Unknown index="4" dependencies="1" />
+   </InitialUnknowns>
+</ModelStructure>
+----
 _Defining FMU features with the_ `dependencies` _list:_
 
 _[Note that via the `dependencies` list the supported features of the FMU can be defined.
@@ -1740,6 +1786,9 @@ the http://en.wikipedia.org/wiki/Extended_BNF[EBNF] is used:
 |   or
 ----
 
+The names must be unique, non-empty strings. +
+_[It is recommended that the names are visually clearly different from each other; but it is not required.]_
+
 The following conventions for scalar names are defined:
 
 *`variableNamingConvention = "flat"`*
@@ -1749,9 +1798,6 @@ name = Unicode-char { Unicode-char } // identical to xs:normalizedString
 Unicode-char = any Unicode character without carriage return (#xD),
 line feed (#xA) nor tab (#x9)
 ----
-
-The names must be unique, non-empty strings. +
-_[It is recommended that the names are visually clearly different from each other; but it is not required.]_
 
 *`variableNamingConvention = "structured"`*
 
@@ -1791,6 +1837,10 @@ unsignedInteger = digit { digit }
 
 The tree of names is mapped to an ordered list of `ScalarVariable.name`pass:[s]
 in http://en.wikipedia.org/wiki/Depth-first_search[depth-first] order.
+
+_[Clarification for FMI 2.0.1, the scalarVariables of the xml must not be ordered in depth first, they can be ordered arbitrary.
+It is only required that the names are given in such a way that a depth first tree can be constructed from the names, except for array elements.]_
+
 Example:
 
 ----
