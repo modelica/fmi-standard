@@ -7,6 +7,7 @@
    It declares data and function types for FMI 2.0
 
    Revisions:
+   - Jul.  5, 2019: Remove const modifier from fields of fmi2CallbackFunctions  (#216)
    - Sep.  6, 2018: Parameter names added to function prototypes
    - Apr.  9, 2014: all prefixes "fmi" renamed to "fmi2" (decision from April 8)
    - Apr.  3, 2014: Added #include <stddef.h> for size_t definition
@@ -126,11 +127,11 @@ typedef void      (*fmi2StepFinished)          (fmi2ComponentEnvironment compone
                                                 fmi2Status status);
 
 typedef struct {
-   const fmi2CallbackLogger         logger;
-   const fmi2CallbackAllocateMemory allocateMemory;
-   const fmi2CallbackFreeMemory     freeMemory;
-   const fmi2StepFinished           stepFinished;
-   const fmi2ComponentEnvironment   componentEnvironment;
+   fmi2CallbackLogger         logger;
+   fmi2CallbackAllocateMemory allocateMemory;
+   fmi2CallbackFreeMemory     freeMemory;
+   fmi2StepFinished           stepFinished;
+   fmi2ComponentEnvironment   componentEnvironment;
 } fmi2CallbackFunctions;
 
 typedef struct {
