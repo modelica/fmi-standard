@@ -69,7 +69,7 @@ typedef enum {
 typedef enum {
     fmi3ModelExchange,
     fmi3CoSimulation
-} fmi3Type;
+} fmi3InterfaceType;
 /* end::Type[] */
 
 /* tag::DependencyKind[] */
@@ -143,13 +143,13 @@ typedef fmi3Status  fmi3SetDebugLoggingTYPE(fmi3Instance instance,
 
 /* Creation and destruction of FMU instances and setting debug status */
 /* tag::Instantiate[] */
-typedef fmi3Instance fmi3InstantiateTYPE(fmi3String  instanceName,
-                                         fmi3Type    fmuType,
-                                         fmi3String  fmuInstantiationToken,
-                                         fmi3String  fmuResourceLocation,
+typedef fmi3Instance fmi3InstantiateTYPE(fmi3String        instanceName,
+                                         fmi3InterfaceType fmuType,
+                                         fmi3String        fmuInstantiationToken,
+                                         fmi3String        fmuResourceLocation,
                                          const fmi3CallbackFunctions* functions,
-                                         fmi3Boolean visible,
-                                         fmi3Boolean loggingOn);
+                                         fmi3Boolean       visible,
+                                         fmi3Boolean       loggingOn);
 /* end::Instantiate[] */
 
 /* tag::FreeInstance[] */
