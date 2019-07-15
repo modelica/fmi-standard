@@ -1,5 +1,5 @@
-#ifndef fmi3TypesPlatform_h
-#define fmi3TypesPlatform_h
+#ifndef fmi3PlatformTypes_h
+#define fmi3PlatformTypes_h
 
 /*
 Standard header file to define the argument types of the
@@ -84,4 +84,4 @@ typedef const fmi3Byte* fmi3Binary;   /* Data type for binary data
 #define fmi3False 0
 /* end::VariableTypes[] */
 
-#endif /* fmi3TypesPlatform_h */
+#endif /* fmi3PlatformTypes_h */

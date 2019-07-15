@@ -1,7 +1,7 @@
 #ifndef fmi3FunctionTypes_h
 #define fmi3FunctionTypes_h
 
-#include "fmi3TypesPlatform.h"
+#include "fmi3PlatformTypes.h"
 
 /*
 This header file must be utilized when compiling an FMU or an FMI master.
