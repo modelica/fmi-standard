@@ -1,82 +1,87 @@
 === Co-Simulation Feature Selection
 
-The following co-simulation `fmuType` are supported in FMI 3.0
+The following co-simulation modes are supported in FMI 3.0
 
-1. Co-Simulation (fmi3CoSimulation, section <<co-simulation>>)
-2. Co-Simulation with Early Return (fmi3EarlyReturn, section <<co-simulation-with-early-return>>)
-3. Clocked Co-Simulation (fmi3ClockedCoSimulation, section <<clocked-co-simulation>>)
-4. Scheduled Execution Simulation (fmi3ScheduledExecutionSimulation, section <<scheduled-execution-simulation>>)
+. Basic Co-Simulation (`fmi3ModeCoSimulation`, section <<co-simulation>>)
+. Hybrid Co-Simulation (`fmi3ModeHybridCoSimulation`, section <<co-simulation-with-early-return>> and section <<clocked-co-simulation>>)
+. Scheduled Execution Simulation (`fmi3ModeScheduledExecutionSimulation`, section <<scheduled-execution-simulation>>)
 
-Each `fmuType` defines a specific set of features. 
-In each co-simulation `fmuType` also the intermediate variable access option (<<intermediate-variable-access>>) can be activated, if the FMU and the master supports this.
+Each mode defines a specific set of features explained in the referenced subsections.
 
-The enumeration `fmi3Type` is defined as follows:
-
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tag=Type]
-----
-
-Please refer to the folowing sections for information about the co-simulation `fmuTypes`. 
-
-Whether an FMU supports an `fmuType` can be read from the modelDescription.XML.
-The description is provided in the XML schema sections for the fmuTypes. 
+In each co-simulation mode also the intermediate variable access option can be activated, if the FMU and the master supports this. More information can be found in section <<intermediate-variable-access>>
 
 It is required that the co-simulation master signals to the FMU which features shall be used for the current use of the FMU.
-The master must set the function parameter `fmuType` in `fmi3Instantiate` for that purpose. 
-Please note that the master can only activate co-simulation features for an FMU that the FMU defines as supported via modelDescription.xml.
+
+For that the following function is used: 
 
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tag=Instantiate]
 ----
 
-For details about this function please refer to section 2.1.
-For details about the intermediate variable access functionality related to the parameter `intermediateVariableAccessOn` can be found in section 4.6.
+For details about this function please refer to section <<fmi-application-programming-interface>>.
 
-The return value NULL signals that the selected feature can not be activated for that FMU.
-A non-NULL return value signals that the FMU supports the selected features.
+The co-simulation master must set the function parameter `fmuType` to `fmi3CoSimulation` in order to activate the co-simultion use in general.
 
+Additionally the co-simulation master has to configure the co-simulation mode used for the current instance of the FMU via setting the parameter `fmuCoSimulationConfiguration`.
+This parameter is a struct 
 
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tag=CoSimulationConfiguration]
+----
 
+that contains the enumeration variable `coSimulationMode` that is of type `fmi3CoSimulationMode` which has to be set to the co-simulation mode used for this FMU instance.
 
-==== Multiple Co-Simulation fmuType Support in one FMU
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tag=CoSimulationMode]
+----
 
-An FMU should support multiple co-simulation `fmuType` so it can be used in differently capable co-simulation master implementations and for different use cases. That improves the reusability of FMUs.   
-A common application of this multiple `fmuType` support is the reuse of FMUs for real-time and non-real-time simulations. 
+The master can only activate co-simulation modes for an FMU that the FMU defines as supported via modelDescription.xml.
+The modelDescription has to include the Element with name `CoSimulation` to be allowed to set the `fmuType` to `fmi3CoSimulation`. 
 
-If the FMU is exported to support the `fmuType` `fmi3ScheduledExecutionSimulation` the support of the following fmuTypes has to be provided:
+For setting the FMU to certain co-simulation modes the following capability flags (i.e. attribues) would have to be set to true.
 
-. `fmi3ClockedCoSimulation`, 
+[cols="1,2"]
+|===
+|*Co-Simulation Mode*
+|*Attributes the mode requires to be true*
 
-and the support of the following fmuTypes should be provided, if possible:
+|`fmi3ModeCoSimulation`
+|-
 
-. `fmi3EarlyReturn`,
-. `fmi3CoSimulation`.
+|`fmi3ModeHybridCoSimulation`
+|`providesHybridCoSimulation`,
 
-If the FMU is exported to support the `fmuType` `fmi3ClockedCoSimulation` the support of the following fmuTypes should be provided, if possible: 
+only if model internal information shall be transported between communication points: `providesIntermediateUpdates`, `canReturnEarlyAfterIntermediateUpdate`
 
-. `fmi3EarlyReturn`, 
-. `fmi3CoSimulation`.
+|`fmi3ModeScheduledExecutionSimulation`
+|`providesScheduledExecutionSimulation`,
+ 
+only if model internal information shall be transported between communication points: `providesIntermediateUpdates`
+|===
 
-If the FMU is exported to support the `fmuType` `fmi3EarlyReturn` the support of the following `fmuType` has to be provided: 
+A detailed description of the capability flags is given in the following sections.
 
-. `fmi3CoSimulation`.
+If the FMU can not provide a support for a co-simulation mode it has to refuse this mode via return value NULL for `fmi3Instantiate()`.
 
-The described multi `fmuType` support is based on wrapping functionality into the `fmi3DoStep()` via emulating missing features of the `fmuType` the FMU has been originally exported for.
+==== Multiple Co-Simulation Mode Support in one FMU
 
-If the FMU can not provide a wrapping for a co-simulation `fmuType` it has to refuse this `fmuType` via return NULL in `fmi3Instantiate()`.
+If the fmuType is `fmi3CoSimulation`, then an FMU should support multiple co-simulation modes so it can be used in differently capable co-simulation master implementations and for different use cases.
+_[That improves the reusability of FMUs.   
+A common application of this multiple mode support is the reuse of FMUs for real-time and non-real-time simulations.]_ 
 
-For assessing in which co-simulation setups the FMU can be used it is required to have an information about the wrapping capabilities of an FMU before run-time. 
+The described multi mode support is based on wrapping functionality into the `fmi3DoStep()` function via emulating missing features of the mode the FMU has been originally exported for.
 
-If the FMU can provide an emulation of inferred clock tick occurences it has to include the flag `canEmulateInferredClockTicks` equals true in the modelDescription.XML. 
-The default value for `canEmulateInferredClockTicks` is false. 
-If `canEmulateInferredClockTicks` equals false and the modelDescription.XML contains inferred clocks, the importing tool has the information that this FMU cannot be set to `fmuType` `fmi3CoSimulation` or `fmi3EarlyReturn`.
-
+Generally it is assumed that an FMU always supports the co-simulation mode `fmi3ModeCoSimulation`. 
+If that is not possible for an FMU
+- e.g. if the FMU can not provide an emulation of inferred clock tick occurences -
+it has to include the capability flag 'canNotUseBasicCoSimulation` equals true in the modelDescription.XML.
 
 _[Remark:_
-_Note that wrapping towards other co-simulation `fmuTypes` can influence the simulation results._ 
-_Depending on the model especially wrapping towards the `fmuType` fmi3CoSimulation may result in divergent simulation results._
-_Especially aperiodic inferred clocks can not always be sufficiently emulated in `fmuTypes` that do not directly support clocks._
-_Therefore it is recommended that the FMU provides logging information to the user about the influence of wrapping `fmuTypes`, if non-optimal `fmuType` are used by the simulation environment.
+_Wrapping towards other co-simulation modes can influence the simulation results._ 
+_Depending on the model especially wrapping towards the mode fmi3ModeCoSimulation may result in divergent simulation results._
+_Especially aperiodic inferred clocks can not always be sufficiently emulated in modes that do not directly support clocks._
+_Therefore it is recommended that the FMU provides logging information to the user about the influence of the current mode on simulation results, if non-optimal modes are used by the simulation environment.
 ]_

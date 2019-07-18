@@ -2,15 +2,16 @@
 // Define callback
 
 // Global variables
-fmi3IntermediateInfo s1_intermediateInfo;
+fmi3IntermediateUpdateInfo s1_intermediateInfo;
 
 // Callback
 
 //Remark:
 //pointer for intermediateInfo has to be unique for each model partition that calls s1_triggeredClock_intermediateUpdate
 //currently no clockIndex information is transported with intermediateInfo.
-//Thus it is required to a) that the FMU secures (via startPreemptionLock, stopPreemptionLock) the call of fmi3GetClock() b) fmi3GetClock() sets back the activation state of the triggered clock
-fmi3Status s1_triggeredClock_intermediateUpdate(fmi3ComponentEnvironment componentEnvironment, fmi3IntermediateInfo* intermediateInfo, fmi3Boolean* earlyReturn)
+//Thus it is required to a) that the FMU secures (via startPreemptionLock, stopPreemptionLock) the call of fmi3GetClock() 
+//b) fmi3GetClock() sets back the activation state of the triggered clock
+fmi3Status s1_triggeredClock_intermediateUpdate(fmi3ComponentEnvironment componentEnvironment, fmi3IntermediateUpdateInfo* intermediateUpdateInfo)
 {
 	//local variables;
 	fmi2Boolean triggered_clockStatesS1[];
@@ -18,19 +19,19 @@ fmi3Status s1_triggeredClock_intermediateUpdate(fmi3ComponentEnvironment compone
 	size_t nclocks;
 
 	// Save intermediateInfo for later use
-	 s1_intermediateInfo = *intermediateInfo;
+	 s1_intermediateInfo = *intermediateUpdateInfo;
 	 if (s1_intermediateInfo.clocksTicked) 
 	 {
 		s1_fmi3GetClocks(s1, triggered_clockReferenceS1, nclocks, triggered_clockStatesS1);
 		s1_fmi3GetReal/Integer/Boolean/String(s1, variables_associated_to_active_triggered_clock);
 		s1_fmi3SetReal/Integer/Boolean/String(s1, variables_associated_to_active_triggered_clock);
 	 }
-	 //evaluate which triggered clocks have ticked and are associated via tickSource to inferred clocks
-	 inferredClockReferences = getActiveClocksForFMU(GUID1,triggered_clockReferenceS1,triggered_clockStatesS1);
+	 //evaluate which triggered clocks have ticked and are associated via clockReference to inferred clocks
+	 inferredClockReferences = getActiveClocksForFMU(ID1,triggered_clockReferenceS1,triggered_clockStatesS1);
 	 for (index=0,count(inferredClockReferences),index++)
 	 {
 		//call os function to schedule a fmi3ActivateModelPartiton() call together with associated get/set calls
-		//In this case clockIndex=2 (defined in modelDescription.XML via tickSource)
+		//In this case clock 2 (defined in modelDescription.XML via valueReference)
 		//(--> see functions s1_Execute_clockIndex2 and s2_Execute_clockIndex2)
 		scheduleTaskForInferredClock(inferredClockReferences[index]);
 	 }
@@ -51,7 +52,6 @@ fmi3Status GlobalInitialize()
 	cbf1.logger = loggerFunction; // Logger function
 	cbf1.allocateMemory = calloc;
 	cbf1.freeMemory = free;
-	cbf1.stepFinished = NULL; // Synchronous execution
 	// Signal that early return is supported by master
 	cbf1.intermediateUpdate = s1_triggeredClock_intermediateUpdate;
 	cbf1.startPreemptionLock = startPreemptionLock(); // Preemption is OS specific
@@ -61,8 +61,15 @@ fmi3Status GlobalInitialize()
 	// (note: this is pseudo code, no correct pointer handling)
 	cbf1.componentEnvironment = NULL
 	
+	//set Co-Simulation mode
+	fmi3CoSimulationConfiguration coSimulationConfiguration;
+	coSimulationConfiguration.intermediateVariableGet = false;
+	coSimulationConfiguration.intermediateInternalVariableGet = false;
+	coSimulationConfiguration.intermediateVariableSet = false;
+	coSimulationConfiguration.coSimulationMode = fmi3ModeScheduledExecutionSimulation;
+	
 	// Instantiate slave 1
-	fmi3Component s1 = s1_fmi3Instantiate("Tool1" , fmi3ModelPartitonActivation, GUID1, "", fmi3False, fmi3False, &cbf1, fmi3True, fmi3False);
+	fmi3Component s1 = s1_fmi3Instantiate("Tool1" , fmi3CoSimulation, ID1, "", &cbf1, fmi3False, fmi3True, &coSimulationConfiguration);
 	
 
 	if (s1 == NULL) then return FAILURE;
