@@ -65,12 +65,12 @@ typedef enum {
 } fmi3Status;
 /* end::Status[] */
 
-/* tag::Type[] */
+/* tag::InterfaceType[] */
 typedef enum {
     fmi3ModelExchange,
     fmi3CoSimulation
 } fmi3InterfaceType;
-/* end::Type[] */
+/* end::InterfaceType[] */
 
 /* tag::DependencyKind[] */
 typedef enum {
