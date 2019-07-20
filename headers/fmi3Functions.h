@@ -57,7 +57,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 extern "C" {
 #endif
 
-#include "fmi3TypesPlatform.h"
+#include "fmi3PlatformTypes.h"
 #include "fmi3FunctionTypes.h"
 #include <stdlib.h>
 
