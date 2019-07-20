@@ -38,7 +38,7 @@ _[Example for a definition in this header file: +
 contains `typedef` definitions of all function prototypes of an FMU.
 When dynamically loading an FMU, these definitions can be used to type-cast the function pointers to the respective function definition.
 _[Example for a definition in this header file: +
-`typedef fmi3Status fmi3SetTimeTYPE(fmi3Component, fmi3Real);`]_
+`typedef fmi3Status fmi3SetTimeTYPE(fmi3Instance, fmi3Real);`]_
 
 `fmi3Functions.h`::
 contains the function prototypes of an FMU that can be accessed in simulation environments and that are defined in <<fmi-common-concepts>>, <<fmi-for-model-exchange>> and
@@ -118,11 +118,15 @@ include::../headers/fmi3PlatformTypes.h[tags=ComponentEnvironment]
 ----
 
 This is a pointer to a data structure in the simulation environment that calls the FMU.
-Using this pointer, data from the `modelDescription.xml` file _[for example, mapping of `valueReference`pass:[s] to variable names]_ can be transferred between the simulation environment and the `logger` function (see <<creation-destruction-and-logging>>).
+Using this pointer, data from the `modelDescription.xml` file _[for example, mapping of `valueReference`pass:[s] to variable names]_ can be transferred between the simulation environment and the `logMessage` function (see <<creation-destruction-and-logging>>).
 
 [source, C]
 ----
+<<<<<<< HEAD
 include::../headers/fmi3PlatformTypes.h[tags=FMUstate]
+=======
+include::../headers/fmi3TypesPlatform.h[tags=FMUState]
+>>>>>>> master
 ----
 
 This is a pointer to a data structure in the FMU that saves the internal FMU state of the actual or a previous time instant.
@@ -181,7 +185,7 @@ all well.
 
 `fmi3Warning`::
 things are not quite right, but the computation can continue.
-Function `logger` was called in the model (see below), and it is expected that
+Function `logMessage` was called in the model (see below), and it is expected that
 this function has shown the prepared information message to the user.
 
 `fmi3Discard`::
@@ -196,22 +200,22 @@ For "model exchange": It is recommended to perform a smaller step size and evalu
 If this is not possible, the simulation has to be terminated. +
 For "co-simulation": `fmi3Discard` is returned also if the slave is not able to return the required status information.
 The master has to decide if the simulation run can be continued. +
-In both cases, function `logger` was called in the FMU (see below), and it is expected that this function has shown the prepared information message to the user if the FMU was called in debug mode (`loggingOn = fmi3True`).
-Otherwise, `logger` should not show a message.
+In both cases, function `logMessage` was called in the FMU (see below), and it is expected that this function has shown the prepared information message to the user if the FMU was called in debug mode (`loggingOn = fmi3True`).
+Otherwise, `logMessage` should not show a message.
 
 `fmi3Error`::
 the FMU encountered an error.
 The simulation cannot be continued with this FMU instance.
-If one of the functions returns `fmi3Error`, it can be tried to restart the simulation from a formerly stored FMU state by calling `fmi3SetFMUstate`.
-This can be done if the capability flag `canGetAndSetFMUstate` is true and `fmi3GetFMUstate` was called before in non-erroneous state.
-If not, the simulation cannot be continued and `fmi3FreeInstance` or `fmi3Reset` [.underline]#must# be called afterwards.footnote:[Typically, `fmi3Error` return is for non-numerical reasons, like "disk full". There might be cases where the environment can fix such errors (eventually with the help oft the user), and then simulation can continue at the last consistent state defined with `fmi3SetFMUstate`.] +
+If one of the functions returns `fmi3Error`, it can be tried to restart the simulation from a formerly stored FMU state by calling `fmi3SetFMUState`.
+This can be done if the capability flag `canGetAndSetFMUState` is true and `fmi3GetFMUState` was called before in non-erroneous state.
+If not, the simulation cannot be continued and `fmi3FreeInstance` or `fmi3Reset` [.underline]#must# be called afterwards.footnote:[Typically, `fmi3Error` return is for non-numerical reasons, like "disk full". There might be cases where the environment can fix such errors (eventually with the help oft the user), and then simulation can continue at the last consistent state defined with `fmi3SetFMUState`.] +
 Further processing is possible after this call; especially other FMU instances are not affected.
-Function `logger` was called in the FMU (see below), and it is expected that this function has shown the prepared information message to the user.
+Function `logMessage` was called in the FMU (see below), and it is expected that this function has shown the prepared information message to the user.
 
 `fmi3Fatal`::
 the model computations are irreparably corrupted for all FMU instances.
 _[For example, due to a run-time exception such as access violation or integer division by zero during the execution of an fmi function]_.
-Function `logger` was called in the FMU (see below), and it is expected that this function has shown the prepared information message to the user.
+Function `logMessage` was called in the FMU (see below), and it is expected that this function has shown the prepared information message to the user.
 It is not possible to call any other function for any of the FMU instances.
 
 `fmi3Pending`::
@@ -244,12 +248,12 @@ include::../headers/fmi3FunctionTypes.h[tags=Instantiate]
 
 [source, C]
 ----
-include::../headers/fmi3FunctionTypes.h[tags=Type]
+include::../headers/fmi3FunctionTypes.h[tags=InterfaceType]
 ----
 
 The function returns a new instance of an FMU.
 If a null pointer is returned, then instantiation failed.
-In that case, `functions->logger` is called with detailed information about the reason.
+In that case, `functions->logMessage` is called with detailed information about the reason.
 An FMU can be instantiated many times (provided capability flag `canBeInstantiatedOnlyOncePerProcess = false`).
 
 This function must be called successfully before any of the following functions can be called.
@@ -303,35 +307,35 @@ include::../headers/fmi3FunctionTypes.h[tags=CallbackFunctions]
 
 The struct contains pointers to functions provided by the environment to be used by the FMU.
 It is not allowed to change these functions between `fmi3Instantiate` and `fmi3Terminate` calls.
-Additionally, a pointer to the environment is provided (componentEnvironment) that needs to be passed to all of the callback functions, in order that those functions can utilize data from the environment, such as mapping a `valueReference` to a string, or assigning memory to a certain FMU instance.
-In the unlikely case that `fmi3Component` is also needed in those functions, it has to be passed via argument `componentEnvironment`. Argument `componentEnvironment` may be a null pointer.
+Additionally, a pointer to the environment is provided (instanceEnvironment) that needs to be passed to all of the callback functions, in order that those functions can utilize data from the environment, such as mapping a `valueReference` to a string, or assigning memory to a certain FMU instance.
+In the unlikely case that `fmi3Instance` is also needed in those functions, it has to be passed via argument `instanceEnvironment`. Argument `instanceEnvironment` may be a null pointer.
 
-The `componentEnvironment` pointer is also passed to the `stepFinished` function in order that the environment can provide an efficient way to identify the slave that called `stepFinished`.
+The `instanceEnvironment` pointer is also passed to the `stepFinished` function in order that the environment can provide an efficient way to identify the slave that called `stepFinished`.
 
 In the default `fmi3FunctionTypes.h` file, typedefs for the function definitions are present to simplify the usage; this is non-normative.
 The functions have the following meaning:
 
-Function `logger`::
+Function `logMessage`::
 Pointer to a function that is called in the FMU, usually if an `fmi3XXX` function does not behave as desired.
-If `logger` is called with `status = fmi3OK`, then the message is a pure information message.
+If `logMessage` is called with `status = fmi3OK`, then the message is a pure information message.
 `instanceName` is the instance name of the model that calls this function.
 `category` is the category of the message.
 The meaning of `category` is defined by the modeling environment that generated the FMU.
 Depending on this modeling environment, none, some or all allowed values of `category` for this FMU are defined in the `modelDescription.xml` file via element `<fmiModelDescription><LogCategories>`, see <<definition-of-log-categories>>.
-Only messages are provided by function `logger` that have a category according to a call to `fmi3SetDebugLogging` (see below).
+Only messages are provided by function `logMessage` that have a category according to a call to `fmi3SetDebugLogging` (see below).
 Argument `message` is a string that contains the message.
 _[Typically, this function prints the message and stores it optionally in a log file.]_
 +
-All string-valued arguments passed by the FMU to the `logger` may be deallocated by the FMU directly after function `logger` returns.
+All string-valued arguments passed by the FMU to the `logMessage` may be deallocated by the FMU directly after function `logMessage` returns.
 The environment must therefore create copies of these strings if it needs to access these strings later. +
-The `logger` function will append a line break to each message when writing messages after each other to a terminal or a file (the messages may also be shown in other ways, for example, as separate text-boxes in a GUI).
+The `logMessage` function will append a line break to each message when writing messages after each other to a terminal or a file (the messages may also be shown in other ways, for example, as separate text-boxes in a GUI).
 The caller may include line-breaks (using "\n") within the message, but should avoid trailing line breaks. +
 Variables can be referenced in a message with `pass:[#]<ValueReference>pass:[#]`.
 If the character `pass:[#]` shall be included in the message, it has to be prefixed with `pass:[#]`, so `pass:[#]` is an escape character.
 +
 _[Example:_ +
 _The message_ `\#1365# must be larger than zero (used in IO channel ##4)` +
-_might be changed by the_ `logger` _function to_ +
+_might be changed by the_ `logMessage` _function to_ +
 `body.m must be larger than zero (used in IO channel #4)` +
 _if `body.m` is the name of the variable with value reference 1365.]_
 
@@ -369,7 +373,7 @@ include::../headers/fmi3FunctionTypes.h[tags=SetDebugLogging]
 ----
 
 If `loggingOn=fmi3True`, debug logging is enabled, otherwise it is switched off.
-If `loggingOn=fmi3True` and `nCategories > 0`, then only debug messages according to the `categories` argument shall be printed via the `logger` function.
+If `loggingOn=fmi3True` and `nCategories > 0`, then only debug messages according to the `categories` argument shall be printed via the `logMessage` function.
 Vector `categories` has `nCategories` elements.
 The allowed values of `categories` are defined by the modeling environment that generated the FMU.
 Depending on the generating modeling environment, none, some or all allowed values for `categories` for this FMU are defined in the `modelDescription.xml` file via element `fmiModelDescription.LogCategories`, see <<definition-of-log-categories>>.
@@ -480,13 +484,13 @@ Since state derivatives are also `Variable`pass:[s], it is possible to get the v
 This is useful when connecting FMUs together.
 Furthermore, the actual value of every variable defined in the `modelDescription.xml` file can be determined at the actually defined time instant (see <<definition-of-model-variables>>).]_
 
-- Argument `vr` is a vector of `nvr` value handles that define the variables that shall be inquired.
+- Argument `vr` is a vector of `nValueReferences` value handles that define the variables that shall be inquired.
 
 - Argument `value` is a vector with the actual values of these variables.
 
 - Argument `size` is a vector with the actual sizes of the values for binary variables.
 
-- Argument `nValues` provides the number of values in the `value` vector (and `size` vector, where applicable) which is only equal to `nvr` if all `valueReference`pass:[s] point to scalar variables.
+- Argument `nValues` provides the number of values in the `value` vector (and `size` vector, where applicable) which is only equal to `nValueReferences` if all `valueReference`pass:[s] point to scalar variables.
 
 - The strings returned by `fmi3GetString`, as well as the binary values returned by `fmi3GetBinary`, must be copied in the target environment because the allocated memory for these strings might be deallocated by the next call to any of the fmi3 interface functions or it might be an internal string buffer that is reused.
 
@@ -501,13 +505,13 @@ include::../headers/fmi3FunctionTypes.h[tags=Setters]
 
 Set parameters, inputs, and start values, and re-initialize caching of variables that depend on these variables (see <<definition-of-model-variables>> for the exact rules on which type of variables `fmi3SetXXX` can be called, as well as <<state-machine-model-exchange>> in case of ModelExchange and <<state-machine-co-simulation>> in case of CoSimulation).
 
-- Argument `vr` is a vector of `nvr` value handles that define the variables that shall be set.
+- Argument `vr` is a vector of `nValueReferences` value handles that define the variables that shall be set.
 
 - Argument `value` is a vector with the actual values of these variables.
 
 - Argument `size` is a vector with the actual sizes of the values of binary variables.
 
-- Argument `nValues` provides the number of values in the `value` vector which is only equal to `nvr` if all `valueReference`pass:[s] point to scalar variables.
+- Argument `nValues` provides the number of values in the `value` vector which is only equal to `nValueReferences` if all `valueReference`pass:[s] point to scalar variables.
 
 - All strings passed as arguments to `fmi3SetString`, as well as all binary values passed as arguments to `fmi3SetBinary`, must be copied inside these functions, because there is no guarantee of the lifetime of strings or binary values, when these functions return.
 
@@ -535,42 +539,42 @@ _[This can be, for example, used to perform an expensive steady-state initializa
 
 [source, C]
 ----
-include::../headers/fmi3FunctionTypes.h[tags=GetSetFreeFMUstate]
+include::../headers/fmi3FunctionTypes.h[tags=GetSetFreeFMUState]
 ----
 
-`fmi3GetFMUstate` makes a copy of the internal FMU state and returns a pointer to this copy (`FMUstate`).
-If on entry `*FMUstate == NULL`, a new allocation is required.
-If `*FMUstate != NULL`, then `*FMUstate` points to a previously returned `FMUstate` that has not been modified since.
-In particular, `fmi3FreeFMUstate` had not been called with this `FMUstate` as an argument.
-_[Function `fmi3GetFMUstate` typically reuses the memory of this `FMUstate`
-in this case and returns the same pointer to it, but with the actual `FMUstate`.]_
+`fmi3GetFMUState` makes a copy of the internal FMU state and returns a pointer to this copy (`FMUState`).
+If on entry `*FMUState == NULL`, a new allocation is required.
+If `*FMUState != NULL`, then `*FMUState` points to a previously returned `FMUState` that has not been modified since.
+In particular, `fmi3FreeFMUState` had not been called with this `FMUState` as an argument.
+_[Function `fmi3GetFMUState` typically reuses the memory of this `FMUState`
+in this case and returns the same pointer to it, but with the actual `FMUState`.]_
 
-`fmi3SetFMUstate` copies the content of the previously copied `FMUstate` back and uses it as actual new FMU state.
-The `FMUstate` copy still exists.
+`fmi3SetFMUState` copies the content of the previously copied `FMUState` back and uses it as actual new FMU state.
+The `FMUState` copy still exists.
 
-`fmi3FreeFMUstate` frees all memory and other resources allocated with the `fmi3GetFMUstate` call for this `FMUstate`.
-The input argument to this function is the `FMUstate` to be freed.
+`fmi3FreeFMUState` frees all memory and other resources allocated with the `fmi3GetFMUState` call for this `FMUState`.
+The input argument to this function is the `FMUState` to be freed.
 If a null pointer is provided, the call is ignored.
-The function returns a null pointer in argument `FMUstate`.
+The function returns a null pointer in argument `FMUState`.
 
 These functions are only supported by the FMU,
-if the optional capability flag `canGetAndSetFMUstate` in `<fmiModelDescription> <ModelExchange / CoSimulation>` in the XML file is explicitly set to `true` (see <<ModelExchange>> and <<CoSimulation>>).
+if the optional capability flag `canGetAndSetFMUState` in `<fmiModelDescription> <ModelExchange / CoSimulation>` in the XML file is explicitly set to `true` (see <<ModelExchange>> and <<CoSimulation>>).
 
 [source, C]
 ----
-include::../headers/fmi3FunctionTypes.h[tags=SerializedFMUstate]
+include::../headers/fmi3FunctionTypes.h[tags=SerializedFMUState]
 ----
 
-`fmi3SerializedFMUstateSize` returns the `size` of the byte vector, in order that `FMUstate` can be stored in it.
+`fmi3SerializedFMUStateSize` returns the `size` of the byte vector, in order that `FMUState` can be stored in it.
 With this information, the environment has to allocate an `fmi3Byte` vector of the required length `size`.
 
-`fmi3SerializeFMUstate` serializes the data which is referenced by pointer `FMUstate` and copies this data in to the byte vector `serializedState` of length `size`, that must be provided by the environment.
+`fmi3SerializeFMUState` serializes the data which is referenced by pointer `FMUState` and copies this data in to the byte vector `serializedState` of length `size`, that must be provided by the environment.
 
-`fmi3DeSerializeFMUstate` deserializes the byte vector `serializedState` of length `size`, constructs a copy of the FMU state and returns `FMUstate`, the pointer to this copy.
-_[The simulation is restarted at this state, when calling `fmi3SetFMUState` with `FMUstate`.]_
+`fmi3DeSerializeFMUState` deserializes the byte vector `serializedState` of length `size`, constructs a copy of the FMU state and returns `FMUState`, the pointer to this copy.
+_[The simulation is restarted at this state, when calling `fmi3SetFMUState` with `FMUState`.]_
 
 These functions are only supported by the FMU,
-if the optional capability flags `canGetAndSetFMUstate` and `canSerializeFMUstate` in
+if the optional capability flags `canGetAndSetFMUState` and `canSerializeFMUState` in
 `<fmiModelDescription><ModelExchange / CoSimulation>` in the XML file are explicitly set to `true` (see <<ModelExchange>> and <<CoSimulation>>).
 
 ==== Getting Partial Derivatives

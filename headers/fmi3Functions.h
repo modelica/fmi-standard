@@ -135,12 +135,12 @@ Common Functions
 #define fmi3SetBinary                fmi3FullName(fmi3SetBinary)
 #define fmi3GetNumberOfVariableDependencies fmi3FullName(fmi3GetNumberOfVariableDependencies)
 #define fmi3GetVariableDependencies  fmi3FullName(fmi3GetVariableDependencies)
-#define fmi3GetFMUstate              fmi3FullName(fmi3GetFMUstate)
-#define fmi3SetFMUstate              fmi3FullName(fmi3SetFMUstate)
-#define fmi3FreeFMUstate             fmi3FullName(fmi3FreeFMUstate)
-#define fmi3SerializedFMUstateSize   fmi3FullName(fmi3SerializedFMUstateSize)
-#define fmi3SerializeFMUstate        fmi3FullName(fmi3SerializeFMUstate)
-#define fmi3DeSerializeFMUstate      fmi3FullName(fmi3DeSerializeFMUstate)
+#define fmi3GetFMUState              fmi3FullName(fmi3GetFMUState)
+#define fmi3SetFMUState              fmi3FullName(fmi3SetFMUState)
+#define fmi3FreeFMUState             fmi3FullName(fmi3FreeFMUState)
+#define fmi3SerializedFMUStateSize   fmi3FullName(fmi3SerializedFMUStateSize)
+#define fmi3SerializeFMUState        fmi3FullName(fmi3SerializeFMUState)
+#define fmi3DeSerializeFMUState      fmi3FullName(fmi3DeSerializeFMUState)
 #define fmi3GetDirectionalDerivative fmi3FullName(fmi3GetDirectionalDerivative)
 
 /***************************************************
@@ -228,12 +228,12 @@ FMI3_Export fmi3GetNumberOfVariableDependenciesTYPE fmi3GetNumberOfVariableDepen
 FMI3_Export fmi3GetVariableDependenciesTYPE         fmi3GetVariableDependencies;
 
 /* Getting and setting the internal FMU state */
-FMI3_Export fmi3GetFMUstateTYPE            fmi3GetFMUstate;
-FMI3_Export fmi3SetFMUstateTYPE            fmi3SetFMUstate;
-FMI3_Export fmi3FreeFMUstateTYPE           fmi3FreeFMUstate;
-FMI3_Export fmi3SerializedFMUstateSizeTYPE fmi3SerializedFMUstateSize;
-FMI3_Export fmi3SerializeFMUstateTYPE      fmi3SerializeFMUstate;
-FMI3_Export fmi3DeSerializeFMUstateTYPE    fmi3DeSerializeFMUstate;
+FMI3_Export fmi3GetFMUStateTYPE            fmi3GetFMUState;
+FMI3_Export fmi3SetFMUStateTYPE            fmi3SetFMUState;
+FMI3_Export fmi3FreeFMUStateTYPE           fmi3FreeFMUState;
+FMI3_Export fmi3SerializedFMUStateSizeTYPE fmi3SerializedFMUStateSize;
+FMI3_Export fmi3SerializeFMUStateTYPE      fmi3SerializeFMUState;
+FMI3_Export fmi3DeSerializeFMUStateTYPE    fmi3DeSerializeFMUState;
 
 /* Getting partial derivatives */
 FMI3_Export fmi3GetDirectionalDerivativeTYPE fmi3GetDirectionalDerivative;

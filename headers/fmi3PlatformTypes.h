@@ -44,16 +44,16 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 /* tag::Component[] */
-typedef void*           fmi3Component;             /* Pointer to FMU instance */
+typedef void*           fmi3Instance;             /* Pointer to FMU instance */
 /* end::Component[] */
 
 /* tag::ComponentEnvironment[] */
-typedef void*           fmi3ComponentEnvironment;  /* Pointer to FMU environment */
+typedef void*           fmi3InstanceEnvironment;  /* Pointer to FMU environment */
 /* end::ComponentEnvironment[] */
 
-/* tag::FMUstate[] */
-typedef void*           fmi3FMUstate;              /* Pointer to internal FMU state */
-/* end::FMUstate[] */
+/* tag::FMUState[] */
+typedef void*           fmi3FMUState;              /* Pointer to internal FMU state */
+/* end::FMUState[] */
 
 /* tag::ValueReference[] */
 typedef unsigned int    fmi3ValueReference;        /* Handle to the value of a variable */
