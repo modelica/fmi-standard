@@ -284,17 +284,17 @@ typedef fmi3Status fmi3GetBinaryTYPE (fmi3Instance instance,
 /*FMI3 Events&Multirate start*/
 /* tag::GetClock[] */
 typedef fmi3Status fmi3GetClockTYPE(fmi3Instance instance, 
-                                    const fmi3ValueReference vr[], size_t nvr, 
+                                    const fmi3ValueReference valueReferences[], size_t nValueReferences, 
                                     fmi3Boolean value[]);
 /* end::GetClock[] */
 
 /* tag::GetInterval[] */
 typedef fmi3Status fmi3GetIntervalDecimalTYPE(fmi3Instance instance, 
-                                              const fmi3ValueReference vr[], size_t nvr, 
+                                              const fmi3ValueReference valueReferences[], size_t nValueReferences, 
                                               fmi3Float64 interval[]);
 
 typedef fmi3Status fmi3GetIntervalFractionTYPE(fmi3Instance instance, 
-                                               const fmi3ValueReference vr[], size_t nvr, 
+                                               const fmi3ValueReference valueReferences[], size_t nValueReferences, 
                                                fmi3UInt64 intervalCounter[], fmi3UInt64 resolution[]);
 /* end::GetInterval[] */
 
@@ -357,17 +357,17 @@ typedef fmi3Status fmi3SetBinaryTYPE (fmi3Instance instance,
 /*FMI3 Events&Multirate start*/
 /* tag::SetClock[] */
 typedef fmi3Status fmi3SetClockTYPE(fmi3Instance instance,
-                                    const fmi3ValueReference vr[], size_t nvr,
+                                    const fmi3ValueReference valueReferences[], size_t nValueReferences,
                                     const fmi3Boolean value[], const fmi3Boolean *subactive);
 /* end::SetClock[] */
 
 /* tag::SetInterval[] */
 typedef fmi3Status fmi3SetIntervalDecimalTYPE(fmi3Instance instance,
-                                              const fmi3ValueReference vr[], size_t nvr,
+                                              const fmi3ValueReference valueReferences[], size_t nValueReferences,
                                               fmi3Float64 interval[]);
 
 typedef fmi3Status fmi3SetIntervalFractionTYPE(fmi3Instance instance,
-                                               const fmi3ValueReference vr[], size_t nvr,
+                                               const fmi3ValueReference valueReferences[], size_t nValueReferences,
                                                fmi3UInt64 intervalCounter[], fmi3UInt64 resolution[]);
 /* end::SetInterval[] */
 /*FMI3 Events&Multirate end*/
