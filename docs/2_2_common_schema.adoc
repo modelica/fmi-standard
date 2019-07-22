@@ -9,8 +9,9 @@ This schema file utilizes the following helper schema files:
 
 - `fmi3Annotation.xsd` +
 - `fmi3AttributeGroups.xsd` +
-- `fmi3Variable.xsd` +
+- `fmi3FMUType.xsd` +
 - `fmi3Type.xsd` +
+- `fmi3Variable.xsd` +
 - `fmi3VariableDependency.xsd` +
 - `fmi3Unit.xsd`
 
@@ -204,6 +205,143 @@ For Co-Simulation, this value is ignored.
 
 _[The attribute `numberOfContinuousStates` available in FMI 1.0 has been removed for FMI 2.0,
 since this information can be deduced from the remaining data in the XML file.]_
+
+==== Definition of Source Code (BuildConfiguration)
+
+The `BuildConfiguration` provides the necessary information to compile and link the contained sources of the model into a dynamic library or as part of an executable.
+
+[cols="1,3a",options="header"]
+|====
+|Attribute
+|Description
+
+|platform
+|Platform tuple of the platform the build configuration is intended for (e.g. `x86_64-linux`)
+
+|description
+|Description of the build configuration
+|====
+
+===== SourceFileSet
+
+The `SourceFileSet` element groups source files that can be compiled with the same compiler and compiler options. Every build configuration must contain at least one `SourceFileSet`.
+
+[cols="1,3a",options="header"]
+|====
+|Attribute
+|Description
+
+|language
+|Language of the source files (e.g. `C99`, `C++11`)
+
+|compiler
+|The compiler to compile the sources (e.g. `VisualC`, `gcc`, `clang++`)
+
+|compilerOptions
+|The compiler flags that have to be used when compiling the sources (e.g. `-fno-rtti`, `/Od`)
+|====
+
+====== SourceFile
+
+[cols="1,3a",options="header"]
+|====
+|Attribute
+|Description
+
+|name
+|Path of the source file relative to the `sources` directory
+|====
+
+====== PreprocessorDefinition
+
+The `PreprocessorDefinition` element defines a preprocessor definition that needs to be passed to the compiler when compiling the source files in the `SourceFileSet`.
+
+[cols="1,3a",options="header"]
+|====
+|Attribute
+|Description
+
+|name
+|Name of the preprocessor definition
+
+|value
+|Value of the preprocessor definition
+
+|optional
+|Determines wether the definition is optional (default is `false`)
+
+|description
+|Description of the preprocessor definition
+|====
+
+====== PreprocessorDefinition/Option
+
+The `Option` element defines a possible value for the `PreprocessorDefinition`. If a `PreprocessorDefinition` contains `Option` elements, its default value must be contained in the options.
+
+[cols="1,3a",options="header"]
+|====
+|Attribute
+|Description
+
+|value
+|Value of the preprocessor definition option
+
+|description
+|Description of the preprocessor definition option
+|====
+
+====== IncludeDirectory
+
+The `IncludeDirectory` element defines the include directories that need to be passed to the compiler when compiling the source files in the `SourceFileSet`.
+
+[cols="1,3a",options="header"]
+|====
+|Attribute
+|Description
+
+|name
+|Path of the include directory relative to the `sources` directory
+|====
+
+====== Library
+
+The `Library` element defines a static library required to link the model binary.
+
+[cols="1,3a",options="header"]
+|====
+|Attribute
+|Description
+
+|name
+|Name of the library
+
+|version
+|Version specifier of the library as defined in https://www.python.org/dev/peps/pep-0440/#version-specifiers[PEP 440].
+The characters `>` (greater-than) and `<` (less-than) must be escaped as `&gt;` and `&lt;`.
+ _[For example `2.5`, `>=2.0,<3.0` or `>=1.0,!=1.2`]_.
+
+|external
+|Boolean attribute that determines wether the library is contained in the `binaries/<platform_tuple>` directory (`false`) or if it has to be provided by the environment (`true`). The default is `false`.
+
+|description
+|Description of the library definition option
+|====
+
+====== Examples
+
+.A minimal build configuration
+[source, xml]
+----
+include::examples/build_configuration.xml[tags=ModelExchange]
+----
+
+.Multiple complex build configurations
+[source, xml]
+----
+include::examples/build_configuration.xml[tags=CoSimulation]
+----
+<1> Generic build configuration for desktop platforms
+<2> Build configuration for a specialized real-time board
 
 ==== Definition of Units (UnitDefinitions)
 
@@ -611,7 +749,7 @@ Element `LogCategories` of `fmiModelDescription` is defined as:
 
 image::images/LogCategories_schema.png[width=70%, align="center"]
 
-`LogCategories` defines an unordered set of category strings that can be utilized to define the log output via function `logger`, see <<creation-destruction-and-logging>>.
+`LogCategories` defines an unordered set of category strings that can be utilized to define the log output via function `logMessage`, see <<creation-destruction-and-logging>>.
 A tool is free to use any `normalizedString` for a category value.
 The `name` attribute of `Category` must be unique with respect to all other elements of the `LogCategories` list.
 
@@ -663,8 +801,8 @@ _[This approach to define `LogCategories` has the following advantages:_
 
 _[Note that since element `<LogCategories>` is optional, an FMU does not need to expose its log categories.]_
 
-. _The log output is drastically reduced, because via `fmi3SetDebugLogging` exactly the categories are set that shall be logged and therefore the FMU only has to print the messages with the corresponding categories to the `logger` function.
-In FMI 1.0, it was necessary to provide all log output of the FMU to the `logger` and then a filter in the `logger` could select what to show to the end-user.
+. _The log output is drastically reduced, because via `fmi3SetDebugLogging` exactly the categories are set that shall be logged and therefore the FMU only has to print the messages with the corresponding categories to the `logMessage` function.
+In FMI 1.0, it was necessary to provide all log output of the FMU to the `logMessage` and then a filter in the `logMessage` could select what to show to the end-user.
 The approach introduced in FMI 2.0 is therefore much more efficient.]_
 
 ==== Definition of a Default Experiment (DefaultExperiment) [[DefaultExperiment]]
