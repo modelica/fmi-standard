@@ -32,30 +32,34 @@ include::../headers/fmi3FunctionTypes.h[tag=IntermediateUpdateInfo]
 * 	`{IUTIME}` is the time at which the callback has been called. 
 If an event happens or a clock ticks, `{IUTIME}` is the time of event or triggered clock.
 `{IUTIME}` is either the exact `earlyReturnTime` required by the master for the break or the closest time greater than the `earlyReturnTime` required by the master.
-If this time is not exactly the required `earlyReturnTime`, the master can rollback the FMU to precisely reach this event time. `{IUTIME}` is also the time of intermediate steps of the internal FMU solver.
+If this time is not exactly the required `earlyReturnTime`, the master can rollback the FMU to precisely reach this event time.
+`{IUTIME}` is also the time of intermediate steps of the internal FMU solver.
 
 
 The following `fmi3Boolean` variables define the reasons of the discontinuity. Several variables can be set by the FMU. Default value of variables is `fmi3False`.
 
 *	when `eventOccurred` is `fmi3True`, it means that `fmi3NewDiscreteStates()` function shall be called for gathering `fmi3eventInfo` related information about events e.g. caused by ticking triggered clocks at `{IUTIME};`
-If this flag is `fmi3True` the master must call `{DER}` to do an early return and handle the event. 
+If this flag is `fmi3True` the master must call `{DER}` to do an early return and handle the event.
+In this case, `earlyReturnTime` argument of `{DER}` is ignored.
 
 *	when `clocksTicked`  is `fmi3True`, it means that `fmi3GetClock()` function should be called for gathering all clock related information about ticking triggered clocks at `{IUTIME};`.
 This variable is relevant only if the master supports handling the clocks. 
 If this flag is `fmi3True` the master must call `{DER}` to do an early return and handle the clock event. 
+In this case, `earlyReturnTime` argument of `{DER}` is ignored.
 
 *	when `intermediateVariableSetAllowed` is `fmi3True`, the FMU signals that intermediate output values can be collected by the co-simulation master.
 
 *	when `intermediateVariableGetAllowed` is `fmi3True`, the FMU signals that intermediate input values can be set by the co-simulation master.
 
-*   when `canReturnEarly` is `fmi3True` the master can request the FMU to return early at the current `{IUTIME}` time instant via calling `fmi3DoEarlyReturn()` within the callback function `{CBIU}`. If `canReturnEarly` is `fmi3False` the FMU will not do the early return, regardless of the master request.
+*   when `canReturnEarly` is `fmi3True` the master can request the FMU to return early at the current `{IUTIME}` time instant via calling `{DER}` within the callback function `{CBIU}`. 
+If `canReturnEarly` is `fmi3False` the FMU will not do the early return, regardless of the master request.
 
 Note that only the first discontinuity event at a Newtonian time instant shall be signaled that way. But, there may be an event iteration at a Newtonian time instant and have super dense time instants.
 
 Based on the information delivered in `{STIUI}`, additional information about the discontinuity at that time instant can be obtained from the `fmi3EventInfo` structure after calling  `fmi3NewDiscreteStates()`  and/or `fmi3GetClock()`.
 
 ===== Early-return requested by the co-simulation master
-The co-simulation master can request the FMU to end the `{DOSTEP}` at a Newtonian time instant and do an early return by calling the  `fmi3DoEarlyReturn()` function inside the callback function `{CBIU}`.
+The co-simulation master can request the FMU to end the `{DOSTEP}` at a Newtonian time instant and do an early return by calling the  `{DER}` function inside the callback function `{CBIU}`.
 The co-simulation master is only allowed to call this function, if the boolean variable `{STIUI}.canReturnEarly` is `fmi3True`.
 If the FMU is successful to do an early return, the return value of the `earlyReturn` argument in `{DOSTEP}` is `fmi3True`, otherwise `fmi3False`.
 
