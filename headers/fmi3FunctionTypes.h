@@ -347,6 +347,14 @@ typedef fmi3Status fmi3GetDirectionalDerivativeTYPE(fmi3Instance instance,
                                                     size_t nDeltaOfUnknowns);
 /* end::GetDirectionalDerivative[] */
 
+/* tag::EnterConfigurationMode[] */
+typedef fmi3Status fmi3EnterConfigurationModeTYPE(fmi3Instance instance);
+/* end::EnterConfigurationMode[] */
+
+/* tag::ExitConfigurationMode[] */
+typedef fmi3Status fmi3ExitConfigurationModeTYPE(fmi3Instance instance);
+/* end::ExitConfigurationMode[] */
+
 /***************************************************
 Types for Functions for FMI3 for Model Exchange
 ****************************************************/

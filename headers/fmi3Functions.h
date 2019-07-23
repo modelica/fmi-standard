@@ -142,6 +142,8 @@ Common Functions
 #define fmi3SerializeFMUState        fmi3FullName(fmi3SerializeFMUState)
 #define fmi3DeSerializeFMUState      fmi3FullName(fmi3DeSerializeFMUState)
 #define fmi3GetDirectionalDerivative fmi3FullName(fmi3GetDirectionalDerivative)
+#define fmi3EnterConfigurationMode   fmi3FullName(fmi3EnterConfigurationMode)
+#define fmi3ExitConfigurationMode    fmi3FullName(fmi3ExitConfigurationMode)
 
 /***************************************************
 Functions for FMI3 for Model Exchange
@@ -237,6 +239,10 @@ FMI3_Export fmi3DeSerializeFMUStateTYPE    fmi3DeSerializeFMUState;
 
 /* Getting partial derivatives */
 FMI3_Export fmi3GetDirectionalDerivativeTYPE fmi3GetDirectionalDerivative;
+
+/* Entering and exiting the Configuration or Reconfiguration Mode */
+FMI3_Export fmi3EnterConfigurationModeTYPE fmi3EnterConfigurationMode;
+FMI3_Export fmi3ExitConfigurationModeTYPE  fmi3ExitConfigurationMode;
 
 /***************************************************
 Functions for FMI3 for Model Exchange
