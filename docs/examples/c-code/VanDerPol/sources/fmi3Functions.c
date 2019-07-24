@@ -471,21 +471,6 @@ fmi3Status fmi3GetDirectionalDerivative(fmi3Instance instance, const fmi3ValueRe
 // Functions for FMI for Co-Simulation
 // ---------------------------------------------------------------------------
 
-fmi3Status fmi3CancelStep(fmi3Instance instance) {
-
-    ModelInstance *comp = (ModelInstance *)instance;
-
-	if (invalidState(comp, "fmi3CancelStep", MASK_fmi3CancelStep)) {
-        // always fmi3CancelStep is invalid, because model is never in modelStepInProgress state.
-        return fmi3Error;
-    }
-
-	logError(comp, "fmi3CancelStep: Can be called when fmi3DoStep returned fmi3Pending."
-        " This is not the case.");
-
-	return fmi3Error;
-}
-
 fmi3Status fmi3DoStep(fmi3Instance instance, fmi3Float64 currentCommunicationPoint,
                     fmi3Float64 communicationStepSize, fmi3Boolean noSetFMUStatePriorToCurrentPoint) {
 
@@ -498,6 +483,31 @@ fmi3Status fmi3DoStep(fmi3Instance instance, fmi3Float64 currentCommunicationPoi
     }
 
     return doStep(comp, currentCommunicationPoint, currentCommunicationPoint + communicationStepSize);
+}
+
+fmi3Status fmi3CancelStep(fmi3Instance instance) {
+    
+    ModelInstance *comp = (ModelInstance *)instance;
+    
+    if (invalidState(comp, "fmi3CancelStep", MASK_fmi3CancelStep)) {
+        // always fmi3CancelStep is invalid, because model is never in modelStepInProgress state.
+        return fmi3Error;
+    }
+    
+    logError(comp, "fmi3CancelStep: Can be called when fmi3DoStep returned fmi3Pending."
+             " This is not the case.");
+    
+    return fmi3Error;
+}
+
+/* Inquire slave status */
+
+fmi3Status fmi3GetDoStepPendingStatus(fmi3Instance instance, fmi3Status* status, fmi3String* message) {
+    return fmi3Error;
+}
+
+fmi3Status fmi3GetDoStepDiscardedStatus(fmi3Instance instance, fmi3Boolean* terminate, fmi3Float64* lastSuccessfulTime) {
+    return fmi3Error;
 }
 
 // ---------------------------------------------------------------------------
