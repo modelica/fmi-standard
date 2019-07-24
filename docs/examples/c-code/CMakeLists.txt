@@ -11,6 +11,8 @@ add_executable (Jacobian
   VanDerPol/modelDescription.xml
 )
 
+set_property(TARGET Jacobian PROPERTY C_STANDARD 99)
+
 target_include_directories(Jacobian PRIVATE
   ../../../headers
 )
