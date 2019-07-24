@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
+
 project (Examples)
 
 add_executable (Jacobian
@@ -10,8 +12,6 @@ add_executable (Jacobian
   ../../../headers/fmi3PlatformTypes.h
   VanDerPol/modelDescription.xml
 )
-
-set_property(TARGET Jacobian PROPERTY C_STANDARD 99)
 
 target_include_directories(Jacobian PRIVATE
   ../../../headers
