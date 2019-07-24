@@ -82,8 +82,8 @@ typedef enum {
 /* tag::CoSimulationConfiguration[] */
 typedef struct{
     fmi3Boolean intermediateVariableGet;
-	fmi3Boolean intermediateInternalVariableGet;
-	fmi3Boolean intermediateVariableSet;
+    fmi3Boolean intermediateInternalVariableGet;
+    fmi3Boolean intermediateVariableSet;
     fmi3CoSimulationMode coSimulationMode;
 } fmi3CoSimulationConfiguration;
 /* end::CoSimulationConfiguration[] */
@@ -137,8 +137,8 @@ typedef struct {
     fmi3CallbackAllocateMemory allocateMemory;
     fmi3CallbackFreeMemory     freeMemory;
     fmi3InstanceEnvironment    instanceEnvironment;
-	fmi3CallbackIntermediateUpdate  intermediateUpdate;
-	fmi3CallbackStartPreemptionLock startPreemptionLock;
+    fmi3CallbackIntermediateUpdate  intermediateUpdate;
+    fmi3CallbackStartPreemptionLock startPreemptionLock;
     fmi3CallbackStopPreemptionLock  stopPreemptionLock;
 } fmi3CallbackFunctions;
 /* end::CallbackFunctions[] */
@@ -187,7 +187,7 @@ typedef fmi3Instance fmi3InstantiateTYPE(fmi3String        instanceName,
                                          const fmi3CallbackFunctions* functions,
                                          fmi3Boolean       visible,
                                          fmi3Boolean       loggingOn,
-										 const fmi3CoSimulationConfiguration* fmuCoSimulationConfiguration);
+                                         const fmi3CoSimulationConfiguration* fmuCoSimulationConfiguration);
 /* end::Instantiate[] */
 
 /* tag::FreeInstance[] */
@@ -525,8 +525,8 @@ typedef fmi3Status fmi3DoStepTYPE(fmi3Instance instance,
 
 /* tag::ActivateModelPartition[] */
 typedef fmi3Status fmi3ActivateModelPartitionTYPE(fmi3Instance instance,
-												  fmi3ValueReference clockReference,
-												  fmi3Float64  activationTime);
+                                                  fmi3ValueReference clockReference,
+                                                  fmi3Float64 activationTime);
 /* end::ActivateModelPartition[] */
 
 /* tag::DoEarlyReturn[] */
