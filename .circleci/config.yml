@@ -9,13 +9,26 @@ jobs:
             - "33:26:15:d0:f2:e8:4f:d7:26:8b:b1:9b:a2:1c:ca:f2"
       - checkout
       - run:
+          name: Install CMake
+          command: apt-get update && sudo apt-get install -y cmake
+      - run:
+          name: Install lxml
+          command: pip install lxml
+      - run:
+          name: Parse XSD schema and validate XML examples
+          command: python .circleci/validate_xml.py
+      - run:
           name: Compile headers
           command: gcc ~/project/headers/fmi3Functions.h
       - run:
-          name: Parse XSD schema and validate examples
+          name: Compile and run code examples
           command: |
-            pip install lxml
-            python .circleci/validate_xml.py
+            mkdir build
+            cd build
+            cmake ../docs/examples/c-code
+            cmake --build . --config Release
+            ./Jacobian
+            cd ..
       - run:
           name: Generate HTML
           command: docker run -v ~/project/:/documents/ --name asciidoc-to-html asciidoctor/docker-asciidoctor asciidoctor --base-dir /documents/ --backend html5 --failure-level WARN docs/index.adoc
