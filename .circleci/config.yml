@@ -1,19 +1,16 @@
 version: 2
 jobs:
-  build:
-    machine: true
+  validate:
+    docker:
+      - image: debian:stretch
     steps:
-      # use the github deploy key
-      - add_ssh_keys:
-          fingerprints:
-            - "33:26:15:d0:f2:e8:4f:d7:26:8b:b1:9b:a2:1c:ca:f2"
       - checkout
       - run:
-          name: Instalk sudo
-          command: 'apt-get update && apt-get install -y sudo && rm -rf /var/lib/apt/lists/*'
+          name: Install sudo
+          command: apt-get update && apt-get install -y sudo && rm -rf /var/lib/apt/lists/*
       - run:
-          name: Install CMake
-          command: apt-get update && sudo apt-get install -y cmake
+          name: Install GCC
+          command: apt-get update && apt-get install -y gcc g++
       - run:
           name: Install lxml
           command: pip install lxml
@@ -23,6 +20,26 @@ jobs:
       - run:
           name: Compile headers
           command: gcc ~/project/headers/fmi3Functions.h
+      - run:
+          name: Install CMake
+          command: apt-get update && sudo apt-get install -y cmake
+      - run:
+          name: Run CMake generator
+          command: cmake docs/examples/c-code -B build
+      - run:
+          name: Build examples
+          command: cmake --build build
+      - run:
+          name: Run examples
+          command: ./build/Jacobian
+  build:
+    machine: true
+    steps:
+      # use the github deploy key
+      - add_ssh_keys:
+          fingerprints:
+            - "33:26:15:d0:f2:e8:4f:d7:26:8b:b1:9b:a2:1c:ca:f2"
+      - checkout
       - run:
           name: Compile and run code examples
           command: |
