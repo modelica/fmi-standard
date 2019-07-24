@@ -173,7 +173,7 @@ Functions for FMI3 for Model Exchange
 Functions for FMI3 for Co-Simulation
 ****************************************************/
 
-#define fmi3EnterStepMode      			 fmi3FullName(fmi3EnterStepMode)
+#define fmi3EnterStepMode                fmi3FullName(fmi3EnterStepMode)
 #define fmi3SetInputDerivatives          fmi3FullName(fmi3SetInputDerivatives)
 #define fmi3GetOutputDerivatives         fmi3FullName(fmi3GetOutputDerivatives)
 #define fmi3DoStep                       fmi3FullName(fmi3DoStep)
