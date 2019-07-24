@@ -13,15 +13,25 @@ SET(CMAKE_C_FLAGS_MINSIZEREL     "${CMAKE_C_FLAGS_MINSIZEREL} -std=c99")
 message("CMAKE_C_FLAGS_DEBUG: ${CMAKE_C_FLAGS_DEBUG}")
 message("CMAKE_C_FLAGS_RELEASE: ${CMAKE_C_FLAGS_RELEASE}")
 
-project (Examples)
-
-add_executable (jacobian
+set(EXAMPLE_SOURCES
   ../../../headers/fmi3Functions.h
   ../../../headers/fmi3FunctionTypes.h
   ../../../headers/fmi3PlatformTypes.h
-  jacobian.c
   ../../../headers/fmi3PlatformTypes.h
   VanDerPol/modelDescription.xml
+)
+
+set(MODEL_SOURCES
+  VanDerPol/sources/fmi3Functions.c
+  VanDerPol/sources/model.c
+  VanDerPol/sources/slave.c
+)
+
+project (Examples)
+
+add_executable (jacobian
+  ${EXAMPLE_SOURCES}
+  jacobian.c
 )
 
 target_include_directories(jacobian PRIVATE
@@ -29,9 +39,7 @@ target_include_directories(jacobian PRIVATE
 )
 
 add_library(slave1 STATIC
-  VanDerPol/sources/fmi3Functions.c
-  VanDerPol/sources/model.c
-  VanDerPol/sources/slave.c
+  ${MODEL_SOURCES}
 )
 
 target_compile_definitions(slave1 PRIVATE
@@ -44,9 +52,7 @@ target_include_directories(slave1 PRIVATE
 )
 
 add_library(slave2 STATIC
-  VanDerPol/sources/fmi3Functions.c
-  VanDerPol/sources/model.c
-  VanDerPol/sources/slave.c
+  ${MODEL_SOURCES}
 )
 
 target_compile_definitions(slave2 PRIVATE
@@ -59,12 +65,8 @@ target_include_directories(slave2 PRIVATE
 )
 
 add_executable (co_simulation
-  ../../../headers/fmi3Functions.h
-  ../../../headers/fmi3FunctionTypes.h
-  ../../../headers/fmi3PlatformTypes.h
+  ${EXAMPLE_SOURCES}
   co_simulation.c
-  ../../../headers/fmi3PlatformTypes.h
-  VanDerPol/modelDescription.xml
 )
 
 target_include_directories(co_simulation PRIVATE
@@ -74,4 +76,30 @@ target_include_directories(co_simulation PRIVATE
 target_link_libraries(co_simulation
   slave1
   slave2
+)
+
+add_library(model STATIC
+  ${MODEL_SOURCES}
+)
+
+target_compile_definitions(model PRIVATE
+  FMI_VERSION=3
+  FMI3_FUNCTION_PREFIX=M_
+)
+
+target_include_directories(model PRIVATE
+  ../../../headers
+)
+
+add_executable (model_exchange
+  ${EXAMPLE_SOURCES}
+  model_exchange.c
+)
+
+target_include_directories(model_exchange PRIVATE
+  ../../../headers
+)
+
+target_link_libraries(model_exchange
+  model
 )
