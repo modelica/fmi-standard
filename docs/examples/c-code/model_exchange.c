@@ -28,6 +28,32 @@ static int sign(double x) {
     return (x > 0) - (x < 0);
 }
 
+static void checkStatus() {
+    
+    fmi3Instance m;
+    fmi3Float64 *der_x;
+    size_t nx;
+    fmi3Status status;
+
+// tag::CheckStatus[]
+status = M_fmi3GetDerivatives(m, der_x, nx);
+
+switch (status) {
+    case fmi3Discard:
+        // reduce step size and try again
+        break;
+    case fmi3Error:
+        // clean up and stop simulation
+        break;
+    case fmi3Fatal:
+        // stop using the model
+        break;
+    default:
+        break;
+}
+// end::CheckStatus[]
+}
+
 int main(int argc, char* argv[]) {
 
     fmi3Float64 h = 0.1, tNext = h, tEnd = 10, time, tStart = 0;
