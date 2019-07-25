@@ -24,24 +24,27 @@ void  cb_freeMemory(fmi3InstanceEnvironment instanceEnvironment, void* obj)  {
     free(obj);
 }
 
+static int sign(double x) {
+    return (x > 0) - (x < 0);
+}
 
 int main(int argc, char* argv[]) {
 
-    fmi3Float64 h, tNext, tEnd = 10, time, tStart = 0;
+    fmi3Float64 h = 0.1, tNext = h, tEnd = 10, time, tStart = 0;
     fmi3Boolean timeEvent, stateEvent, enterEventMode, terminateSimulation = fmi3False, initialEventMode, valuesOfContinuousStatesChanged, nominalsOfContinuousStatesChanged;
     fmi3EventInfo eventInfo;
 
     const char *guid = "{8c4e810f-3da3-4a00-8276-176fa3c9f000}";
 
-    fmi3CallbackFunctions callbacks;
+    fmi3CallbackFunctions callbacks = { cb_logMessage, cb_allocateMemory, cb_freeMemory, NULL, NULL };
     fmi3Instance m;
     fmi3Float64 x[2], x_nominal[2], der_x[2], dt = 0.01, z[1], previous_z[1];
-    size_t nx = 2, nz = 0;
+    size_t nx = 2, nz = 0, i;
 
     printf("Running model_exchange example... ");
 
-    // tag::CoSimulation[]
-    m = M_fmi3Instantiate("m", fmi3CoSimulation, guid, NULL, &callbacks, fmi3False, fmi3False);
+    // tag::ModelExchange[]
+    m = M_fmi3Instantiate("m", fmi3ModelExchange, guid, NULL, &callbacks, fmi3False, fmi3False);
     // "m" is the instance name
     // "M_" is the MODEL_IDENTIFIER
 
@@ -62,7 +65,11 @@ int main(int argc, char* argv[]) {
     enterEventMode   = fmi3False;
     timeEvent        = fmi3False;
     stateEvent       = fmi3False;
-    // previous_z = zeros(nz);
+    
+    // initialize previous event indicators
+    M_fmi3GetEventIndicators(m, previous_z, nz);
+
+    M_fmi3EnterContinuousTimeMode(m);
     
     // retrieve initial state x and
     // nominal values of x (if absolute tolerance is needed)
@@ -73,6 +80,8 @@ int main(int argc, char* argv[]) {
     // M_fmi2GetReal/Integer/Boolean/String(m, ...)
     
     while (!terminateSimulation) {
+        
+        tNext = time + h;
         
         // handle events
         if (enterEventMode || timeEvent || stateEvent) {
@@ -128,7 +137,9 @@ int main(int argc, char* argv[]) {
             initialEventMode = fmi3False;
         }
 
-        if (time >= tEnd) goto TERMINATE_MODEL;
+        if (time >= tEnd) {
+            goto TERMINATE_MODEL;
+        }
 
         // compute derivatives
         M_fmi3GetDerivatives(m, der_x, nx);
@@ -142,16 +153,21 @@ int main(int argc, char* argv[]) {
         // M_fmi2SetReal(m, ...)
 
         // set states at t = time and perform one step
-        // x = x + h * der_x // forward Euler method
+        for (i = 0; i < nx; i++) {
+            x[i] += h * der_x[i]; // forward Euler method
+        }
+        
         M_fmi3SetContinuousStates(m, x, nx);
 
         // get event indicators at t = time
         M_fmi3GetEventIndicators(m, z, nz);
 
-        // detect  events, if any
-        timeEvent = time >= tNext;
-        // stateEvent = sign(z) <> sign(previous_z) or previous_z != 0 && z == 0
-        // previous_z = z;
+        stateEvent = fmi3False;
+        
+        for (i = 0; i < nz; i++) {
+            stateEvent |= sign(z[i]) != sign(previous_z[i]); // detect events
+            previous_z[i] = z[i]; // remember the current value
+        }
 
         // inform the model about an accepted step
         M_fmi3CompletedIntegratorStep(m, fmi3True, &enterEventMode, &terminateSimulation);
@@ -160,13 +176,16 @@ int main(int argc, char* argv[]) {
         // M_fmi2GetReal(m, ...)
     }
     
-    // terminate simulation and retrieve final values
 TERMINATE_MODEL:
+
+    // terminate simulation and retrieve final values
     M_fmi3Terminate(m);
+
     // M_fmi2GetReal/Integer/Boolean/String(m, ...)
     
     // cleanup
     M_fmi3FreeInstance(m);
+    // end::ModelExchange[]
 
     printf("done.\n");
 
