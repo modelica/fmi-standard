@@ -422,6 +422,15 @@ typedef fmi3Status fmi3GetDirectionalDerivativeTYPE(fmi3Instance instance,
                                                     size_t nDeltaOfUnknowns);
 /* end::GetDirectionalDerivative[] */
 
+/* Entering and exiting the Configuration or Reconfiguration Mode */
+
+/* tag::EnterConfigurationMode[] */
+typedef fmi3Status fmi3EnterConfigurationModeTYPE(fmi3Instance instance);
+/* end::EnterConfigurationMode[] */
+
+/* tag::ExitConfigurationMode[] */
+typedef fmi3Status fmi3ExitConfigurationModeTYPE(fmi3Instance instance);
+/* end::ExitConfigurationMode[] */
 
 /* tag::NewDiscreteStates[] */
 typedef fmi3Status fmi3NewDiscreteStatesTYPE(fmi3Instance instance,

@@ -143,6 +143,8 @@ Common Functions
 #define fmi3SerializeFMUState        fmi3FullName(fmi3SerializeFMUState)
 #define fmi3DeSerializeFMUState      fmi3FullName(fmi3DeSerializeFMUState)
 #define fmi3GetDirectionalDerivative fmi3FullName(fmi3GetDirectionalDerivative)
+#define fmi3EnterConfigurationMode   fmi3FullName(fmi3EnterConfigurationMode)
+#define fmi3ExitConfigurationMode    fmi3FullName(fmi3ExitConfigurationMode)
 
 #define fmi3SetClock                      fmi3FullName(fmi3SetClock)
 #define fmi3GetClock                      fmi3FullName(fmi3GetClock)
@@ -249,6 +251,11 @@ FMI3_Export fmi3DeSerializeFMUStateTYPE    fmi3DeSerializeFMUState;
 /* Getting partial derivatives */
 FMI3_Export fmi3GetDirectionalDerivativeTYPE fmi3GetDirectionalDerivative;
 
+/* Entering and exiting the Configuration or Reconfiguration Mode */
+FMI3_Export fmi3EnterConfigurationModeTYPE fmi3EnterConfigurationMode;
+FMI3_Export fmi3ExitConfigurationModeTYPE  fmi3ExitConfigurationMode;
+
+/* Clock related functions */
 FMI3_Export fmi3SetClockTYPE                fmi3SetClock;
 FMI3_Export fmi3GetClockTYPE                fmi3GetClock;
 FMI3_Export fmi3GetIntervalDecimalTYPE      fmi3GetIntervalDecimal;
@@ -256,7 +263,8 @@ FMI3_Export fmi3SetIntervalDecimalTYPE      fmi3SetIntervalDecimal;
 FMI3_Export fmi3GetIntervalFractionTYPE     fmi3GetIntervalFraction;
 FMI3_Export fmi3SetIntervalFractionTYPE     fmi3SetIntervalFraction;
 FMI3_Export fmi3NewDiscreteStatesTYPE       fmi3NewDiscreteStates;
- 
+
+
 /***************************************************
 Functions for FMI3 for Model Exchange
 ****************************************************/
