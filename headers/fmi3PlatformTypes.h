@@ -78,6 +78,7 @@ typedef char            fmi3Byte;     /* Smallest addressable unit of the machin
                                          (typically one byte) */
 typedef const fmi3Byte* fmi3Binary;   /* Data type for binary data
                                          (out-of-band length terminated) */
+typedef int             fmi3Clock;    /* Data type to be used for activating clocks with fmi3True and fmi3False */
 
 /* Values for fmi3Boolean */
 #define fmi3True  1
