@@ -357,7 +357,7 @@ In other cases a NULL pointer can be assigned to the `intermediateUpdate` callba
 Function `startPreemptionLock` and `stopPreemptionLock`::
 To provide more options to secure the code against unwanted preemption these callback functions are defined.
 They can be used to prevent preemption for certain code parts enclosed by `startPreemptionLock` and `stopPreemptionLock` in co-simulation mode `fmi3ModeScheduledExecutionSimulation`. 
-Even if the co-simulation master does not support preemption, at least an empty implementation of these callback functions is required to allow the reuse of code and an efficient preemption.
+Even if the co-simulation master does not support preemption, at least an empty implementation of these callback functions must be provided to allow the reuse of code for different modes together with an efficient preemption.
 
 [source, C]
 ----
@@ -536,9 +536,9 @@ For co-simulation FMUs, additional functions are defined in <<transfer-of-input-
 ==== Operation on Clocks [[operation-on-clocks]]
 In the following section the operations on clocks are described. 
 Clocks are defined for the evaluation of *clocked model partitions* and the related definition of suitable *communication points*. 
-This change proposal offers two types of clocks, desinged to address similar use cases with differences in details. 
+Two types of clocks are available, desinged to address similar use cases with differences in details. 
 One clock type (Synchrounous Clocks) complies with the limitations imposed by the synchronous clock theory, the other clock type (Communication Point Clocks) is a general purpose co-simulation clock for providing suitable communication points for the timed evaluation of model partitions. 
-Please note that therefore the term clock and clocked is used in both cases but has a more general meaning in this FCP. 
+The term clock and clocked is therefore used for both clock types. 
 Both clock types can handle two different variants, the *inferred clocks* and the *triggered clocks*. First the two different clock types are presented with the mathematical definition of their use cases. 
 After that the two clock variants are described. The section ends with a short description of connecting clocked FMUs.
 
@@ -563,8 +563,8 @@ y_j=g_j(x_{j-1},u_j,t_j);
 ++++
 
 Variables _xj_ are called `states of a clocked partition`, or `discrete-time states` and _j_ is the _j+1th_ tick of the associated clock. 
-Variables uj are the (external or local) inputs and yj are the (external or local) outputs of a clocked partition. 
-A discrete-time state can be from any type of a Variable (with exception of a `Clock`) such as of type Real or Boolean. 
+Variables _uj_ are the (external or local) inputs and _yj_ are the (external or local) outputs of a clocked partition. 
+A discrete-time state can be from any type of a Variable (with exception of a `Clock`) such as of type `fmi3Float64` or `fmi3Boolean`. 
 A clocked partition is not executed during initialization mode, but it is executed the first time at its first clock tick. 
 The associated clock of the model partion is synchronous to its discrete-time states. 
 Discrete-time states are listed in the ModelStructure and have the Variable xml-attribute _previous_ referring to the variable holding the previous value of the state. 
@@ -573,12 +573,12 @@ They can have initial values defined by xml-attributes _initial_ and _start_, or
 There are two kinds of evaluation modes:
 [start=1]
 . Regular evaluation for an active clock: state and output equations are evaluated. States get updated.
-. 	Partly evaluation for a subactive clock: states are left unmodified. 
-Modelica uses this mode for the first tick in clocked continuous equations. This mode can also be requested by the calling environment with fmi3SetClock, e.g. to form partial derivatives ∂yj/∂xj-1.
+. Partly evaluation for a subactive clock: states are left unmodified. 
+_[Modelica uses this mode for the first tick in clocked continuous equations. This mode can also be requested by the calling environment with `fmi3SetClock()`, e.g. to form partial derivatives ∂yj/∂xj-1.]_
 
 *Communication Point Clocks*
 In addition to the above definition also a simplified clock definition used only in FMI for Co-Simulation is available that can be used to define the communication points of model partitions of the model (in the following such partitions are called model partitions). 
-Such clocks are called CommunicationPointClocks (CPClocks). 
+Such clocks are called Communication Point Clocks (CPClocks). 
 These clocks are not compatible to synchronous clocks theory and must not be used together with synchronous clocks in one model.
 
 A model partition is mathematically defined as:
@@ -591,11 +591,10 @@ x_j=f_j(x_{j-1},u_j,t_j)
 y_j=g_j(x_{j-1},u_j,t_j)
 ++++
 
-Please note that CommunicationPointClocks can also be defined for continuous or piecewise continuous parts of the model.
+Communication Point Clocks can also be defined for continuous or piecewise continuous parts of the model.
 
 ===== Variants of Clocks [[variants-of-clocks]]
 This section gives a definition of the two clock variants. 
-Furthermore the periodic clock tick is described which is used by both variants.
 
 *Triggered Clocks*
 A triggered clock is a general clock that ticks when a time-, state- or step-event occurs in the continuous-model partition of the FMU (for CPClocks these triggered clock tick events can occour in all model partitions) and are identified based on their clockReference (see 2.2.3). 
@@ -617,11 +616,12 @@ Its interval is initialized by the environment.
 Example:
 A clocked PI controller can be defined as FMU and the input and output signal of the controller can be defined to be on the same `Inferred` clock. In such a case, the environment deduces the clock ticks from the components that are connected to the PI controller (e.g. a component connected to the input, or to the output may define the relevant clock).
 ]
-//EDITQ: Periodic Clock Ticks on the same text level (i.e. same text formatting) as Inferred Clocks and Triggered Clocks is confusing. 
-//EDITQ: It should not look like a new type of clock but as a derivate of the two primitive clock types
+
+===== Additional Clock Properties [[additional-clock-properties]]
+This section gives a definition of additional clock properties. 
 
 *Periodic Clock Ticks*
-Either triggered or inferred, a periodic clock ticks at equidistant sample time points that are known a priori (defined in modelDescription.xml) or are alternatively determined by environment in case of inferred clocks. Mathematically, the next clock tick at time instant ti is defined as:
+Either triggered or inferred, a periodic clock ticks at equidistant sample time points that are known a priori (defined in modelDescription.xml) or are alternatively determined by the environment in case of inferred clocks. Mathematically, the next clock tick at time instant ti is defined as:
 _t_0 := t_start + t_offset_
 _t_i := t_i-1 + ∆T,    i = 1,2,3,…_
 
@@ -635,14 +635,36 @@ where:
 |The previous time instant in seconds, where the clock ticked.
 
 |stem:[\Delta T>0]
-|The constant time interval from the previous clock tick to the current clock tick. It is either defined as a real number (xml-attribute _interval_ or API function `fmi3GetIntervalDecimal()`) or as a rational number (xml-attributes _intervalCounter_ and _resolution_  or API function `fmi3GetIntervalFraction()`).
+|The constant time interval from the previous clock tick to the current clock tick. It is defined as a rational number based on _intervalCounter_ and _resolution_ via clock variable attributes.
 |===
 
-The interval ∆T and toffset for periodic clocks must be defined in the xml-file.
+The following functions can be used to get or set this interval either as a rational or real number:
+
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=SetInterval]
+----
+
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=GetInterval]
+----
+
+The interval ∆T and toffset must be defined for periodic clocks in the xml-file. 
+In case of periodic inferred clocks these values are the start interval values if they are not given by the simulation master _[this information can be used for emulating periodic inferred clocks in co-simulation mode `fmi3ModeCoSimulation`].
 
 If ∆T is fixed for an FMU and cannot be changed it is a strictly periodic clock. 
-The clock is periodic, if ∆T can be defined before calling fmi3EnterInitializationMode. 
-The clock is aperiodic if ∆T is not constant during a simulation run (`fmi3SetIntervalDecimal()` or `fmi3SetIntervalFraction()` can be called during event mode).
+The clock is periodic, if ∆T can be defined before calling fmi3EnterInitializationMode via `fmi3SetIntervalDecimal()` or `fmi3SetIntervalFraction()`.
+The clock is aperiodic if ∆T is not constant during a simulation run (`fmi3SetIntervalDecimal()` or `fmi3SetIntervalFraction()` can be called for that clock during event mode).
+
+*Clock Priority*
+The clocks are ordered descending based on their priorities. 
+It is nevertheless possible to define multiple clocks with the same priority. 
+No ordering is defined for clocks of the same priority. 
+If a computational order information is needed, different priorities for clocks have to be defined. 
+The priority of a clock has to be defined in the modelDescription.xml via the clock variable integer attribute `priority` – smaller values have a higher priority. 
+For periodic clocks it is recommended to derive the priorities based on a rate monotonic scheduling scheme (smallest period leads to highest priority (smallest priority value)).
+
 
 *Clock Relationships for Communication Point Clocks*
 If triggered clocks and inferred clocks are defined it is possible to define a tick relationship from a triggered clock to an inferred clock. 
