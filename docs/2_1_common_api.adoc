@@ -306,7 +306,7 @@ It is not allowed to change these functions between `fmi3Instantiate` and `fmi3T
 Additionally, a pointer to the environment is provided (instanceEnvironment) that needs to be passed to all of the callback functions, in order that those functions can utilize data from the environment, such as mapping a `valueReference` to a string, or assigning memory to a certain FMU instance.
 In the unlikely case that `fmi3Instance` is also needed in those functions, it has to be passed via argument `instanceEnvironment`. Argument `instanceEnvironment` may be a null pointer.
 
-The `instanceEnvironment` pointer is also passed to the `stepFinished` function in order that the environment can provide an efficient way to identify the slave that called `stepFinished`.
+The `instanceEnvironment` pointer is also passed to the `fmi3CallbackIntermediateUpdate` function in order that the environment can provide an efficient way to identify the slave that called `fmi3CallbackIntermediateUpdate`.
 
 In the default `fmi3FunctionTypes.h` file, typedefs for the function definitions are present to simplify the usage; this is non-normative.
 The functions have the following meaning:
@@ -348,6 +348,16 @@ Function `freeMemory`::
 Pointer to a function that must be called in the FMU if memory is freed that has been allocated with `allocateMemory`.
 If a null pointer is provided as input argument `obj`, the function shall perform no action _[(a simple implementation is to use free from the C standard library; in ANSI C89 and C99, the null pointer handling is identical as defined here)]_.
 If attribute `canNotUseMemoryManagementFunctions = "true"` in `<fmiModelDescription><ModelExchange / CoSimulation>`, then function `freeMemory` is not used in the FMU and a null pointer can be provided.
+
+Function `intermediateUpdate`::
+This callback allows internal events of different types (e.g. associated to triggered clock ticks or intermediate variable access) to be signaled from an FMU to the co-simulation master. 
+If `fmu3Type` is set to `fmi3CoSimulation` and either the `coSimulationMode` in `fmi3CoSimulationConfiguration` is set to `fmi3ModeHybridCoSimulation` or `fmi3ModeScheduledExecutionSimulation` or any of the intermediate variable access modes is set to "true", then the `fmi3CallbackIntermediateUpdate()` callback must be defined in `fmi3CallbackFunctions` in `fmi3Instantiate()`.
+In other cases a NULL pointer can be assigned to the `intermediateUpdate` callback, such as if the `fmu3Type` is set to  `fmi3ModelExchange`.
+
+Function `startPreemptionLock` and `stopPreemptionLock`::
+To provide more options to secure the code against unwanted preemption these callback functions are defined.
+They can be used to prevent preemption for certain code parts enclosed by `startPreemptionLock` and `stopPreemptionLock` in co-simulation mode `fmi3ModeScheduledExecutionSimulation`. 
+Even if the co-simulation master does not support preemption, at least an empty implementation of these callback functions is required to allow the reuse of code and an efficient preemption.
 
 [source, C]
 ----
