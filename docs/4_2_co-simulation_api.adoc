@@ -1,10 +1,10 @@
-==== FMI Application Programming Interface
+=== FMI Application Programming Interface
 
-===== Mode fmi3ModeCoSimulation
+==== Mode fmi3ModeCoSimulation
 
 This section contains the interface description to access the in/output data and status information of a co-simulation slave from a C program.
 
-====== Transfer of Input / Output Values and Parameters [[transfer-of-input-output-and-parameters]]
+===== Transfer of Input / Output Values and Parameters in fmi3ModeCoSimulation [[transfer-of-input-output-and-parameters]]
 
 Input and output variables and variables are transferred via the `fmi3GetXXX` and `fmi3SetXXX` functions, defined in <<get-and-set-variable-values>>.
 
@@ -51,7 +51,7 @@ E.g. after a successful `fmi3DoStep(...)` the returned values are related to the
 
 This standard supports polynomial interpolation and extrapolation as well as more sophisticated signal extrapolation schemes like rational extrapolation, see the companion document "FunctionalMockupInterface-ImplementationHints.pdf".
 
-====== Computation
+===== Computation in fmi3ModeCoSimulation
 
 The computation of time steps is controlled by the following function.
 
@@ -88,7 +88,7 @@ _[The master should stop the simulation run immediatlely.]_ See <<status-returne
 
 It depends on the capabilities of the slave which parameter constellations and calling sequences are allowed (see <<CoSimulation>>)
 
-====== Retrieving Status Information from the Slave [[retrieving-status-from-slave]]
+===== Retrieving Status Information from the Slave in fmi3ModeCoSimulation [[retrieving-status-from-slave]]
 
 Status information is retrieved from the slave by the following function:
 
@@ -100,7 +100,7 @@ include::../headers/fmi3FunctionTypes.h[tags=GetDoStepDiscardedStatus]
 `terminate` is true if the slave wants to terminate the simulation.
 `lastSuccessfulTime` is the time instant at which the slave stopped the `fmi3DoStep` call.
 
-====== State Machine of Calling Sequence from Master to Slave [[state-machine-co-simulation]]
+===== State Machine of Calling Sequence from Master to Slave in fmi3ModeCoSimulation [[state-machine-co-simulation]]
 
 The following state machine defines the supported calling sequences.
 
@@ -225,7 +225,7 @@ or `causality` = `"input"` +
 *8* always, but if status is other than `fmi3Terminated`,
 retrieved values are useable for debugging only
 
-====== Code Example
+===== Code Example for fmi3ModeCoSimulation
 
 In the following example, the usage of the FMI functions is sketched in order to clarify the typical calling sequence of the functions in a simulation environment.
 We consider two slaves, where both have one continuous real input and one continuous real output which are connected in the following way:
@@ -249,7 +249,7 @@ include::examples/c-code/co_simulation.c[tags=CoSimulation]
 ----
 
 
-===== Mode fmi3ModeHybridCoSimulation
+==== Mode fmi3ModeHybridCoSimulation
 :DOSTEP: fmi3DoStep()
 :CBIU: fmi3CallbackIntermediateUpdate()
 :DER:  fmi3DoEarlyReturn()
@@ -260,7 +260,7 @@ The boolean capability flag `canHandleEarlyReturn` in the modelDescription XML f
 The default value of this capability flag is false.
 Each time an internal discontinuity or an event happens inside an FMU with capability flag `canHandleEarlyReturn=true`, a triggered clock ticks and the callback function `{CBIU}` is invoked by the FMU then the associated structure `{STIUI}` is sent back to the co-simulation master.
 
-====== Communication of event time and input/output values 
+===== Communication of event time and input/output values in fmi3ModeCoSimulation
 
 In order to stablish a way to communicate the input and output and, in particular, the event time from the FMU to the co-simulation master, the `{CBIU}` callback is used.
 [source, c]
@@ -309,7 +309,7 @@ Note that only the first discontinuity event at a Newtonian time instant shall b
 
 Based on the information delivered in `{STIUI}`, additional information about the discontinuity at that time instant can be obtained from the `fmi3EventInfo` structure after calling  `fmi3NewDiscreteStates()`  and/or `fmi3GetClock()`.
 
-====== Early-return requested by the co-simulation master
+===== Early-return Requested by the Co-Simulation Master in fmi3ModeHybridCoSimulation
 The co-simulation master can request the FMU to end the `{DOSTEP}` at a Newtonian time instant and do an early return by calling the  `{DER}` function inside the callback function `{CBIU}`.
 The co-simulation master is only allowed to call this function, if the boolean variable `{STIUI}.canReturnEarly` is `fmi3True`.
 If the FMU is successful to do an early return, the return value of the `earlyReturn` argument in `{DOSTEP}` is `fmi3True`, otherwise `fmi3False`.
@@ -324,7 +324,7 @@ include::../headers/fmi3FunctionTypes.h[tag=DoStep]
 If the FMU returns from `{DOSTEP}` with the `earlyReturn = fmi3True` the co-simulation master has to call `fmi3EnterEventMode()` for that FMU.
 Please note that, the co-simulation master can also call `fmi3EnterEventMode()` at communication instants to handle inferred events, as will be discussed in following sections.
 
-====== Handling a Successful Early-Return by the Master 
+===== Handling a Successful Early-Return by the Co-Simulation Master in fmi3ModeHybridCoSimulation
 
 Once an FMU conducts a successful early-return and returns from `{DOSTEP}` with `earlyReturn = fmi3True`, the master should handle the event and resume the co-simulation.
 If an FMU provides the early-return capability, the master should indicate the FMU that the  early-return feature is also supported by the master.
@@ -359,10 +359,10 @@ It is not allowed to call `fmi3EnterEventMode()` or `fmi3EnterStepMode()` for an
 
 
 
-====== State Machine of Calling Sequence from Master to Slave
+===== State Machine of Calling Sequence from Master to Slave in fmi3ModeHybridCoSimulation
 
 
-====== Pseudo-code Example
+===== Pseudo-code Example for fmi3ModeHybridCoSimulation
 
 In the following example, the usage of the FMI functions is illustrated in order to clarify the typical calling sequence of the functions in a simulation environment.
 The example is given in a mix of pseudo-code and `'C'`, in order to keep it small and understandable. 
@@ -373,7 +373,7 @@ include::examples/pseudo_code_co_simulation_early_return.txt[]
 ----
 
 
-===== Co-Simulation with Clock Support [[clocked-co-simulation-api]] 
+==== Co-Simulation with Clock Support in fmi3ModeHybridCoSimulation [[api-clocked-co-simulation]] 
 
 :INSTANTIATE: fmi3Instantiate()
 :DOSTEP: fmi3DoStep()
@@ -403,7 +403,7 @@ _In such a situation, it is recommended that the FMU tries to minimize this erro
 _That have to be defined in the modelDescription.xml if associated model partitions shall be activated based on external events or, alternatively, activate the associated model partitions based on FMU internal rules.]_
 
 
-====== Transfer of Input / Output Values and Parameters [[clocked-co-simulation-api-transfer-of-input-output-and-parameters]]
+===== Transfer of Input / Output Values and Parameters in fmi3ModeHybridCoSimulation [[transfer-of-input-output-and-parameters-clocked-co-simulation]]
 If the co-simulation master supports clocks, all inferred clocks of the model should be handled and inferred clock events should be scheduled. 
 If a clock ticks (triggered or inferred), the FMU invokes the `{INTERMEDIATEUPDATE}` callback and sets `{INTERMEDIATEUPDATEINFO}.clocksTicked` to `fmi3True`. 
 Then the master must call `{DOEARLYRETURN}` to do an early return from `{DOSTEP}`.
@@ -425,7 +425,7 @@ Once the FMU is pushed into Event Mode, the activation status of triggered clock
 The simulation master sets and gets clock variable values similar to the FMI for ModelExchange, as defined in <<fmi-api-setting-getting-clock-activation-state>>.
 
 
-====== Computation [[clocked-co-simulation-api-computation]]
+===== Computation in fmi3ModeHybridCoSimulation [[computation-clocked-co-simulation]]
 
 Similar to FMI for ModelExchange, in order to activate inferred or triggered clocks of an FMU, it is required to push the FMU into Event Mode by calling `{ENTEREVENTMODE}`.
 If a triggered clock happens, i.e., if `{DOSTEP}` returns with `earlyReturn` = `fmi3True` and `{INTERMEDIATEUPDATEINFO}.eventOccurred` or `{INTERMEDIATEUPDATEINFO}.clocksTicked` is `fmi3True`, the FMU must be pushed into the Event Mode by calling  `{ENTEREVENTMODE}`;
@@ -450,12 +450,12 @@ It is also possible that a triggered clock ticks as a function of an aperiodic i
 For example, a triggered clock may tick one second after the tick of an aperiodic inferred clock.
 
 
-====== Retrieving Status Information from the Slave [[clocked-co-simulation-api-retrieving-status-information-from-slave]]
+===== Retrieving Status Information from the Slave in fmi3ModeHybridCoSimulation [[retrieving-status-information-from-slave-clocked-co-simulation]]
 
 #[TODO]: @Masoud: Is this section relevant as retrieving status informations from the slaves is described in <<retrieving-status-from-slave>>. Should this section be removed?#
 
 
-====== State Machine of Calling Sequence from Master to Slave [[clocked-co-simulation-api-state-machine-calling-sequence]]
+===== State Machine of Calling Sequence from Master to Slave in fmi3ModeHybridCoSimulation [[state-machine-calling-sequence-clocked-co-simulation]]
 
 The following state machine defines the supported calling sequences.
 
@@ -489,7 +489,7 @@ terminated::
 #[TODO]: @ Masoud: Same as in section <<state-machine-co-simulation>>? To be removed?#
 
 
-====== Pseudo-code Example [[clocked-co-simulation-api-pseudo-code-example]]
+===== Pseudo-code Example for fmi3ModeHybridCoSimulation [[pseudo-code-example-clocked-co-simulation]]
 
 In the following example, the usage of the FMI functions is sketched in order to clarify the typical calling sequence of the functions in a simulation environment. 
 The example is given in a mix of pseudo-code and `'C'`, in order to keep it small and understandable. 
@@ -499,7 +499,7 @@ See pseudocode:
 include::examples/pseudo_code_co_simulation_clocked.txt[]
 ----
 
-===== Scheduled Execution Simulation [[scheduled-execution-simulation-api]] 
+==== Scheduled Execution Simulation [[api-scheduled-execution-simulation]] 
 :stem: latexmath
 
 This section contains the interface description for supporting the scheduled excecution mode from a C program.
@@ -513,7 +513,7 @@ If the flag `providesScheduledExecutionSimulation` equals false, it is not allow
 If no inferred clocks are defined by the FMU it is not allowed to set `providesScheduledExecutionSimulation` to true in the modelDescription.xml.
 
 
-====== Transfer of Input / Output Values and Parameters
+===== Transfer of Input / Output Values and Parameters in fmi3ModeScheduledExecutionSimulation
 
 The simulation master sets and gets variable values as defined in section 4.2.
 
@@ -530,7 +530,7 @@ The only difference is that an early return has no meaning in this mode and  no 
 All internal events that shall be handled by the co-simulation master are signaled via `fmi3IntermediateUpdate()`. 
 _[In this mode it is recommended to restrict such updates by the FMU to triggered clock ticks for reducing the computational load in real-time simulations.]_
 
-====== Computation
+===== Computation in fmi3ModeScheduledExecutionSimulation
 
 If this mode is set, the master has to directly control the time of computation of model partitions.
 The activation states of triggered clocks are transported via `fmi3IntermediateUpdate()` and `fmi3GetClock()`.
@@ -570,7 +570,7 @@ Typically, hardware I/O or virtual ECU software events belong to this category.]
 It is not allowed to call `fmi3ActivateModelPartition()` for a clockReference (i.e. valueReference of clock variable) more than once for the same activationTime latexmath:[t_i].
 
 //TODO describe state machine
-===== State Machine
+===== State Machine for fmi3ModeScheduledExecutionSimulation
 
 This section summarizes the avalable states and the allowed function calls in the respective states
 
@@ -608,24 +608,24 @@ test2
 
 
 
-===== State: Step Mode
-====== Allowed Function Calls
+====== State: Step Mode
+======= Allowed Function Calls
 
 `fmi3EnterInitializationMode()`::
 Restrictions in this state:
 +
 test2
 
-===== State: terminated
-====== Allowed Function Calls
+====== State: terminated
+======= Allowed Function Calls
 
 `fmi3EnterInitializationMode()`::
 Restrictions in this state:
 +
 test2
 
-===== State: fatal
-====== Allowed Function Calls
+====== State: fatal
+======= Allowed Function Calls
 
 `fmi3EnterInitializationMode()`::
 Restrictions in this state:
@@ -656,7 +656,7 @@ _fmi3GetXXX on outputs_ +
 |====
 _]_
 
-====== Preemption Support
+===== Preemption Support
 
 For real-time applications the simulation time equals real wall clock time, thus each `fmi3ActivateModelPartition()` computation step has to be finished in real-time within its current period time length (computation time is not only defined by the runtime of `fmi3ActivateModelPartition()` but also by the time for setting and getting variables and related operations). 
 Usually a preemptive scheduling of the `fmi3ActivateModelPartition()`, `fmi3GetXXX()`, `fmi3SetXXX()` calls is required for respecting this constraint.
@@ -748,7 +748,7 @@ void Task2(void) //high priority
 ----
 
 
-====== Pseudo-code Example
+===== Pseudo-code Example for fmi3ModeScheduledExecutionSimulation
 
 In the following example, the usage of the FMI functions is sketched in order to clarify the typical calling sequence of the functions in a simulation environment.
 The example is given in a mix of pseudo-code and C, in order to keep it small and understandable.
@@ -760,7 +760,7 @@ include::examples/pseudo_code_co_simulation_scheduled_execution_simulation.txt[]
 ----
 
 
-===== Intermediate Variable Access [[intermediate-variable-access-api]] 
+==== Intermediate Variable Access [[api-intermediate-variable-access]] 
 :DOSTEP: fmi3DoStep()
 
 In order to support intermediate variable access during `fmi3DoStep` a variable
@@ -807,7 +807,7 @@ is finished.
 [caption="Figure 12: "]
 image::images/intermediatevariableaccess.svg[width=400%, align="center"]
 
-====== Pseudo-code Example
+===== Pseudo-code Example for Intermediate Variable Access
 
 In the following example, the usage of the intermediate variable access is
 illustrated in order to clarify the typical calling sequence of the functions
