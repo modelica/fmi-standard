@@ -38,6 +38,7 @@ target_include_directories(jacobian PRIVATE
 target_compile_definitions(jacobian PRIVATE
   FMI_VERSION=3
   DISABLE_PREFIX
+  _CRT_SECURE_NO_WARNINGS
 )
 
 add_library(slave1 STATIC
@@ -47,6 +48,7 @@ add_library(slave1 STATIC
 target_compile_definitions(slave1 PRIVATE
   FMI_VERSION=3
   FMI3_FUNCTION_PREFIX=s1_
+  _CRT_SECURE_NO_WARNINGS
 )
 
 target_include_directories(slave1 PRIVATE
@@ -60,6 +62,7 @@ add_library(slave2 STATIC
 target_compile_definitions(slave2 PRIVATE
   FMI_VERSION=3
   FMI3_FUNCTION_PREFIX=s2_
+  _CRT_SECURE_NO_WARNINGS
 )
 
 target_include_directories(slave2 PRIVATE
@@ -87,6 +90,7 @@ add_library(model STATIC
 target_compile_definitions(model PRIVATE
   FMI_VERSION=3
   FMI3_FUNCTION_PREFIX=M_
+  _CRT_SECURE_NO_WARNINGS
 )
 
 target_include_directories(model PRIVATE
