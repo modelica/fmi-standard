@@ -225,10 +225,9 @@ or `causality` = `"input"` +
 *8* always, but if status is other than `fmi3Terminated`,
 retrieved values are useable for debugging only
 
-====== Pseudo-code Example
+====== Code Example
 
 In the following example, the usage of the FMI functions is sketched in order to clarify the typical calling sequence of the functions in a simulation environment.
-The example is given in a mix of pseudo-code and C, in order to keep it small and understandable.
 We consider two slaves, where both have one continuous real input and one continuous real output which are connected in the following way:
 
 .Connection graph of the slaves.
@@ -246,98 +245,7 @@ The error handling is implemented in a very rudimentary way.
 
 [source, C]
 ----
-//////////////////////////
-//Initialization sub-phase
-//Set callback functions,
-fmi3CallbackFunctions cbf;
-cbf.logMessage = logMessageFunction;  //logMessage function
-cbf.allocateMemory = calloc;
-cbf.freeMemory = free;
-cbf.stepFinished = NULL;      //synchronous execution
-cbf.instanceEnvironment = NULL;
-
-//Instantiate both slaves
-fmi3Instance s1 = s1_fmi3Instantiate("Tool1" , fmi3CoSimulation, instantiationToken1, "",
-                                    fmi3False, fmi3False, &cbf, fmi3True);
-fmi3Instance s2 = s2_fmi3Instantiate("Tool2" , fmi3CoSimulation, instantiationToken2, "",
-                                    fmi3False, fmi3False, &cbf, fmi3True);
-
-if ((s1 == NULL) || (s2 == NULL))
-      return FAILURE;
-
-// Start and stop time
-startTime = 0;
-stopTime = 10;
-
-//communication step size
-h = 0.01;
-
-// set all variable start values (of "ScalarVariable / <type> / start")
-s1_fmi3SetReal/Integer/Boolean/String(s1, ...);
-s2_fmi3SetReal/Integer/Boolean/String(s2, ...);
-
-//Initialize slaves
-s1_fmi3SetupExperiment(s1, fmi3False, 0.0, startTime, fmi3True, stopTime);
-s2_fmi3SetupExperiment(s1, fmi3False, 0.0, startTime, fmi3True, stopTime);
-s1_fmi3EnterInitializationMode(s1);
-s2_fmi3EnterInitializationMode(s2);
-
-// set the input values at time = startTime
-s1_fmi3SetReal/Integer/Boolean/String(s1, ...);
-s2_fmi3SetReal/Integer/Boolean/String(s2, ...);
-s1_fmi3ExitInitializationMode(s1);
-s2_fmi3ExitInitializationMode(s2);
-
-//////////////////////////
-//Simulation sub-phase
-tc = startTime; //Current master time
-
-while ((tc < stopTime) && (status == fmi3OK))
-{
-    //retrieve outputs
-    s1_fmi3GetReal(s1, ..., 1, &y1);
-    s2_fmi3GetReal(s2, ..., 1, &y2);
-
-    //set inputs
-    s1_fmi3SetReal(s1, ..., 1, &y2);
-    s2_fmi3SetReal(s2, ..., 1, &y1);
-
-    //call slave s1 and check status
-    status = s1_fmi3DoStep(s1, tc, h, fmi3True);
-    switch (status) {
-    case fmi3Discard:
-      s1_fmi3GetDoStepDiscardedStatus(s1, &boolVal, &lastSuccessfulTime);
-      if (boolVal == fmi3True)
-            printf("Slave s1 wants to terminate simulation.");
-    case fmi3Error:
-    case fmi3Fatal:
-      terminateSimulation = true;
-      break;
-    }
-    if (terminateSimulation)
-      break;
-
-    //call slave s2 and check status as above
-    status = s2_fmi3DoStep(s2, tc, h, fmi3True);
-    ...
-
-    //increment master time
-    tc += h;
-}
-
-//////////////////////////
-//Shutdown sub-phase
-if ((status != fmi3Error) && (status != fmi3Fatal))
-{
-    s1_fmi3Terminate(s1);
-    s2_fmi3Terminate(s2);
-}
-
-if (status != fmi3Fatal)
-{
-    s1_fmi3FreeInstance(s1);
-    s2_fmi3FreeInstance(s2);
-}
+include::examples/c-code/co_simulation.c[tags=CoSimulation]
 ----
 
 
