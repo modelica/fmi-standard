@@ -298,3 +298,83 @@ In reality, every scalar output argument is computed by one_ `fmi3GetXXX` _funct
 
 _In_ _Step Mode the input arguments to_ latexmath:[\mathbf{f}_{doStep}] _are defined by calls to_ `fmi3SetXXX` _and_ `fmi3SetRealInputDerivatives` _functions.
 The variables computed by_ latexmath:[\mathbf{f}_{doStep}] _can be inquired by_  `fmi3GetXXX` _function calls.]_
+
+===== Early Return from Current Communication Step
+:DOSTEP: fmi3DoStep()
+:CBIU: fmi3CallbackIntermediateUpdate()
+:DER:  fmi3DoEarlyReturn()
+
+//=== Improving efficiency in multi-FMU environment when asynchronous mode is used
+
+If an FMU prematurely stops its current `{DOSTEP}`  computation due to an unpredictable internal event before the normal end of the `{DOSTEP}`, i.e. before reaching `currentCommunicationPoint + communicationStepSize`, all other concurrently running FMUs are to be stopped as soon as possible in order to minimize the time needed for the co-simulation master to resynchronize all the FMUs at the same event time.
+
+On a multi-node architecture, in particular, significant co-simulation speed-up may be obtained if the master can avoid waiting until the end of the slowest `{DOSTEP}` when many FMUs are integrating in parallel.
+
+In this context based on parallel calculations, the following figure illustrates different possibilities to synchronize FMUs at the same event time.
+
+//TODO: (review the below text descriptions of the four cases) text form (like below) instead of only png (i.e. no text search and noch tracking of changes possible in png form)
+//TODO: add a visual more accurate diagram of the four cases 
+In the case of FMU1, the event time is also the new latexmath:[t_{i+1}] time, i.e. this is the source of the event.
+In the case of FMU2, a complete rollback to latexmath:[t^{'}_{i+1}] is necessary.
+In the case of FMU3, a partial rollback is neccessary.
+In the case of FMU4, the current `{DOSTEP}` has been interrupted at latexmath:[t^{'}_{i+1}] and no rollback is neccessary.
+
+.different possibilities to synchronize parallel FMUs at the same event time.
+[caption="Figure 12: "]
+image::images/earlyreturn.png[width=100%, align="center"]
+
+`{DOSTEP}`` routines run in parallel on different cores, so that each FMU starts integration from communication point latexmath:[t_{i}] to reach the next communication point latexmath:[t_{i+1}].
+Assuming an unexpected internal event is detected at latexmath:[t^{'}_{i+1}< t_{i+1}] during FMU~1~ integration, the master is informed of an early return using `{CBIU}` callback function. 
+So the master would like now avoid other FMUs exceed the event time, since all FMUs should be resynchronized at the event time which will be the next new communication point.
+On the figure, ongoing FMU computations can be broken either immediately (refer to case 2 for FMU~3~) or at latexmath:[t^{'}_{i+1}] (refer to case 3 for FMU~4~). 
+Only FMU~2~ and FMU~3~ will be rolled back to latexmath:[t^{'}_{i+1}] by the Master as FMU~1~ and FMU~4~ have already reached the new communication point latexmath:[t^{'}_{i+1}].
+Due to the early-return mechanism, the overall execution time of the simulation is reduced.
+
+
+In order to stop the execution of ongoing `{DOSTEP}`, the master invokes `{DER}` during (i.e. within)  the `{CBIU}` callback function and forces the FMU to do an early return.
+
+The prototype of this function whose return code is always `fmi3OK`, follows: 
+
+[source, c]
+----
+include::../headers/fmi3FunctionTypes.h[tag=DoEarlyReturn]
+----
+
+After returning from the callback function, if the `{DER}` has been invoked inside the callback function, the FMU stops the integration either exactly at `earlyReturnTime` (if `current-FMU-time {lt}= earlyReturnTime`) or immediately after the its next internal intermediate step (if `current-FMU-time {gt} earlyReturnTime`). 
+Afterwards, the FMU goes into the `stepComplete` state and  `{DOSTEP}`  returns and signals the premature stop (early-return) to the master by setting `earlyReturn` variable to `fmi3True`.
+
+===== Co-Simulation with Clock Support [[clocked-co-simulation-math-basics]]
+
+===== Scheduled Excecution Simulation Support [[scheduled-execution-simulation-math-basics]]
+
+===== Intermediate Variable Access Support [[intermediate-variable-access-math-basics]]
+
+Intermediate variable access has three main uses:
+
+1. *An FMU is able to produce valid output variables at intermediate points
+during a communication interval.* This is typically the result of an internal
+solver taking multiple integration steps at each communication interval.
+The FMU exposes intermediate output variables for the master whenever they are
+available. These can be used for e.g. extrapolation, interpolation, filtering
+or asynchronous co-simulation.
+
+2. *Intermediate input variables for an FMU is available in the co-simulation
+master.* The FMU requests updated intermediate input variables every time they
+are required by the internal solver. This can be either at temporary solver
+states or after successful integration steps.
+
+3. *Intermediate input variables for the FMU can be computed by the
+co-simulation master.* The computation requires intermediate output
+variables from the FMU. Whenever the internal solver in the FMU needs
+updated intermediate input variables, it provides the intermediate
+output variables for and requests the intermediate input variables from
+the master.
+
+Combinations of the above methods are also allowed.
+
+Access to intermediate variables enables several features such as
+
+* Advanced interpolation/extrapolation techniques
+* Asynchronous communication
+* Anti-alias filtering
+* Smoothing of inputs

@@ -1,0 +1,912 @@
+==== FMI Application Programming Interface
+
+===== Mode fmi3ModeCoSimulation
+
+This section contains the interface description to access the in/output data and status information of a co-simulation slave from a C program.
+
+====== Transfer of Input / Output Values and Parameters [[transfer-of-input-output-and-parameters]]
+
+Input and output variables and variables are transferred via the `fmi3GetXXX` and `fmi3SetXXX` functions, defined in <<get-and-set-variable-values>>.
+
+In order to enable the slave to interpolate the continuous real inputs between communication steps, the derivatives of the inputs with respect to time can be provided.
+Also, higher derivatives can be set to allow higher order interpolation.
+Whether a slave is able to interpolate and therefore needs this information is provided by the capability attribute `canInterpolateInputs`.
+
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=SetInputDerivatives]
+----
+
+Sets the n-th time derivative of real input variables.
+Argument `vr` is a vector of value references that define the variables whose derivatives shall be set.
+The array `order` contains the orders of the respective derivative (1 means the first derivative, 0 is not allowed).
+Argument "value" is a vector with the values of the derivatives.
+`nValueReferences` is the dimension of the vectors. +
+Restrictions on using the function are the same as for the `fmi3SetReal` function.
+
+Inputs and their derivatives are set with respect to the beginning of a communication time step.
+
+To allow interpolation/approximation of the real output variables between communication steps (if they are used as inputs for other slaves), the derivatives of the outputs with respect to time can be read.
+Whether the slave is able to provide the derivatives of outputs is given by the unsigned integer capability flag `MaxOutputDerivativeOrder`.
+It delivers the maximum order of the output derivative.
+If the actual order is lower (because the order of integration algorithm is low), the retrieved value is 0.
+
+_[Example: If the internal polynomial is of order 1 and the master inquires the second derivative of an output, the slave will return zero.]_
+
+The derivatives can be retrieved by:
+
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=GetOutputDerivatives]
+----
+
+Retrieves the n-th derivative of output values.
+Argument `vr` is a vector of `nValueReferences` value references that define the variables whose derivatives shall be retrieved.
+The array `order` contains the order of the respective derivative (1 means the first derivative, 0 is not allowed).
+Argument `value` is a vector with the actual values of the derivatives. +
+Restrictions on using the function are the same as for the `fmi3GetReal` function.
+
+The returned outputs correspond to the current slave time.
+E.g. after a successful `fmi3DoStep(...)` the returned values are related to the end of the communication time step.
+
+This standard supports polynomial interpolation and extrapolation as well as more sophisticated signal extrapolation schemes like rational extrapolation, see the companion document "FunctionalMockupInterface-ImplementationHints.pdf".
+
+====== Computation
+
+The computation of time steps is controlled by the following function.
+
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=DoStep]
+----
+
+The computation of a time step is started. +
+Argument `currentCommunicationPoint` is the current communication point of the master (latexmath:[tc_i]) and argument `communicationStepSize` is the communication step size (latexmath:[hc_i]).
+The latter must be latexmath:[> 0.0].
+The slave must integrate until time instant latexmath:[tc_{i+1} = tc_i + hc_i].
+_[The calling environment defines the communication points and `fmi3DoStep` must synchronize to these points by always integrating exactly to latexmath:[tc_i + hc_i].
+It is up to `fmi3DoStep` how to achieve this.]_
+At the first call to `fmi3DoStep` after `fmi3ExitInitializationMode` was called `currentCommunicationPoint` must be equal to `startTime` as set with `fmi3SetupExperiment`.
+_[Formally, argument `currentCommunicationPoint` is not needed.
+It is present in order to handle a mismatch between the master and the FMU state of the slave: The `currentCommunicationPoint` and the FMU state of the slaves defined by former_ `fmi3DoStep` _or_ `fmi3SetFMUState` _calls have to be consistent with respect to each other.
+For example, if the slave does not use the update formula for the independent variable as required above,_ latexmath:[tc_{i+1} = tc_i + hc_i] _(using argument_ latexmath:[tc_i] = `currentCommunicationPoint` _of_ `fmi3DoStep`) _but uses internally an own update formula, such as_ latexmath:[tc_{s,i+1} = tc_{s,i} + hc_{s,i}] _then the slave could use as time increment_ latexmath:[\text{hc}_{s,i} := (tc_i - tc_{s,i}) + hc_i] _(instead of_ latexmath:[\text{hc}_{s,i} := hc_i] _) to avoid a mismatch between the master time_ latexmath:[tc_{i+1}] _and the slave internal time_ latexmath:[tc_{s,i+1}] _for large i.]_
+
+Argument `noSetFMUStatePriorToCurrentPoint` is `fmi3True` if `fmi3SetFMUState` will no longer be called for time instants prior to `currentCommunicationPoint` in this simulation run _[the slave can use this flag to flush a result buffer]_.
+
+The function returns: +
+`fmi3OK` - if the communication step was computed successfully until its end. +
+`fmi3Discard` - if the slave computed successfully only a subinterval of the communication step.
+The master can call the appropriate `fmi3GetXXXStatus` functions to get further information.
+If possible, the master should retry the simulation with a shorter communication step size.
+_[Redoing a step is only possible if the FMU state has been recorded at the beginning of the current (failed) step with `fmi3GetFMUState`.
+Redoing a step is performed by calling `fmi3SetFMUState` and afterwards calling `fmi3DoStep` with the new communicationStepSize.
+Note that it is not possible to change `currentCommunicationPoint` in such a call.]_ +
+`fmi3Error` - the communication step could not be carried out at all.
+The master can try to repeat the step with other input values and/or a different communication step size in the same way as described in the `fmi3Discard` case above. +
+`fmi3Fatal` - if an error occurred which corrupted the FMU irreparably.
+_[The master should stop the simulation run immediatlely.]_ See <<status-returned-by-functions>> for details. +
+
+It depends on the capabilities of the slave which parameter constellations and calling sequences are allowed (see <<CoSimulation>>)
+
+==== Retrieving Status Information from the Slave [[retrieving-status-from-slave]]
+
+Status information is retrieved from the slave by the following function:
+
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=GetDoStepDiscardedStatus]
+----
+
+`terminate` is true if the slave wants to terminate the simulation.
+`lastSuccessfulTime` is the time instant at which the slave stopped the `fmi3DoStep` call.
+
+====== State Machine of Calling Sequence from Master to Slave [[state-machine-co-simulation]]
+
+The following state machine defines the supported calling sequences.
+
+.Calling sequence of Co-Simulation C functions in form of an UML 2.0 state machine.
+[#figure-co-simulation-state-machine]
+image::images/calling-sequence-co-simulation.svg[width=80%, align="center"]
+
+Each state of the state machine corresponds to a certain phase of a simulation as follows:
+
+instantiated::
+In this state, start and guess values (= variables that have `initial` = `"exact"` or `"approx"`) can be set.
+
+Configuration Mode:
+In this state structural parameters with `variability` = `fixed` or `variability` = `tunable` can be changed.
+This state is entered from state *instantiated* by calling `fmi3EnterConfigurationMode()` and left back to *instantiated* by calling `fmi3ExitConfigurationMode()`.
+`fmi3EnterConfigurationMode()` can only be called if the FMU contains at least one structural parameter.
+
+Initialization Mode::
+In this state, equations are active to determine all outputs (and optionally other variables exposed by the exporting tool).
+The variables that can be retrieved by `fmi3GetXXX` calls are (1) defined in the XML file under `<ModelStructure><InitialUnknowns>`, and (2) variables with `causality` = `"output"`.
+Variables with `initial` = `"exact"`, as well as variables with `variability` = `"input"` can be set.
+
+slaveInitialized::
+In this state, the slave is initialized and the co-simulation computation is performed. The calculation until the next communication point is performed with function `fmi3DoStep`. Depending on the return value, the slave is in a different state (*step Complete*, *step Failed*, *step Canceled*).
+
+Reconfiguration Mode::
+In this state structural parameters with `variability` = `tunable` can be changed.
+This state is entered from state *stepComplete* by calling `fmi3EnterConfigurationMode()` and left back to *stepComplete* by calling `fmi3ExitConfigurationMode()`.
+`fmi3EnterConfigurationMode()` can only be called if the FMU contains at least one structural parameter.
+
+terminated::
+In this state, the solution at the final time of the simulation can be retrieved.
+
+Note that in *Initialization Mode* input variables can be set with `fmi3SetXXX` and output variables can be retrieved with `fmi3GetXXX` interchangeably according to the model structure defined under element `<ModelStructure><InitialUnknowns>` in the XML file.
+_[For example, if one output `y1` depends on two inputs `u1`, `u2`, then these two inputs must be set, before `y1` can be retrieved.
+If additionally an output `y2` depends on an input `u3`, then `u3` can be set and `y2` can be retrieved afterwards.
+As a result, artificial or "real" algebraic loops over connected FMUs in *Initialization Mode* can be handled by using appropriate numerical algorithms.]_
+
+There is the additional restriction in *slaveInitialized* state that it is not allowed to call `fmi3GetXXX` functions after `fmi3SetXXX` functions without an `fmi3DoStep` call in between.
+
+_[The reason is to avoid different interpretations of the caching, since contrary to FMI for Model Exchange, `fmi3DoStep` will perform the actual calculation instead of `fmi3GetXXX`, and therefore, dummy algebraic loops at communication points cannot be handeled by an appropriate sequence of `fmi3GetXXX` and, `fmi3SetXXX` calls as for ModelExchange.
+
+Examples:_
+
+[cols="3,4",options="header"]
+|====
+|_Correct calling sequence_ |_Wrong calling sequence_
+|_fmi3SetXXX on inputs_ +
+_fmi3DoStep_ +
+_fmi3GetXXX on outputs_ +
+_fmi3SetXXX on inputs_ +
+_fmi3DoStep_ +
+_fmi3GetXXX on outputs_ +
+
+|_fmi3SetXXX on inputs_ +
+_fmi3DoStep_ +
+_fmi3GetXXX on outputs_ +
+_fmi3SetXXX on inputs_ +
+_fmi3GetXXX on outputs // not allowed_ +
+_fmi3DoStep_ +
+_fmi3GetXXX on outputs_ +
+|====
+_]_
+
+The allowed function calls in the respective states are summarized in the following table (functions marked in [yellow-background]#"yellow"# are only available for "Co-Simulation", the other functions are available both for "Model Exchange" and "Co-Simulation"):
+
+[cols="10,1,1,1,1,1,1,1,1,1,1",width="40%"]
+|====
+.2+.>|*Function*
+10+|*FMI 2.0 for Co-Simulation*
+|[vertical-text]#start, end#
+|[vertical-text]#instantiated#
+|[vertical-text]#Initialization Mode#
+|[vertical-text]#stepComplete#
+|[vertical-text]#stepInProgress#
+|[vertical-text]#stepFailed#
+|[vertical-text]#stepCanceled#
+|[vertical-text]#terminated#
+|[vertical-text]#error#
+|[vertical-text]#fatal#
+
+|fmi3GetVersion               |x |x |x |x |x |x |x |x |x |
+|fmi3SetDebugLogging          |  |x |x |x |x |x |x |x |x |
+|fmi3Instantiate              |x |  |  |  |  |  |  |  |  |
+|fmi3FreeInstance             |  |x |x |x |  |x |x |x |x |
+|fmi3SetupExperiment          |  |x |  |  |  |  |  |  |  |
+|fmi3EnterInitializationMode  |  |x |  |  |  |  |  |  |  |
+|fmi3ExitInitializationMode   |  |  |x |  |  |  |  |  |  |
+|fmi3Terminate                |  |  |  |x |  |x |  |  |  |
+|fmi3Reset                    |  |x |x |x |  |x |x |x |x |
+|fmi3GetReal                  |  |  |2 |x |  |8 |7 |x |7 |
+|fmi3GetInteger               |  |  |2 |x |  |8 |7 |x |7 |
+|fmi3GetBoolean               |  |  |2 |x |  |8 |7 |x |7 |
+|fmi3GetString                |  |  |2 |x |  |8 |7 |x |7 |
+|fmi3SetReal                  |  |1 |3 |6 |  |  |  |  |  |
+|fmi3SetInteger               |  |1 |3 |6 |  |  |  |  |  |
+|fmi3SetBoolean               |  |1 |3 |6 |  |  |  |  |  |
+|fmi3SetString                |  |1 |3 |6 |  |  |  |  |  |
+|fmi3GetFMUState              |  |x |x |x |  |8 |7 |x |7 |
+|fmi3SetFMUState              |  |x |x |x |  |x |x |x |x |
+|fmi3FreeFMUState             |  |x |x |x |  |x |x |x |x |
+|fmi3SerializedFMUStateSize   |  |x |x |x |  |x |x |x |x |
+|fmi3SerializeFMUState        |  |x |x |x |  |x |x |x |x |
+|fmi3DeSerializeFMUState      |  |x |x |x |  |x |x |x |x |
+|fmi3GetDirectionalDerivative |  |  |x |x |  |8 |7 |x |7 |
+|fmi3SetRealInputDerivatives  {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |x |x |x |  |  |  |  |  |
+|fmi3GetRealOutputDerivatives {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |x |  |8 |x |x |7 |
+|fmi3DoStep                   {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |x |  |  |  |  |  |
+|fmi3DoEarlyReturn            {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |  |x |  |  |  |  |
+|fmi3GetDoStepDiscardedStatus {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |  |  |x |  |  |  |
+|====
+
+*x* means: call is allowed in the corresponding state +
+*number* means: call is allowed if the indicated condition holds: +
+*1* for a variable with `variability = "constant"` that has `initial = "exact"` or `"approx"` +
+*2* for a variable with `causality = "output"` or continuous-time states or state derivatives
+(if element `<Derivatives>` is present) +
+*3* for a variable with `variability = "constant"` that has `initial = "exact"`,
+or `causality` = `"input"` +
+*6* for a variable with `causality` = `"input"` or (`causality` = `"parameter"` and `variability` = `"tunable"`) +
+*7* always, but retrieved values are usable for debugging only +
+*8* always, but if status is other than `fmi3Terminated`,
+retrieved values are useable for debugging only
+
+====== Pseudo-code Example
+
+In the following example, the usage of the FMI functions is sketched in order to clarify the typical calling sequence of the functions in a simulation environment.
+The example is given in a mix of pseudo-code and C, in order to keep it small and understandable.
+We consider two slaves, where both have one continuous real input and one continuous real output which are connected in the following way:
+
+.Connection graph of the slaves.
+image::images/co-simulation-connection-of-slaves.svg[width=30%, align="center"]
+
+We assume no algebraic dependency between input and output of each slave.
+The code demonstrates the simplest master algorithm as shown in <<math-co-simulation>>:
+
+[start=8]
+. Constant communication step size.
+. No repeating of communication steps.
+. The slaves do not support asynchronous execution of `fmi3DoStep`.
+
+The error handling is implemented in a very rudimentary way.
+
+[source, C]
+----
+//////////////////////////
+//Initialization sub-phase
+//Set callback functions,
+fmi3CallbackFunctions cbf;
+cbf.logMessage = logMessageFunction;  //logMessage function
+cbf.allocateMemory = calloc;
+cbf.freeMemory = free;
+cbf.stepFinished = NULL;      //synchronous execution
+cbf.instanceEnvironment = NULL;
+
+//Instantiate both slaves
+fmi3Instance s1 = s1_fmi3Instantiate("Tool1" , fmi3CoSimulation, instantiationToken1, "",
+                                    fmi3False, fmi3False, &cbf, fmi3True);
+fmi3Instance s2 = s2_fmi3Instantiate("Tool2" , fmi3CoSimulation, instantiationToken2, "",
+                                    fmi3False, fmi3False, &cbf, fmi3True);
+
+if ((s1 == NULL) || (s2 == NULL))
+      return FAILURE;
+
+// Start and stop time
+startTime = 0;
+stopTime = 10;
+
+//communication step size
+h = 0.01;
+
+// set all variable start values (of "ScalarVariable / <type> / start")
+s1_fmi3SetReal/Integer/Boolean/String(s1, ...);
+s2_fmi3SetReal/Integer/Boolean/String(s2, ...);
+
+//Initialize slaves
+s1_fmi3SetupExperiment(s1, fmi3False, 0.0, startTime, fmi3True, stopTime);
+s2_fmi3SetupExperiment(s1, fmi3False, 0.0, startTime, fmi3True, stopTime);
+s1_fmi3EnterInitializationMode(s1);
+s2_fmi3EnterInitializationMode(s2);
+
+// set the input values at time = startTime
+s1_fmi3SetReal/Integer/Boolean/String(s1, ...);
+s2_fmi3SetReal/Integer/Boolean/String(s2, ...);
+s1_fmi3ExitInitializationMode(s1);
+s2_fmi3ExitInitializationMode(s2);
+
+//////////////////////////
+//Simulation sub-phase
+tc = startTime; //Current master time
+
+while ((tc < stopTime) && (status == fmi3OK))
+{
+    //retrieve outputs
+    s1_fmi3GetReal(s1, ..., 1, &y1);
+    s2_fmi3GetReal(s2, ..., 1, &y2);
+
+    //set inputs
+    s1_fmi3SetReal(s1, ..., 1, &y2);
+    s2_fmi3SetReal(s2, ..., 1, &y1);
+
+    //call slave s1 and check status
+    status = s1_fmi3DoStep(s1, tc, h, fmi3True);
+    switch (status) {
+    case fmi3Discard:
+      s1_fmi3GetDoStepDiscardedStatus(s1, &boolVal, &lastSuccessfulTime);
+      if (boolVal == fmi3True)
+            printf("Slave s1 wants to terminate simulation.");
+    case fmi3Error:
+    case fmi3Fatal:
+      terminateSimulation = true;
+      break;
+    }
+    if (terminateSimulation)
+      break;
+
+    //call slave s2 and check status as above
+    status = s2_fmi3DoStep(s2, tc, h, fmi3True);
+    ...
+
+    //increment master time
+    tc += h;
+}
+
+//////////////////////////
+//Shutdown sub-phase
+if ((status != fmi3Error) && (status != fmi3Fatal))
+{
+    s1_fmi3Terminate(s1);
+    s2_fmi3Terminate(s2);
+}
+
+if (status != fmi3Fatal)
+{
+    s1_fmi3FreeInstance(s1);
+    s2_fmi3FreeInstance(s2);
+}
+----
+
+
+===== Mode fmi3ModeHybridCoSimulation
+:DOSTEP: fmi3DoStep()
+:CBIU: fmi3CallbackIntermediateUpdate()
+:DER:  fmi3DoEarlyReturn()
+:STIUI: fmi3IntermediateUpdateInfo
+:IUTIME: intermediateUpdateTime
+
+The boolean capability flag `canHandleEarlyReturn` in the modelDescription XML file indicates whether the FMU supports the early-return feature.  
+The default value of this capability flag is false.
+Each time an internal discontinuity or an event happens inside an FMU with capability flag `canHandleEarlyReturn=true`, a triggered clock ticks and the callback function `{CBIU}` is invoked by the FMU then the associated structure `{STIUI}` is sent back to the co-simulation master.
+
+====== Communication of event time and input/output values 
+
+In order to stablish a way to communicate the input and output and, in particular, the event time from the FMU to the co-simulation master, the `{CBIU}` callback is used.
+[source, c]
+----
+include::../headers/fmi3FunctionTypes.h[tag=CallbackIntermediateUpdate]
+----
+This callback allows internal events associated to triggered clock ticks be signaled from an FMU to the co-simulation master. 
+If `fmu3Type` is set to `fmi3CoSimulation` and the Co-simulation mode is set to `fmi3ModeHybridCoSimulation`, the `{CBIU}` callback must be defined in `fmi3CallbackFunctions` in `fmi3Instantiate()`.
+In other cases a NULL pointer can be assigned to the `{CBIU}` callback, such as if the `fmu3Type` is set to  `fmi3ModelExchange`.
+
+The `{STIUI}`  argument in the `{CBIU}` function is a structure which is used to signal triggered clock ticks and internal events to the master.
+Whenever the FMU invokes the `{CBIU}` callback function, it fills the `{STIUI}` structure to pass information concerning the call to the co-simulation master.
+The structure is defined as follows:
+
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tag=IntermediateUpdateInfo]
+----
+
+* 	`{IUTIME}` is the time at which the callback has been called. 
+If an event happens or a clock ticks, `{IUTIME}` is the time of event or triggered clock.
+`{IUTIME}` is either the exact `earlyReturnTime` required by the master for the break or the closest time greater than the `earlyReturnTime` required by the master.
+If this time is not exactly the required `earlyReturnTime`, the master can rollback the FMU to precisely reach this event time.
+`{IUTIME}` is also the time of intermediate steps of the internal FMU solver.
+
+
+The following `fmi3Boolean` variables define the reasons of the discontinuity. Several variables can be set by the FMU. Default value of variables is `fmi3False`.
+
+*	when `eventOccurred` is `fmi3True`, it means that `fmi3NewDiscreteStates()` function shall be called for gathering `fmi3eventInfo` related information about events e.g. caused by ticking triggered clocks at `{IUTIME};`
+If this flag is `fmi3True` the master must call `{DER}` to do an early return and handle the event.
+In this case, `earlyReturnTime` argument of `{DER}` is ignored.
+
+*	when `clocksTicked`  is `fmi3True`, it means that `fmi3GetClock()` function should be called for gathering all clock related information about ticking triggered clocks at `{IUTIME};`.
+This variable is relevant only if the master supports handling the clocks. 
+If this flag is `fmi3True` the master must call `{DER}` to do an early return and handle the clock event. 
+In this case, `earlyReturnTime` argument of `{DER}` is ignored.
+
+*	when `intermediateVariableSetAllowed` is `fmi3True`, the FMU signals that intermediate output values can be collected by the co-simulation master.
+
+*	when `intermediateVariableGetAllowed` is `fmi3True`, the FMU signals that intermediate input values can be set by the co-simulation master.
+
+*   when `canReturnEarly` is `fmi3True` the master can request the FMU to return early at the current `{IUTIME}` time instant via calling `{DER}` within the callback function `{CBIU}`. 
+If `canReturnEarly` is `fmi3False` the FMU will not do the early return, regardless of the master request.
+
+Note that only the first discontinuity event at a Newtonian time instant shall be signaled that way. But, there may be an event iteration at a Newtonian time instant and have super dense time instants.
+
+Based on the information delivered in `{STIUI}`, additional information about the discontinuity at that time instant can be obtained from the `fmi3EventInfo` structure after calling  `fmi3NewDiscreteStates()`  and/or `fmi3GetClock()`.
+
+====== Early-return requested by the co-simulation master
+The co-simulation master can request the FMU to end the `{DOSTEP}` at a Newtonian time instant and do an early return by calling the  `{DER}` function inside the callback function `{CBIU}`.
+The co-simulation master is only allowed to call this function, if the boolean variable `{STIUI}.canReturnEarly` is `fmi3True`.
+If the FMU is successful to do an early return, the return value of the `earlyReturn` argument in `{DOSTEP}` is `fmi3True`, otherwise `fmi3False`.
+
+The function `{DOSTEP}` has the following input and output arguments: 
+
+[source, c]
+----
+include::../headers/fmi3FunctionTypes.h[tag=DoStep]
+----
+
+If the FMU returns from `{DOSTEP}` with the `earlyReturn = fmi3True` the co-simulation master has to call `fmi3EnterEventMode()` for that FMU.
+Please note that, the co-simulation master can also call `fmi3EnterEventMode()` at communication instants to handle inferred events, as will be discussed in following sections.
+
+====== Handling a Successful Early-Return by the Master 
+
+Once an FMU conducts a successful early-return and returns from `{DOSTEP}` with `earlyReturn = fmi3True`, the master should handle the event and resume the co-simulation.
+If an FMU provides the early-return capability, the master should indicate the FMU that the  early-return feature is also supported by the master.
+The co-simulation master signals to the FMU that it supports and has recognized the early return co-simulation capabilities of the FMU by setting the CoSimulation mode to `fmi3ModeHybridCoSimulation` in the `fmi3Instantiate()` function.
+If the master does not support the early-return, the FMU is expected to not set the event flag `{STIUI}.eventOccurred` and in this case the FMU is imperatively ending `{DOSTEP}` computation at the next predefined communication instant (i.e., _currentCommunicationPoint_+ _communicationStepSize_).
+
+If the early-return is supported by both the FMU and the master, the co-simulation master is supposed to catch all events through the `fmi3NewDiscreteStates()` function and the `fmi3EventInfo` structure.
+The FMU stops computation at the first encountered triggered event (if any) and the event time is provided through `{STIUI}.{IUTIME}`.
+If `{DOSTEP}` returns with `earlyReturn = fmi3True` and an event has happened, i.e., `{STIUI}.eventOccurred` is `fmi3True`, then an event handling has to be done by the co-simulation master.
+In order to start event handling the co-simulation master has to call `fmi3EnterEventMode()` for that FMU to push the FMU into Event Mode.
+
+If the early-return request of the co-simulation master is ignored by the FMU, then `{DOSTEP}` returns with `earlyReturn = fmi3False`.
+In this case, if the master needs a resynchronization of FMUs at an event time, but the _currentCommunicationPoint_ has passed the event time, the master needs to roll-back the FMU and repeat the step with a suitable _communicationStepSize_ (if the FMU supports the rollback).
+
+In Event Mode and only after `{DOSTEP}` returns with `earlyReturn = fmi3True` a `fmi3NewDiscreteStates()` call returns `fmi3EventInfo` structure as a return argument. 
+Not all elements of `fmi3EventInfo` are relevant and only the following elements may be considered:
+
+-	when _newDiscreteStatesNeeded_ is true it means that the master should stay in Event Mode and another call to `fmi3NewDiscreteStates()` is required.
+
+-	when _nextEventTimeDefined_ is true it means that an event time is available and the value is given by the `nextEventTime` value. 
+This is the case when the model can report in advance the accurate time of the next predictable time event.
+
+-	when _terminateSimulation_ is true it means that the model wants to stop integration and the co-simulation master should call `fmi3Terminate()`.
+
+In Event Mode it is allowed to `fmi3getXXX()` variable values of the FMU after the call of `fmi3NewDiscreteStates()` and it is allowed to `fmi3setXXX()` variable values before calling `fmi3NewDiscreteStates()`.  
+The FMU leaves Event Mode when the master calls `fmi3EnterStepMode()` for that FMU.
+
+It is not allowed to call `fmi3EnterEventMode()` or `fmi3EnterStepMode()` for an FMU does not support early-return or clocks. 
+
+
+//TODO: verify entry point for state machine as discussed in https://github.com/APillekeit/fmi-standard/issues/4
+
+
+
+====== State Machine of Calling Sequence from Master to Slave
+
+
+====== Pseudo-code Example
+
+In the following example, the usage of the FMI functions is illustrated in order to clarify the typical calling sequence of the functions in a simulation environment.
+The example is given in a mix of pseudo-code and `'C'`, in order to keep it small and understandable. 
+See pseudocode:
+[source, c]
+----
+include::examples/pseudo_code_co_simulation_early_return.txt[]
+----
+
+
+===== Co-Simulation with Clock Support [[clocked-co-simulation-api]] 
+
+:INSTANTIATE: fmi3Instantiate()
+:DOSTEP: fmi3DoStep()
+:NEWDISCRETESTATES: fmi3NewDiscreteStates()
+:SETCLOCK: fmi3SetClock()
+:GETCLOCK: fmi3GetClock()
+:SETINTERVALDECIMAL: fmi3SetIntervalDecimal()
+:SETINTERVALFRACTION: fmi3SetIntervalFraction()
+:GETINTERVALDECIMAL: fmi3GetIntervalDecimal()
+:GETINTERVALFRACTION: fmi3GetIntervalFraction()
+:ENTEREVENTMODE: fmi3EnterEventMode()
+:ENTERSTEPMODE: fmi3EnterStepMode()
+:INTERMEDIATEUPDATE: fmi3CallbackIntermediateUpdate()
+:INTERMEDIATEUPDATEINFO: fmi3IntermediateUpdateInfo
+:DOEARLYRETURN: fmi3DoEarlyReturn()
+
+In this section, signaling and retrieving clock tick as well as interface for supporting clocks in FMI for co-simulation will be discussed.
+If an FMU for co-simulation declares clocks and clocked variables in the _modelDescription.xml_ file, it supports clocks.
+The co-simulation master should indicate the FMU that the master has recognized the clock capabilities of the FMU and supports the clock handling by setting the CoSimulation mode to `fmi3ModeHybridCoSimulation` in `{INSTANTIATE}`.
+Note than , even if no clock is defined by an FMU in _modelDescription.xml_, the master is allowed to set the CoSimulation mode to `fmi3ModeHybridCoSimulation` to be able to do early return.
+
+If an FMU provides clocks, but the co-simulation master does not support or does not want to support early-return or clocks, by setting CoSimulation mode to `fmi3ModeCoSimulation`, the activation of model partitions inside of the FMU has to be handled internally within `{DOSTEP}`. 
+
+_[Please note: If aperiodic clocks are present in an FMU, but the master does not support clocks, this usually leads to simulation result errors for that FMU._
+_Therefore it is required to issue a warning log message so that the current simulation setting will lead to simulation errors._
+_In such a situation, it is recommended that the FMU tries to minimize this error by either provide and check the clock's activation state via corresponding `fmi3Boolean` inputs._
+_That have to be defined in the modelDescription.xml if associated model partitions shall be activated based on external events or, alternatively, activate the associated model partitions based on FMU internal rules.]_
+
+
+====== Transfer of Input / Output Values and Parameters [[clocked-co-simulation-api-transfer-of-input-output-and-parameters]]
+If the co-simulation master supports clocks, all inferred clocks of the model should be handled and inferred clock events should be scheduled. 
+If a clock ticks (triggered or inferred), the FMU invokes the `{INTERMEDIATEUPDATE}` callback and sets `{INTERMEDIATEUPDATEINFO}.clocksTicked` to `fmi3True`. 
+Then the master must call `{DOEARLYRETURN}` to do an early return from `{DOSTEP}`.
+then the master should push the relevant FMUs into Event Mode by calling `{ENTEREVENTMODE}`. 
+Then `{SETCLOCK}` (and `{SETINTERVALDECIMAL}` or `{SETINTERVALFRACTION}` if necessary) should be invoked to indicate the enable ticked clocks. 
+Once the clock event is handled, the FMU should be pushed into Step Mode by calling `{ENTERSTEPMODE}`. 
+In Step Mode, the co-simulation master can call `{DOSTEP}` for the time interval from the current event time instant until the next inferred event instants. 
+Each clock, that ticks outside of the FMU, is activated for an FMU based on its _clockReference_ and an associated `{SETCLOCK}`.
+Please note that `{SETCLOCK}` can activate multiple clocks with each call.
+
+Note that `{DOSTEP}` may not reach the next inferred event instant because an early return or a triggered clock may happen.
+The master checks the occurrence of triggered clocks through the `{INTERMEDIATEUPDATE}` callback. 
+
+The FMU must not call the `{INTERMEDIATEUPDATE}` callback function with a `{INTERMEDIATEUPDATEINFO}.intermediateUpdateTime` value that is smaller (or equal ??? #[TODO]#) than the `{INTERMEDIATEUPDATEINFO}.intermediateUpdateTime` value given in a preceeding call of `{INTERMEDIATEUPDATE}` with `{INTERMEDIATEUPDATEINFO}.intermediateStepFinished` is `fmi3True`.
+#[TODO]: Recheck if this is the correct position. --> If this is mandatory then it should be placed in section 4_6_2_co-simulation_intermediate_variable_access_api?#
+
+Once the FMU is pushed into Event Mode, the activation status of triggered clocks are checked by `{GETCLOCK}` function. 
+
+The simulation master sets and gets clock variable values similar to the FMI for ModelExchange, as defined in <<fmi-api-setting-getting-clock-activation-state>>.
+
+
+====== Computation [[clocked-co-simulation-api-computation]]
+
+Similar to FMI for ModelExchange, in order to activate inferred or triggered clocks of an FMU, it is required to push the FMU into Event Mode by calling `{ENTEREVENTMODE}`.
+If a triggered clock happens, i.e., if `{DOSTEP}` returns with `earlyReturn` = `fmi3True` and `{INTERMEDIATEUPDATEINFO}.eventOccurred` or `{INTERMEDIATEUPDATEINFO}.clocksTicked` is `fmi3True`, the FMU must be pushed into the Event Mode by calling  `{ENTEREVENTMODE}`;
+
+In order to retrieve the state of triggered clocks, `{GETCLOCK}` and `{GETINTERVALDECIMAL}` or `{GETINTERVALFRACTION}` need to be called in the Event Mode.
+If the `{DOSTEP}` return value is `fmi3OK` and `earlyReturn` = `fmi3False`, the calling of `{GETCLOCK}`, `{GETINTERVALDECIMAL}`, `{GETINTERVALFRACTION}`, `{NEWDISCRETESTATES}` is only meaningful after `{SETCLOCK}` in the case of super-dense time iterations are desired.
+
+Similar to the ModelExchange case, the allowed call order is `{GETCLOCK}`, `{GETINTERVALDECIMAL}`, `{GETINTERVALFRACTION}`, `fmi3GetXXX()`, `fmi3SetXXX()`. 
+If a function is not required, its call can be omitted.
+If one of these functions returns a value different than `fmi3OK` then the co-simulation should be stopped.  
+
+If `fmi3EventInfo.terminateSimulation` becomes `fmi3True` after calling `{NEWDISCRETESTATES}` then the co-simulation should be stopped. 
+Once handling of the clock events finished, the master calls `{ENTERSTEPMODE}` for that FMU to push it into Step Mode.
+Note that it is not allowed to call `{ENTEREVENTMODE}` or `{ENTERSTEPMODE}` if the master or the FMU does not support clocks.
+
+If the FMU defines an internal clock relationship between an aperiodic inferred clock and triggered clocks, (i.e., a triggered clock triggers the model partition associated with an inferred clock) the FMU performs an early return at the time instant of the tick of the triggered clock in such a union, see section <<variants-of-clocks>>.
+
+Usually the co-simulation master should be able to derive (but is not forced to do so) the correct communication point times for inferred clocks in advance and thus it should be able to set the proper `communicationStepSize` for `{DOSTEP}`. 
+This might not be possible if the ticking of an aperiodic inferred clock for an FMU depends on the ticking of an aperiodic triggered clock of another FMU.
+
+It is also possible that a triggered clock ticks as a function of an aperiodic inferred clock tick.
+For example, a triggered clock may tick one second after the tick of an aperiodic inferred clock.
+
+
+====== Retrieving Status Information from the Slave [[clocked-co-simulation-api-retrieving-status-information-from-slave]]
+
+#[TODO]: @Masoud: Is this section relevant as retrieving status informations from the slaves is described in <<retrieving-status-from-slave>>. Should this section be removed?#
+
+
+====== State Machine of Calling Sequence from Master to Slave [[clocked-co-simulation-api-state-machine-calling-sequence]]
+
+The following state machine defines the supported calling sequences.
+
+.Calling sequence of clocked co-simulation mode.
+image::images/calling-sequence-hybrid-co-simulation.svg[width=80%, align="center"]
+[#figure-hybrid-co-simulation-state-machine]
+#[TODO]: There are no functions called `fmi3EnterReconfigurationMode()` and `fmi3ExitReconfigurationMode()` in fmi3Functions.h?#
+
+ In comparison to the state machine in section <<state-machine-co-simulation>> the entry state after *Initialization Mode* is the *Event Mode* because ... #[TODO] @ Masoud: Reasons that this state machine differs from `fmi3ModeCoSimulation`#
+Each state of the state machine corresponds to a certain phase of a simulation as follows:
+
+instantiated::
+#[TODO]: @ Masoud: Same as in section <<state-machine-co-simulation>>? To be removed?#
+
+Configuration Mode::
+#[TODO]: @ Masoud: Same as in section <<state-machine-co-simulation>>? To be removed?#
+
+Initialization Mode::
+#[TODO]: @ Masoud: Same as in section <<state-machine-co-simulation>>? To be removed?#
+
+Event Mode::
+#[TODO]: @ Masoud: To be filled#
+
+Step Mode::
+#[TODO]: @ Masoud: To be filled#
+
+Reconfiguration Mode::
+#[TODO]: @ Masoud: To be filled#
+
+terminated::
+#[TODO]: @ Masoud: Same as in section <<state-machine-co-simulation>>? To be removed?#
+
+
+====== Pseudo-code Example [[clocked-co-simulation-api-pseudo-code-example]]
+
+In the following example, the usage of the FMI functions is sketched in order to clarify the typical calling sequence of the functions in a simulation environment. 
+The example is given in a mix of pseudo-code and `'C'`, in order to keep it small and understandable. 
+See pseudocode:
+[source, c]
+----
+include::examples/pseudo_code_co_simulation_clocked.txt[]
+----
+
+===== Scheduled Execution Simulation [[scheduled-execution-simulation-api]] 
+:stem: latexmath
+
+This section contains the interface description for supporting the scheduled excecution mode from a C program.
+
+The direct scheduling of model partitions based on clock ticks requires an additional handling mode for FMUs. 
+The FMU signals its support for direct model partition scheduling in the modelDescription.xml via the flag `providesScheduledExecutionSimulation` equals true. 
+The co-simulation master signals to the FMU that it supports and has recognized the clock and model partition scheduling capabilities of the FMU via setting the co-simulation mode to `fmi3ModeScheduledExecutionSimulation` in the function `fmi3Instantiate()`.
+
+If the flag `providesScheduledExecutionSimulation` equals false, it is not allowed to set the co-simulation mode to `fmi3ModeScheduledExecutionSimulation`.
+
+If no inferred clocks are defined by the FMU it is not allowed to set `providesScheduledExecutionSimulation` to true in the modelDescription.xml.
+
+
+====== Transfer of Input / Output Values and Parameters
+
+The simulation master sets and gets variable values as defined in section 4.2.
+
+Before scheduling a model partition it is allowed to set all variables assigned to that model partition via its associated clock (including all global variables that are not associated to a clock) via `fmi3SetXXX()`. 
+After the computation of a model partition (call of `fmi3ActivateModelPartition()` with the clockReference of the clock that is associated to the model partition) all variables that are assigned to this model partition (including all global variables that are not associated to a clock) can be retrieved via `fmi3GetXXX()`.
+Set/get operations have to be atomic for a single variable.
+
+_[The value of global variables can be influenced by more than one model partition if multiple model partitions are active at the same time.]_
+
+The computational effort has to be predictable, thus all computationally expensive operations needed to calculate a model partition have to be contained within the `fmi3ActivateModelPartition()` function. 
+The simulation master can assume that `get/setXXX` operations are not computationaly expensive.
+In mode `fmi3ModeScheduledExecutionSimulation` the handling of `fmi3IntermediateUpdate()` callbacks is the same as in section <<clocked-co-simulation>>. 
+The only difference is that an early return has no meaning in this mode and  no additional event handling based on `fmi3NewDiscreteStates()` is conducted. 
+All internal events that shall be handled by the co-simulation master are signaled via `fmi3IntermediateUpdate()`. 
+_[In this mode it is recommended to restrict such updates by the FMU to triggered clock ticks for reducing the computational load in real-time simulations.]_
+
+====== Computation
+
+If this mode is set, the master has to directly control the time of computation of model partitions.
+The activation states of triggered clocks are transported via `fmi3IntermediateUpdate()` and `fmi3GetClock()`.
+
+Each `fmi3ActivateModelPartition()` call is now associated to a (publicly disclosed, externally controlled) model partition of the model and therefore to a single defined inferred clock. 
+
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tag=ActivateModelPartition]
+----
+
+The `fmi3ActivateModelPartition()` function has the following parameters:
+
+- `fmi3Component c`: same meaning as for other fmi3 functions
+
+- `fmi3ValueReference clockReference`: valueReference of an inferred clock defined in the modelDescription.XML which shall be activated
+
+-	`fmi3Float64 activationTime`: simulation (i.e. virtual) time of the clock tick
+
+Scheduling of `fmi3ActivateModelPartition()` calls for each FMU is done by the simulation master. Calls are based on ticks of periodic or aperiodic inferred clocks.
+These inferred clock ticks can be based on triggered clock ticks from FMU external sources (e.g. triggered clocks of other FMUs) or other external clocks/events/interrupts assigned via the simulation master configuration (such external events can be based on a potentially unpredictable process or can be just simulation time based events e.g. the planned Communication Point). 
+The `fmi3ActivateModelPartition()` function is not called for triggered clocks of an FMU.
+
+The `fmi3DoStep()`, `fmi3SetClock()`, `fmi3SetIntervalDecimal()`, `fmi3SetIntervalFraction()`, `fmi3DoEarlyReturn()` functions are not called in this co-simulation mode.
+
+The value for the `fmi3ActivateModelPartition()` parameter `activationTime` is the clock tick time latexmath:[t_i] from the  assigned inferred clock (which is known to the co-simulation master).
+Refer to the clock time progress definition (<<clock-types-for-evaluation-of-clocked-model-partitions>>) for inferred periodic clocks.
+
+If required, the FMU can internally derive the clock interval stem:[\Delta T_i] based on the last clock tick time stem:[t_{i-1}] i.e. last activationTime for this clockReference (based on last `fmi3ActivateModelPartition()` call)
+
+A `fmi3ActivateModelPartition()` call will compute the results of the model partition defined by clockReference for the current clock tick latexmath:[t_i].
+
+_[This is a different timing concept compared to `fmi3DoStep()` calls. 
+This is required to cover clock ticks for aperiodic inferred clocks that tick at time instances that are not predictable in advance for the simulation master. 
+Typically, hardware I/O or virtual ECU software events belong to this category.]_
+
+It is not allowed to call `fmi3ActivateModelPartition()` for a clockReference (i.e. valueReference of clock variable) more than once for the same activationTime latexmath:[t_i].
+
+//TODO describe state machine
+===== State Machine
+
+This section summarizes the avalable states and the allowed function calls in the respective states
+
+.Calling sequence of scheduled execution simulation mode.
+[caption="Figure 10: "]
+image::images/calling-sequence-co-simulation_scheduled_excecution.svg[width=80%, align="center"]
+
+
+
+====== State: instantiated
+
+In this state, start and guess values (= variables that have `initial` equals `"exact"` or `"approx"`) can be set.
+
+======= Allowed Function Calls
+
+`fmi3EnterInitializationMode()`::
+Restrictions in this state:
++
+test2
+
+
+
+
+===== State: Initialization Mode
+In this state, equations are active to determine all outputs (and optionally other variables exposed by the exporting tool).
+The variables that can be retrieved by `fmi3GetXXX` calls are (1) defined in the XML file under `<ModelStructure><InitialUnknowns>`, and (2) variables with `causality` equals `"output"`.
+Variables with `initial` equals `"exact"`, as well as variables with `variability` equals `"input"` can be set.
+
+====== Allowed Function Calls
+
+`fmi3EnterInitializationMode()`::
+Restrictions in this state:
++
+test2
+
+
+
+===== State: Step Mode
+====== Allowed Function Calls
+
+`fmi3EnterInitializationMode()`::
+Restrictions in this state:
++
+test2
+
+===== State: terminated
+====== Allowed Function Calls
+
+`fmi3EnterInitializationMode()`::
+Restrictions in this state:
++
+test2
+
+===== State: fatal
+====== Allowed Function Calls
+
+`fmi3EnterInitializationMode()`::
+Restrictions in this state:
++
+test2
+
+
+
+Examples:_
+
+[cols="3,4",options="header"]
+|====
+|_Correct calling sequence for a model partition of an FMU_ |_Wrong calling sequence_
+|_fmi3SetXXX on inputs_ +
+fmi3ActivateModelPartition +
+_fmi3GetXXX on outputs_ +
+_fmi3SetXXX on inputs_ +
+fmi3ActivateModelPartition +
+_fmi3GetXXX on outputs_ +
+
+|_fmi3SetXXX on inputs_ +
+fmi3ActivateModelPartition +
+_fmi3GetXXX on outputs_ +
+_fmi3SetXXX on inputs_ +
+_fmi3GetXXX on outputs // not allowed_ +
+fmi3ActivateModelPartition +
+_fmi3GetXXX on outputs_ +
+|====
+_]_
+
+====== Preemption Support
+
+For real-time applications the simulation time equals real wall clock time, thus each `fmi3ActivateModelPartition()` computation step has to be finished in real-time within its current period time length (computation time is not only defined by the runtime of `fmi3ActivateModelPartition()` but also by the time for setting and getting variables and related operations). 
+Usually a preemptive scheduling of the `fmi3ActivateModelPartition()`, `fmi3GetXXX()`, `fmi3SetXXX()` calls is required for respecting this constraint.
+
+The FMU’s code has to be prepared for being able to correctly handle preemptive calls of `fmi3ActivateModelPartition()`,`fmi3GetXXX()`,`fmi3SetXXX()`. 
+That requires a secured internal and external access to global states and variable values. 
+Thus in this co-simulation mode a support for a correct handling of the preemption of model partition computations is required. 
+That also requires that the FMU reports the active state of a triggered clock only with the first call of `fmi3GetClock()` for a specific activation of this clock and sets the reported activation state back to false for the following `fmi3GetClock()` calls for that clock until this triggered clock is internally activated again.
+
+If a preemptive multitasking regime is intended an individual task (or thread, task and thread are used synonymously here) for each model partition (associated to an inferred clock) has to be created. 
+The task for computing each `fmi3ActivateModelPartition()` is created and controlled by the simulation master, not by the FMU. 
+So the FMU exporting tool does not need to take care for that (except for preparing its code to support preemption).
+
+_[If only one single model partition (inferred clock) is available via the interface of an FMU, preemptive calls of the related `fmi3ActivateModelPartition()` function are possible by default (since there are no external cross dependencies within one model partition between communication points).]_
+
+Based on the inferred clock settings defined in the XML the master calls `fmi3setXXX()`, `fmi3ActivateModelPartition()`, `fmi3getXXX()` calls. 
+Set/get calls for each task are only allowed for variables that are associated to the inferred clock associated to that task or – here preemption issues become important – to variables that are associated to no clocks (global variables), based on the XML information (see 4.4.3).
+
+_[The recommendation is to avoid global variable associations as much as possible in the XML. 
+It is also recommended to reduce dependencies (defined in XML model structure) between variables located in different model partitions of one FMU, since this also requires in most cases that the related variables have to be global variables.]_
+
+The co-simulation master has no knowledge about the FMU internal communication between the model partitions of a single FMU and does not handle it.
+
+Error, reset or terminate information are global states of the FMU. If e.g. an `fmi3XXX` function returns `fmi3Discard` or `fmi3Error` this is also assumed for all preempted model partitions. 
+Please note that in case of `fmi3Discard` or `fmi3Error` no repetition of the step is possible, the only possible ways to go forward are to end or to reset the simulation.
+
+The simulation master schedules the `fmi3ActivateModelPartition()` (as well as related get/setXXX) calls based on given priorities for inferred clocks defined in the modelDescription.xml.
+
+Priority (see <<clock-type-definition>>):
+
+- Same priority: Tasks cannot preempt each other. Arbitrary execution order is possible for tasks of the same priority.
+- Different priorities: Tasks of a higher priority preempt tasks of a lower priority as soon as the higher priority task needs to be computed. 
+
+Inferred clock ticks (see <<variants-of-clocks>>): 
+
+- (strict) periodic (period can be predefined by FMU or be defined by master, depending on XML information)
+- aperiodic (based on external possibly unpredictable events)
+
+Based on the period and priority definitions the exporting tool can restrict the code execution order. 
+It nevertheless has to secure its code against concurrent execution (not parallel execution) along the defined priority restrictions. 
+Mostly this is required for internal inter-model-partition communication and in general for the joint use of global variables within the FMU. 
+The exporting tool has to consider external events i.e. interrupts (if inferred aperiodic clocks are defined) and the influences of computing speed, so the exact preemption occurrence points cannot be foreseen (within the given priority and period restrictions).
+
+To provide more options to secure the code against unwanted preemption new callback functions are defined that can be used to prevent preemption for certain code parts.
+If `providesScheduledExecutionSimulation` equals true the default setting is that preemption is permitted. 
+The preemption lock has to be actively started and stoped in the FMU’s code.
+Such locks should be used with care and only for securing very short code parts that cannot be secured otherwise.
+
+A lock can be created and released to prevent preemption of that task (i.e. model partition):
+
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tag=PreemptionLock]
+----
+
+Even if the co-simulation master does not support preemption and the mode `fmi3ModeScheduledExecutionSimulation`, at least an empty implementation of these callback functions is required.
+
+Example for the use of `fmi3CallbackStartPreemptionLock()` and `fmi3CallbackStopPreemptionLock()` callback functions in the FMU code:
+
+[source, C]
+----
+Int16 DataBuffer[3];   // global buffer
+
+
+void Task1(void) //low priority
+{
+   ...
+   // write data to DataBuffer
+   fmi3CallbackStartPreemptionLock();
+   DataBuffer[0] = internal_out_RootSys1_1;
+   DataBuffer[1] = internal_out_RootSys1_2;
+   DataBuffer[2] = internal_out_RootSys1_3;
+   fmi3CallbackStopPreemptionLock();
+   ...
+ }
+
+...
+void Task2(void) //high priority
+{
+   ...
+   // read data from DataBuffer
+   fmi3CallbackStartPreemptionLock();
+   internal_in_RootSys2_1 = DataBuffer[0]; 
+   internal_in_RootSys2_2 = DataBuffer[1];   
+   internal_in_RootSys2_3 = DataBuffer[2]; 
+   fmi3CallbackStopPreemptionLock();
+   ...
+}
+----
+
+
+====== Pseudo-code Example
+
+In the following example, the usage of the FMI functions is sketched in order to clarify the typical calling sequence of the functions in a simulation environment.
+The example is given in a mix of pseudo-code and C, in order to keep it small and understandable.
+We consider one slave with three model partitions. Two model partitions associated to two periodic inferred clocks (clock periods 1 ms and 2 ms) and one aperiodic inferred clock.  
+
+[source, c]
+----
+include::examples/pseudo_code_co_simulation_scheduled_execution_simulation.txt[]
+----
+
+
+===== Intermediate Variable Access [[intermediate-variable-access-api]] 
+:DOSTEP: fmi3DoStep()
+
+In order to support intermediate variable access during `fmi3DoStep` a variable
+capability flag in the XML file is required:
+
+`intermediateAccess`  = `true/false` with default value set to `false`
+
+If an FMU has at least one variable with `intermediateAccess=true`, it can
+invoke the  `fmi3CallbackIntermediateUpdate()` callback function, so that the
+`fmi3IntermediateUpdateInfo` is sent back to the co-simulation master.
+
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tag=IntermediateUpdateInfo]
+----
+
+The following flags in the `fmi3IntermediateInfo`struct are used for
+intermediate variable access:
+
+*   `intermediateTime` is the simulation time at which the discontinuity
+has occurred within the FMU.
+
+*   when `intermediateVariableSetAllowed` is `fmi3True` the co-simulation
+master is allowed to provide intermediate input variables by calling `setXXX`
+functions for variables with `intermediateAccess=true`.
+
+*   when `intermediateVariableGetAllowed` is `fmi3True` the co-simulation
+master is allowed to collect intermediate output variables by calling `getXXX`
+functions for variables with `intermediateAccess=true`.
+
+*   when `intermediateStepFinished` is `fmi3False` the co-simulation master shall
+only use intermediate output variables to compute intermediate input variables
+at the current state.
+
+Hence, it is important to distinguish intermediate output from successful
+internal integration steps from intermediate outputs valid only for temporary
+solver states. The figure below shows an overview of the solver states and the
+intended use of intermediate variable access. It is not necessary that temporary
+solver states occur before a finished step. For example, variable step-size
+solvers may try longer steps first and then reduce step size before the step
+is finished.
+
+.Overview of solver states and intermediate variable access during a communication step
+[caption="Figure 12: "]
+image::images/intermediatevariableaccess.svg[width=400%, align="center"]
+
+====== Pseudo-code Example
+
+In the following example, the usage of the intermediate variable access is
+illustrated in order to clarify the typical calling sequence of the functions
+in a simulation environment. The example is given in a mix of pseudo-code and
+`'C'`, in order to keep it small and understandable.
+See pseudocode:
+[source, c]
+----
+include::examples/pseudo_code_co_simulation_intermediate_variable_access.txt[]
+----
