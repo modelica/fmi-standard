@@ -31,11 +31,17 @@ project (Examples)
 
 add_executable (jacobian
   ${EXAMPLE_SOURCES}
+  ${MODEL_SOURCES}
   jacobian.c
 )
 
 target_include_directories(jacobian PRIVATE
   ../../../headers
+)
+
+target_compile_definitions(jacobian PRIVATE
+  FMI_VERSION=3
+  DISABLE_PREFIX
 )
 
 add_library(slave1 STATIC

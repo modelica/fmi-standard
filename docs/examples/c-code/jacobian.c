@@ -1,6 +1,6 @@
 #include <assert.h>
+#include "fmi3Functions.h"
 
-#include "VanDerPol/sources/all.c"
 
 void cb_logMessage(fmi3InstanceEnvironment instanceEnvironment, fmi3String instanceName, fmi3Status status, fmi3String category, fmi3String message) {
     puts(message);
