@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
     fmi3CallbackFunctions callbacks = { cb_logMessage, cb_allocateMemory, cb_freeMemory, NULL, NULL };
     fmi3Instance m;
 
-    printf("Running Jacobian example... ");
+    puts("Running Jacobian example... ");
 
     m = fmi3Instantiate("jacobian", fmi3ModelExchange, "{8c4e810f-3da3-4a00-8276-176fa3c9f000}", NULL, &callbacks, fmi3False, fmi3False);
 
@@ -72,7 +72,7 @@ for (i = 0; i < nx; i++) {
     fmi3Terminate(m);
     fmi3FreeInstance(m);
 
-    printf("done.\n");
+    puts("done.");
 
     return 0;
 }
