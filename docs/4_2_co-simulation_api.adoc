@@ -267,7 +267,7 @@ include::../headers/fmi3FunctionTypes.h[tag=IntermediateUpdateInfo]
 
 The co-simulation master can request the FMU to end the `fmi3DoStep()` at a Newtonian time instant and to do an early return by calling the `fmi3DoEarlyReturn()` function inside the callback function `fmi3CallbackIntermediateUpdate()`.
 The co-simulation master is only allowed to call this function, if the boolean variable `fmi3IntermediateUpdateInfo.canReturnEarly` is `fmi3True`.
-If the master does not call `fmi3DoEarlyReturn()` the FMU is imperatively ending `{DOSTEP}` computation at the next predefined communication instant (i.e., _currentCommunicationPoint_+ _communicationStepSize_).
+If the master does not call `fmi3DoEarlyReturn()` the FMU continues the `{DOSTEP}` computation until the next predefined communication instant (i.e., _currentCommunicationPoint_+ _communicationStepSize_) or until the next call of `{CBIU}`.
 
 [source, c]
 ----
@@ -277,10 +277,9 @@ include::../headers/fmi3FunctionTypes.h[tag=DoEarlyReturn]
 The FMU should return early from the current `fmi3DoStep()` at the time instant defined by parameter `earlyReturnTime`. 
 If the early return is conducted successfully by the FMU it must set the parameter `earlyReturn` to `fmi3True` in `fmi3DoStep()` and return `fmi3OK`.
 
-If the FMU cannot return exactly at the required `earlyReturnTime`, the FMU must either 
+If the FMU signals a `earlyReturn` equals `fmi3True` the internal simulation time of the FMU equals the value of `intermediateUpdateTime` of the last `{CBIU}` call that signaled `canReturnEarly` equals `fmi3true`.
 
-* continue the fmi3DoStep() computation normally until the planned end of its communication step (if possible) and return `fmi3OK` and signal this by setting the `fmi3DoStep()` parameter `earlyReturn` to `fmi3False` upon return, or 
-* alternatively the FMU can discard the current communication step via returning `fmi3Discard`.
+If the FMU cannot return exactly at the required `earlyReturnTime`, the FMU must call `{CBIU}` with `canReturnEarly` equals `fmi3true` to transport the new internal simulation time via `intermediateUpdateTime` to the master before it is returning from `{DOSTEP}`. 
 
 The co-simulation master can now decide about a rollback of the FMU to precisely reach the `earlyReturnTime` time if this is required. Note that `Event Mode` is not supported in `fmi3ModeCoSimulation`.
 
@@ -315,7 +314,8 @@ include::../headers/fmi3FunctionTypes.h[tag=IntermediateUpdateInfo]
 ----
 
 * 	`{IUTIME}` is the internal simulation time of the FMU at which the callback has been called.
-If an event happens or a triggered clock ticks, `{IUTIME}` is the time of event or triggered clock tick.
+If an event happens or a triggered clock ticks, `{IUTIME}` is the time of event or triggered clock tick. 
+If the FMU signals a `earlyReturn` equals `fmi3True` after returning from `{DOSTEP}` then `{IUTIME}` is the internal simulation time of the FMU of the last `{CBIU}` call that signaled `canReturnEarly` equals `fmi3true`.
 //TODO-API: Masoud: I do not understand this?
 //`{IUTIME}` is either the exact `earlyReturnTime` required by the master for the break or the closest time greater than the `earlyReturnTime` required by the master.
 //If this time is not exactly the required `earlyReturnTime`, the master can rollback the FMU to precisely reach this event time.
@@ -353,7 +353,7 @@ If the FMU returns from `{DOSTEP}` with the `earlyReturn = fmi3True` the co-simu
 include::../headers/fmi3FunctionTypes.h[tag=EnterEventMode]
 ----
 
-Please note that, the co-simulation master can also call `fmi3EnterEventMode()` at communication instants to handle inferred events, as will be discussed in following sections.
+The co-simulation master can also call `fmi3EnterEventMode()` at communication instants to handle inferred events, as will be discussed in following sections.
 
 If an FMU provides the early-return capability, the master should indicate the FMU that the early-return feature is also supported by the master.
 The co-simulation master signals to the FMU that it supports and has recognized the early return co-simulation capabilities of the FMU by setting the CoSimulation mode to `fmi3ModeHybridCoSimulation` in the `fmi3Instantiate()` function.
@@ -442,7 +442,7 @@ then the master should push the FMU into `Event Mode` by calling `{ENTEREVENTMOD
 Once the FMU is pushed into `Event Mode`, the activation status of triggered clocks are checked by `{GETCLOCK}` function. 
 Then `{SETCLOCK}` (and `{SETINTERVALDECIMAL}` or `{SETINTERVALFRACTION}` if necessary) should be invoked to enable the ticked inferred clocks. 
 Each clock, that ticks outside of the FMU (i.e. inferred clock), is activated for an FMU based on its _clockReference_ and an associated `{SETCLOCK}` in `Event Mode`.
-Please note that `{SETCLOCK}` can activate multiple clocks with each call.
+`{SETCLOCK}` can activate multiple clocks with each call.
 An event iteration is possible.
 Once all clock events are handled for this time instant, the FMU should be pushed into Step Mode by calling `{ENTERSTEPMODE}`. 
 In Step Mode, the co-simulation master can call `{DOSTEP}` for the time interval from the current event time instant until the next inferred event instant. 
@@ -712,7 +712,7 @@ It is also recommended to reduce dependencies (defined in XML model structure) b
 The co-simulation master has no knowledge about the FMU internal communication between the model partitions of a single FMU and does not handle it.
 
 Error, reset or terminate information are global states of the FMU. If e.g. an `fmi3XXX` function returns `fmi3Discard` or `fmi3Error` this is also assumed for all preempted model partitions. 
-Please note that in case of `fmi3Discard` or `fmi3Error` no repetition of the step is possible, the only possible ways to go forward are to end or to reset the simulation.
+In case of `fmi3Discard` or `fmi3Error` no repetition of the step is possible, the only possible ways to go forward are to end or to reset the simulation.
 
 The simulation master schedules the `fmi3ActivateModelPartition()` (as well as related get/setXXX) calls based on given priorities for inferred clocks defined in the modelDescription.xml.
 
