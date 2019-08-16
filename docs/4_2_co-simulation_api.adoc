@@ -279,9 +279,9 @@ If the early return is conducted successfully by the FMU it must set the paramet
 
 If the FMU signals a `earlyReturn` equals `fmi3True` the internal simulation time of the FMU equals the value of `intermediateUpdateTime` of the last `{CBIU}` call that signaled `canReturnEarly` equals `fmi3true`.
 
-If the FMU cannot return exactly at the required `earlyReturnTime`, the FMU must call `{CBIU}` with `canReturnEarly` equals `fmi3true` to transport the new internal simulation time via `intermediateUpdateTime` to the master before it is returning from `{DOSTEP}`. 
+If the `earlyReturnTime` is not equal to the last signaled `intermediateUpdateTime`, the FMU must call `{CBIU}` with `canReturnEarly` equals `fmi3true` to transport the new internal simulation time via `intermediateUpdateTime` to the master before it is returning from `{DOSTEP}`. 
 
-The co-simulation master can now decide about a rollback of the FMU to precisely reach the `earlyReturnTime` time if this is required. Note that `Event Mode` is not supported in `fmi3ModeCoSimulation`.
+The co-simulation master can now decide about a rollback of the FMU to reach the `earlyReturnTime` time if this is required. Note that `Event Mode` is not supported in `fmi3ModeCoSimulation`.
 
 ==== Mode fmi3ModeHybridCoSimulation
 :DOSTEP: fmi3DoStep()
@@ -355,7 +355,8 @@ include::../headers/fmi3FunctionTypes.h[tag=EnterEventMode]
 
 The co-simulation master can also call `fmi3EnterEventMode()` at communication instants to handle inferred events, as will be discussed in following sections.
 
-If an FMU provides the early-return capability, the master should indicate the FMU that the early-return feature is also supported by the master.
+If an FMU provides the early-return capability that includes the handling of events in `Event Mode`, the FMU signals this via `canReturnEarlyAfterIntermediateUpdate` and `providesHybridCoSimulation` equals true in the modelDescription.
+The master should indicate to the FMU that this early-return feature is also supported by the master.
 The co-simulation master signals to the FMU that it supports and has recognized the early return co-simulation capabilities of the FMU by setting the CoSimulation mode to `fmi3ModeHybridCoSimulation` in the `fmi3Instantiate()` function.
 //TODO-API: Is the sentence below this correct? I think this does not fit to this mode!?
 //If the master does not support the early-return, the FMU is expected to not set the event flag `{STIUI}.eventOccurred` and in this case the FMU is imperatively ending `{DOSTEP}` computation at the next predefined communication instant (i.e., _currentCommunicationPoint_+ _communicationStepSize_).
@@ -543,6 +544,8 @@ If the flag `providesScheduledExecutionSimulation` equals false, it is not allow
 
 If no inferred clocks are defined by the FMU it is not allowed to set `providesScheduledExecutionSimulation` to true in the modelDescription.xml.
 
+Error, reset or terminate information is a global state of the FMU. If e.g. an `fmi3XXX` function returns `fmi3Discard` or `fmi3Error` this is also assumed for all active or preempted model partitions. 
+In case of `fmi3Discard` or `fmi3Error` no repetition of the step is possible, the only possible way to go forward is to enter the `terminated`state and to end or to reset the simulation of - if supported - to set the FMU back to a former state.
 
 ===== Transfer of Input / Output Values and Parameters in fmi3ModeScheduledExecutionSimulation
 
@@ -556,17 +559,17 @@ _[The value of global variables can be influenced by more than one model partiti
 
 The computational effort has to be predictable, thus all computationally expensive operations needed to calculate a model partition have to be contained within the `fmi3ActivateModelPartition()` function. 
 The simulation master can assume that `get/setXXX` operations are not computationally expensive.
-In mode `fmi3ModeScheduledExecutionSimulation` the handling of `fmi3IntermediateUpdate()` callbacks is the same as in section <<clocked-co-simulation>>. 
+In mode `fmi3ModeScheduledExecutionSimulation` the handling of `fmi3CallbackIntermediateUpdate()` callbacks is the same as in section <<clocked-co-simulation>>. 
 The only difference is that an early return has no meaning in this mode and  no additional event handling based on `fmi3NewDiscreteStates()` is conducted. 
-All internal events that shall be handled by the co-simulation master are signaled via `fmi3IntermediateUpdate()`. 
+All internal events that shall be handled by the co-simulation master are signaled via `fmi3CallbackIntermediateUpdate()`. 
 _[In this mode it is recommended to restrict such updates by the FMU to triggered clock ticks for reducing the computational load in real-time simulations.]_
 
 ===== Computation in fmi3ModeScheduledExecutionSimulation
 
-If this mode is set, the master has to directly control the time of computation of model partitions.
-The activation states of triggered clocks are transported via `fmi3IntermediateUpdate()` and `fmi3GetClock()`.
+If this mode is set, the master has to directly control the time of computation of model partitions associated to inferred clocks.
+The activation states of triggered clocks are transported via `fmi3CallbackIntermediateUpdate()` and `fmi3GetClock()`.
 
-Each `fmi3ActivateModelPartition()` call is now associated to a (publicly disclosed, externally controlled) model partition of the model and therefore to a single defined inferred clock. 
+Each `fmi3ActivateModelPartition()` call is now associated to the computation of a (publicly disclosed, externally controlled) model partition of the model and therefore to a single defined inferred clock. 
 
 [source, C]
 ----
@@ -608,7 +611,7 @@ All states must not be entered or exited concurrently for model partitions of an
 image::images/calling-sequence-co-simulation_scheduled_execution.svg[width=80%, align="center"]
 
 
-The states `(Re-)Configuration Mode`, `instantiated`, `Initialization Mode`, `terminated`, `fatal` are handled in the same way as mode `fmi3ModeCoSimulation` with the exception that the the following function calls functions must not be called in any state in this co-simulation mode: `fmi3DoStep()`, `fmi3SetClock()`, `fmi3SetIntervalDecimal()`, `fmi3SetIntervalFraction()`, `fmi3DoEarlyReturn()`, `fmi3EnterEventMode()`, `fmi3EnterStepMode()`.
+The states `(Re-)Configuration Mode`, `instantiated`, `Initialization Mode`, `terminated`, `fatal` are handled in the same way as in mode `fmi3ModeCoSimulation` with the exception that the the following function calls functions must not be called in any state in this co-simulation mode: `fmi3DoStep()`, `fmi3SetClock()`, `fmi3SetIntervalDecimal()`, `fmi3SetIntervalFraction()`, `fmi3DoEarlyReturn()`, `fmi3EnterEventMode()`, `fmi3EnterStepMode()`.
 
 ====== State: Clock Activation Mode
 The master and the FMU enter this state when the master calls `fmi3ExitInitializationMode()` in state `Initialization Mode` or `fmi3ExitConfigurationMode` in state `Reconfiguration Mode`.
@@ -627,12 +630,12 @@ If the function returns with `fmi3OK` or `fmi3Warning` the FMU stays in this sta
 If the function returns with `fmi3Discard` or `fmi3Error` the FMU goes into state `terminated`.
 If the function returns with `fmi3Fatal` the FMU goes into state `fatal`.
 In case of `fmi3Fatal` the master can prematurely end all tasks related to the computation of model partitions of this FMU.
-In case of `fmi3Discard` or `fmi3Error` the master must wait until all other tasks related to the computation of model partitions of this FMU have ended, but no new tasks can be started (e.g. related to triggered clock tick) and all other function calls for this FMU must also return `fmi3Discard` or `fmi3Error`.
+In case of `fmi3Discard` or `fmi3Error` the master must wait until all other tasks related to the computation of model partitions of this FMU have ended, but no new tasks can be started (e.g. related to triggered clock tick) and all other function calls for this FMU must also return `fmi3Discard` or `fmi3Error` until the state `terminated` is reached.
 +
-It is recommended to call `fmi3SetXXX` and `fmi3GetXXX` in the same task as `fmi3ActivateModelPartition()` for setting and retrieving variable values associated to the clock.
+It is recommended to call `fmi3SetXXX` and `fmi3GetXXX` in the same task as `fmi3ActivateModelPartition()` for setting and retrieving variable values associated to a clock activation.
 
 `fmi3Set(Float32, Float64, Int8 ...)`::
-Is called before the start of the computation of a model partition (i.e. before call of `fmi3ActivateModelPartition()`) and only for variables associated to the inferred clock assigned to the model partition.
+Is called before the start of the computation of a model partition (i.e. before call of `fmi3ActivateModelPartition()`) and only for global variables and variables associated to the inferred clock assigned to the model partition.
 +
 The restrictions related to variable causality and variability defined for `Step Mode` in mode `fmi3ModeCoSimulation` apply.
 +
@@ -640,10 +643,10 @@ If the function returns with `fmi3OK` or `fmi3Warning` the FMU stays in this sta
 If the function returns with `fmi3Discard` or `fmi3Error` the FMU goes into state `terminated`.
 If the function returns with `fmi3Fatal` the FMU goes into state `fatal`.
 In case of `fmi3Fatal` the master can prematurely end all tasks related to the computation of model partitions of this FMU.
-In case of `fmi3Discard` or `fmi3Error` the master must wait until all other tasks related to the computation of model partitions of this FMU have ended, but no new tasks can be started (e.g. related to triggered clock tick) and all other function calls for this FMU must also return `fmi3Discard` or `fmi3Error`.
+In case of `fmi3Discard` or `fmi3Error` the master must wait until all other tasks related to the computation of model partitions of this FMU have ended, but no new tasks can be started (e.g. related to triggered clock tick) and all other function calls for this FMU must also return `fmi3Discard` or `fmi3Error` until the state `terminated` is reached.
 
 `fmi3Get(Float32, Float64, Int8 ...)`::
-Is called after the end of the computation of a model partition (i.e. after return of `fmi3ActivateModelPartition()`) and only for variables associated to the inferred clock assigned to the model partition. 
+Is called after the end of the computation of a model partition (i.e. after return of `fmi3ActivateModelPartition()`) and only for global variables and variables associated to the inferred clock assigned to the model partition. 
 +
 The restrictions related to variable causality and variability defined for `Step Mode` in mode `fmi3ModeCoSimulation` apply.
 +
@@ -651,7 +654,7 @@ If the function returns with `fmi3OK` or `fmi3Warning` the FMU stays in this sta
 If the function returns with `fmi3Discard` or `fmi3Error` the FMU goes into state `terminated`.
 If the function returns with `fmi3Fatal` the FMU goes into state `fatal`.
 In case of `fmi3Fatal` the master can prematurely end all tasks related to the computation of model partitions of this FMU.
-In case of `fmi3Discard` or `fmi3Error` the master must wait until all other tasks related to the computation of model partitions of this FMU have ended, but no new tasks can be started (e.g. related to triggered clock tick) and all other function calls for this FMU have to also return `fmi3Discard` or `fmi3Error`.
+In case of `fmi3Discard` or `fmi3Error` the master must wait until all other tasks related to the computation of model partitions of this FMU have ended, but no new tasks can be started (e.g. related to triggered clock tick) and all other function calls for this FMU have to also return `fmi3Discard` or `fmi3Error` until the state `terminated` is reached.
 
 Example:
 
@@ -675,19 +678,37 @@ _fmi3GetXXX on outputs_ +
 |====
 
 `fmi3SetRealInputDerivatives()`:: 
-Is called before the start of the computation of a model partition (i.e. before call of `fmi3ActivateModelPartition()`) and only for variables associated to the inferred clock assigned to the model partition.
+Is called before the start of the computation of a model partition (i.e. before call of `fmi3ActivateModelPartition()`) and only for global variables and variables associated to the inferred clock assigned to the model partition.
 +
 The restrictions related to variable causality and variability defined for `Step Mode` in mode `fmi3ModeCoSimulation` apply.
++
+If the function returns with `fmi3OK` or `fmi3Warning` the FMU stays in this state. 
+If the function returns with `fmi3Discard` or `fmi3Error` the FMU goes into state `terminated`.
+If the function returns with `fmi3Fatal` the FMU goes into state `fatal`.
+In case of `fmi3Fatal` the master can prematurely end all tasks related to the computation of model partitions of this FMU.
+In case of `fmi3Discard` or `fmi3Error` the master must wait until all other tasks related to the computation of model partitions of this FMU have ended, but no new tasks can be started (e.g. related to triggered clock tick) and all other function calls for this FMU have to also return `fmi3Discard` or `fmi3Error` until the state `terminated` is reached.
 
 `fmi3GetDirectionalDerivative()`::
-Is called after the end of the computation of a model partition (i.e. after return of `fmi3ActivateModelPartition()`) and only for variables associated to the inferred clock assigned to the model partition.
+Is called after the end of the computation of a model partition (i.e. after return of `fmi3ActivateModelPartition()`) and only for global variables and variables associated to the inferred clock assigned to the model partition.
 +
 The restrictions related to variable causality and variability defined for `Step Mode` in mode `fmi3ModeCoSimulation` apply.
++
+If the function returns with `fmi3OK` or `fmi3Warning` the FMU stays in this state. 
+If the function returns with `fmi3Discard` or `fmi3Error` the FMU goes into state `terminated`.
+If the function returns with `fmi3Fatal` the FMU goes into state `fatal`.
+In case of `fmi3Fatal` the master can prematurely end all tasks related to the computation of model partitions of this FMU.
+In case of `fmi3Discard` or `fmi3Error` the master must wait until all other tasks related to the computation of model partitions of this FMU have ended, but no new tasks can be started (e.g. related to triggered clock tick) and all other function calls for this FMU have to also return `fmi3Discard` or `fmi3Error` until the state `terminated` is reached.
 
 `fmi3GetRealOutputDerivatives()`::
-Is called after the end of the computation of a model partition (i.e. after return of `fmi3ActivateModelPartition()`) and only for variables associated to the inferred clock assigned to the model partition.
+Is called after the end of the computation of a model partition (i.e. after return of `fmi3ActivateModelPartition()`) and only for global variables and variables associated to the inferred clock assigned to the model partition.
 +
 The restrictions related to variable causality and variability defined for `Step Mode` in mode `fmi3ModeCoSimulation` apply.
++
+If the function returns with `fmi3OK` or `fmi3Warning` the FMU stays in this state. 
+If the function returns with `fmi3Discard` or `fmi3Error` the FMU goes into state `terminated`.
+If the function returns with `fmi3Fatal` the FMU goes into state `fatal`.
+In case of `fmi3Fatal` the master can prematurely end all tasks related to the computation of model partitions of this FMU.
+In case of `fmi3Discard` or `fmi3Error` the master must wait until all other tasks related to the computation of model partitions of this FMU have ended, but no new tasks can be started (e.g. related to triggered clock tick) and all other function calls for this FMU have to also return `fmi3Discard` or `fmi3Error` until the state `terminated` is reached.
 
 `fmi3CallbackIntermediateUpdate()`::
 Only in this state the FMU is allowed to call the callback `fmi3CallbackIntermediateUpdate()`. 
@@ -704,8 +725,6 @@ Thus this function can not be called concurrently for model partitions of an FMU
 If the function returns with `fmi3OK` or `fmi3Warning` the FMU goes into state `Reconfiguration Mode`.
 If the function returns with `fmi3Discard` or `fmi3Error` the FMU goes into state `terminated`.
 If the function returns with `fmi3Fatal` the FMU goes into state `fatal`.
-In case of `fmi3Fatal` the master can prematurely end all tasks related to the computation of model partitions of this FMU.
-In case of `fmi3Discard` or `fmi3Error` the master must wait until all other tasks related to the computation of model partitions of this FMU have ended, but no new tasks can be started (e.g. related to triggered clock tick) and all other function calls for this FMU have to also return `fmi3Discard` or `fmi3Error`.
 
 `fmi3GetVersion()`::
 Can be called at any time in this state.
@@ -743,7 +762,7 @@ Usually a preemptive scheduling of the `fmi3ActivateModelPartition()`, `fmi3GetX
 The FMU’s code has to be prepared for being able to correctly handle preemptive calls of `fmi3ActivateModelPartition()`,`fmi3GetXXX()`,`fmi3SetXXX()`. 
 That requires a secured internal and external access to global states and variable values. 
 Thus in this co-simulation mode a support for a correct handling of the preemption of model partition computations is required. 
-That also requires that the FMU reports the active state of a triggered clock only with the first call of `fmi3GetClock()` for a specific activation of this clock and sets the reported activation state back to false for the following `fmi3GetClock()` calls for that clock until this triggered clock is internally activated again.
+That also requires that the FMU reports the active state of a triggered clock only with the first call of `fmi3GetClock()` for a specific activation of this clock and sets the reported activation state immediately back to false for the following `fmi3GetClock()` calls for that clock until this triggered clock is internally activated again.
 
 If a preemptive multitasking regime is intended an individual task (or thread -- task and thread are used synonymously here) for each model partition (associated to an inferred clock) has to be created. 
 The task for computing each `fmi3ActivateModelPartition()` is created and controlled by the simulation master, not by the FMU. 
@@ -759,9 +778,6 @@ It is also recommended to reduce dependencies (defined in XML model structure) b
 
 The co-simulation master has no knowledge about the FMU internal communication between the model partitions of a single FMU and does not handle it.
 
-Error, reset or terminate information are global states of the FMU. If e.g. an `fmi3XXX` function returns `fmi3Discard` or `fmi3Error` this is also assumed for all preempted model partitions. 
-In case of `fmi3Discard` or `fmi3Error` no repetition of the step is possible, the only possible ways to go forward are to end or to reset the simulation.
-
 The simulation master schedules the `fmi3ActivateModelPartition()` (as well as related get/setXXX) calls based on given priorities for inferred clocks defined in the modelDescription.xml.
 
 Priority (see <<clock-type-definition>>):
@@ -775,13 +791,13 @@ Inferred clock ticks (see <<variants-of-clocks>>):
 - aperiodic (based on external possibly unpredictable events)
 
 Based on the period and priority definitions the exporting tool can restrict the code execution order. 
-It nevertheless has to secure its code against concurrent execution (not parallel execution) along the defined priority restrictions. 
+It nevertheless has to secure its code against concurrent execution _[not against parallel execution, as this is not supported for model partitions of an FMU in the interface description of this mode]_ along the defined priority restrictions. 
 Mostly this is required for internal inter-model-partition communication and in general for the joint use of global variables within the FMU. 
 The exporting tool has to consider external events i.e. interrupts (if inferred aperiodic clocks are defined) and the influences of computing speed, so the exact preemption occurrence points cannot be foreseen (within the given priority and period restrictions).
 
 To provide more options to secure the code against unwanted preemption new callback functions are defined that can be used to prevent preemption for certain code parts.
 If `providesScheduledExecutionSimulation` equals true the default setting is that preemption is permitted. 
-The preemption lock has to be actively started and stoped in the FMU’s code.
+The preemption lock has to be actively started and stopped in the FMU’s code.
 Such locks should be used with care and only for securing very short code parts that cannot be secured otherwise.
 
 A lock can be created and released to prevent preemption of that task (i.e. model partition):
