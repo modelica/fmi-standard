@@ -1,5 +1,5 @@
-#ifndef fmi3TypesPlatform_h
-#define fmi3TypesPlatform_h
+#ifndef fmi3PlatformTypes_h
+#define fmi3PlatformTypes_h
 
 /*
 Standard header file to define the argument types of the
@@ -44,16 +44,16 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 /* tag::Component[] */
-typedef void*           fmi3Component;             /* Pointer to FMU instance */
+typedef void*           fmi3Instance;             /* Pointer to FMU instance */
 /* end::Component[] */
 
 /* tag::ComponentEnvironment[] */
-typedef void*           fmi3ComponentEnvironment;  /* Pointer to FMU environment */
+typedef void*           fmi3InstanceEnvironment;  /* Pointer to FMU environment */
 /* end::ComponentEnvironment[] */
 
-/* tag::FMUstate[] */
-typedef void*           fmi3FMUstate;              /* Pointer to internal FMU state */
-/* end::FMUstate[] */
+/* tag::FMUState[] */
+typedef void*           fmi3FMUState;              /* Pointer to internal FMU state */
+/* end::FMUState[] */
 
 /* tag::ValueReference[] */
 typedef unsigned int    fmi3ValueReference;        /* Handle to the value of a variable */
@@ -84,4 +84,4 @@ typedef const fmi3Byte* fmi3Binary;   /* Data type for binary data
 #define fmi3False 0
 /* end::VariableTypes[] */
 
-#endif /* fmi3TypesPlatform_h */
+#endif /* fmi3PlatformTypes_h */

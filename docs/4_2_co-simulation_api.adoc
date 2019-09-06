@@ -19,7 +19,7 @@ Sets the n-th time derivative of real input variables.
 Argument `vr` is a vector of value references that define the variables whose derivatives shall be set.
 The array `order` contains the orders of the respective derivative (1 means the first derivative, 0 is not allowed).
 Argument "value" is a vector with the values of the derivatives.
-`nvr` is the dimension of the vectors. +
+`nValueReferences` is the dimension of the vectors. +
 Restrictions on using the function are the same as for the `fmi3SetReal` function.
 
 Inputs and their derivatives are set with respect to the beginning of a communication time step.
@@ -39,7 +39,7 @@ include::../headers/fmi3FunctionTypes.h[tags=GetOutputDerivatives]
 ----
 
 Retrieves the n-th derivative of output values.
-Argument `vr` is a vector of `nvr` value references that define the variables whose derivatives shall be retrieved.
+Argument `vr` is a vector of `nValueReferences` value references that define the variables whose derivatives shall be retrieved.
 The array `order` contains the order of the respective derivative (1 means the first derivative, 0 is not allowed).
 Argument `value` is a vector with the actual values of the derivatives. +
 Restrictions on using the function are the same as for the `fmi3GetReal` function.
@@ -97,7 +97,7 @@ include::../headers/fmi3FunctionTypes.h[tags=CancelStep]
 
 Can be called if `fmi3DoStep` returned `fmi3Pending` in order to stop the current asynchronous execution.
 The master calls this function if, for example, the co-simulation run is stopped by the user or one of the slaves.
-Afterwards only calls to `fmi3Reset`, `fmi3FreeInstance`, or `fmi3SetFMUstate` are valid to exit the *step Canceled* state.
+Afterwards only calls to `fmi3Reset`, `fmi3FreeInstance`, or `fmi3SetFMUState` are valid to exit the *step Canceled* state.
 Refer to <<state-machine-co-simulation>> for all other valid functions in this state.
 
 It depends on the capabilities of the slave which parameter constellations and calling sequences are allowed (see <<CoSimulation>>)
@@ -136,6 +136,11 @@ Each state of the state machine corresponds to a certain phase of a simulation a
 instantiated::
 In this state, start and guess values (= variables that have `initial` = `"exact"` or `"approx"`) can be set.
 
+Configuration Mode:
+In this state structural parameters with `variability` = `fixed` or `variability` = `tunable` can be changed.
+This state is entered from state *instantiated* by calling `fmi3EnterConfigurationMode()` and left back to *instantiated* by calling `fmi3ExitConfigurationMode()`.
+`fmi3EnterConfigurationMode()` can only be called if the FMU contains at least one structural parameter.
+
 Initialization Mode::
 In this state, equations are active to determine all outputs (and optionally other variables exposed by the exporting tool).
 The variables that can be retrieved by `fmi3GetXXX` calls are (1) defined in the XML file under `<ModelStructure><InitialUnknowns>`, and (2) variables with `causality` = `"output"`.
@@ -143,6 +148,11 @@ Variables with `initial` = `"exact"`, as well as variables with `variability` = 
 
 slaveInitialized::
 In this state, the slave is initialized and the co-simulation computation is performed. The calculation until the next communication point is performed with function `fmi3DoStep`. Depending on the return value, the slave is in a different state (*step Complete*, *step Failed*, *step Canceled*).
+
+Reconfiguration Mode::
+In this state structural parameters with `variability` = `tunable` can be changed.
+This state is entered from state *stepComplete* by calling `fmi3EnterConfigurationMode()` and left back to *stepComplete* by calling `fmi3ExitConfigurationMode()`.
+`fmi3EnterConfigurationMode()` can only be called if the FMU contains at least one structural parameter.
 
 terminated::
 In this state, the solution at the final time of the simulation can be retrieved.
@@ -212,12 +222,12 @@ The allowed function calls in the respective states are summarized in the follow
 |fmi3SetInteger               |  |1 |3 |6 |  |  |  |  |  |
 |fmi3SetBoolean               |  |1 |3 |6 |  |  |  |  |  |
 |fmi3SetString                |  |1 |3 |6 |  |  |  |  |  |
-|fmi3GetFMUstate              |  |x |x |x |  |8 |7 |x |7 |
-|fmi3SetFMUstate              |  |x |x |x |  |x |x |x |x |
-|fmi3FreeFMUstate             |  |x |x |x |  |x |x |x |x |
-|fmi3SerializedFMUstateSize   |  |x |x |x |  |x |x |x |x |
-|fmi3SerializeFMUstate        |  |x |x |x |  |x |x |x |x |
-|fmi3DeSerializeFMUstate      |  |x |x |x |  |x |x |x |x |
+|fmi3GetFMUState              |  |x |x |x |  |8 |7 |x |7 |
+|fmi3SetFMUState              |  |x |x |x |  |x |x |x |x |
+|fmi3FreeFMUState             |  |x |x |x |  |x |x |x |x |
+|fmi3SerializedFMUStateSize   |  |x |x |x |  |x |x |x |x |
+|fmi3SerializeFMUState        |  |x |x |x |  |x |x |x |x |
+|fmi3DeSerializeFMUState      |  |x |x |x |  |x |x |x |x |
 |fmi3GetDirectionalDerivative |  |  |x |x |  |8 |7 |x |7 |
 |fmi3SetRealInputDerivatives  {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |x |x |x |  |  |  |  |  |
 |fmi3GetRealOutputDerivatives {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |x |  |8 |x |x |7 |
@@ -239,10 +249,9 @@ or `causality` = `"input"` +
 *8* always, but if status is other than `fmi3Terminated`,
 retrieved values are useable for debugging only
 
-==== Pseudo-code Example
+==== Code Example
 
 In the following example, the usage of the FMI functions is sketched in order to clarify the typical calling sequence of the functions in a simulation environment.
-The example is given in a mix of pseudo-code and C, in order to keep it small and understandable.
 We consider two slaves, where both have one continuous real input and one continuous real output which are connected in the following way:
 
 .Connection graph of the slaves.
@@ -260,96 +269,5 @@ The error handling is implemented in a very rudimentary way.
 
 [source, C]
 ----
-//////////////////////////
-//Initialization sub-phase
-//Set callback functions,
-fmi3CallbackFunctions cbf;
-cbf.logger = loggerFunction;  //logger function
-cbf.allocateMemory = calloc;
-cbf.freeMemory = free;
-cbf.stepFinished = NULL;      //synchronous execution
-cbf.componentEnvironment = NULL;
-
-//Instantiate both slaves
-fmi3Component s1 = s1_fmi3Instantiate("Tool1" , fmi3CoSimulation, instantiationToken1, "",
-                                    fmi3False, fmi3False, &cbf, fmi3True);
-fmi3Component s2 = s2_fmi3Instantiate("Tool2" , fmi3CoSimulation, instantiationToken2, "",
-                                    fmi3False, fmi3False, &cbf, fmi3True);
-
-if ((s1 == NULL) || (s2 == NULL))
-      return FAILURE;
-
-// Start and stop time
-startTime = 0;
-stopTime = 10;
-
-//communication step size
-h = 0.01;
-
-// set all variable start values (of "ScalarVariable / <type> / start")
-s1_fmi3SetReal/Integer/Boolean/String(s1, ...);
-s2_fmi3SetReal/Integer/Boolean/String(s2, ...);
-
-//Initialize slaves
-s1_fmi3SetupExperiment(s1, fmi3False, 0.0, startTime, fmi3True, stopTime);
-s2_fmi3SetupExperiment(s1, fmi3False, 0.0, startTime, fmi3True, stopTime);
-s1_fmi3EnterInitializationMode(s1);
-s2_fmi3EnterInitializationMode(s2);
-
-// set the input values at time = startTime
-s1_fmi3SetReal/Integer/Boolean/String(s1, ...);
-s2_fmi3SetReal/Integer/Boolean/String(s2, ...);
-s1_fmi3ExitInitializationMode(s1);
-s2_fmi3ExitInitializationMode(s2);
-
-//////////////////////////
-//Simulation sub-phase
-tc = startTime; //Current master time
-
-while ((tc < stopTime) && (status == fmi3OK))
-{
-    //retrieve outputs
-    s1_fmi3GetReal(s1, ..., 1, &y1);
-    s2_fmi3GetReal(s2, ..., 1, &y2);
-
-    //set inputs
-    s1_fmi3SetReal(s1, ..., 1, &y2);
-    s2_fmi3SetReal(s2, ..., 1, &y1);
-
-    //call slave s1 and check status
-    status = s1_fmi3DoStep(s1, tc, h, fmi3True);
-    switch (status) {
-    case fmi3Discard:
-      s1_fmi3GetDoStepDiscardedStatus(s1, &boolVal, &lastSuccessfulTime);
-      if (boolVal == fmi3True)
-            printf("Slave s1 wants to terminate simulation.");
-    case fmi3Error:
-    case fmi3Fatal:
-      terminateSimulation = true;
-      break;
-    }
-    if (terminateSimulation)
-      break;
-
-    //call slave s2 and check status as above
-    status = s2_fmi3DoStep(s2, tc, h, fmi3True);
-    ...
-
-    //increment master time
-    tc += h;
-}
-
-//////////////////////////
-//Shutdown sub-phase
-if ((status != fmi3Error) && (status != fmi3Fatal))
-{
-    s1_fmi3Terminate(s1);
-    s2_fmi3Terminate(s2);
-}
-
-if (status != fmi3Fatal)
-{
-    s1_fmi3FreeInstance(s1);
-    s2_fmi3FreeInstance(s2);
-}
+include::examples/c-code/co_simulation.c[tags=CoSimulation]
 ----
