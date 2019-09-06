@@ -606,9 +606,9 @@ Predefined rules for variable matching in a connection are given below. Predefin
 
 _[CoSimulation errors are not addressed by the terminals. The CoSimulation algorithm has to be chosen and implemented by the importing tool. Features that might be required for specific CoSimulation algorithms had to be implemented by the FMU exporting tool._
 
-_Algebraic loops in systems of connected ModelExchange FMUs are not addressed or resolved by the terminals. It is not required that the causality of the terminal member variables in connected terminals match.]_
+_Algebraic loops in systems of connected ModelExchange FMUs are not addressed or resolved by the terminals. It is not required that the causality of the terminal member variables in connected terminals match._
 
-_[TODO: SSP Standard refers to a connectorKind - make a statement that this is not related to variableKind or terminalKind]_
+_The SSP standard refers to a "connectorKind". This "connectorKind" is not related to the `terminalKind` or `variableKind` described in the following sections.]_
 
 ===== Terminals
 
@@ -642,6 +642,7 @@ _[Examples: Modelica connectors and Simpack Markers]_
 
 |"bus"
 |Matching of the variables is based on `memberName`. An importing tool should connect terminals only if some or all terminal member variables are present and match.
+[TODO: Thats not correct. The terminals could be connected of there is no matching signal! Now it says >0 ("some or all").]
 
 _[Examples: Modelica expandable connectors and Simulink buses]_
 
@@ -677,21 +678,20 @@ image::images/fmi3Terminal_TerminalMemberVariable_Schema.png[width=50%, pdfwidth
 The normalized string `variableKind` is used to provide general information about the variable. This information defines how the connection of this variable has to be implemented (e.g. Kirchhoff's current law or common signal flow).
 
 The normalized string `memberName` is the representation in tools which apply name-based matching in connections. The member name has to be unique in a terminal.
-_[Tools which apply sequence based matching should also provide unique member names, so that all importing tools can use the same member names.]_
+_[Tools which apply sequence based matching should also provide unique member names, so that all importing tools can use the same member names. An importing tool may use the member name to identify a specific alias of a set of ModelVariables with the same `valueReference`.]_
 
-One ModelVariable can be part of several terminals except from variables with causality "input". 
+One ModelVariable can be part of several terminals, except from variables with causality "input". 
 [TODO: actually not correct. can be considered as alias of an input. the importing tool has to detect that if one input is set (= one is connected to an output), then there is no degree of freedom left. if more terminals which have this input as terminal member variable are connected, then the information flow is similar to an output]
 
-[TODO: can calculatedParameters have aliases?]
-//_[The attribute has to be provided to identify aliases (local variables, calculatedParameters).]_ 
+[TODO: explicitly state that the prefix <terminalName> doesnt mean that the variable is a TerminalMemberVariable?]
 
-_[The suggested variable naming scheme for the structured naming convention is <ModelVariable name> = <terminal name>.<memberName>._
+_[The suggested variable naming scheme for the structured naming convention is: <ModelVariable name> = <terminal name>.<memberName>_
 
 _Example 1: <ModelVariable name> is "portA.U", <terminal name> is "portA", <memberName> is "U"._
 
 _Example 2: <ModelVariable name> is "hierarchConn.innerConn.U", <outer terminal name> is "hierarchConn", <inner terminal name> is "innerConn", <memberName> is "U"._
 
-_The suggested variable naming scheme for the non-structured naming convention is <ModelVariable name> = <memberName>._
+_The suggested variable naming scheme for the non-structured naming convention is: <ModelVariable name> = <memberName>_
 
 _Matching is not restricted by variability, causality or variable type. Example: A fixed variable may be connected to a tunable variable, a variable of type Real may be connected to a variable of type Integer.
 However, it is recommended that the variable types and variabilities are equal.
@@ -712,8 +712,8 @@ Restricted to input and output, parameter and calculatedParameter.
 
 
 _[Example: Signal flow, parameter propagation, equality checks]_
-|"across" [TODO: writeme]
-| Kirchhoff's voltage law
+|"across"
+| Kirchhoff's voltage law [TODO: writeme]
 |"inflow" / "outflow"
 |Variables which fulfill Kirchhoff’s current law.
 
@@ -753,16 +753,18 @@ image::images/fmi3Terminal_TerminalStreamMemberVariable_Schema.png[width=50%, pd
 
 This element is used for variables which fulfill the balance equation for transported quantities. It is restricted to input and output, parameter and calculatedParameter.
 
-The Stream concept is described in the appendix D.3 of the Modelica specification. Only one terminal member variable with the `variableKind` "inflow" or "outflow" per terminal is allowed. _[More sophisticated structures can be implemented using hierarchical terminals.]_
+The Stream concept is described in the appendix D.3 of the Modelica specification. Only one terminal member variable with the `variableKind` "inflow" or "outflow" per terminal is allowed, if a TerminalStreamMemberVariable is present. _[More sophisticated structures can be implemented using hierarchical terminals.]_
 
 The attribute `inStreamValueReference` and `outStreamValueReference` are used to identify the `ModelVariable`. If the referred model variables are arrays, then the length size has to be equal. A terminal may have more than one TerminalStreamMemberVariable. The `inStreamMemberName` and `outStreamMemberName` describe the terminal member name, similar to the `memberName` attribute in the `TerminalMemberVariable`.
 
-_[An example of use for stream is a gas mixture flow. The gas composition could be implemented as a mass fraction vector. The `outStreamValueReference` refers to latexmath:[portA.x_\textrm{outStream}[]] and the `inStreamValueReference` refers to latexmath:[portA.x_\textrm{inStream}[]]. The `inStreamMemberName` and `outStreamMemberName` are "latexmath:[x_\textrm{inStream}[]]" and "latexmath:[x_\textrm{outStream}[]]".
+_[An example of use for stream is a gas mixture flow. The gas composition could be implemented as a mass fraction vector. The `outStreamValueReference` refers to latexmath:[portA.q_\textrm{outStream}[]] and the `inStreamValueReference` refers to latexmath:[portA.q_\textrm{inStream}[]]. The `inStreamMemberName` and `outStreamMemberName` are "latexmath:[q_\textrm{inStream}[]]" and "latexmath:[q_\textrm{outStream}[]]".
 ]_
+
+[TODO: fix brackets in equations]
 
 _[Balance equation for transported quantities:_
 
-_latexmath:[0 = \sum{h_i\dot{m}_i}]
+_latexmath:[0 = \sum{q_i\dot{m}_i}]
 latexmath:[0 = \sum{\dot{m}_i}\cdot
 \left\{\begin{array}{ll}
 q_{\textrm{$i$, outStream}} &\textrm{if $\dot{m}$ is outflowing through terminal $i$}\\
@@ -803,9 +805,9 @@ The coordinate system is defined by the coordinates of two points, the left lowe
 The x-axis directed to the right, the y-axis is directed upwards.
 
 _[The exporting tool should define how the coordinate system unit relates to mm display or print out size. 
-However, an importing tool might choose to use the factor from the default coordinate system extent to the actual coordinate system extent to calculate a scaling factor, to match the default icon size in the importing tool.]_
+However, an importing tool might choose to use the factor from the default coordinate system extent to the actual coordinate system extent to calculate a scaling factor, to match the default icon size in the importing tool._
 
-_[The area defined by the coordinate system suggested to be used as “clickable icon size” in other tools. 
+_The area defined by the coordinate system suggested to be used as “clickable icon size” in other tools. 
 A `Terminal` might be placed outside of this area, so the visible bounding box has to be determined by the importing tool.]_
 
 The coordinate system default is x1=-100, y1=-100, x2=100, y2=100. This extent is used if the CoordinateSystem` element is missing. The default `suggestedScalingFactorTo_mm` is 0.1. So the default coordinate system display size should be 20 mm width and 20 mm height.
@@ -832,7 +834,7 @@ For “complex terminals” (terminals which are listed in the `Terminals` eleme
 _[If the graphical representation is used for an input or output (e.g. a Real input “u”), then a `Terminal` has to be added to the `Terminals` element which has one `TerminalMemberVariable`. The name of the `Terminal` and the name of the `TerminalMemberVariable` should be equal to the name of the input/output.]_
 
 The `iconSource_PNG` is mandatory for a terminal, optionally an SVG file can be provided. 
-The default connection stroke size and color can be provided, to define the intended connection line layout in the importing tool. 
+The default connection stroke size and color can be provided, to define the intended connection line layout in the importing tool. The stroke size is given relative to the coordinate system extent. 
 The stroke color is given in RGB values from 0 to 255. E.g.: “255 255 0”.
 
 The VendorAnnotations element can be used by vendors to store additional information for the graphical representation. 
