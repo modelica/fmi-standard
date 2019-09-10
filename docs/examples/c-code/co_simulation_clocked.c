@@ -79,8 +79,8 @@ int main(int argc, char* argv[]) {
   callbacks.freeMemory          = cb_freeMemory;
   // Signal that early return is supported by master
   callbacks.intermediateUpdate  = cb_intermediateUpdate;
-  callbacks.startPreemptionLock = NULL; // Preemption not active
-  callbacks.stopPreemptionLock  = NULL; // Preemption not active
+  callbacks.lockPreemption = NULL; // Preemption not active
+  callbacks.unlockPreemption  = NULL; // Preemption not active
 
 
   // Instantiate slave

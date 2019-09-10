@@ -128,8 +128,8 @@ typedef fmi3Status (*fmi3CallbackIntermediateUpdate) (fmi3InstanceEnvironment in
                                                       fmi3IntermediateUpdateInfo* intermediateUpdateInfo);
 /* end::CallbackIntermediateUpdate[] */
 /* tag::PreemptionLock[] */
-typedef void       (*fmi3CallbackStartPreemptionLock)   ();
-typedef void       (*fmi3CallbackStopPreemptionLock)    ();
+typedef void       (*fmi3CallbackLockPreemption)   ();
+typedef void       (*fmi3CallbackUnlockPreemption) ();
 /* end::PreemptionLock[] */
 
 typedef struct {
@@ -138,8 +138,8 @@ typedef struct {
     fmi3CallbackFreeMemory          freeMemory;
     fmi3InstanceEnvironment         instanceEnvironment;
     fmi3CallbackIntermediateUpdate  intermediateUpdate;
-    fmi3CallbackStartPreemptionLock startPreemptionLock;
-    fmi3CallbackStopPreemptionLock  stopPreemptionLock;
+    fmi3CallbackLockPreemption      lockPreemption;
+    fmi3CallbackUnlockPreemption    unlockPreemption;
 } fmi3CallbackFunctions;
 /* end::CallbackFunctions[] */
 
