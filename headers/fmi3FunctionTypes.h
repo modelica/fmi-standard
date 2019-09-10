@@ -101,7 +101,7 @@ typedef enum {
 
 /* tag::IntermediateUpdateInfo[] */
 typedef struct{
-    fmi3Float64 intermediateUpdateTime; 
+    fmi3Float64 intermediateUpdateTime;
     fmi3Boolean eventOccurred;
     fmi3Boolean clocksTicked;
     fmi3Boolean intermediateVariableSetAllowed;
@@ -280,18 +280,18 @@ typedef fmi3Status fmi3GetBinaryTYPE (fmi3Instance instance,
 /* end::Getters[] */
 
 /* tag::GetClock[] */
-typedef fmi3Status fmi3GetClockTYPE(fmi3Instance instance, 
-                                    const fmi3ValueReference valueReferences[], size_t nValueReferences, 
+typedef fmi3Status fmi3GetClockTYPE(fmi3Instance instance,
+                                    const fmi3ValueReference valueReferences[], size_t nValueReferences,
                                     fmi3Boolean value[]);
 /* end::GetClock[] */
 
 /* tag::GetInterval[] */
-typedef fmi3Status fmi3GetIntervalDecimalTYPE(fmi3Instance instance, 
-                                              const fmi3ValueReference valueReferences[], size_t nValueReferences, 
+typedef fmi3Status fmi3GetIntervalDecimalTYPE(fmi3Instance instance,
+                                              const fmi3ValueReference valueReferences[], size_t nValueReferences,
                                               fmi3Float64 interval[]);
 
-typedef fmi3Status fmi3GetIntervalFractionTYPE(fmi3Instance instance, 
-                                               const fmi3ValueReference valueReferences[], size_t nValueReferences, 
+typedef fmi3Status fmi3GetIntervalFractionTYPE(fmi3Instance instance,
+                                               const fmi3ValueReference valueReferences[], size_t nValueReferences,
                                                fmi3UInt64 intervalCounter[], fmi3UInt64 resolution[]);
 /* end::GetInterval[] */
 
