@@ -80,10 +80,10 @@ typedef enum {
 /* end::CoSimulationMode[] */
 
 /* tag::CoSimulationConfiguration[] */
-typedef struct{
-    fmi3Boolean intermediateVariableGet;
-    fmi3Boolean intermediateInternalVariableGet;
-    fmi3Boolean intermediateVariableSet;
+typedef struct {
+    fmi3Boolean intermediateVariableGetRequired;
+    fmi3Boolean intermediateInternalVariableGetRequired;
+    fmi3Boolean intermediateVariableSetRequired;
     fmi3CoSimulationMode coSimulationMode;
 } fmi3CoSimulationConfiguration;
 /* end::CoSimulationConfiguration[] */

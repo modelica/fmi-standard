@@ -9,7 +9,7 @@ fmi3IntermediateUpdateInfo s1_intermediateInfo;
 //Remark:
 //pointer for intermediateInfo has to be unique for each model partition that calls s1_triggeredClock_intermediateUpdate
 //currently no clockIndex information is transported with intermediateInfo.
-//Thus it is required to a) that the FMU secures (via lockPreemption, unlockPreemption) the call of fmi3GetClock() 
+//Thus it is required to a) that the FMU secures (via lockPreemption, unlockPreemption) the call of fmi3GetClock()
 //b) fmi3GetClock() sets back the activation state of the triggered clock
 fmi3Status s1_triggeredClock_intermediateUpdate(fmi3InstanceEnvironment instance, fmi3IntermediateUpdateInfo* intermediateUpdateInfo)
 {
@@ -20,7 +20,7 @@ fmi3Status s1_triggeredClock_intermediateUpdate(fmi3InstanceEnvironment instance
 
 	// Save intermediateInfo for later use
 	 s1_intermediateInfo = *intermediateUpdateInfo;
-	 if (s1_intermediateInfo.clocksTicked) 
+	 if (s1_intermediateInfo.clocksTicked)
 	 {
 		s1_fmi3GetClocks(s1, triggered_clockReferenceS1, nclocks, triggered_clockStatesS1);
 		s1_fmi3GetReal/Integer/Boolean/String(s1, variables_associated_to_active_triggered_clock);
@@ -35,7 +35,7 @@ fmi3Status s1_triggeredClock_intermediateUpdate(fmi3InstanceEnvironment instance
 		//(--> see functions s1_Execute_clockIndex2 and s2_Execute_clockIndex2)
 		scheduleTaskForInferredClock(inferredClockReferences[index]);
 	 }
-	 
+
 	 earlyReturn = false;
 }
 
@@ -57,24 +57,24 @@ fmi3Status GlobalInitialize()
 	cbf1.lockPreemption = lockPreemption(); // Preemption is OS specific
 	cbf1.unlockPreemption = unlockPreemption(); // Preemption is OS specific
 
-	// Create pointer to information for identifying the FMU in callbacks 
+	// Create pointer to information for identifying the FMU in callbacks
 	// (note: this is pseudo code, no correct pointer handling)
 	cbf1.instanceEnvironment = NULL
-	
+
 	//set Co-Simulation mode
 	fmi3CoSimulationConfiguration coSimulationConfiguration;
-	coSimulationConfiguration.intermediateVariableGet = false;
-	coSimulationConfiguration.intermediateInternalVariableGet = false;
-	coSimulationConfiguration.intermediateVariableSet = false;
+	coSimulationConfiguration.intermediateVariableGetRequired = false;
+	coSimulationConfiguration.intermediateInternalVariableGetRequired = false;
+	coSimulationConfiguration.intermediateVariableSetRequired = false;
 	coSimulationConfiguration.coSimulationMode = fmi3ModeScheduledExecutionSimulation;
-	
+
 	// Instantiate slave 1
 	fmi3Instance s1 = s1_fmi3Instantiate("Tool1" , fmi3CoSimulation, ID1, "", &cbf1, fmi3False, fmi3True, &coSimulationConfiguration);
-	
+
 
 	if (s1 == NULL) then return FAILURE;
 
-	
+
 	// Set all variable start values (of "ScalarVariable / <type> / start")
 	s1_fmi3SetReal/Integer/Boolean/String(s1, ...);
 
@@ -89,11 +89,11 @@ fmi3Status GlobalInitialize()
 
 	s1_fmi3ExitInitializationMode(s1);
 
-	
+
 	// Get all outputs (for better readability only Real variables are used here. Handling for Integer, Boolean, String is the same)
 	s1_fmi3GetReal(s1, yr1_c0); // variable associated to clockIndex 0
 	s1_fmi3GetReal(s1, yr1_c1); // variable associated to clockIndex 1
-	s1_fmi3GetReal(s1, yr1_c2); // variable associated to clockIndex 2	
+	s1_fmi3GetReal(s1, yr1_c2); // variable associated to clockIndex 2
 }
 
 //////////////////////////
@@ -103,15 +103,15 @@ fmi3Status GlobalInitialize()
 fmi3Status Execute_1ms()
 {
 	 ur1_c0 = yr1_c0;
-	 
-	 // Set inputs associated to clockIndex 0 
+
+	 // Set inputs associated to clockIndex 0
 	 s1_fmi3SetReal(s1, ur1_c0);
 
 
 	 // call step functions for clockIndex 0
 	 status1 = fmi3ModelPartitionActivation(s1, 0, activationTime, currentTime);
-  
-  	 // Get outputs associated to clockIndex 0 
+
+  	 // Get outputs associated to clockIndex 0
 	 s1_fmi3GetReal(s1, yr1_c0);
 };
 
@@ -119,30 +119,30 @@ fmi3Status Execute_1ms()
 fmi3Status Execute_2ms()
 {
 	 ur1_c1 = yr1_c1;
-	 
+
 	 // Set inputs associated to clockIndex 1
 	 s1_fmi3SetReal(s1, ur1_c1);
-	
+
 
 	 // call step functions for clockIndex 1
 	 status1 = s1_fmi3ModelPartitionActivation(s1, 1, activationTime, currentTime);
-  
-  	 // Get outputs associated to clockIndex 1 
+
+  	 // Get outputs associated to clockIndex 1
 	 s1_fmi3GetReal(s1, yr1_c1);
 }
 
-// Step function for s1 for inferred clock with clockIndex=2. 
+// Step function for s1 for inferred clock with clockIndex=2.
 fmi3Status s1_Execute_clockIndex2(activationTime, currentTime)
 {
 	 ur1_c2 = yr1_c2;
-	 
+
 	 // Set inputs associated to clockIndex 2
 	 s1_fmi3SetReal(s1, ur1_c2);
-	
+
 	 // call step functions for clockIndex 2
 	 status = s1_fmi3ModelPartitionActivation(s1, 2, activationTime, currentTime);
 
-  	 // Get outputs associated to clockIndex 2 
+  	 // Get outputs associated to clockIndex 2
 	s1_fmi3GetReal(s1, yr1_c2);
 }
 

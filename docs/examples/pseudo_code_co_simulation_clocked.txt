@@ -27,15 +27,15 @@ cbf.unlockPreemption = NULL // Preemption not active
 
 
 // Instantiate slave
-// Create pointer to information for identifying the FMU in callbacks 
+// Create pointer to information for identifying the FMU in callbacks
 // (note: this is pseudo code, no correct pointer handling)
 cbf.componentEnvironment = NULL;
 
 //set Co-Simulation mode
 fmi3CoSimulationConfiguration coSimulationConfiguration;
-coSimulationConfiguration.intermediateVariableGet = false;
-coSimulationConfiguration.intermediateInternalVariableGet = false;
-coSimulationConfiguration.intermediateVariableSet = false;
+coSimulationConfiguration.intermediateVariableGetRequired = false;
+coSimulationConfiguration.intermediateInternalVariableGetRequired = false;
+coSimulationConfiguration.intermediateVariableSetRequired = false;
 coSimulationConfiguration.coSimulationMode = fmi3ModeHybridCoSimulation;
 
 // Instantiate slave
@@ -43,7 +43,7 @@ fmi3Instance s = fmi3Instantiate("Tool", fmi3CoSimulation, GUID, "", &cbf, fmi3F
 
 if (s == NULL) then return FAILURE;
 
-// Start and stop time 
+// Start and stop time
 startTime = 0;
 stopTime = 10;
 // Communication constant step size
@@ -56,7 +56,7 @@ fmi3SetReal/Integer/Boolean/String(s, ...);
 fmi3SetupExperiment(s, fmi3False, 0.0, startTime, fmi3True, stopTime);
 fmi3EnterInitializationMode(s);
 
-// Set the input values at time = startTime 
+// Set the input values at time = startTime
 fmi3SetReal/Integer/Boolean/String(s, ...);
 
 fmi3ExitInitializationMode(s);
@@ -75,21 +75,21 @@ while (tc < tStop) do {
     /*Set possible active inferred clocks to true or to false*/
     if(mode == continuousTimeMode) then {
       fmi3EnterEventMode(s);
-      mode = eventMode; 
+      mode = eventMode;
     };
     fmi3SetClock(s, ...);
     fmi3SetInterval(s, ...); /*Only needed if interval changes*/
   };
- 
+
   if(mode == eventMode) then fmi3NewDiscreteStates(s, s_eventInfo);
-  
+
   if(mode == continuousTimeMode) then {
     // Continuous mode (default mode)
     fmi3Real tend = tc+step;
-    fmi3Real t = tend*2; 
+    fmi3Real t = tend*2;
     fmi3Boolean earlyReturn = fmi3False;
     status = fmi3DoStep(s, tc, step, ..., earlyReturn);
-      
+
     if(earlyReturn) then {
       t = s_intermediateUpdateInfo.intermediateUpdateTime;
       /*rollback FMUs to earliest event time*/
@@ -105,17 +105,17 @@ while (tc < tStop) do {
   if(s_intermediateUpdatedInfo.clocksTicked) then {
     fmi3GetClock(s, ...);
     fmi3GetInterval(s, /*Intervals*/, ...);
-  }; 
+  };
 
   if((mode == eventMode) && (s_eventInfo.newDiscreteStatesNeeded == fmi3False) && (/*no clocks from GetClock() are active*/)) then {
-    fmi3EnterContinuousTimeMode(s);    
+    fmi3EnterContinuousTimeMode(s);
     mode = continuousTimeMode;
     step = min(/*Intervals*/, s_eventInfo.nextEventTime, ...);
   };
 
-  // Get outputs 
+  // Get outputs
   fmi3GetReal/Integer/Boolean/String(s, ...);
-  // Set inputs 
+  // Set inputs
   fmi3SetReal/Integer/Boolean/String(s, ...);
 };
 

@@ -1,7 +1,7 @@
 /* [TODO] Open points*/
 // - What grade of detail is necessary?
 //    - Configuration Mode necessary?
-//    - Are status checks necessary? 
+//    - Are status checks necessary?
 // - How many slaves?
 // - Clocks: How many and which clock types?
 // - Create Value References
@@ -84,15 +84,15 @@ int main(int argc, char* argv[]) {
 
 
   // Instantiate slave
-  // Create pointer to information for identifying the FMU in callbacks 
+  // Create pointer to information for identifying the FMU in callbacks
   callbacks.instanceEnvironment = NULL;
 
   //set Co-Simulation mode
   fmi3CoSimulationConfiguration coSimulationConfiguration;
-  coSimulationConfiguration.intermediateVariableGet         = fmi3False;
-  coSimulationConfiguration.intermediateInternalVariableGet = fmi3False;
-  coSimulationConfiguration.intermediateVariableSet         = fmi3False;
-  coSimulationConfiguration.coSimulationMode                = fmi3ModeHybridCoSimulation;
+  coSimulationConfiguration.intermediateVariableGetRequired = fmi3False;
+  coSimulationConfiguration.intermediateInternalVariableGetRequired = fmi3False;
+  coSimulationConfiguration.intermediateVariableSetRequired = fmi3False;
+  coSimulationConfiguration.coSimulationMode = fmi3ModeHybridCoSimulation;
 
 
   // Instantiate slave
@@ -108,7 +108,7 @@ int main(int argc, char* argv[]) {
 
 
   // Setup Experiment
-  // Start and stop time 
+  // Start and stop time
   startTime = 0;
   stopTime = 10;
   // Communication constant step size
@@ -125,7 +125,7 @@ int main(int argc, char* argv[]) {
   // Initialization Mode
   fmi3EnterInitializationMode(s);
 
-  // Set the input values at time = startTime 
+  // Set the input values at time = startTime
   //fmi3SetReal / Integer / Boolean / String(s, ...); // [TODO]: To be set.
   //fmi3SetClock(s, ...); // [TODO]: To be set.
 
@@ -148,7 +148,7 @@ int main(int argc, char* argv[]) {
       if(mode == stepMode) { // [TODO]: @Masoud recheck: continuousTimeMode --> stepMode
         status = fmi3EnterEventMode(s);
         if ((status == fmi3Fatal) || (status == fmi3Error)) break;
-        mode = eventMode; 
+        mode = eventMode;
       };
       //fmi3SetClock(s, ...); // [TODO]: To be set.
       //fmi3SetIntervalDecimal(s, ...); /*Only needed if interval changes*/ // [TODO]: To be set.
