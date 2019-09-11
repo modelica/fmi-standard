@@ -35,7 +35,7 @@ int main(int argc, char* argv[]) {
     
     const char *guid = "{8c4e810f-3da3-4a00-8276-176fa3c9f000}";
     
-    fmi3CallbackFunctions callbacks;
+    fmi3CallbackFunctions callbacks = { NULL };
     fmi3Instance s1, s2;
 
     printf("Running CoSimulation example... ");
@@ -45,15 +45,13 @@ int main(int argc, char* argv[]) {
 // Initialization sub-phase
 
 // set callback functions
-callbacks.logMessage          = cb_logMessage;
-callbacks.allocateMemory      = cb_allocateMemory;
-callbacks.freeMemory          = cb_freeMemory;
-callbacks.stepFinished        = NULL; // synchronous execution
-callbacks.instanceEnvironment = NULL;
+callbacks.logMessage     = cb_logMessage;
+callbacks.allocateMemory = cb_allocateMemory;
+callbacks.freeMemory     = cb_freeMemory;
 
 // instantiate both slaves
-s1 = s1_fmi3Instantiate("slave1", fmi3CoSimulation, guid, NULL, &callbacks, fmi3False, fmi3False);
-s2 = s2_fmi3Instantiate("slave2", fmi3CoSimulation, guid, NULL, &callbacks, fmi3False, fmi3False);
+s1 = s1_fmi3Instantiate("slave1", fmi3CoSimulation, guid, NULL, &callbacks, fmi3False, fmi3False, NULL);
+s2 = s2_fmi3Instantiate("slave2", fmi3CoSimulation, guid, NULL, &callbacks, fmi3False, fmi3False, NULL);
 
 if (s1 == NULL || s2 == NULL)
     return EXIT_FAILURE;
@@ -98,7 +96,7 @@ while ((tc < stopTime) && (status == fmi3OK)) {
     // fmi3SetReal(s2, ..., 1, &y1);
 
     // call slave s1 and check status
-    status = s1_fmi3DoStep(s1, tc, h, fmi3True);
+    status = s1_fmi3DoStep(s1, tc, h, fmi3True, NULL);
 
     switch (status) {
         case fmi3Discard:
@@ -117,7 +115,7 @@ while ((tc < stopTime) && (status == fmi3OK)) {
         break;
 
     // call slave s2 and check status as above
-    status = s2_fmi3DoStep(s2, tc, h, fmi3True);
+    status = s2_fmi3DoStep(s2, tc, h, fmi3True, NULL);
 
     // ...
 
