@@ -133,10 +133,10 @@ typedef void       (*fmi3CallbackUnlockPreemption) ();
 /* end::PreemptionLock[] */
 
 typedef struct {
+    fmi3InstanceEnvironment         instanceEnvironment;
     fmi3CallbackLogMessage          logMessage;
     fmi3CallbackAllocateMemory      allocateMemory;
     fmi3CallbackFreeMemory          freeMemory;
-    fmi3InstanceEnvironment         instanceEnvironment;
     fmi3CallbackIntermediateUpdate  intermediateUpdate;
     fmi3CallbackLockPreemption      lockPreemption;
     fmi3CallbackUnlockPreemption    unlockPreemption;
