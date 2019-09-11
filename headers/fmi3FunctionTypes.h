@@ -145,12 +145,12 @@ typedef struct {
 
 /* tag::EventInfo[] */
 typedef struct {
+    fmi3Float64 nextEventTime;  /* next event if nextEventTimeDefined=fmi3True */
     fmi3Boolean newDiscreteStatesNeeded;
     fmi3Boolean terminateSimulation;
     fmi3Boolean nominalsOfContinuousStatesChanged;
     fmi3Boolean valuesOfContinuousStatesChanged;
     fmi3Boolean nextEventTimeDefined;
-    fmi3Float64 nextEventTime;  /* next event if nextEventTimeDefined=fmi3True */
 } fmi3EventInfo;
 /* end::EventInfo[] */
 
