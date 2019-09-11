@@ -122,11 +122,13 @@ typedef void* (*fmi3CallbackAllocateMemory) (fmi3InstanceEnvironment instanceEnv
                                              size_t size);
 typedef void  (*fmi3CallbackFreeMemory)     (fmi3InstanceEnvironment instanceEnvironment,
                                              void* obj);
+/* end::CallbackFunctions[] */
 
 /* tag::CallbackIntermediateUpdate[] */
 typedef fmi3Status (*fmi3CallbackIntermediateUpdate) (fmi3InstanceEnvironment instanceEnvironment,
                                                       fmi3IntermediateUpdateInfo* intermediateUpdateInfo);
 /* end::CallbackIntermediateUpdate[] */
+
 /* tag::PreemptionLock[] */
 typedef void       (*fmi3CallbackLockPreemption)   ();
 typedef void       (*fmi3CallbackUnlockPreemption) ();
@@ -141,7 +143,6 @@ typedef struct {
     fmi3CallbackLockPreemption      lockPreemption;
     fmi3CallbackUnlockPreemption    unlockPreemption;
 } fmi3CallbackFunctions;
-/* end::CallbackFunctions[] */
 
 /* tag::EventInfo[] */
 typedef struct {
