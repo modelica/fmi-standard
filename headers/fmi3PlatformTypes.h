@@ -60,25 +60,26 @@ typedef unsigned int    fmi3ValueReference;        /* Handle to the value of a v
 /* end::ValueReference[] */
 
 /* tag::VariableTypes[] */
-typedef float           fmi3Float32;  /* Single precision floating point (32-bit) */
-typedef double          fmi3Float64;  /* Double precision floating point (64-bit) */
-typedef   int8_t        fmi3Int8;     /* 8-bit signed integer */
-typedef  uint8_t        fmi3UInt8;    /* 8-bit unsigned integer */
-typedef  int16_t        fmi3Int16;    /* 16-bit signed integer */
-typedef uint16_t        fmi3UInt16;   /* 16-bit unsigned integer */
-typedef  int32_t        fmi3Int32;    /* 32-bit signed integer */
-typedef uint32_t        fmi3UInt32;   /* 32-bit unsigned integer */
-typedef  int64_t        fmi3Int64;    /* 64-bit signed integer */
-typedef uint64_t        fmi3UInt64;   /* 64-bit unsigned integer */
-typedef int             fmi3Boolean;  /* Data type to be used with fmi3True and fmi3False */
-typedef char            fmi3Char;     /* Data type for one character */
+typedef           float fmi3Float32;  /* Single precision floating point (32-bit) */
+typedef          double fmi3Float64;  /* Double precision floating point (64-bit) */
+typedef          int8_t fmi3Int8;     /* 8-bit signed integer */
+typedef         uint8_t fmi3UInt8;    /* 8-bit unsigned integer */
+typedef         int16_t fmi3Int16;    /* 16-bit signed integer */
+typedef        uint16_t fmi3UInt16;   /* 16-bit unsigned integer */
+typedef         int32_t fmi3Int32;    /* 32-bit signed integer */
+typedef        uint32_t fmi3UInt32;   /* 32-bit unsigned integer */
+typedef         int64_t fmi3Int64;    /* 64-bit signed integer */
+typedef        uint64_t fmi3UInt64;   /* 64-bit unsigned integer */
+typedef             int fmi3Boolean;  /* Data type to be used with fmi3True and fmi3False */
+typedef            char fmi3Char;     /* Data type for one character */
 typedef const fmi3Char* fmi3String;   /* Data type for character strings
                                          ('\0' terminated, UTF8 encoded) */
-typedef char            fmi3Byte;     /* Smallest addressable unit of the machine
+typedef            char fmi3Byte;     /* Smallest addressable unit of the machine
                                          (typically one byte) */
 typedef const fmi3Byte* fmi3Binary;   /* Data type for binary data
                                          (out-of-band length terminated) */
-typedef int             fmi3Clock;    /* Data type to be used for activating clocks with fmi3True and fmi3False */
+typedef             int fmi3Clock;    /* Data type to be used for activating clocks with
+                                         fmi3True and fmi3False */
 
 /* Values for fmi3Boolean */
 #define fmi3True  1
