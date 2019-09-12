@@ -52,11 +52,11 @@ typedef void*           fmi3InstanceEnvironment;  /* Pointer to FMU environment 
 /* end::ComponentEnvironment[] */
 
 /* tag::FMUState[] */
-typedef void*           fmi3FMUState;              /* Pointer to internal FMU state */
+typedef void*           fmi3FMUState;             /* Pointer to internal FMU state */
 /* end::FMUState[] */
 
 /* tag::ValueReference[] */
-typedef unsigned int    fmi3ValueReference;        /* Handle to the value of a variable */
+typedef unsigned int    fmi3ValueReference;       /* Handle to the value of a variable */
 /* end::ValueReference[] */
 
 /* tag::VariableTypes[] */
