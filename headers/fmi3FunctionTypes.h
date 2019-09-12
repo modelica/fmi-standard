@@ -5,7 +5,7 @@
 
 /*
 This header file must be utilized when compiling an FMU or an FMI master.
-It declares data and function types for FMI 3.0-wg003.3
+It declares data and function types for FMI 3.0-alpha.1.
 
 Copyright (C) 2011 MODELISAR consortium,
               2012-2019 Modelica Association Project "FMI"
