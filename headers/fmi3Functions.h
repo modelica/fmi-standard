@@ -111,7 +111,6 @@ Common Functions
 /* Enter and exit initialization mode, terminate and reset */
 #define fmi3SetupExperiment          fmi3FullName(fmi3SetupExperiment)
 #define fmi3EnterInitializationMode  fmi3FullName(fmi3EnterInitializationMode)
-#define fmi3ExitInitializationMode   fmi3FullName(fmi3ExitInitializationMode)
 #define fmi3EnterEventMode           fmi3FullName(fmi3EnterEventMode)
 #define fmi3Terminate                fmi3FullName(fmi3Terminate)
 #define fmi3Reset                    fmi3FullName(fmi3Reset)
@@ -219,7 +218,6 @@ FMI3_Export fmi3FreeInstanceTYPE fmi3FreeInstance;
 /* Enter and exit initialization mode, terminate and reset */
 FMI3_Export fmi3SetupExperimentTYPE         fmi3SetupExperiment;
 FMI3_Export fmi3EnterInitializationModeTYPE fmi3EnterInitializationMode;
-FMI3_Export fmi3ExitInitializationModeTYPE  fmi3ExitInitializationMode;
 FMI3_Export fmi3EnterEventModeTYPE          fmi3EnterEventMode;
 FMI3_Export fmi3TerminateTYPE               fmi3Terminate;
 FMI3_Export fmi3ResetTYPE                   fmi3Reset;
