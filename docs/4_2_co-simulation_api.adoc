@@ -108,7 +108,7 @@ The following state machine defines the supported calling sequences.
 [#figure-co-simulation-state-machine]
 image::images/calling-sequence-co-simulation.svg[width=80%, align="center"]
 
-In this co-simulation mode the following functions must not be called: `fmi3ActivateModelPartition()`, `fmi3NewDiscreteStates()`, `fmi3EnterEventMode()`, `fmi3SetClock()`, `fmi3GetClock()`, `fmi3SetIntervalFraction()`, `fmi3GetIntervalFraction()` including all functions that are specific to fmuType `fmi3ModelExchange`.
+In this co-simulation mode the following functions must not be called: `fmi3ActivateModelPartition()`, `fmi3NewDiscreteStates()`, `fmi3EnterEventMode()`, `fmi3SetClock()`, `fmi3GetClock()`, `fmi3SetIntervalFraction()`, `fmi3GetIntervalFraction()`, `fmi3SetIntervalDecimal()`, `fmi3GetIntervalDecimal()` including all functions that are specific to fmuType `fmi3ModelExchange`.
 
 ====== State: slaveSetableFMUstate
 In all states of this super state it is allowed to call 
@@ -210,7 +210,7 @@ If the function returns `fmi3Error` the FMU enters state `Terminated`.
 If the function returns `fmi3Fatal` the FMU enters state `Fatal`.  
 
 Allowed Function Calls::
-`fmi3DoEarlyReturn()`
+`fmi3DoEarlyReturn()` #[TODO]: Why is this allowed in normal Co-Simulation Mode?#
 
 `fmi3Set{VariableTypes}`, `fmi3Get{VariableTypes}`::
 For variables that are marked with attribute "intermediateAccess" equals true in the modelDescription.xml.
@@ -366,7 +366,7 @@ include::examples/c-code/co_simulation.c[tags=CoSimulation]
 ----
 
 ===== Early-return Requested by the Co-Simulation Master in fmi3ModeCoSimulation
-
+#[TODO]: @Masoud: Should this be moved to section "==== Mode fmi3ModeHybridCoSimulation"???#
 The boolean capability flag `canReturnEarlyAfterIntermediateUpdate` in the modelDescription XML file indicates whether the FMU supports the early-return feature.
 The default value of this capability flag is false.
 Each time an internal discontinuity or an event happens inside an FMU with capability flag `canReturnEarlyAfterIntermediateUpdate=true`, the callback function `fmi3CallbackIntermediateUpdate()` is invoked by the FMU and the associated structure `fmi3IntermediateUpdateInfo` is sent back to the co-simulation master.
@@ -400,7 +400,7 @@ If the `earlyReturnTime` is not equal to the last signaled `intermediateUpdateTi
 
 The co-simulation master can now decide about a rollback of the FMU to reach the `earlyReturnTime` time if this is required. Note that `Event Mode` is not supported in `fmi3ModeCoSimulation`.
 
-==== Mode fmi3ModeHybridCoSimulation
+==== Mode fmi3ModeHybridCoSimulation [[api-hybrid-co-simulation]]
 :DOSTEP: fmi3DoStep()
 :CBIU: fmi3CallbackIntermediateUpdate()
 :DER:  fmi3DoEarlyReturn()
@@ -441,9 +441,9 @@ If the FMU signals a `earlyReturn` equals `fmi3True` after returning from `{DOST
 
 The following `fmi3Boolean` variables define the reasons for the `fmi3CallbackIntermediateUpdate` call. Several variables can be set by the FMU. Default value of variables is `fmi3False`.
 
-*	when `eventOccurred` is `fmi3True`, the master must call `{DER}` to do an early return and handle the event via entering event mode. In this case, `earlyReturnTime` argument of `{DER}` is ignored. In `Event Mode` the master shall call the `fmi3NewDiscreteStates()` function for gathering `fmi3eventInfo` related information about the event occurred at `{IUTIME};`
+*	when `eventOccurred` is `fmi3True`, the master must call `{DER}` to do an early return and handle the event via entering event mode. In this case, `earlyReturnTime` argument of `{DER}` is ignored. In `Event Mode` the master shall call the `fmi3NewDiscreteStates()` function for gathering `fmi3eventInfo` related information about the event occurred at `{IUTIME}`.
 
-*	when `clocksTicked`  is `fmi3True`, it means that `fmi3GetClock()` function should be called for gathering all clock related information about ticking triggered clocks at `{IUTIME};`.
+*	when `clocksTicked`  is `fmi3True`, it means that `fmi3GetClock()` function should be called for gathering all clock related information about ticking triggered clocks at `{IUTIME}`.
 If this flag is `fmi3True` the master must call `{DER}` to do an early return and handle the clock event in `Event Mode`.
 In this case, `earlyReturnTime` argument of `{DER}` is ignored.
 
@@ -534,7 +534,7 @@ It is not allowed to call `fmi3EnterEventMode()` or `fmi3EnterStepMode()` for an
 :ENTEREVENTMODE: fmi3EnterEventMode()
 :ENTERSTEPMODE: fmi3EnterStepMode()
 :INTERMEDIATEUPDATE: fmi3CallbackIntermediateUpdate()
-:INTERMEDIATEUPDATEINFO: fmi3IntermediateUpdateInfo
+:INTERMEDIATEUPDATEINFO: intermediateUpdateInfo
 :DOEARLYRETURN: fmi3DoEarlyReturn()
 
 In this section, signaling and retrieving clock ticks as well as the interface for supporting clocks in FMI for co-simulation will be discussed.
@@ -556,7 +556,7 @@ _Therefore it is recommended that the FMU provides logging information to the us
 If the co-simulation master supports clocks, all inferred clocks of the model should be handled and inferred clock events should be scheduled by the master.
 If a triggered clock ticks, the FMU invokes the `{INTERMEDIATEUPDATE}` callback and sets `{INTERMEDIATEUPDATEINFO}.clocksTicked` to `fmi3True`.
 Then the master must call `{DOEARLYRETURN}` to do an early return from `{DOSTEP}`.
-then the master should push the FMU into `Event Mode` by calling `{ENTEREVENTMODE}`.
+Then the master should push the FMU into `Event Mode` by calling `{ENTEREVENTMODE}`.
 Once the FMU is pushed into `Event Mode`, the activation status of triggered clocks are checked by `{GETCLOCK}` function.
 Then `{SETCLOCK}` (and `{SETINTERVALDECIMAL}` or `{SETINTERVALFRACTION}` if necessary) should be invoked to enable the ticked inferred clocks.
 Each clock, that ticks outside of the FMU (i.e. inferred clock), is activated for an FMU based on its _clockReference_ and an associated `{SETCLOCK}` in `Event Mode`.
@@ -568,19 +568,19 @@ In Step Mode, the co-simulation master can call `{DOSTEP}` for the time interval
 Note that `{DOSTEP}` may not reach the next inferred event instant because an early return may occur.
 
 The FMU must not call the `{INTERMEDIATEUPDATE}` callback function with a `{INTERMEDIATEUPDATEINFO}.intermediateUpdateTime` value that is smaller (or equal ??? #[TODO]#) than the `{INTERMEDIATEUPDATEINFO}.intermediateUpdateTime` value given in a preceeding call of `{INTERMEDIATEUPDATE}` with `{INTERMEDIATEUPDATEINFO}.intermediateStepFinished` is `fmi3True`.
-#[TODO]: Recheck if this is the correct position. --> If this is mandatory then it should be placed in section 4_6_2_co-simulation_intermediate_variable_access_api?#
+#[TODO]: Recheck if this is the correct position. --> If this is mandatory then it should be placed in section <<api-intermediate-variable-access>>?#
 
 The simulation master sets and gets clock variable values similar to the FMI for ModelExchange, as defined in <<fmi-api-setting-getting-clock-activation-state>>.
 
 ===== Computation in fmi3ModeHybridCoSimulation [[computation-clocked-co-simulation]]
 
 Similar to FMI for ModelExchange, in order to activate inferred clocks of an FMU, it is required to push the FMU into Event Mode by calling `{ENTEREVENTMODE}`.
-If `{DOSTEP}` returns with `earlyReturn` = `fmi3True` and `{INTERMEDIATEUPDATEINFO}.eventOccurred` or `{INTERMEDIATEUPDATEINFO}.clocksTicked` is `fmi3True`, the FMU must be pushed into the Event Mode by calling  `{ENTEREVENTMODE}`;
+If `{DOSTEP}` returns with `earlyReturn` = `fmi3True` and `{INTERMEDIATEUPDATEINFO}.eventOccurred` or `{INTERMEDIATEUPDATEINFO}.clocksTicked` is `fmi3True`, the FMU must be pushed into the Event Mode by calling `{ENTEREVENTMODE}`.
 
 In order to retrieve the state of triggered clocks, `{GETCLOCK}` and `{GETINTERVALDECIMAL}` or `{GETINTERVALFRACTION}` need to be called in the Event Mode.
 If the `{DOSTEP}` return value is `fmi3OK` and `earlyReturn` = `fmi3False`, the calling of `{GETCLOCK}`, `{GETINTERVALDECIMAL}`, `{GETINTERVALFRACTION}`, `{NEWDISCRETESTATES}` is only meaningful after `{SETCLOCK}` in the case of super-dense time iterations are desired.
 
-Similar to the ModelExchange case, the allowed call order is `{GETCLOCK}`, `{GETINTERVALDECIMAL}`, `{GETINTERVALFRACTION}`, `fmi3GetXXX()`, `fmi3SetXXX()`.
+Similar to the ModelExchange case, the allowed call order is `{GETCLOCK}`, `{GETINTERVALDECIMAL}`, `{GETINTERVALFRACTION}`, `fmi3Get{VariableType}()`, `fmi3Set{VariableType}()`.
 Function calls of this call order can be omitted.
 
 The handling of return values of function calls is identical to mode `fmi3ModeCoSimulation`.
@@ -609,37 +609,258 @@ The following state machine defines the supported calling sequences.
 .Calling sequence of clocked co-simulation mode.
 image::images/calling-sequence-hybrid-co-simulation.svg[width=80%, align="center"]
 [#figure-hybrid-co-simulation-state-machine]
-#[TODO]: There are no functions called `fmi3EnterReconfigurationMode()` and `fmi3ExitReconfigurationMode()` in fmi3Functions.h?#
+
+In this co-simulation mode the following functions must not be called: `fmi3ActivateModelPartition()`, `fmi3NewDiscreteStates()` including all functions that are specific to fmuType `fmi3ModelExchange`.
 
 In comparison to the state machine in section <<state-machine-co-simulation>> the entry state after *Initialization Mode* is the *Event Mode* because ... #[TODO] @ Masoud: Reasons that this state machine differs from `fmi3ModeCoSimulation`#
 Each state of the state machine corresponds to a certain phase of a simulation as follows:
 
-instantiated::
-#[TODO]: @ Masoud: Same as in section <<state-machine-co-simulation>>? To be removed?#
+#[TODO]: Some of the following descriptions are mainly taken from section <<state-machine-co-simulation>>. Is this repeating necessary?#
+#[TODO]: In which states can fmi3SetClock() be called?#
+#[TODO]: The "fobidden function calls" can probably be removed.#
 
-Configuration Mode::
-#[TODO]: @ Masoud: Same as in section <<state-machine-co-simulation>>? To be removed?#
+====== State: slaveSetableFMUstate
+In all states of this super state it is allowed to call 
+`fmi3GetFMUState()`, `fmi3SetFMUState()`, `fmi3FreeFMUState()`, `fmi3SerializedFMUStateSize()`, `fmi3SerializeFMUState()`, `fmi3DeSerializeFMUState()`, `fmi3Reset()`, `fmi3GetVersion()`, `fmi3SetDebugLogging()` and `fmi3FreeInstance()`.
 
-Initialization Mode::
-#[TODO]: @ Masoud: Same as in section <<state-machine-co-simulation>>? To be removed?#
+If any function returns with `fmi3Fatal` the FMU enters state `Fatal`.
 
-Event Mode::
-#[TODO]: @ Masoud: To be filled#
+====== State: slaveUnderEvaluation
+This super state is entered by the FMU when `fmi3Instantiate()` is called. If any function returns `fmi3Error` the FMU enters state `Terminated`. 
 
-Step Mode::
-#[TODO]: @ Masoud: To be filled#
+====== State: slaveInitialized
+#[TODO]: This state description is missing in <<state-machine-co-simulation>>. Proposal:#
+This super state is entered by the FMU when `fmi3ExitInitializatoinMode()` is called. If the function `fmi3Terminate` is called, the FMU enters state `Terminated`. 
 
-Reconfiguration Mode::
-#[TODO]: @ Masoud: To be filled#
+====== State: Instantiated
+#[TODO]: Compare content/functions with <<state-machine-co-simulation>> because here it is slightly altered#
+In this state the FMU can do one-time initializations and allocate memory. The FMU sets all variables to its start values.
 
-terminated::
-#[TODO]: @ Masoud: Same as in section <<state-machine-co-simulation>>? To be removed?#
+Allowed Function Calls::
+`fmi3SetupExperiment()`, `fmi3EnterInitializationMode()`, `fmi3EnterConfigurationMode()`, `fmi3SetInputDerivatives()`
 
+`fmi3Set{VariableType}`::
+For variables with `variability` unequal to `"constant"` and for which initial equals to `"exact"` or `"approx"`.
+The intention is to set start and guess values for these variables.
+
+Forbidden Function Calls::
+`fmi3Instantiate()`, `fmi3ExitInitializationMode()`, `fmi3EnterEventMode()`, `fmi3Terminate()`, `fmi3Get{VariableType}`, `fmi3GetDirectionalDerivative()`, `fmi3ExitConfigurationMode()`, #`fmi3SetClock()`#, `fmi3GetClock()`, `fmi3GetIntervalDecimal()`, `fmi3GetIntervalFraction`, `fmi3EnterStepMode()`, `fmi3GetOutputDerivatives()`, `fmi3DoStep()`, `fmi3DoEarlyReturn()`, `fmi3GetDoStepDiscardedStatus()`
+
+====== State: Configuration Mode
+#[TODO]: Compare content/functions with <<state-machine-co-simulation>> because here it is slightly altered#
+In this state structural parameters with `variability` equals `tunable` can be changed.
+
+This state is entered from state `Instantiated` by calling `fmi3EnterConfigurationMode()` and left back to `Instantiated` by calling `fmi3ExitConfigurationMode()`.
+
+Allowed Function Calls::
+`fmi3ExitConfigurationMode()`
+
+`fmi3Set{VariableTypes}`::
+Only for variables with `causality` equals `"structuralParameter"` and `variability` equals `"tunable"`.
+
+Forbidden Function Calls::
+ `fmi3Instantiate()`, `fmi3SetupExperiment`, `fmi3EnterInitializationMode()`, `fmi3ExitInitializationMode()`, `fmi3EnterEventMode()`, `fmi3Terminate()`, `fmi3Get{VariableTypes}`, `fmi3GetDirectionalDerivative()`, `fmi3EnterConfigurationMode()`, #`fmi3SetClock()`#, `fmi3GetClock()`, `fmi3GetIntervalDecimal()`, `fmi3GetIntervalFraction`, `fmi3EnterStepMode()`, `fmi3GetOutputDerivatives()`, `fmi3DoStep()`, `fmi3DoEarlyReturn()`, `fmi3GetDoStepDiscardedStatus()`
+ 
+====== State: Initialization Mode
+#[TODO]: Compare content/functions with <<state-machine-co-simulation>> because here it is slightly altered#
+This mode is used by the master to compute consistent initial conditions for overall system. 
+Therefore iterative calls of `fmi3Set{VariableTypes}` and `fmi3Get{VariableTypes}` are allowed.
+In between the FMU must evaluate all relevant equations.
+In this way artificial or "real" algebraic loops over connected FMUs in *Initialization Mode* may be handled by using appropriate numerical algorithms.
+
+Allowed Function Calls::
+`fmi3ExitInitializationMode()`, `fmi3GetDirectionalDerivative()`, `fmi3SetInputDerivatives()`
+
+`fmi3Set{VariableType}`::
+For variables with:
+* `variability` unequal `"constant"` that have `initial` euqals `"exact"`, or 
+* `causality` equals `"input"`, or 
+* `causality` equals to `"parameter"` and `variability` equals to `"tunable"`.
+
+`fmi3Get{VariableType}`::
+For variables with `causality equals "output"`.
+
+Forbidden Function Calls::
+`fmi3Instantiate()`, `fmi3SetupExperiment`, `fmi3EnterInitializationMode()`, `fmi3EnterEventMode()`, `fmi3Terminate()`, `fmi3EnterConfigurationMode()`, `fmi3ExitConfigurationMode()`, `fmi3SetClock()`, `fmi3GetClock()`, `fmi3GetIntervalDecimal()`, `fmi3GetIntervalFraction`, `fmi3EnterStepMode()`, `fmi3GetOutputDerivatives()`, `fmi3DoStep()`, `fmi3DoEarlyReturn()`, `fmi3GetDoStepDiscardedStatus()`,
+
+====== State: Event Mode
+#[TODO]: General description is still needed.#
+The master and the FMU enter this state when the master calls `fmi3ExitInitializationMode()` in state `Initialization Mode` or `fmi3ExitConfigurationMode` in state `Reconfiguration Mode` or `{ENTEREVENTMODE}` in state `Step Mode`.
+
+Allowed Function Calls::
+
+`fmi3EnterConfigurationMode()`::
+This function must not be called if the FMU contains no structural parameters (i.e. with `causality="structuralParameter"`).
+
+`fmi3EnterStepMode()`::
+#...#
+
+`fmi3NewDiscreteStates()`::
+Only after `fmi3DoStep()` returns `earlyReturn = fmi3True` a `fmi3NewDiscreteStates()` call returns `fmi3EventInfo` structure. When `eventInfo.newDiscreteStatesNeeded = fmi3True` it means that the master should stay in Event Mode and another call to `fmi3NewDiscreteStates()` is required. 
+#[TODO]: @Masoud: Revise. Taken from <<api-hybrid-co-simulation>>#
+
+`fmi3GetClock()`::
+#...#
+
+`fmi3SetClock()`::
+#...#
+
+====== State: Step Mode
+#[TODO]: Compare content/functions with <<state-machine-co-simulation>> because here it is slightly altered#
+#[TODO]: General description is still needed.#
+This state is used by the master to progress simulation time.
+
+Allowed Function Calls::
+`fmi3Terminate()`, `fmi3Get{VariableType}`, `fmi3GetDirectionalDerivative()`, `fmi3SetInputDerivatives()`, `fmi3GetOutputDerivatives()`
+
+`fmi3DoStep()`::
+Within fmi3DoStep() the FMU may call `fmi3CallbackIntermediateUpdate()` 
+If the function returns with `fmi3OK` or `fmi3Warning` the FMU stays in this state.
+If the function returns with `fmi3Discard` the FMU enters state `Step Failed`.  
+
+`fmi3Set{VariableType}`::
+For variables with:
+* `causality` equals `"input"`, or
+* `causality` equals `"parameter"` and `variability` equals `"tunable"`
+
+It is not allowed to call `fmi3Get{VariableType}` functions after `fmi3Set{VariableType}` functions without an `fmi3DoStep()` call in between.
+
+`fmi3GetClock()`::
+#...?#
+
+`fmi3SetClock()`::
+#...?#
+
+====== State: Intermediate Update Mode
+#[TODO]: Is a clock description necessary in this state?#
+In this state the master can retrieve information from the FMU between communication points.
+Functions called in this state must not return `fmi3Discard`.
+
+The FMU enters this state by calling `fmi3CallbackIntermediateUpdate()` within `fmi3DoStep()` and leaves the state towards state `Step Mode` if the function returns `fmi3OK` or `fmi3Warning`.
+If the function returns `fmi3Error` the FMU enters state `Terminated`.
+If the function returns `fmi3Fatal` the FMU enters state `Fatal`.  
+
+Allowed Function Calls::
+`fmi3DoEarlyReturn()`
+
+`fmi3Set{VariableTypes}`, `fmi3Get{VariableTypes}`::
+For variables that are marked with attribute "intermediateAccess" equals true in the modelDescription.xml.
+
+Forbidden Function Calls::
+The same functions which are not allowed to be called in `Step Mode` must not be called in this state. 
+Additionally the following functions must not be called `fmi3EnterConfigurationMode()`, `fmi3Terminate()`, `fmi3DoStep()`.
+
+====== State: Reconfiguration Mode
+#[TODO]: Compare content/functions with <<state-machine-co-simulation>> because here it is slightly altered#
+In this state structural parameters with `variability` equals `tunable` can be changed.
+This state is entered from state `Step Mode` by calling `fmi3EnterConfigurationMode()` and left back to `Step Mode` by calling `fmi3ExitConfigurationMode()`.
+
+Allowed Function Calls::
+`fmi3ExitConfigurationMode()`
+
+`fmi3Set{VariableTypes}`::
+Only for variables with `causality` equals `"structuralParameter"` and `variability` equals `"tunable"`.
+
+Forbidden Function Calls::
+ `fmi3Instantiate()`, `fmi3SetupExperiment()`, `fmi3EnterInitializationMode()`, `fmi3ExitInitializationMode()`, `fmi3Get{VariableTypes}`, `fmi3GetDirectionalDerivative()`, `fmi3EnterConfigurationMode()`, `fmi3EnterStepMode()`, `fmi3DoStep()`, `fmi3SetInputDerivatives()`, `fmi3GetOutputDerivatives()`, `fmi3GetDoStepDiscardedStatus()`
+
+====== State: Step Failed
+#[TODO]: Compare content/functions with <<state-machine-co-simulation>> because here it is slightly altered#
+The FMU changes into this state if it is not able to compute a communication step completely by returning `fmi3Discard` from `fmi3DoStep()`.
+This might have been caused by numerical problems or intended stop of the simulation run.
+In case of numerical problems the master may try to achieve a correct solution for example by repeating the last step with a different communication step size or by continuing from the `lastSuccessfulTime`.
+It does not enter into this state if the FMU returns early from a communication step caused by `fmi3DoEarlyReturn()`.
+
+Allowed Function Calls::
+`fmi3Terminate()`, `fmi3EnterStepMode()`, `fmi3Get{VariableType}`, `fmi3GetDirectionalDerivative()`, `fmi3GetOutputDerivatives()`
+
+`fmi3GetDoStepDiscardedStatus()`::
+The master calls this functions to retrieve information about the reason for discarding the last communication step.
+
+Forbidden Function Calls::
+`fmi3Instantiate()`, `fmi3SetupExperiment()`, `fmi3EnterInitializationMode()`, `fmi3ExitInitializationMode()`, `fmi3Set{VariableType}`, `fmi3EnterConfigurationMode()`, `fmi3ExitConfigurationMode()`, `fmi3SetInputDerivatives()`, `fmi3DoStep()`, `fmi3DoEarlyReturn()`, 
+
+====== State: Terminated
+#[TODO]: Compare content/functions with <<state-machine-co-simulation>> because here it is slightly altered#
+In this state, the solution at the final time of the simulation can be retrieved.
+
+Allowed Function Calls::
+`fmi3Get{VariableType}`, `fmi3GetDirectionalDerivative()`, `fmi3GetOutputDerivatives()`
+
+Forbidden Function Calls::
+`fmi3Instantiate()`, `fmi3SetupExperiment()`, `fmi3EnterInitializationMode()`, `fmi3ExitInitializationMode()`, `fmi3Set{VariableType}`, `fmi3EnterConfigurationMode()`, `fmi3ExitConfigurationMode()`, `fmi3SetInputDerivatives()`, `fmi3DoStep()`, `fmi3DoEarlyReturn()`
+
+====== State: Fatal
+The FMU enters this state if a function call of this or any other instance of this FMU returns `fmi3Fatal`.
+In this state it is not allowed to call any function of the FMU.
+
+Allowed Function Calls::
+none
+
+Forbidden Function Calls::
+all
+
+_[
+#[TODO]: update table. Remove stepComplete, stepInProgress, stepCanceled? Where is the state Error located?#
+The allowed function calls in the respective states are summarized in the following table (functions marked in [yellow-background]#"yellow"# are only available for "Co-Simulation", the other functions are available both for "Model Exchange" and "Co-Simulation"):
+
+[cols="10,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1",width="40%"]
+|====
+.2+.>|*Function*
+15+|*FMI 2.0 for Co-Simulation*
+|[vertical-text]#start, end#
+|[vertical-text]#Instantiated#
+|[vertical-text]#Configuration Mode#
+|[vertical-text]#Initialization Mode#
+|[vertical-text]#Event Mode#
+|[vertical-text]#Reconfiguration Mode#
+|[vertical-text]#Step Mode#
+|[vertical-text]#stepComplete#
+|[vertical-text]#stepInProgress#
+|[vertical-text]#Step Failed#
+|[vertical-text]#Intermediate Update Mode#
+|[vertical-text]#stepCanceled#
+|[vertical-text]#Terminated#
+|[vertical-text]#error#
+|[vertical-text]#Fatal#
+
+|fmi3GetVersion               |x |x |  |x |  |  |  |x |x |  |x |x |x |x |
+|fmi3SetDebugLogging          |  |x |  |x |  |  |  |x |x |  |x |x |x |x |
+|fmi3Instantiate              |x |  |  |  |  |  |  |  |  |  |  |  |  |  |
+|fmi3FreeInstance             |  |x |  |x |  |  |  |x |  |  |x |x |x |x |
+|fmi3SetupExperiment          |  |x |  |  |  |  |  |  |  |  |  |  |  |  |
+|fmi3EnterInitializationMode  |  |x |  |  |  |  |  |  |  |  |  |  |  |  |
+|fmi3ExitInitializationMode   |  |  |  |x |  |  |  |  |  |  |  |  |  |  |
+|fmi3Terminate                |  |  |  |  |  |  |  |x |  |  |x |  |  |  |
+|fmi3Reset                    |  |x |  |x |  |  |  |x |  |  |x |x |x |x |
+|fmi3GetReal                  |  |  |  |2 |  |  |  |x |  |  |8 |7 |x |7 |
+|fmi3GetInteger               |  |  |  |2 |  |  |  |x |  |  |8 |7 |x |7 |
+|fmi3GetBoolean               |  |  |  |2 |  |  |  |x |  |  |8 |7 |x |7 |
+|fmi3GetString                |  |  |  |2 |  |  |  |x |  |  |8 |7 |x |7 |
+|fmi3SetReal                  |  |1 |  |3 |  |  |  |6 |  |  |  |  |  |  |
+|fmi3SetInteger               |  |1 |  |3 |  |  |  |6 |  |  |  |  |  |  |
+|fmi3SetBoolean               |  |1 |  |3 |  |  |  |6 |  |  |  |  |  |  |
+|fmi3SetString                |  |1 |  |3 |  |  |  |6 |  |  |  |  |  |  |
+|fmi3GetFMUState              |  |x |  |x |  |  |  |x |  |  |8 |7 |x |7 |
+|fmi3SetFMUState              |  |x |  |x |  |  |  |x |  |  |x |x |x |x |
+|fmi3FreeFMUState             |  |x |  |x |  |  |  |x |  |  |x |x |x |x |
+|fmi3SerializedFMUStateSize   |  |x |  |x |  |  |  |x |  |  |x |x |x |x |
+|fmi3SerializeFMUState        |  |x |  |x |  |  |  |x |  |  |x |x |x |x |
+|fmi3DeSerializeFMUState      |  |x |  |x |  |  |  |x |  |  |x |x |x |x |
+|fmi3GetDirectionalDerivatives|  |  |  |x |  |  |  |x |  |  |8 |7 |x |7 |
+|fmi3EnterStepMode            {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |  |  |  |  |  |  |  |  |  |  |  |
+|fmi3SetInputDerivatives      {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |x |  |x |  |  |  |  |x |  |  |  |  |  |
+|fmi3GetOutputDerivatives     {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |  |  |  |  |  |x |  |8 |x |x |7 |
+|fmi3DoStep                   {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |  |  |  |  |  |x |  |  |  |  |  |
+|fmi3ActivateModelPartition   {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |  |  |  |  |  |  |  |  |  |  |  |
+|fmi3DoEarlyReturn            {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |  |  |  |  |  |  |x |  |  |  |  |
+|fmi3GetDoStepDiscardedStatus {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |  |  |  |  |  |  |  |x |  |  |  |
+|====
 
 ===== Code Example for fmi3ModeHybridCoSimulation [[code-example-clocked-co-simulation]]
 
 In the following example, the usage of the FMI functions is sketched in order to clarify the typical calling sequence of the functions in a simulation environment.
-We consider ... #[TODO]: Description of code example#
+We consider ... #[TODO]: Description of code example. Is this the same as in section "Code Example for fmi3ModeCoSimulation"?#
 
 The error handling is implemented in a very rudimentary way.
 

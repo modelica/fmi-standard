@@ -79,8 +79,8 @@ int main(int argc, char* argv[]) {
   callbacks.freeMemory          = cb_freeMemory;
   // Signal that early return is supported by master
   callbacks.intermediateUpdate  = cb_intermediateUpdate;
-  callbacks.lockPreemption = NULL; // Preemption not active
-  callbacks.unlockPreemption  = NULL; // Preemption not active
+  callbacks.lockPreemption      = NULL; // Preemption not active
+  callbacks.unlockPreemption    = NULL; // Preemption not active
 
 
   // Instantiate slave
@@ -89,10 +89,10 @@ int main(int argc, char* argv[]) {
 
   //set Co-Simulation mode
   fmi3CoSimulationConfiguration coSimulationConfiguration;
-  coSimulationConfiguration.intermediateVariableGetRequired = fmi3False;
+  coSimulationConfiguration.intermediateVariableGetRequired         = fmi3False;
   coSimulationConfiguration.intermediateInternalVariableGetRequired = fmi3False;
-  coSimulationConfiguration.intermediateVariableSetRequired = fmi3False;
-  coSimulationConfiguration.coSimulationMode = fmi3ModeHybridCoSimulation;
+  coSimulationConfiguration.intermediateVariableSetRequired         = fmi3False;
+  coSimulationConfiguration.coSimulationMode                        = fmi3ModeHybridCoSimulation;
 
 
   // Instantiate slave
@@ -110,7 +110,7 @@ int main(int argc, char* argv[]) {
   // Setup Experiment
   // Start and stop time
   startTime = 0;
-  stopTime = 10;
+  stopTime  = 10;
   // Communication constant step size
   h = 0.01;
 
