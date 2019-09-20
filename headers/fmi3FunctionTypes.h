@@ -399,13 +399,13 @@ typedef fmi3Status fmi3ExitConfigurationModeTYPE(fmi3Instance instance);
 /* tag::GetClock[] */
 typedef fmi3Status fmi3GetClockTYPE(fmi3Instance instance,
                                     const fmi3ValueReference valueReferences[], size_t nValueReferences,
-                                    fmi3Boolean value[]);
+                                    fmi3Clock values[]);
 /* end::GetClock[] */
 
 /* tag::SetClock[] */
 typedef fmi3Status fmi3SetClockTYPE(fmi3Instance instance,
                                     const fmi3ValueReference valueReferences[], size_t nValueReferences,
-                                    const fmi3Boolean value[], const fmi3Boolean *subactive);
+                                    const fmi3Clock values[], const fmi3Boolean *subactive);
 /* end::SetClock[] */
 
 /* tag::GetInterval[] */
