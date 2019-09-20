@@ -208,6 +208,10 @@ typedef fmi3Status fmi3SetupExperimentTYPE(fmi3Instance instance,
 typedef fmi3Status fmi3EnterInitializationModeTYPE(fmi3Instance instance);
 /* end::EnterInitializationMode[] */
 
+/* tag::ExitInitializationMode[] */
+typedef fmi3Status fmi3ExitInitializationModeTYPE(fmi3Instance instance);
+/* end::ExitInitializationMode[] */
+
 /* tag::EnterEventMode[] */
 typedef fmi3Status fmi3EnterEventModeTYPE(fmi3Instance instance,
                                           fmi3Boolean inputEvent,
