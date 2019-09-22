@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
 
     printf("Running Jacobian example... ");
 
-    m = fmi3Instantiate("jacobian", fmi3ModelExchange, "{8c4e810f-3da3-4a00-8276-176fa3c9f000}", NULL, &callbacks, fmi3False, fmi3False);
+    m = fmi3Instantiate("jacobian", fmi3ModelExchange, "{8c4e810f-3da3-4a00-8276-176fa3c9f000}", NULL, &callbacks, fmi3False, fmi3False, NULL);
 
     fmi3SetupExperiment(m, fmi3False, 0, 0, fmi3False, 0);
 

@@ -70,7 +70,7 @@ int main(int argc, char* argv[]) {
     printf("Running model_exchange example... ");
 
 // tag::ModelExchange[]
-m = M_fmi3Instantiate("m", fmi3ModelExchange, guid, NULL, &callbacks, fmi3False, fmi3False);
+m = M_fmi3Instantiate("m", fmi3ModelExchange, guid, NULL, &callbacks, fmi3False, fmi3False, NULL);
 // "m" is the instance name
 // "M_" is the MODEL_IDENTIFIER
 
