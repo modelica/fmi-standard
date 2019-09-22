@@ -48,7 +48,6 @@ int main(int argc, char* argv[]) {
 callbacks.logMessage          = cb_logMessage;
 callbacks.allocateMemory      = cb_allocateMemory;
 callbacks.freeMemory          = cb_freeMemory;
-callbacks.stepFinished        = NULL; // synchronous execution
 callbacks.instanceEnvironment = NULL;
 
 // instantiate both slaves

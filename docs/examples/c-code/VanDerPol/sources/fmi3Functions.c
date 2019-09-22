@@ -40,12 +40,12 @@
 // ---------------------------------------------------------------------------
 #define MASK_fmi3GetTypesPlatform        (modelStartAndEnd | modelInstantiated | modelInitializationMode \
 | modelEventMode | modelContinuousTimeMode \
-| modelStepComplete | modelStepInProgress | modelStepFailed | modelStepCanceled \
+| modelStepComplete | modelStepFailed | modelStepCanceled \
 | modelTerminated | modelError)
 #define MASK_fmi3GetVersion              MASK_fmi3GetTypesPlatform
 #define MASK_fmi3SetDebugLogging         (modelInstantiated | modelInitializationMode \
 | modelEventMode | modelContinuousTimeMode \
-| modelStepComplete | modelStepInProgress | modelStepFailed | modelStepCanceled \
+| modelStepComplete | modelStepFailed | modelStepCanceled \
 | modelTerminated | modelError)
 #define MASK_fmi3Instantiate             (modelStartAndEnd)
 #define MASK_fmi3FreeInstance            (modelInstantiated | modelInitializationMode \
@@ -111,9 +111,7 @@
 #define MASK_fmi3GetRealOutputDerivatives (modelStepComplete | modelStepFailed | modelStepCanceled \
 | modelTerminated | modelError)
 #define MASK_fmi3DoStep                  modelStepComplete
-#define MASK_fmi3CancelStep              modelStepInProgress
-#define MASK_fmi3GetStatus               (modelStepComplete | modelStepInProgress | modelStepFailed \
-| modelTerminated)
+#define MASK_fmi3GetStatus               (modelStepComplete | modelStepFailed | modelTerminated)
 #define MASK_fmi3GetRealStatus           MASK_fmi3GetStatus
 #define MASK_fmi3GetIntegerStatus        MASK_fmi3GetStatus
 #define MASK_fmi3GetBooleanStatus        MASK_fmi3GetStatus
@@ -485,26 +483,7 @@ fmi3Status fmi3DoStep(fmi3Instance instance, fmi3Float64 currentCommunicationPoi
     return doStep(comp, currentCommunicationPoint, currentCommunicationPoint + communicationStepSize);
 }
 
-fmi3Status fmi3CancelStep(fmi3Instance instance) {
-    
-    ModelInstance *comp = (ModelInstance *)instance;
-    
-    if (invalidState(comp, "fmi3CancelStep", MASK_fmi3CancelStep)) {
-        // always fmi3CancelStep is invalid, because model is never in modelStepInProgress state.
-        return fmi3Error;
-    }
-    
-    logError(comp, "fmi3CancelStep: Can be called when fmi3DoStep returned fmi3Pending."
-             " This is not the case.");
-    
-    return fmi3Error;
-}
-
 /* Inquire slave status */
-
-fmi3Status fmi3GetDoStepPendingStatus(fmi3Instance instance, fmi3Status* status, fmi3String* message) {
-    return fmi3Error;
-}
 
 fmi3Status fmi3GetDoStepDiscardedStatus(fmi3Instance instance, fmi3Boolean* terminate, fmi3Float64* lastSuccessfulTime) {
     return fmi3Error;
