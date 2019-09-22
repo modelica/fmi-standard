@@ -135,7 +135,8 @@ static fmi3Status unsupportedFunction(fmi3Instance instance, const char *fName, 
 
 fmi3Instance fmi3Instantiate(fmi3String instanceName, fmi3InterfaceType fmuType, fmi3String fmuGUID,
                             fmi3String fmuResourceLocation, const fmi3CallbackFunctions *functions,
-                            fmi3Boolean visible, fmi3Boolean loggingOn) {
+                            fmi3Boolean visible, fmi3Boolean loggingOn,
+                            const fmi3CoSimulationConfiguration* fmuCoSimulationConfiguration) {
 
 	return createModelInstance(
 		(loggerType)functions->logMessage,
