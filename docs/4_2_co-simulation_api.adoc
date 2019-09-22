@@ -677,26 +677,29 @@ Forbidden Function Calls::
 `fmi3Instantiate()`, `fmi3SetupExperiment`, `fmi3EnterInitializationMode()`, `fmi3EnterEventMode()`, `fmi3Terminate()`, `fmi3EnterConfigurationMode()`, `fmi3ExitConfigurationMode()`, `fmi3SetClock()`, `fmi3GetClock()`, `fmi3GetIntervalDecimal()`, `fmi3GetIntervalFraction`, `fmi3EnterStepMode()`, `fmi3GetOutputDerivatives()`, `fmi3DoStep()`, `fmi3DoEarlyReturn()`, `fmi3GetDoStepDiscardedStatus()`,
 
 ====== State: Event Mode
-#[TODO]: General description is still needed.#
 The master and the FMU enter this state when the master calls `fmi3ExitInitializationMode()` in state `Initialization Mode` or `fmi3ExitConfigurationMode` in state `Reconfiguration Mode` or `{ENTEREVENTMODE}` in state `Step Mode`.
+In order to handle discrete events, such as inferred or triggered clocks, the FMU is pushed into the event mode by calling `fmi3EnterEventMode()`.
+In this mode, the FMU handles the clocks events. 
 
 Allowed Function Calls::
 
 `fmi3EnterConfigurationMode()`::
 This function must not be called if the FMU contains no structural parameters (i.e. with `causality="structuralParameter"`).
 
-`fmi3EnterStepMode()`::
-#...#
 
 `fmi3NewDiscreteStates()`::
-Only after `fmi3DoStep()` returns `earlyReturn = fmi3True` a `fmi3NewDiscreteStates()` call returns `fmi3EventInfo` structure. When `eventInfo.newDiscreteStatesNeeded = fmi3True` it means that the master should stay in Event Mode and another call to `fmi3NewDiscreteStates()` is required. 
-#[TODO]: @Masoud: Revise. Taken from <<api-hybrid-co-simulation>>#
+In order to handle discrete events `fmi3NewDiscreteStates()` is called . This function returns the `fmi3EventInfo` structure. When `eventInfo.newDiscreteStatesNeeded` equals to true,the FMU should stay in Event Mode and another call to `fmi3NewDiscreteStates()` is required. 
+
+`fmi3EnterStepMode()`::
+Once all events are handled, and `fmi3NewDiscreteStates()` returns with `eventInfo.newDiscreteStatesNeeded` equals to false, the FMU should return back to the Step Mode. Unless the FMU requests to terminate the co-simulation by setting  `fmi3EventInfo.terminateSimulation` to true.
 
 `fmi3GetClock()`::
-#...#
+The status of triggered clocks should be retrieved by this function. 
+It is not allowed to call this function for inferred clocks.
 
 `fmi3SetClock()`::
-#...#
+The status of inferred clocks is set by this function. 
+It is not allowed to call this function for triggered clocks.
 
 ====== State: Step Mode
 #[TODO]: Compare content/functions with <<state-machine-co-simulation>> because here it is slightly altered#
@@ -719,10 +722,10 @@ For variables with:
 It is not allowed to call `fmi3Get{VariableType}` functions after `fmi3Set{VariableType}` functions without an `fmi3DoStep()` call in between.
 
 `fmi3GetClock()`::
-#...?#
+It is not allowed to call this function in Step Mode.
 
 `fmi3SetClock()`::
-#...?#
+It is not allowed to call this function in Step Mode.
 
 ====== State: Intermediate Update Mode
 #[TODO]: Is a clock description necessary in this state?#
