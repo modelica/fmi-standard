@@ -38,6 +38,7 @@ int main(int argc, char* argv[]) {
     fmi3CallbackFunctions callbacks;
     fmi3Instance s1, s2;
 
+    fmi3CoSimulationConfiguration coSimConfiguration;
     printf("Running CoSimulation example... ");
 
 // tag::CoSimulation[]
@@ -50,9 +51,14 @@ callbacks.allocateMemory      = cb_allocateMemory;
 callbacks.freeMemory          = cb_freeMemory;
 callbacks.instanceEnvironment = NULL;
 
+coSimConfiguration.intermediateVariableGetRequired = fmi3False;
+coSimConfiguration.intermediateInternalVariableGetRequired = fmi3False;
+coSimConfiguration.intermediateVariableSetRequired = fmi3False;
+coSimConfiguration.coSimulationMode = fmi3ModeCoSimulation;
+
 // instantiate both slaves
-s1 = s1_fmi3Instantiate("slave1", fmi3CoSimulation, guid, NULL, &callbacks, fmi3False, fmi3False);
-s2 = s2_fmi3Instantiate("slave2", fmi3CoSimulation, guid, NULL, &callbacks, fmi3False, fmi3False);
+s1 = s1_fmi3Instantiate("slave1", fmi3CoSimulation, guid, NULL, &callbacks, fmi3False, fmi3False, &coSimConfiguration);
+s2 = s2_fmi3Instantiate("slave2", fmi3CoSimulation, guid, NULL, &callbacks, fmi3False, fmi3False, &coSimConfiguration);
 
 if (s1 == NULL || s2 == NULL)
     return EXIT_FAILURE;
@@ -97,7 +103,7 @@ while ((tc < stopTime) && (status == fmi3OK)) {
     // fmi3SetReal(s2, ..., 1, &y1);
 
     // call slave s1 and check status
-    status = s1_fmi3DoStep(s1, tc, h, fmi3True);
+    status = s1_fmi3DoStep(s1, tc, h, fmi3True, NULL);
 
     switch (status) {
         case fmi3Discard:
@@ -116,7 +122,7 @@ while ((tc < stopTime) && (status == fmi3OK)) {
         break;
 
     // call slave s2 and check status as above
-    status = s2_fmi3DoStep(s2, tc, h, fmi3True);
+    status = s2_fmi3DoStep(s2, tc, h, fmi3True, NULL);
 
     // ...
 
