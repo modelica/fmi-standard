@@ -35,10 +35,9 @@ int main(int argc, char* argv[]) {
     
     const char *guid = "{8c4e810f-3da3-4a00-8276-176fa3c9f000}";
     
-    fmi3CallbackFunctions callbacks;
+    fmi3CallbackFunctions callbacks = { NULL };
     fmi3Instance s1, s2;
 
-    fmi3CoSimulationConfiguration coSimConfiguration;
     printf("Running CoSimulation example... ");
 
 // tag::CoSimulation[]
@@ -46,19 +45,13 @@ int main(int argc, char* argv[]) {
 // Initialization sub-phase
 
 // set callback functions
-callbacks.logMessage          = cb_logMessage;
-callbacks.allocateMemory      = cb_allocateMemory;
-callbacks.freeMemory          = cb_freeMemory;
-callbacks.instanceEnvironment = NULL;
-
-coSimConfiguration.intermediateVariableGetRequired = fmi3False;
-coSimConfiguration.intermediateInternalVariableGetRequired = fmi3False;
-coSimConfiguration.intermediateVariableSetRequired = fmi3False;
-coSimConfiguration.coSimulationMode = fmi3ModeCoSimulation;
+callbacks.logMessage     = cb_logMessage;
+callbacks.allocateMemory = cb_allocateMemory;
+callbacks.freeMemory     = cb_freeMemory;
 
 // instantiate both slaves
-s1 = s1_fmi3Instantiate("slave1", fmi3CoSimulation, guid, NULL, &callbacks, fmi3False, fmi3False, &coSimConfiguration);
-s2 = s2_fmi3Instantiate("slave2", fmi3CoSimulation, guid, NULL, &callbacks, fmi3False, fmi3False, &coSimConfiguration);
+s1 = s1_fmi3Instantiate("slave1", fmi3CoSimulation, guid, NULL, &callbacks, fmi3False, fmi3False, NULL);
+s2 = s2_fmi3Instantiate("slave2", fmi3CoSimulation, guid, NULL, &callbacks, fmi3False, fmi3False, NULL);
 
 if (s1 == NULL || s2 == NULL)
     return EXIT_FAILURE;

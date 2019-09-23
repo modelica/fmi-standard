@@ -5,6 +5,8 @@
 #error FMI_VERSION must be one of 1, 2 or 3
 #endif
 
+#define UNUSED(x) (void)(x);
+
 #include <stddef.h>  // for size_t
 #include <stdbool.h> // for bool
 
@@ -136,7 +138,7 @@ Status setBinary(ModelInstance* comp, ValueReference vr, const size_t size[], co
 void getContinuousStates(ModelInstance *comp, double x[], size_t nx);
 void setContinuousStates(ModelInstance *comp, const double x[], size_t nx);
 void getDerivatives(ModelInstance *comp, double dx[], size_t nx);
-double getPartialDerivative(ModelInstance *comp, ValueReference unknown, ValueReference known);
+Status getPartialDerivative(ModelInstance *comp, ValueReference unknown, ValueReference known, double *partialDerivative);
 void getEventIndicators(ModelInstance *comp, double z[], size_t nz);
 void eventUpdate(ModelInstance *comp);
 

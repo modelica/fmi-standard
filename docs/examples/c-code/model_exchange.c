@@ -62,7 +62,12 @@ int main(int argc, char* argv[]) {
 
     const char *guid = "{8c4e810f-3da3-4a00-8276-176fa3c9f000}";
 
-    fmi3CallbackFunctions callbacks = { cb_logMessage, cb_allocateMemory, cb_freeMemory, NULL, NULL };
+    fmi3CallbackFunctions callbacks = { NULL };
+    
+    callbacks.allocateMemory = cb_allocateMemory;
+    callbacks.freeMemory     = cb_freeMemory;
+    callbacks.logMessage     = cb_logMessage;
+    
     fmi3Instance m;
     fmi3Float64 x[2], x_nominal[2], der_x[2], dt = 0.01, z[1], previous_z[1];
     size_t nx = 2, nz = 0, i;

@@ -17,7 +17,7 @@ void  cb_freeMemory(fmi3InstanceEnvironment instanceEnvironment, void* obj)  {
 
 int main(int argc, char* argv[]) {
 
-    int i;
+    int i = 0;
     fmi3Float64 time = 0;
     int nx = 2;
     fmi3Float64 x[2];
@@ -25,8 +25,12 @@ int main(int argc, char* argv[]) {
     fmi3ValueReference vr_dx[] = { 1, 3 };
     fmi3Float64 dk = 1;
     fmi3Float64 J[2][2];
-    fmi3CallbackFunctions callbacks = { cb_logMessage, cb_allocateMemory, cb_freeMemory, NULL, NULL };
+    fmi3CallbackFunctions callbacks = { NULL };
     fmi3Instance m;
+    
+    callbacks.allocateMemory = cb_allocateMemory;
+    callbacks.freeMemory     = cb_freeMemory;
+    callbacks.logMessage     = cb_logMessage;
 
     printf("Running Jacobian example... ");
 
