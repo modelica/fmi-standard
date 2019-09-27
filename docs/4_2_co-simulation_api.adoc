@@ -392,7 +392,7 @@ include::../headers/fmi3FunctionTypes.h[tag=IntermediateUpdateInfo]
 ----
 
 The co-simulation master can request the FMU to end the `fmi3DoStep()` at a Newtonian time instant and to do an early return by calling the `fmi3DoEarlyReturn()` function inside the callback function `fmi3CallbackIntermediateUpdate()`.
-The co-simulation master is only allowed to call this function, if the boolean variable `fmi3IntermediateUpdateInfo->canReturnEarlyAfterIntermediateUpdate` is `fmi3True`.
+The co-simulation master is only allowed to call this function, if the boolean variable `fmi3IntermediateUpdateInfo->canReturnEarly` is `fmi3True`.
 If the master does not call `fmi3DoEarlyReturn()` the FMU continues the `{DOSTEP}` computation until the next predefined communication instant (i.e., _currentCommunicationPoint_+ _communicationStepSize_) or until the next call of `{CBIU}`.
 
 [source, c]
@@ -403,9 +403,9 @@ include::../headers/fmi3FunctionTypes.h[tag=DoEarlyReturn]
 The FMU should return early from the current `fmi3DoStep()` at the time instant defined by parameter `earlyReturnTime`.
 If the early return is conducted successfully by the FMU it must set the parameter `earlyReturn` to `fmi3True` in `fmi3DoStep()` and return `fmi3OK`.
 
-If the FMU signals a `earlyReturn` equals `fmi3True` the internal simulation time of the FMU equals the value of `intermediateUpdateTime` of the last `{CBIU}` call that signaled `canReturnEarlyAfterIntermediateUpdate` equals `fmi3true`.
+If the FMU signals a `earlyReturn` equals `fmi3True` the internal simulation time of the FMU equals the value of `intermediateUpdateTime` of the last `{CBIU}` call that signaled `canReturnEarly` equals `fmi3true`.
 
-If the `earlyReturnTime` is greater than or equal to the last signaled `intermediateUpdateTime`, the FMU may integrate up to the time instant  `earlyReturnTime`  and call `{CBIU}` with `canReturnEarlyAfterIntermediateUpdate` equals `fmi3true` to transport the new internal simulation time via `intermediateUpdateTime` to the master before it is returning from `{DOSTEP}`.
+If the `earlyReturnTime` is greater than or equal to the last signaled `intermediateUpdateTime`, the FMU may integrate up to the time instant  `earlyReturnTime`  and call `{CBIU}` with `canReturnEarly` equals `fmi3true` to transport the new internal simulation time via `intermediateUpdateTime` to the master before it is returning from `{DOSTEP}`.
 
 If `earlyReturnTime` is less than the last signaled `intermediateUpdateTime`, the co-simulation master can decide if a rollback of the FMU to reach the `earlyReturnTime` time is required. Note that `Event Mode` is not supported in `fmi3ModeCoSimulation`.
 
@@ -437,7 +437,7 @@ include::../headers/fmi3FunctionTypes.h[tag=IntermediateUpdateInfo]
 
 * 	`{IUTIME}` is the internal simulation time of the FMU at which the callback has been called.
 If an event happens or a triggered clock ticks, `{IUTIME}` is the time of event or triggered clock tick.
-If the FMU signals an `earlyReturn` equals `fmi3True` after returning from `{DOSTEP}` then `{IUTIME}` is the internal simulation time of the FMU of the last `{CBIU}` call that signaled `canReturnEarlyAfterIntermediateUpdate` equals `fmi3true`.
+If the FMU signals an `earlyReturn` equals `fmi3True` after returning from `{DOSTEP}` then `{IUTIME}` is the internal simulation time of the FMU of the last `{CBIU}` call that signaled `canReturnEarly` equals `fmi3true`.
 //TODO-API: Masoud: I do not understand this?
 //`{IUTIME}` is either the exact `earlyReturnTime` required by the master for the break or the closest time greater than the `earlyReturnTime` required by the master.
 //If this time is not exactly the required `earlyReturnTime`, the master can rollback the FMU to precisely reach this event time.
@@ -458,8 +458,8 @@ In this case, `earlyReturnTime` argument of `{DER}` is ignored.
 
 * when `intermediateStepFinished` is `fmi3True`, the FMU signals that the internal solver step for this time instant is complete.
 
-*   when `canReturnEarlyAfterIntermediateUpdate` is `fmi3True` the master can request the FMU to return early at the current `{IUTIME}` time instant via calling `{DER}` within the callback function `{CBIU}`.
-If `canReturnEarlyAfterIntermediateUpdate` is `fmi3False` the FMU will not do the early return, regardless of the master request.
+*   when `canReturnEarly` is `fmi3True` the master can request the FMU to return early at the current `{IUTIME}` time instant via calling `{DER}` within the callback function `{CBIU}`.
+If `canReturnEarly` is `fmi3False` the FMU will not do the early return, regardless of the master request.
 
 Note that only the first discontinuity event at a Newtonian time instant shall be signaled that way. But in `Event Mode`, there may be an event iteration at a Newtonian time instant and have super dense time instants.
 
@@ -682,7 +682,7 @@ When `intermediateUpdateInfo->clocksTicked` is `fmi3True`, the master should pus
 In the Event mode, the master should call this function for gathering all clock related information about ticking triggered clocks at `intermediateUpdateInfo->intermediateUpdateTime`.
 
 `fmi3DoEarlyReturn()`::
-`intermediateUpdateInfo->canReturnEarlyAfterIntermediateUpdate` is `fmi3True`, the co-simulation master can request the FMU to end the `fmi3DoStep()` and to do an early return by calling this function.
+`intermediateUpdateInfo->canReturnEarly` is `fmi3True`, the co-simulation master can request the FMU to end the `fmi3DoStep()` and to do an early return by calling this function.
 
 `fmi3SetXXX()`::
 if `intermediateUpdateInfo->intermediateVariableSetAllowed` is equal to `fmi3True`, the value of intermediate variables can be set.
