@@ -784,21 +784,21 @@ If the flag `providesScheduledExecutionSimulation` equals false, it is not allow
 
 If no inferred clocks are defined by the FMU it is not allowed to set `providesScheduledExecutionSimulation` to true in the modelDescription.xml.
 
-Error, reset or terminate information is a global state of the FMU. If e.g. an `fmi3XXX` function returns `fmi3Discard` or `fmi3Error` this is also assumed for all active or preempted model partitions.
+Error, reset or terminate information is a global state of the FMU. If e.g. an function returns `fmi3Discard` or `fmi3Error` this is also assumed for all active or preempted model partitions.
 In case of `fmi3Discard` or `fmi3Error` no repetition of the step is possible, the only possible way to go forward is to enter the `terminated`state and to end or to reset the simulation of - if supported - to set the FMU back to a former state.
 
 ===== Transfer of Input / Output Values and Parameters in fmi3ModeScheduledExecutionSimulation
 
 The simulation master sets and gets variable values as defined in section 4.2.
 
-Before scheduling a model partition it is allowed to set all variables assigned to that model partition via its associated clock (including all global variables that are not associated to a clock) via `fmi3SetXXX()`.
-After the computation of a model partition (call of `fmi3ActivateModelPartition()` with the clockReference of the clock that is associated to the model partition) all variables that are assigned to this model partition (including all global variables that are not associated to a clock) can be retrieved via `fmi3GetXXX()`.
+Before scheduling a model partition it is allowed to set all variables assigned to that model partition via its associated clock (including all global variables that are not associated to a clock) via `fmi3Set{VariableType}()`.
+After the computation of a model partition (call of `fmi3ActivateModelPartition()` with the clockReference of the clock that is associated to the model partition) all variables that are assigned to this model partition (including all global variables that are not associated to a clock) can be retrieved via `fmi3Get{VariableType}()`.
 Set/get operations have to be atomic for a single variable.
 
 _[The value of global variables can be influenced by more than one model partition if multiple model partitions are active at the same time.]_
 
 The computational effort has to be predictable, thus all computationally expensive operations needed to calculate a model partition have to be contained within the `fmi3ActivateModelPartition()` function.
-The simulation master can assume that `get/setXXX` operations are not computationally expensive.
+The simulation master can assume that `fmi3Get{VariableType} and fmi3Set{VariableType}` operations are not computationally expensive.
 In mode `fmi3ModeScheduledExecutionSimulation` the handling of `fmi3CallbackIntermediateUpdate()` callbacks is the same as in section <<clocked-co-simulation>>.
 The only difference is that an early return has no meaning in this mode and  no additional event handling based on `fmi3NewDiscreteStates()` is conducted.
 All internal events that shall be handled by the co-simulation master are signaled via `fmi3CallbackIntermediateUpdate()`.
@@ -835,9 +835,15 @@ The value for the `fmi3ActivateModelPartition()` parameter `activationTime` is t
 
 Refer to <<math-scheduled-execution-simulation>> and <<clock-types-for-evaluation-of-clocked-model-partitions>>.
 
-_[This is a different timing concept compared to `fmi3DoStep()` calls.
-This is required to cover clock ticks for aperiodic inferred clocks that tick at time instances that are not predictable in advance for the simulation master.
-Typically, hardware I/O or virtual ECU software events belong to this category.]_
+This is a different timing concept compared to `fmi3DoStep()` calls.
+A `fmi3ActivateModelPartition()` call will compute the results of the model partition defined by clockReference (i.e. valueReference of the variable that defines a clock) for the current clock tick latexmath:[t_i].
+
+The value for the `fmi3ActivateModelPartition()` parameter `activationTime` is the clock tick time latexmath:[t_i] from the assigned inferred clock (which is known to the co-simulation master).
+Refer to the clock time progress definition (<<clock-types-for-evaluation-of-clocked-model-partitions>>) for periodic clocks.
+
+If required, the FMU can internally derive the clock interval stem:[\Delta T_i] based on the last clock tick time stem:[t_{i-1}] i.e. last activationTime for this clockReference (based on last `fmi3ActivateModelPartition()` call)
+
+It is not allowed to call `fmi3ActivateModelPartition()` for a clockReference more than once for the same activationTime latexmath:[t_i].
 
 It is not allowed to call `fmi3ActivateModelPartition()` for a clockReference (i.e. valueReference of clock variable) more than once for the same activationTime latexmath:[t_i].
 
@@ -985,9 +991,9 @@ _[TODO non-normative table of states and function calls]_
 ===== Preemption Support
 
 For real-time applications the simulation time equals the real wall clock time, thus each `fmi3ActivateModelPartition()` computation step has to be finished in real-time within its current period time length (computation time is not only defined by the runtime of `fmi3ActivateModelPartition()` but also by the time for setting and getting variables and related operations).
-Usually a preemptive scheduling of the `fmi3ActivateModelPartition()`, `fmi3GetXXX()`, `fmi3SetXXX()` calls is required for respecting this constraint.
+Usually a preemptive scheduling of the `fmi3ActivateModelPartition()`, `fmi3Get{VariableType}()`, `fmi3Set{VariableType}()` calls is required for respecting this constraint.
 
-The FMU’s code has to be prepared for being able to correctly handle preemptive calls of `fmi3ActivateModelPartition()`,`fmi3GetXXX()`,`fmi3SetXXX()`.
+The FMU’s code has to be prepared for being able to correctly handle preemptive calls of `fmi3ActivateModelPartition()`,`fmi3Get{VariableType}()`,`fmi3Set{VariableType}()`.
 That requires a secured internal and external access to global states and variable values.
 Thus in this co-simulation mode a support for a correct handling of the preemption of model partition computations is required.
 That also requires that the FMU reports the active state of a triggered clock only with the first call of `fmi3GetClock()` for a specific activation of this clock and sets the reported activation state immediately back to false for the following `fmi3GetClock()` calls for that clock until this triggered clock is internally activated again.
@@ -998,7 +1004,7 @@ So the FMU exporting tool does not need to take care for that (except for prepar
 
 _[If only one single model partition (inferred clock) is available via the interface of an FMU, preemptive calls of the related `fmi3ActivateModelPartition()` function are possible by default since there are no external cross dependencies within one model partition between communication points.]_
 
-Based on the inferred clock settings defined in the XML the master calls `fmi3setXXX()`, `fmi3ActivateModelPartition()`, `fmi3getXXX()` calls.
+Based on the inferred clock settings defined in the XML the master calls `fmi3set{VariableType}()`, `fmi3ActivateModelPartition()`, `fmi3get{VariableType}()` calls.
 Set/get calls for each task are only allowed for variables that are associated to the inferred clock associated to that task or – here preemption issues become important – to variables that are associated to no clocks (global variables), based on the XML information (see 4.4.3).
 
 _[The recommendation is to avoid global variable associations as much as possible in the XML.
@@ -1006,7 +1012,7 @@ It is also recommended to reduce dependencies (defined in XML model structure) b
 
 The co-simulation master has no knowledge about the FMU internal communication between the model partitions of a single FMU and does not handle it.
 
-The simulation master schedules the `fmi3ActivateModelPartition()` (as well as related get/setXXX) calls based on given priorities for inferred clocks defined in the modelDescription.xml.
+The simulation master schedules the `fmi3ActivateModelPartition()` (as well as related fmi3Get{VariableType} and fmi3Set{VariableType}) calls based on given priorities for inferred clocks defined in the modelDescription.xml.
 
 Priority (see <<clock-type-definition>>):
 
