@@ -7,6 +7,7 @@
    It declares data and function types for FMI 2.0
 
    Revisions:
+   - Sep. 30, 2019: Changed license text to BSD-2-clause without additions
    - Jul.  5, 2019: Remove const modifier from fields of fmi2CallbackFunctions  (#216)
    - Sep.  6, 2018: Parameter names added to function prototypes
    - Apr.  9, 2014: all prefixes "fmi" renamed to "fmi2" (decision from April 8)
