@@ -2,11 +2,12 @@
 #define fmi2TypesPlatform_h
 
 /* Standard header file to define the argument types of the
-   functions of the Functional Mock-up Interface 2.0.
+   functions of the Functional Mock-up Interface 2.0.1
    This header file must be utilized both by the model and
    by the simulation engine.
 
    Revisions:
+   - Sep. 29, 2019: License text changed to BSD-2-clause without addions
    - Apr.  9, 2014: all prefixes "fmi" renamed to "fmi2" (decision from April 8)
    - Mar   31, 2014: New datatype fmiChar introduced.
    - Feb.  17, 2013: Changed fmiTypesPlatform from "standard32" to "default".
@@ -39,7 +40,7 @@
 
 
    Copyright (C) 2008-2011 MODELISAR consortium,
-                 2012-2018 Modelica Association Project "FMI"
+                 2012-2019 Modelica Association Project "FMI"
                  All rights reserved.
 
    This file is licensed by the copyright holders under the 2-Clause BSD License
