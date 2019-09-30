@@ -3,7 +3,7 @@
 
 /* This header file must be utilized when compiling a FMU.
    It defines all functions of the
-         FMI 2.0 Model Exchange and Co-Simulation Interface.
+         FMI 2.0.1 Model Exchange and Co-Simulation Interface.
 
    In order to have unique function names even if several FMUs
    are compiled together (e.g. for embedded systems), every "real" function name
@@ -21,7 +21,8 @@
    names are used and "FMI2_FUNCTION_PREFIX" must not be defined.
 
    Revisions:
-   - Apr.  9, 2014: all prefixes "fmi" renamed to "fmi2" (decision from April 8)
+   - Sep. 29, 2019: License changed to 2-clause BSD License (without extensions)
+   - Apr.  9, 2014: All prefixes "fmi" renamed to "fmi2" (decision from April 8)
    - Mar. 26, 2014: FMI_Export set to empty value if FMI_Export and FMI_FUNCTION_PREFIX
                     are not defined (#173)
    - Oct. 11, 2013: Functions of ModelExchange and CoSimulation merged:
@@ -102,7 +103,7 @@
 
 
    Copyright (C) 2008-2011 MODELISAR consortium,
-                 2012-2018 Modelica Association Project "FMI"
+                 2012-2019 Modelica Association Project "FMI"
                  All rights reserved.
 
    This file is licensed by the copyright holders under the 2-Clause BSD License
