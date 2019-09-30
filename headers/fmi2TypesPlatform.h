@@ -7,8 +7,8 @@
    by the simulation engine.
 
    Revisions:
-   - Sep. 29, 2019: License text changed to BSD-2-clause without addions
-   - Apr.  9, 2014: all prefixes "fmi" renamed to "fmi2" (decision from April 8)
+   - Sep. 29, 2019:  License changed to 2-clause BSD License (without extensions)
+   - Apr.  9, 2014:  All prefixes "fmi" renamed to "fmi2" (decision from April 8)
    - Mar   31, 2014: New datatype fmiChar introduced.
    - Feb.  17, 2013: Changed fmiTypesPlatform from "standard32" to "default".
                      Removed fmiUndefinedValueReference since no longer needed

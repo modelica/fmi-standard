@@ -21,8 +21,8 @@
    names are used and "FMI2_FUNCTION_PREFIX" must not be defined.
 
    Revisions:
-   - Sep. 29, 2019: adapt license text to BSD-2-clause without additions
-   - Apr.  9, 2014: all prefixes "fmi" renamed to "fmi2" (decision from April 8)
+   - Sep. 29, 2019: License changed to 2-clause BSD License (without extensions)
+   - Apr.  9, 2014: All prefixes "fmi" renamed to "fmi2" (decision from April 8)
    - Mar. 26, 2014: FMI_Export set to empty value if FMI_Export and FMI_FUNCTION_PREFIX
                     are not defined (#173)
    - Oct. 11, 2013: Functions of ModelExchange and CoSimulation merged:
