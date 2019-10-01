@@ -309,10 +309,9 @@ The variables computed by_ latexmath:[\mathbf{f}_{doStep}] _can be inquired by_ 
 #[TODO: This is basically non-normative text that describes a use case where this mechanisms might be usefull BUT it is not a specification.]#
 #[TODO: The description should not use api calls but describe the idea. api functions are introduced in the api section later]#
 
+If an FMU prematurely stops its current step integration computation due to an unpredictable internal event before the normal end of the step calculation, all other concurrently running FMUs are to be stopped as soon as possible in order to minimize the time needed for the co-simulation master to resynchronize all the FMUs at the same event time.
 
-If an FMU prematurely stops its current `{DOSTEP}`  computation due to an unpredictable internal event before the normal end of the `{DOSTEP}`, i.e. before reaching `currentCommunicationPoint + communicationStepSize`, all other concurrently running FMUs are to be stopped as soon as possible in order to minimize the time needed for the co-simulation master to resynchronize all the FMUs at the same event time.
-
-On a multi-node architecture, in particular, significant co-simulation speed-up may be obtained if the master can avoid waiting until the end of the slowest `{DOSTEP}` when many FMUs are integrating in parallel.
+On massive multi-FMU architectures, significant co-simulation speed-up may be obtained if the master can avoid waiting until the end of the slowest step integration when many FMUs are integrating in parallel.
 
 In this context based on parallel calculations, the following figure illustrates different possibilities to synchronize FMUs at the same event time.
 
@@ -327,29 +326,17 @@ In the case of FMU4, the current `{DOSTEP}` has been interrupted at latexmath:[t
 [caption="Figure 12: "]
 image::images/earlyreturn.png[width=100%, align="center"]
 
-`{DOSTEP}`` routines run in parallel on different cores, so that each FMU starts integration from communication point latexmath:[t_{i}] to reach the next communication point latexmath:[t_{i+1}].
-Assuming an unexpected internal event is detected at latexmath:[t^{'}_{i+1}< t_{i+1}] during FMU~1~ integration, the master is informed of an early return using `{CBIU}` callback function. 
+
+Step integrations are executed in parallel, so that each FMU starts integration from communication point latexmath:[t_{i}] to reach the next communication point latexmath:[t_{i+1}].
+Assuming an unexpected internal event is detected at latexmath:[t^{'}_{i+1}< t_{i+1}] during FMU~1~ integration, the master is informed of this early return. 
 So now the master would like avoid other FMUs exceed the event time, since all FMUs should be resynchronized at the event time which will be the next new communication point.
 On the figure, ongoing FMU computations can be broken either immediately (refer to case 2 for FMU~3~) or at latexmath:[t^{'}_{i+1}] (refer to case 3 for FMU~4~). 
 Only FMU~2~ and FMU~3~ will be rolled back to latexmath:[t^{'}_{i+1}] by the Master as FMU~1~ and FMU~4~ have already reached the new communication point latexmath:[t^{'}_{i+1}].
 Due to the early-return mechanism, the overall execution time of the simulation is reduced.
 
+Each ongoing FMU stops its integration either exactly at the broken time given by the master or immediately after its current intermediate step if this time is already out-of-date.
 
-In order to stop the execution of ongoing `{DOSTEP}`, the master invokes `{DER}` during (i.e. within)  the `{CBIU}` callback function and forces the FMU to do an early return.
-
-The prototype of this function whose return code is always `fmi3OK`, follows: 
-
-[source, c]
-----
-include::../headers/fmi3FunctionTypes.h[tag=DoEarlyReturn]
-----
-
-After returning from the callback function, if the `{DER}` has been invoked inside the callback function, the FMU stops the integration either exactly at `earlyReturnTime` (if `current-FMU-time {lt}= earlyReturnTime`) or immediately after the its next internal intermediate step (if `current-FMU-time {gt} earlyReturnTime`). 
-//TODO-API: Why next internal intermediate step and not at the current intermediate step!?
-
-Afterwards, the FMU goes into the `Step Mode` state and  `{DOSTEP}`  returns and signals the premature stop (early-return) to the master by setting `earlyReturn` parameter of `{DOSTEP}` to `fmi3True`.
-If the FMU signals a `earlyReturn` equals `fmi3True` the internal simulation time of the FMU equals the value of `intermediateUpdateTime` of the last `{CBIU}` call that has signaled `canReturnEarly` equals `fmi3true`.
-//TODO-API: Is my assumption correct? Is this intermediateUpdateTime the simulation time of the FMU the master can assume after an successful early return!? If not, what is the early return simulation time?
+Afterwards, the FMU goes into the `Step Mode` state and a new step integration returns and signals the premature stop (early-return) to the master.
 
 ==== Co-Simulation with Clock Support [[math-clocked-co-simulation]]
 
