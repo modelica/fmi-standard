@@ -754,7 +754,7 @@ Element `Terminals` of `fmiModelDescription` is defined as:
 
 image::images/fmiModelDescription_Terminals_Schema.png[width=50%, pdfwidth=50%, align="center"]
 
-All instances of `Terminal` are listed in the `Terminals` sequence:
+All instances of `Terminal` have the type `fmi3Terminal` and are listed in the `Terminals` sequence:
 
 image::images/fmiModelDescription_Terminals_Terminal_Schema.png[width=60%, pdfwidth=60%, align="center"]
 
@@ -779,8 +779,8 @@ There is a sequence of terminal member variables and nested terminals in the `Te
 _[Examples: Modelica connectors and Simpack Markers]_
 
 |"bus"
-|Matching of the variables is based on `memberName`. An importing tool should connect terminals only if some or all terminal member variables are present and match.
-[TODO: Thats not correct. The terminals could be connected of there is no matching signal! Now it says >0 ("some or all").]
+|Matching of the variables is based on `memberName`. An importing tool may connect terminals if some or no terminal member variables are present.
+
 
 _[Examples: Modelica expandable connectors and Simulink buses]_
 
@@ -821,9 +821,9 @@ _[Tools which apply sequence based matching should also provide unique member na
 One ModelVariable can be part of several terminals, except from variables with causality "input". 
 [TODO: actually not correct. can be considered as alias of an input. the importing tool has to detect that if one input is set (= one is connected to an output), then there is no degree of freedom left. if more terminals which have this input as terminal member variable are connected, then the information flow is similar to an output]
 
-[TODO: explicitly state that the prefix <terminalName> doesnt mean that the variable is a TerminalMemberVariable?]
-
 _[The suggested variable naming scheme for the structured naming convention is: <ModelVariable name> = <terminal name>.<memberName>_
+
+_The prefix "<terminalName>." doesn't mean that the variable is a TerminalMemberVariable._
 
 _Example 1: <ModelVariable name> is "portA.U", <terminal name> is "portA", <memberName> is "U"._
 
@@ -832,7 +832,9 @@ _Example 2: <ModelVariable name> is "hierarchConn.innerConn.U", <outer terminal 
 _The suggested variable naming scheme for the non-structured naming convention is: <ModelVariable name> = <memberName>_
 
 _Matching is not restricted by variability, causality or variable type. Example: A fixed variable may be connected to a tunable variable, a variable of type Real may be connected to a variable of type Integer.
-However, it is recommended that the variable types and variabilities are equal.
+However, it is recommended that the variable types and variabilities are equal._
+
+_The `matchingRule` refers to the `TerminalMemberVariables` on the same level only. Nested terminals can have different `matchingRules`._
 
 _There is no special handling of derivatives. If a derivative is present as a terminal member variable then it is considered as normal member variable. Additional information about derivatives can provided using the `derivative` attribute]_
 
@@ -850,8 +852,6 @@ Restricted to input and output, parameter and calculatedParameter.
 
 
 _[Example: Signal flow, parameter propagation, equality checks]_
-|"across"
-| Kirchhoff's voltage law [TODO: writeme]
 |"inflow" / "outflow"
 |Variables which fulfill Kirchhoff’s current law.
 
@@ -869,7 +869,7 @@ _[The signal `variableKind` can be applied for different use cases. The first us
 
 _The signal flow can cause algebraic loops. If variables in connected terminals have the causality output, then an importing tool may iterate an undefined input of an FMU to ensure that the connected output values are equal._
 
-_Another use case is the parameter propagation. If a variable in both connected terminals has the causality parameter, then an importing tool could present only one of those parameters to the user, and propagate the value to the other FMU. If only one of the variables has causality parameter, and the other is a constant output or calculatedParameter, then the importing tool could also propagate the parameter value without presenting a parameter to the user. One example of use would be the name of a substance flowing through a pipe. If the fluid flows from one pipe FMU to another, the substance should be the same. This substance name could be propagated over several FMUs._
+_Another use case is the parameter propagation. If a variable in both connected terminals has the causality parameter, then an importing tool could ask the user for the value of one of those parameters only, and propagate this value to the other FMU. If only one of the variables has causality parameter, and the other is a constant output or calculatedParameter, then the importing tool could also propagate the parameter value without presenting a parameter to the user. One example of use would be the name of a substance flowing through a pipe. If the fluid flows from one pipe FMU to another, the substance should be the same. This substance name could be propagated over several FMUs._
 
 _Finally the `variableKind` "signal" can be applied to implement compatibility checks. If for example the causality of the variables in connected terminals have the variability constant, then the imporing tool can implement an equality assertion. This is also possible with calculated parameters. One example of use would be the cross sectional flow area in pipes which is calculated from geometry parameters. In some cases a change in the cross sectional flow area should be regarded in the momentum equation, and the connection has to be deemed incompatible.
 ]_
@@ -897,7 +897,6 @@ The attribute `inStreamValueReference` and `outStreamValueReference` are used to
 
 _[An example of use for stream is a gas mixture flow. The gas composition could be implemented as a mass fraction vector. The `outStreamValueReference` refers to latexmath:[portA.q_\textit{outStream}\textit{[\]}] and the `inStreamValueReference` refers to latexmath:[portA.q_\textit{inStream}\textit{[\]}]. The `inStreamMemberName` and `outStreamMemberName` are "latexmath:[q_\textit{inStream}\textit{[\]}]" and "latexmath:[q_\textit{outStream}\textit{[\]}]"._
 
-[TODO: fix brackets in equations]
 
 _Balance equation for transported quantities:_
 
@@ -923,7 +922,7 @@ E.g. if the outStream name is "h_outflow" then the inStream name should be "h_ou
 
 The graphical representation of the FMU and terminals are needed in order to more easily comprehend the meaning of connected FMUs and to help an importing tool to display the terminals and the FMU icon in the way the exporter intended.
 
-The graphical representation is fully optional. The graphical representaiton of terminals is separate from the terminal definitions in the `Terminals` element.
+The graphical representation is fully optional. The graphical representation of terminals is separate from the terminal definitions in the `Terminals` element.
 
 There are three optional elements in the `GraphicalRepresentation`:
 
