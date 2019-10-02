@@ -217,8 +217,7 @@ typedef fmi3Status fmi3EnterEventModeTYPE(fmi3Instance instance,
                                           fmi3Boolean inputEvent,
                                           fmi3Boolean stepEvent,
                                           fmi3Boolean stateEvent,
-                                          fmi3Boolean timeEvent,
-                                          fmi3Float64 eventTime);
+                                          fmi3Boolean timeEvent);
 /* end::EnterEventMode[] */
 
 /* tag::Terminate[] */
