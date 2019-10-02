@@ -816,16 +816,18 @@ image::images/fmi3Terminal_TerminalMemberVariable_Schema.png[width=50%, pdfwidth
 The normalized string `variableKind` is used to provide general information about the variable. This information defines how the connection of this variable has to be implemented (e.g. Kirchhoff's current law or common signal flow).
 
 The normalized string `memberName` is the representation in tools which apply name-based matching in connections. The member name has to be unique in a terminal.
-_[Tools which apply sequence based matching should also provide unique member names, so that all importing tools can use the same member names. An importing tool may use the member name to identify a specific alias of a set of ModelVariables with the same `valueReference`.]_
 
-One ModelVariable can be part of several terminals, except from variables with causality "input". 
-[TODO: actually not correct. can be considered as alias of an input. the importing tool has to detect that if one input is set (= one is connected to an output), then there is no degree of freedom left. if more terminals which have this input as terminal member variable are connected, then the information flow is similar to an output]
+The normalized string `variableName` is used to identify the terminal member variable in the list of `ModelVariables`. _[The `name` attribute of the model variable is equal to the `variableName` of the `TerminalMemberVariable`. An importing tool may use the `variableName` attribute to identify a specific alias to get additional information, such as minimum, maximum, and nominal values.]_
 
-_[The suggested variable naming scheme for the structured naming convention is: <ModelVariable name> = <terminal name>.<memberName>_
+One variable can be part of several terminals, which is considered aliasing according to the rules of <<aliasing-of-variables>>.
+
+_[Tools which apply sequence based matching should also provide unique member names, so that all importing tools which use name based matching use the same member names.
+
+The suggested variable naming scheme for the structured naming convention is: <ModelVariable name> = <terminalName>.<memberName>_
 
 _The prefix "<terminalName>." doesn't mean that the variable is a TerminalMemberVariable._
 
-_Example 1: <ModelVariable name> is "portA.U", <terminal name> is "portA", <memberName> is "U"._
+_Example 1: <ModelVariable name> is "portA.U", <terminalName> is "portA", <memberName> is "U"._
 
 _Example 2: <ModelVariable name> is "hierarchConn.innerConn.U", <outer terminal name> is "hierarchConn", <inner terminal name> is "innerConn", <memberName> is "U"._
 
@@ -836,7 +838,8 @@ However, it is recommended that the variable types and variabilities are equal._
 
 _The `matchingRule` refers to the `TerminalMemberVariables` on the same level only. Nested terminals can have different `matchingRules`._
 
-_There is no special handling of derivatives. If a derivative is present as a terminal member variable then it is considered as normal member variable. Additional information about derivatives can provided using the `derivative` attribute]_
+_There is no special handling of derivatives. If a derivative is present as a terminal member variable then it is considered as normal member variable. 
+If a derivative is not a terminal member variable, then this information may still be used by an importing tool.]_
 
 
 The predefined variable kinds are:
@@ -893,9 +896,9 @@ This element is used for variables which fulfill the balance equation for transp
 
 The Stream concept is described in the appendix D.3 of the Modelica specification. Only one terminal member variable with the `variableKind` "inflow" or "outflow" per terminal is allowed, if a TerminalStreamMemberVariable is present. _[More sophisticated structures can be implemented using hierarchical terminals.]_
 
-The attribute `inStreamValueReference` and `outStreamValueReference` are used to identify the `ModelVariable`. If the referred model variables are arrays, then the length size has to be equal. A terminal may have more than one TerminalStreamMemberVariable. The `inStreamMemberName` and `outStreamMemberName` describe the terminal member name, similar to the `memberName` attribute in the `TerminalMemberVariable`.
+The attribute `inStreamVariableName` and `outStreamVariableName` are used to identify the `ModelVariables`. If the referenced model variables are arrays, then the size has to be equal. A terminal may have more than one TerminalStreamMemberVariable. The `inStreamMemberName` and `outStreamMemberName` describe the terminal member name for matching purposes, similar to the `memberName` attribute in the `TerminalMemberVariable`.
 
-_[An example of use for stream is a gas mixture flow. The gas composition could be implemented as a mass fraction vector. The `outStreamValueReference` refers to latexmath:[portA.q_\textit{outStream}\textit{[\]}] and the `inStreamValueReference` refers to latexmath:[portA.q_\textit{inStream}\textit{[\]}]. The `inStreamMemberName` and `outStreamMemberName` are "latexmath:[q_\textit{inStream}\textit{[\]}]" and "latexmath:[q_\textit{outStream}\textit{[\]}]"._
+_[An example of use for an array of stream variables is a gas mixture flow. The gas composition could be implemented as a mass fraction vector. The `outStreamVariableName` refers to latexmath:[portA.q_\textit{outStream}\textit{[\]}] and the `inStreamVariableName` refers to latexmath:[portA.q_\textit{inStream}\textit{[\]}]. The `inStreamMemberName` and `outStreamMemberName` are "latexmath:[q_\textit{inStream}\textit{[\]}]" and "latexmath:[q_\textit{outStream}\textit{[\]}]"._
 
 
 _Balance equation for transported quantities:_
@@ -1490,6 +1493,8 @@ With this interpretation, changing parameters online is "clean", as long as thes
 _FMI for Co-Simulation:_
 _Changing of tunable parameters is allowed before an `fmi3DoStep` call (so, whenever an input can be set with `fmi3SetXXX`) and before `fmi3ExitInitializationMode` is called (that is before and during Initialization Mode).
 The FMU internally carries out event handling if necessary.]_
+
+===== Aliasing of Variables [[aliasing-of-variables]]
 
 Variables of the same base type (like `fmi3Real`) that have identical `valueReference` definitions are called "alias" variables.
 The main purpose of "alias" variables is to enhance efficiency.
