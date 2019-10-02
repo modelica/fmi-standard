@@ -390,7 +390,7 @@ include::../headers/fmi3FunctionTypes.h[tag=IntermediateUpdateInfo]
 
 The co-simulation master can request the FMU to end the `fmi3DoStep()` at a Newtonian time instant and to do an early return by calling the `fmi3DoEarlyReturn()` function inside the callback function `fmi3CallbackIntermediateUpdate()`.
 The co-simulation master is only allowed to call this function, if the boolean variable `fmi3IntermediateUpdateInfo->canReturnEarly` is `fmi3True`.
-If the master does not call `fmi3DoEarlyReturn()` the FMU continues the `{DOSTEP}` computation until the next predefined communication instant (i.e., _currentCommunicationPoint_+ _communicationStepSize_) or until the next call of `{CBIU}`.
+If the master does not call `fmi3DoEarlyReturn()` the FMU continues the `fmi3DoStep()` computation until the next predefined communication instant (i.e., _currentCommunicationPoint_+ _communicationStepSize_) or until the next call of `{CBIU}`.
 
 [source, c]
 ----
@@ -652,8 +652,14 @@ This function returns the `fmi3EventInfo* eventInfo` structure.
 When `eventInfo.newDiscreteStatesNeeded` equals to true, the FMU should stay in Event Mode and another call to `fmi3NewDiscreteStates()` is required.
 
 `fmi3EnterStepMode()`::
-Once all events are handled and `fmi3NewDiscreteStates()` returns with `eventInfo.newDiscreteStatesNeeded` equals to false, the FMU should return back to the Step Mode.
-Unless the FMU requests to terminate the co-simulation by setting  `fmi3EventInfo->terminateSimulation` to true.
+If the FMU is in the Event mode, the FMU should handle active events or clocks. Once all events are handled and `fmi3NewDiscreteStates()` returns with `eventInfo.newDiscreteStatesNeeded` equals to false, the FMU should return back to the Step Mode, unless the FMU requests to terminate the co-simulation by setting  `fmi3EventInfo->terminateSimulation` to true.
+In order to push the FMU into the Step mode, the `fmi3EnterStepMode()` function is used. 
+In this case, a new step can be started from the current communication point, which is actually the event time instant.
+
+If the FMU is in the Step Discarded Mode, the `fmi3EnterStepMode()` function pushes the FMU from Step Discarded Mode to Step Mode.
+Note that in the step mode, the master may change again FMU inputs and parameters, or even in case of HybridCosimulation push the FMU into the event mode or reconfiguration mode to try the discarded step again.
+In this case, a new step can be started from `lastSuccessfulTime` which is retrieved by the `fmi3GetDoStepDiscardedStatus` function.
+
 
 `fmi3GetClock()`::
 The status of  clocks can be inquired by this function.
@@ -677,11 +683,6 @@ This state in hybrid co-simulation differ from co-simulation described in sectio
 
 Allowed Function Calls::
 
-`fmi3GetClock()`::
-# Masoud: To be discussed. Not sure if this function is needed inside the callback.#
-When `intermediateUpdateInfo->clocksTicked` is `fmi3True`, the master should push the FMU into the event mode. 
-In the Event mode, the master should call this function for gathering all clock related information about ticking triggered clocks at `intermediateUpdateInfo->intermediateUpdateTime`.
-
 `fmi3DoEarlyReturn()`::
 `intermediateUpdateInfo->canReturnEarly` is `fmi3True`, the co-simulation master can request the FMU to end the `fmi3DoStep()` and to do an early return by calling this function.
 
@@ -690,6 +691,9 @@ if `intermediateUpdateInfo->intermediateVariableSetAllowed` is equal to `fmi3Tru
 
 `fmi3GetXXX()`::
 if `intermediateUpdateInfo->intermediateVariableGetAllowed` is equal to `fmi3True`, the value of intermediate variables can be inquired.
+
+Forbidden Function Calls::
+All API functions not listed in the allowed function list, including `fmi3GetClock()` and  `fmi3SetClock()` are forbidden in this mode.
 
 ====== State: Reconfiguration Mode
 This state in hybrid co-simulation does not differ from co-simulation described in section <<state-reconfiguration-mode-co-simulation>>.
