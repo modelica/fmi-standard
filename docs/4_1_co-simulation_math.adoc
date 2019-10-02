@@ -70,6 +70,11 @@ The details of the flow are given in the state machine of the calling sequences 
 
 ===== Mathematical Model Co-Simulation
 
+_[Function `fmi3Set{VariableType}` used in the document, is an abbreviation for functions `fmi3SetFloat64`, `fmi3SetInt8`, `fmi3SetInt16`, `fmi3SetString` and for other base variable types respectively - with the exception of clocks.
+Function `fmi3Get{VariableType}` is an abbreviation for functions `fmi3SetFloat64`, `fmi3SetInt8`, `fmi3SetInt16`, `fmi3SetString` and for other base variable types respectively - with the exception of clocks.
+]_
+#TODO: Move to better place of function abbreviation definition in document#
+
 This section contains a formal mathematical model of a Co-Simulation FMU.
 The following fundamental assumptions are made:
 
@@ -226,14 +231,11 @@ The following color coding is used in the table:
 [cols="1,8"]
 |====
 |[silver]#*grey*# |If a variable in an argument list is marked in grey, then this variable is not changing in this mode and just the last calculated value from the previous mode is internally used.
-For an input argument it is not allowed to call `fmi3SetXXX`.
-For an output argument, calling `fmi3GetXXX` on such a variable returns always the same value in this mode.
+For an input argument it is not allowed to call `fmi3Set{VariableType}`.
+For an output argument, calling `fmi3Get{VariableType}` on such a variable returns always the same value in this mode.
 |[lime]#*green*# |Functions marked in [lime]#green# are special functions to enter or leave a mode.
 |[blue]#*blue*# |Equations and functions marked in [blue]#blue# define the actual computations to be performed in the respective mode.
 |====
-
-Function `fmi3SetXXX` used in the table below, is an abbreviation for functions `fmi3SetReal`, `fmi3SetBoolean`, `fmi3SetInteger` and `fmi3SetString` respectively.
-Function `fmi3GetXXX` is an abbreviation for functions `fmi3GetReal`, `fmi3GetBoolean`, `fmi3GetInteger` and `fmi3GetString` respectively.
 
 .Mathematical description of an FMU for Co-Simulation.
 [#table-math-co-simulation]
@@ -247,21 +249,21 @@ Function `fmi3GetXXX` is an abbreviation for functions `fmi3GetReal`, `fmi3GetBo
 |`fmi3SetupExperiment`
 
 |Set variables and that have a start value (`initial` = `"exact"` or `"approx"`)
-|`fmi3SetXXX`
+|`fmi3Set{VariableType}`
 
 2+|*Equations during Initialization Mode* ("InitializationMode" in state machine)
 
 |[lime]#Enter Initialization Mode at (activate initialization, discrete-time and continuous-time equations)# |[lime]#fmi3EnterInitializationMode#
 
 |Set variables latexmath:[v_{initial=exact}] and latexmath:[v_{initial=approx}] that have a start value with `initial` = `"exact"` (independent parameters latexmath:[\mathbf{p}] and continuous-time states with start values latexmath:[\mathbf{x}_{c,initial=exact}] are included here)
-|`fmi3SetXXX`
+|`fmi3Set{VariableType}`
 
 |Set continuous-time and discrete-time inputs latexmath:[\mathbf{u}_{c+d}(tc_0)] and optionally the derivatives of continuous-time inputs latexmath:[\mathbf{u}_{c}^{(j)}(tc_0)]
-|`fmi3SetXXX` +
+|`fmi3Set{VariableType}` +
 `fmi3SetRealInputDerivatives`
 
 |[blue]#latexmath:[\mathbf{v}_{InitialUnknowns} := \mathbf{f}_{init}(\mathbf{u}_c, \mathbf{u}_d, t_0, \mathbf{v}_{initial=exact})]#
-|`[blue]#fmi3GetXXX#` +
+|`[blue]#fmi3Get{VariableType}#` +
 `[blue]#fmi3GetDirectionalDerivative#`
 
 |[lime]#Exit Initialization Mode (de-activate initialization equations)#
@@ -270,17 +272,17 @@ Function `fmi3GetXXX` is an abbreviation for functions `fmi3GetReal`, `fmi3GetBo
 2+|*Equations during Step Mode* ("stepComplete", "stepInProgress" in state machine)
 
 |Set independent tunable parameters latexmath:[\mathbf{p}_{tune}] (and do not set other parameters latexmath:[\mathbf{p}_{other}])
-|`fmi3SetXXX`
+|`fmi3Set{VariableType}`
 
 |Set continuous-time and discrete-time inputs latexmath:[\mathbf{u}_{d+c}(tc_i)] and optionally the derivatives of continuous-time inputs latexmath:[\mathbf{u}_{c}^{(j)}(tc_i)]
-|`fmi3SetXXX` +
+|`fmi3Set{VariableType}` +
 `fmi3SetRealInputDerivatives`
 
 |[blue]#latexmath:[\begin{matrix} tc_{i+1} := tc_i + hc_i \\ (\mathbf{y}_{c+d}, \mathbf{y}_c^{(j)}, \mathbf{w}_{c+d}) := \mathbf{f}_{doStep}(\mathbf{u}_{c+d}, \mathbf{u}_{c}^{(j)}, tc_i, hc_i, \mathbf{p}_{tune}, \mathbf{p}_{other})_{tc_i} \\ tc_i := tc_{i+1} \end{matrix}]# +
 [blue]#latexmath:[\mathbf{f}_{doStep}] is also a function of the internal variables latexmath:[\mathbf{x}_c], latexmath:[^{\bullet}\mathbf{x}_d]#
 
 |`[blue]#fmi3DoStep#` +
-`fmi3GetXXX` +
+`fmi3Get{VariableType}` +
 `[blue]#fmi3GetRealOutputDerivatives#` +
 `[blue]#fmi3GetDirectionalDerivative#`
 
@@ -294,10 +296,10 @@ latexmath:[\mathbf{f}_{init}, \mathbf{f}_{out} \in C^0] (=continuous functions w
 _[Remark - Calling Sequences:_
 
 _In the table above, for notational convenience in Initialization Mode one function call is defined to compute all output arguments from all inputs arguments.
-In reality, every scalar output argument is computed by one_ `fmi3GetXXX` _function call._
+In reality, every scalar output argument is computed by one_ `fmi3Get{VariableType}` _function call._
 
-_In_ _Step Mode the input arguments to_ latexmath:[\mathbf{f}_{doStep}] _are defined by calls to_ `fmi3SetXXX` _and_ `fmi3SetRealInputDerivatives` _functions.
-The variables computed by_ latexmath:[\mathbf{f}_{doStep}] _can be inquired by_  `fmi3GetXXX` _function calls.]_
+_In_ _Step Mode the input arguments to_ latexmath:[\mathbf{f}_{doStep}] _are defined by calls to_ `fmi3Set{VariableType}` _and_ `fmi3SetRealInputDerivatives` _functions.
+The variables computed by_ latexmath:[\mathbf{f}_{doStep}] _can be inquired by_  `fmi3Get{VariableType}` _function calls.]_
 
 ==== Early Return from Current Communication Step
 :DOSTEP: fmi3DoStep()
