@@ -118,7 +118,7 @@ while (!terminateSimulation) {
     if (enterEventMode || stateEvent || timeEvent) {
 
         if (!initialEventMode) {
-            M_fmi3EnterEventMode(m, fmi3False, fmi3False, stateEvent, timeEvent, time);
+            M_fmi3EnterEventMode(m, fmi3False, fmi3False, stateEvent, timeEvent);
         }
 
         // event iteration
