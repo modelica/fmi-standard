@@ -245,10 +245,15 @@ In case of numerical problems the master may try to achieve a correct solution f
 It does not enter into this state if the FMU returns early from a communication step caused by `fmi3DoEarlyReturn()`.
 
 Allowed Function Calls::
-`fmi3Terminate()`, `fmi3EnterStepMode()`, `fmi3Get{VariableType}`, `fmi3GetDirectionalDerivatives()`, `fmi3GetOutputDerivatives()`
+`fmi3Terminate()`, `fmi3Get{VariableType}`, `fmi3GetDirectionalDerivatives()`, `fmi3GetOutputDerivatives()`
 
 `fmi3GetDoStepDiscardedStatus()`::
 The master calls this functions to retrieve information about the reason for discarding the last communication step.
+
+`fmi3EnterStepMode()`::
+The `fmi3EnterStepMode()` function pushes the FMU from `Step Discarded` to `Step Mode`.
+_[In Step Mode, the master may change again FMU inputs and parameters, or push the FMU into other states]_
+In this case, a new step may be started from `lastSuccessfulTime` which can be retrieved by the `fmi3GetDoStepDiscardedStatus()` function in state `Step Discarded`.
 
 Forbidden Function Calls::
 `fmi3EnterConfigurationMode()`, `fmi3ExitConfigurationMode()`, `fmi3Instantiate()`, `fmi3SetupExperiment()`, `fmi3EnterInitializationMode()`, `fmi3ExitInitializationMode()`, `fmi3DoStep()`, `fmi3Set{VariableType}`, `fmi3DoEarlyReturn()`, `fmi3SetInputDerivatives()`
@@ -635,8 +640,7 @@ This state in hybrid co-simulation does not differ from co-simulation described 
 
 ====== State: Event Mode
 The master and the FMU enter this state when the master calls `fmi3ExitInitializationMode()` in state `Initialization Mode` or `fmi3ExitConfigurationMode` in state `Reconfiguration Mode` or `{ENTEREVENTMODE}` in state `Step Mode`.
-In order to handle discrete events, such as inferred or triggered clocks, the FMU is pushed into the event mode by calling `fmi3EnterEventMode()`.
-In this mode, the FMU handles the clocks events. 
+In order to handle discrete events and clock ticks, the FMU is pushed into the event mode by calling `fmi3EnterEventMode()` 
 
 Allowed Function Calls::
 `fmi3Terminate()`::
@@ -652,14 +656,9 @@ This function returns the `fmi3EventInfo* eventInfo` structure.
 When `eventInfo.newDiscreteStatesNeeded` equals to true, the FMU should stay in Event Mode and another call to `fmi3NewDiscreteStates()` is required.
 
 `fmi3EnterStepMode()`::
-If the FMU is in the Event mode, the FMU should handle active events or clocks. Once all events are handled and `fmi3NewDiscreteStates()` returns with `eventInfo.newDiscreteStatesNeeded` equals to false, the FMU should return back to the Step Mode, unless the FMU requests to terminate the co-simulation by setting  `fmi3EventInfo->terminateSimulation` to true.
-In order to push the FMU into the Step mode, the `fmi3EnterStepMode()` function is used. 
-In this case, a new step can be started from the current communication point, which is actually the event time instant.
-
-If the FMU is in the Step Discarded Mode, the `fmi3EnterStepMode()` function pushes the FMU from Step Discarded Mode to Step Mode.
-Note that in the step mode, the master may change again FMU inputs and parameters, or even in case of HybridCosimulation push the FMU into the event mode or reconfiguration mode to try the discarded step again.
-In this case, a new step can be started from `lastSuccessfulTime` which is retrieved by the `fmi3GetDoStepDiscardedStatus` function.
-
+Once all events are handled and `fmi3NewDiscreteStates()` returns with `eventInfo.newDiscreteStatesNeeded` equals to false, the FMU should return back to the Step Mode, unless the FMU requests to terminate the co-simulation by setting  `fmi3EventInfo->terminateSimulation` to true.
+In order to push the FMU into the `Step Mode`, the `fmi3EnterStepMode()` function is used. 
+In this case, a new step can be started from the current communication point time.
 
 `fmi3GetClock()`::
 The status of  clocks can be inquired by this function.
