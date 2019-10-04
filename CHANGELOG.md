@@ -1,6 +1,6 @@
-= Changelog
+# Changelog
 
-== v2.0.1 (unreleased)
+## v2.0.1 (unreleased)
 
 Specification document:
 
@@ -10,10 +10,10 @@ Specification document:
 * `p. 8` Remove references to outdated ImplementationHint document (#352)
 * `p. 14` clarified:  Who shall define the prefix for source code FMUs? (#420)
 * `p. 27 ff., p. 88 ff.` fixed pseudo code examples:
-** fmi2GetDirectionalDerivative: Inconsistency in specification and pseudocode example (#311)
-** detect a state change during event iteration: wrong in pseudo code  (#333)
-**  Wrong call sequence for fmi2SetTime in ME pseudo code example (#296)
-**  Fix Pseudocode Example (#308)
+  * fmi2GetDirectionalDerivative: Inconsistency in specification and pseudocode example (#311)
+  * detect a state change during event iteration: wrong in pseudo code  (#333)
+  *  Wrong call sequence for fmi2SetTime in ME pseudo code example (#296)
+  *  Fix Pseudocode Example (#308)
 * `p. 31` Improved ModelStructure description in FMI 2.0 specification (#374)
 * `p. 22` fixed: inconsistency between description and state machine (#338)
 * `p. 33, p.68` provide license information (#417)
@@ -36,8 +36,8 @@ Specification document:
 * `p. 73` Improve sentence using nextMode (#393, #456)
 * `p. 77` fixed: Inconsistent definition of the calling conditions for fmi2SetContinuousStates (#407)
 * `p. 80` Clarification for pure discrete FMUs
-** Pure discrete-time FMU with state events (#405)
-** Non-determinism regarding the pure discrete-time FMU variant (#409)
+  * Pure discrete-time FMU with state events (#405)
+  * Non-determinism regarding the pure discrete-time FMU variant (#409)
 * `p. 82` Fixed:  Description of fmi2GetContinuousStates is out of date (#334, #501)
 * `p. 85` inconsistent definitions of when fmi2GetDerivatives and fmi2GetNominalsOfContinuousStates may be called (#301)
 * `p. 87` fixed: fmi2SetTime in Event Mode of Model Exchange (#394)
