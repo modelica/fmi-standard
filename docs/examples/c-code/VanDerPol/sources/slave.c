@@ -246,83 +246,148 @@ void logError(ModelInstance *comp, const char *message, ...) {
 // default implementations
 #if NUMBER_OF_EVENT_INDICATORS < 1
 void getEventIndicators(ModelInstance *comp, double z[], size_t nz) {
+	UNUSED(comp)
+	UNUSED(z)
+	UNUSED(nz)
     // do nothing
 }
 #endif
 
 #ifndef GET_FLOAT64
 Status getFloat64(ModelInstance* comp, ValueReference vr, double *value, size_t *index) {
+	UNUSED(comp)
+	UNUSED(vr)
+	UNUSED(value)
+	UNUSED(index)
     return Error;
 }
 #endif
 
 #ifndef GET_INT32
 Status getInt32(ModelInstance* comp, ValueReference vr, int *value, size_t *index) {
-    return Error;
+	UNUSED(comp)
+	UNUSED(vr)
+	UNUSED(value)
+	UNUSED(index)
+	return Error;
 }
 #endif
 
 #ifndef GET_BOOLEAN
 Status getBoolean(ModelInstance* comp, ValueReference vr, bool *value, size_t *index) {
+	UNUSED(comp)
+	UNUSED(vr)
+	UNUSED(value)
+	UNUSED(index)
     return Error;
 }
 #endif
 
 #ifndef GET_STRING
 Status getString(ModelInstance* comp, ValueReference vr, const char **value, size_t *index) {
+	UNUSED(comp)
+	UNUSED(vr)
+	UNUSED(value)
+	UNUSED(index)
     return Error;
 }
 #endif
 
 #ifndef GET_BINARY
 Status getBinary(ModelInstance* comp, ValueReference vr, size_t size[], const char *value[], size_t *index) {
+	UNUSED(comp)
+	UNUSED(vr)
+	UNUSED(size)
+	UNUSED(value)
+	UNUSED(index)
     return Error;
 }
 #endif
 
 #ifndef SET_FLOAT64
 Status setFloat64(ModelInstance* comp, ValueReference vr, const double *value, size_t *index) {
+	UNUSED(comp)
+	UNUSED(vr)
+	UNUSED(value)
+	UNUSED(index)
     return Error;
 }
 #endif
 
 #ifndef SET_INT32
 Status setInt32(ModelInstance* comp, ValueReference vr, const int *value, size_t *index) {
+	UNUSED(comp)
+	UNUSED(vr)
+	UNUSED(value)
+	UNUSED(index)
     return Error;
 }
 #endif
 
 #ifndef SET_BOOLEAN
 Status setBoolean(ModelInstance* comp, ValueReference vr, const bool *value, size_t *index) {
+	UNUSED(comp)
+	UNUSED(vr)
+	UNUSED(value)
+	UNUSED(index)
     return Error;
 }
 #endif
 
 #ifndef SET_STRING
 Status setString(ModelInstance* comp, ValueReference vr, const char *const *value, size_t *index) {
+	UNUSED(comp)
+	UNUSED(vr)
+	UNUSED(value)
+	UNUSED(index)
     return Error;
 }
 #endif
 
 #ifndef SET_BINARY
 Status setBinary(ModelInstance* comp, ValueReference vr, const size_t size[], const char *const value[], size_t *index) {
+	UNUSED(comp)
+	UNUSED(vr)
+	UNUSED(size)
+	UNUSED(value)
+	UNUSED(index)
     return Error;
 }
 #endif
 
 #if NUMBER_OF_STATES < 1
-void getContinuousStates(ModelInstance *comp, double x[], size_t nx) {}
-void setContinuousStates(ModelInstance *comp, const double x[], size_t nx) {}
-void getDerivatives(ModelInstance *comp, double dx[], size_t nx) {}
+void getContinuousStates(ModelInstance *comp, double x[], size_t nx) {
+	UNUSED(comp)
+	UNUSED(x)
+	UNUSED(nx)
+}
+
+void setContinuousStates(ModelInstance *comp, const double x[], size_t nx) {
+	UNUSED(comp)
+	UNUSED(x)
+	UNUSED(nx)
+}
+
+void getDerivatives(ModelInstance *comp, double dx[], size_t nx) {
+	UNUSED(comp)
+	UNUSED(dx)
+	UNUSED(nx)
+}
 #endif
 
 #ifndef GET_PARTIAL_DERIVATIVE
-double getPartialDerivative(ModelInstance *comp, ValueReference unknown, ValueReference known) {
-    return 0;
+Status getPartialDerivative(ModelInstance *comp, ValueReference unknown, ValueReference known, double *partialDerivative) {
+	UNUSED(comp)
+	UNUSED(unknown)
+	UNUSED(known)
+	UNUSED(partialDerivative)
+	return Error;
 }
 #endif
 
 Status doStep(ModelInstance *comp, double t, double tNext) {
+
+	UNUSED(t)
 
     bool stateEvent, timeEvent;
     
