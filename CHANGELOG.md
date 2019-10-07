@@ -55,3 +55,7 @@ C headers (no functional changes):
 XSD schema (no functional changes)
 
 * Clarifying FMI version string in xsd documentation string (#388 , #498)
+
+Distribution archive:
+
+* file names and structure changed
