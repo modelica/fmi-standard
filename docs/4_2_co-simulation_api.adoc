@@ -231,12 +231,17 @@ If the function returns `fmi3Fatal` the FMU enters state `Fatal`.
 Allowed Function Calls::
 `fmi3DoEarlyReturn()`
 
-`fmi3Set{VariableTypes}()`, `fmi3Get{VariableTypes}()`, `fmi3SetInputDerivatives()`, `fmi3GetOutputDerivatives()`, `fmi3GetDirectionalDerivative()`::
-For variables that are marked with attribute "intermediateAccess" equals true in the modelDescription.xml.
+`fmi3Set{VariableTypes}()`, `fmi3SetInputDerivatives()`::
+If `intermediateUpdateInfo->intermediateVariableSetAllowed` is equal to `fmi3True`, the value of intermediate variables can be set.
+Intermediate variables are variables that are marked with attribute "intermediateAccess" equals true in the modelDescription.xml.
+
+`fmi3Get{VariableTypes}()`, `fmi3GetOutputDerivatives()`::
+If `intermediateUpdateInfo->intermediateVariableGetAllowed` is equal to `fmi3True`, the value of intermediate variables can be retrieved.
+Intermediate variables are variables that are marked with attribute "intermediateAccess" equals true in the modelDescription.xml.
 
 Forbidden Function Calls::
 The same functions which are not allowed to be called in `Step Mode` must not be called in this state. 
-Additionally the following functions must not be called  `fmi3EnterConfigurationMode()`, `fmi3Terminate()`, `fmi3DoStep()`.
+Additionally the following functions must not be called  `fmi3EnterConfigurationMode()`, `fmi3Terminate()`, `fmi3DoStep()`, `fmi3GetDirectionalDerivative()`.
 
 ====== State: Reconfiguration Mode [[state-reconfiguration-mode-co-simulation]]
 In this state structural parameters with `variability` equals `tunable` can be changed.
@@ -654,12 +659,6 @@ Allowed Function Calls::
 `fmi3DoEarlyReturn()`::
 `intermediateUpdateInfo->canReturnEarly` is `fmi3True`, the co-simulation master can request the FMU to end the `fmi3DoStep()` and to do an early return by calling this function.
 
-`fmi3Set{VariableType}()`::
-if `intermediateUpdateInfo->intermediateVariableSetAllowed` is equal to `fmi3True`, the value of intermediate variables can be set.
-
-`fmi3Get{VariableType}()`::
-if `intermediateUpdateInfo->intermediateVariableGetAllowed` is equal to `fmi3True`, the value of intermediate variables can be inquired.
-
 Forbidden Function Calls::
 All API functions not listed in the allowed function list, including `fmi3GetClock()` and  `fmi3SetClock()` are forbidden in this mode.
 
@@ -942,7 +941,7 @@ Allowed Function Calls::
 For a triggered clock only the first call of fmi3GetClock() for a specific activation of this clock signals `fmi3True`.
 The FMU sets the reported activation state immediately back to `fmi3False` for the following fmi3GetClock() calls for that clock (in the same or other model partitions of the FMU) until this triggered clock is internally activated again.
 The master can call fmi3Set{VariableType} and fmi3Get{VariableType} during the callback for variables associated to a triggered clock that is active during this callback. 
-#[TODO]: What about fmi3SetRealInputDerivatives and fmi3GetRealOutputDerivatives?#
+Also intermediate variable access is allowed as defined in <<state-intermediate-update-mode-co-simulation>>
 
 _[Based on the FMI standard it cannot be determined which part of the code of an FMU has called the callback function `fmi3CallbackIntermediateUpdate()`. 
 This is especially the case for the co-simulation mode `fmi3ModeScheduledExecutionSimulation` in which multiple model partitions can be active at the same time.
