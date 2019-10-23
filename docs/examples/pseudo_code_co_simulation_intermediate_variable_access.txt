@@ -1,0 +1,120 @@
+//////////////////////////
+// Define callback
+
+// Global variables
+fmi3IntermediateInfo s_intermediateInfo;
+
+// Callback
+fmi3Status intermediateUpdate(fmi3ComponentEnvironment componentEnvironment, fmi3IntermediateInfo* info, fmi3Boolean* earlyReturn)
+{
+  intermediateTime = info->intermediateTime;
+
+  //If getting intermediate output variables allowed
+  if (info->intermediateVariableGetAllowed) then {
+    //Get the output variables at time = intermediateTime
+    fmi3GetReal/Integer/Boolean/String(s, ...);
+
+    //If integration step in FMU solver is finished
+    if (info->intermediateStepFinished) then {
+      //Forward output variables to other FMUs or write to result files
+    }
+  }
+
+  //If setting intermediate output variables allowed
+  if (info->intermediateVariableSetAllowed) then {
+    //Compute intermediate input variables from output varibles and
+    //variables from other FMUs. Use latest available output
+    //variables, possibly from get functions above
+    inputVariables = ...
+
+    //Set the input variables at time = intermediateTime
+    fmi3SetReal/Integer/Boolean/String(s, ...);
+  }
+
+  //Internal execution in FMU will now continue
+}
+
+//////////////////////////
+// Initialization sub-phase
+
+// Set callback functions,
+fmi3CallbackFunctions cbf;
+fmi3EventInfo eventInfo;
+cbf.logger = loggerFunction; // Logger function
+cbf.allocateMemory = calloc;
+cbf.freeMemory = free;
+// Signal that early return is supported by master
+cbf.intermediateUpdate = intermediateUpdate;
+
+// Create pointer to information for identifying the FMU in callbacks
+// (note: this is pseudo code, no correct pointer handling)
+cbf.componentEnvironment = GUID;
+
+//set Co-Simulation mode
+fmi3CoSimulationConfiguration coSimulationConfiguration;
+coSimulationConfiguration.intermediateVariableGetRequired = true;
+coSimulationConfiguration.intermediateInternalVariableGetRequired = false;
+coSimulationConfiguration.intermediateVariableSetRequired = true;
+coSimulationConfiguration.coSimulationMode = fmi3ModeHybridCoSimulation;
+
+// Instantiate slave
+fmi3Component s = fmi3Instantiate("Tool1" , fmi3CoSimulation, GUID, "", fmi3False, fmi3False, &cbf, fmi3True, fmi3False, &coSimulationConfiguration);
+
+if (s == NULL) then return FAILURE;
+
+// Start and stop time
+startTime = 0;
+stopTime = 10;
+// Communication constant step size
+h = 0.01;
+
+// Set all variable start values (of "ScalarVariable / <type> / start")
+fmi3SetReal/Integer/Boolean/String(s, ...);
+
+// Initialize slave
+fmi3SetupExperiment(s, fmi3False, 0.0, startTime, fmi3True, stopTime);
+fmi3EnterInitializationMode(s);
+
+// Set the input values at time = startTime
+fmi3SetReal/Integer/Boolean/String(s, ...);
+
+fmi3ExitInitializationMode(s);
+
+//////////////////////////
+// Simulation sub-phase
+tc = startTime; // Starting master time
+step = h;       // Starting non-zero step size
+while (tc < tStop) do
+{
+  if (step > 0) then
+  { // Continuous mode (default mode)
+    fmi3Bolean earlyReturn = fmi3False;
+    status = fmi3DoStep(s,tc,step,...);
+    switch () {
+      case (status == fmi3OK):
+        tc +=step;
+      case (status == fmi3Warning):
+        // Simplified code
+      case (status == fmi3Error or status == fmi3Fatal or status == fmi3Discard):
+        // Simplified code
+    };
+  }
+  else
+  { // Event mode
+    fmi3NewDiscreteStates(s, s_eventInfo);
+    if not(s_eventInfo.newDiscreteStatesNeeded) then {
+      fmi3EnterContinuousMode(s);
+      step = h;
+    };
+  };
+  // Get outputs
+  fmi3GetReal/Integer/Boolean/String(s, ...);
+  // Set inputs
+  fmi3SetReal/Integer/Boolean/String(s, ...);
+};
+
+//////////////////////////
+// Shutdown sub-phase
+if ((status != fmi2Error) and (status != fmi2Fatal)) then fmi3Terminate(s);
+
+if (status != fmi2Fatal) then fmi3FreeInstance(s1);
