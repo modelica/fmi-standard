@@ -1,6 +1,6 @@
-=== Mathematical Description [[math-co-simulation]]
-
-==== Basics
+=== Mathematical Description
+==== Co-Simulation [[math-co-simulation]]
+===== Basics Co-Simulation
 
 Co-simulation exploits the modular structure of coupled problems in all stages of the simulation process beginning with the separate model setup and preprocessing for the individual _subsystems_ in different _simulation tools_ (which can be powerful simulators as well as simple C programs).
 During time integration, the simulation is again performed independently for all subsystems restricting the data exchange between subsystems to discrete _communication points_ latexmath:[tc_i].
@@ -15,7 +15,7 @@ In this framework, the physical connections between subsystems are represented b
 .Data flow at communication points.
 image::images/co-simulation-data-flow.svg[width=80%, align="center"]
 
-For co-simulation two basic groups of functions have to be realized:
+For co-simulation two basic groups of functions have to be implemented:
 
 . functions for the data exchange between subsystems
 
@@ -68,7 +68,12 @@ The communication step size has to be greater than zero.
 FMI for Co-Simulation allows a co-simulation flow which starts with instantiation and initialization (all slaves are prepared for computation, the communication links are established), followed by simulation (the slaves are forced to simulate a communication step), and finishes with shutdown.
 The details of the flow are given in the state machine of the calling sequences from master to slave (see <<state-machine-co-simulation>>).
 
-==== Mathematical Model
+===== Mathematical Model Co-Simulation
+
+_[Function `fmi3Set{VariableType}` used in the document, is an abbreviation for functions `fmi3SetFloat64`, `fmi3SetInt8`, `fmi3SetInt16`, `fmi3SetString` and for other base variable types respectively - with the exception of clocks.
+Function `fmi3Get{VariableType}` is an abbreviation for functions `fmi3SetFloat64`, `fmi3SetInt8`, `fmi3SetInt16`, `fmi3SetString` and for other base variable types respectively - with the exception of clocks.
+]_
+#TODO: Move to better place of function abbreviation definition in document#
 
 This section contains a formal mathematical model of a Co-Simulation FMU.
 The following fundamental assumptions are made:
@@ -226,14 +231,11 @@ The following color coding is used in the table:
 [cols="1,8"]
 |====
 |[silver]#*grey*# |If a variable in an argument list is marked in grey, then this variable is not changing in this mode and just the last calculated value from the previous mode is internally used.
-For an input argument it is not allowed to call `fmi3SetXXX`.
-For an output argument, calling `fmi3GetXXX` on such a variable returns always the same value in this mode.
+For an input argument it is not allowed to call `fmi3Set{VariableType}`.
+For an output argument, calling `fmi3Get{VariableType}` on such a variable returns always the same value in this mode.
 |[lime]#*green*# |Functions marked in [lime]#green# are special functions to enter or leave a mode.
 |[blue]#*blue*# |Equations and functions marked in [blue]#blue# define the actual computations to be performed in the respective mode.
 |====
-
-Function `fmi3SetXXX` used in the table below, is an abbreviation for functions `fmi3SetReal`, `fmi3SetBoolean`, `fmi3SetInteger` and `fmi3SetString` respectively.
-Function `fmi3GetXXX` is an abbreviation for functions `fmi3GetReal`, `fmi3GetBoolean`, `fmi3GetInteger` and `fmi3GetString` respectively.
 
 .Mathematical description of an FMU for Co-Simulation.
 [#table-math-co-simulation]
@@ -247,21 +249,21 @@ Function `fmi3GetXXX` is an abbreviation for functions `fmi3GetReal`, `fmi3GetBo
 |`fmi3SetupExperiment`
 
 |Set variables and that have a start value (`initial` = `"exact"` or `"approx"`)
-|`fmi3SetXXX`
+|`fmi3Set{VariableType}`
 
 2+|*Equations during Initialization Mode* ("InitializationMode" in state machine)
 
 |[lime]#Enter Initialization Mode at (activate initialization, discrete-time and continuous-time equations)# |[lime]#fmi3EnterInitializationMode#
 
 |Set variables latexmath:[v_{initial=exact}] and latexmath:[v_{initial=approx}] that have a start value with `initial` = `"exact"` (independent parameters latexmath:[\mathbf{p}] and continuous-time states with start values latexmath:[\mathbf{x}_{c,initial=exact}] are included here)
-|`fmi3SetXXX`
+|`fmi3Set{VariableType}`
 
 |Set continuous-time and discrete-time inputs latexmath:[\mathbf{u}_{c+d}(tc_0)] and optionally the derivatives of continuous-time inputs latexmath:[\mathbf{u}_{c}^{(j)}(tc_0)]
-|`fmi3SetXXX` +
+|`fmi3Set{VariableType}` +
 `fmi3SetRealInputDerivatives`
 
 |[blue]#latexmath:[\mathbf{v}_{InitialUnknowns} := \mathbf{f}_{init}(\mathbf{u}_c, \mathbf{u}_d, t_0, \mathbf{v}_{initial=exact})]#
-|`[blue]#fmi3GetXXX#` +
+|`[blue]#fmi3Get{VariableType}#` +
 `[blue]#fmi3GetDirectionalDerivative#`
 
 |[lime]#Exit Initialization Mode (de-activate initialization equations)#
@@ -270,17 +272,17 @@ Function `fmi3GetXXX` is an abbreviation for functions `fmi3GetReal`, `fmi3GetBo
 2+|*Equations during Step Mode* ("stepComplete", "stepInProgress" in state machine)
 
 |Set independent tunable parameters latexmath:[\mathbf{p}_{tune}] (and do not set other parameters latexmath:[\mathbf{p}_{other}])
-|`fmi3SetXXX`
+|`fmi3Set{VariableType}`
 
 |Set continuous-time and discrete-time inputs latexmath:[\mathbf{u}_{d+c}(tc_i)] and optionally the derivatives of continuous-time inputs latexmath:[\mathbf{u}_{c}^{(j)}(tc_i)]
-|`fmi3SetXXX` +
+|`fmi3Set{VariableType}` +
 `fmi3SetRealInputDerivatives`
 
 |[blue]#latexmath:[\begin{matrix} tc_{i+1} := tc_i + hc_i \\ (\mathbf{y}_{c+d}, \mathbf{y}_c^{(j)}, \mathbf{w}_{c+d}) := \mathbf{f}_{doStep}(\mathbf{u}_{c+d}, \mathbf{u}_{c}^{(j)}, tc_i, hc_i, \mathbf{p}_{tune}, \mathbf{p}_{other})_{tc_i} \\ tc_i := tc_{i+1} \end{matrix}]# +
 [blue]#latexmath:[\mathbf{f}_{doStep}] is also a function of the internal variables latexmath:[\mathbf{x}_c], latexmath:[^{\bullet}\mathbf{x}_d]#
 
 |`[blue]#fmi3DoStep#` +
-`fmi3GetXXX` +
+`fmi3Get{VariableType}` +
 `[blue]#fmi3GetRealOutputDerivatives#` +
 `[blue]#fmi3GetDirectionalDerivative#`
 
@@ -294,7 +296,106 @@ latexmath:[\mathbf{f}_{init}, \mathbf{f}_{out} \in C^0] (=continuous functions w
 _[Remark - Calling Sequences:_
 
 _In the table above, for notational convenience in Initialization Mode one function call is defined to compute all output arguments from all inputs arguments.
-In reality, every scalar output argument is computed by one_ `fmi3GetXXX` _function call._
+In reality, every scalar output argument is computed by one_ `fmi3Get{VariableType}` _function call._
 
-_In_ _Step Mode the input arguments to_ latexmath:[\mathbf{f}_{doStep}] _are defined by calls to_ `fmi3SetXXX` _and_ `fmi3SetRealInputDerivatives` _functions.
-The variables computed by_ latexmath:[\mathbf{f}_{doStep}] _can be inquired by_  `fmi3GetXXX` _function calls.]_
+_In_ _Step Mode the input arguments to_ latexmath:[\mathbf{f}_{doStep}] _are defined by calls to_ `fmi3Set{VariableType}` _and_ `fmi3SetRealInputDerivatives` _functions.
+The variables computed by_ latexmath:[\mathbf{f}_{doStep}] _can be inquired by_  `fmi3Get{VariableType}` _function calls.]_
+
+==== Early Return from Current Communication Step
+:DOSTEP: fmi3DoStep()
+:CBIU: fmi3CallbackIntermediateUpdate()
+:DER:  fmi3DoEarlyReturn()
+
+//=== Improving efficiency in multi-FMU environment when asynchronous mode is used
+
+In the particular context of multi-FMU architectures, significant co-simulation speed-up may be obtained if the master can avoid waiting until the end of the slowest FMU step integration. If an FMU prematurely stops its current step integration computation due to an unpredictable internal event before the normal end of the step calculation, all other concurrently running FMUs may be stopped as soon as possible in order to minimize the time needed for the co-simulation master to resynchronize all the FMUs at the same event time.
+
+In this context based on parallel multi-FMU calculations, the following figure illustrates different possibilities to synchronize FMUs at the same event time.
+
+.Different possibilities to synchronize parallel FMUs at the same event time.
+
+[caption="Figure 12: "]
+image::images/earlyReturnFigure.png[width=100%, align="center"]
+
+Each FMU starts integration from communication point latexmath:[t_{i}] to reach the next communication point latexmath:[t_{i+1}].
+Assuming an unexpected internal event is detected at latexmath:[t^{'}_{i+1}< t_{i+1}] during FMU~1~ integration, the master is informed of this early return. 
+So now the master would like to avoid other FMUs exceed the event time, since all FMUs should be resynchronized at the event time which will be the next new communication point.
+
+* In the case of FMU~1~, the internal event time becomes the new latexmath:[t_{i+1}] time, i.e. this is the source of the event.
+* In the case of FMU~2~, a complete rollback from latexmath:[t_{i}] to latexmath:[t^{'}_{i+1}] is necessary.
+* In the case of FMU~3~, computation is immediately interrupted and only a partial rollback is necessary to reach latexmath:[t^{'}_{i+1}] time.
+* In the case of FMU~4~, the current step integration has been interrupted at latexmath:[t^{'}_{i+1}] and no rollback is necessary.
+
+Each ongoing FMU stops its integration either exactly at the broken time given by the master or immediately after its current intermediate step if this time is already out-of-date.
+Afterwards, a new step integration done on the FMU returns and signals the premature stop (early-return) to the master.
+
+Due to the early-return mechanism, the overall execution time of the simulation is reduced.
+
+==== Co-Simulation with Clock Support [[math-clocked-co-simulation]]
+
+The notion of clock in FMI for ModelExchange has been extended to the FMI for CoSimulation.
+
+Both triggered and inferred clocks are supported in CoSimulation with clocks. 
+In order to handle inferred and triggered clocks in the CoSimulation, a new Event mode has been introduced.
+ 
+The concept and the way inferred and triggered clocks are handled are very similar in ModelExchange and Co-simulation.
+In order to handle inferred clocks, the co-simulation master schedules inferred clocks and adjusts the communication steps in such a way that inferred clock ticks become communication points.
+At these communication points, the FMU is pushed to the Event mode and inferred clocks are handled.
+ 
+Triggered clocks, on the other hand, are detected by the FMU.
+The FMU detects a triggered clock and informs the master by invoking a callback in which the event time and the event type is communicated to the master.
+Then FMU stops the current co-simulation step and returns back from Dostep.
+Then the FMU is pushed to the Event mode and the event is handled.
+Note that, since triggered events time instants are not known in advance, at triggered event time instants, new communication steps are created.
+
+
+==== Scheduled Execution Simulation Support [[math-scheduled-execution-simulation]]
+:stem: latexmath
+
+The Scheduled Execution Simulation mode has a different timing concept compared to the other co-simulation modes. 
+This is required to cover clock ticks for aperiodic inferred clocks which may tick at time instances that are not predictable in advance for the simulation master. 
+Typically, hardware I/O or virtual ECU software events belong to this category.
+
+A co-simulation master's call for computing a model partition will compute the results of the model partition defined by an inferred clock for the current clock tick time latexmath:[t_i].
+
+The result values will be computed for the current clock tick time (activation time) latexmath:[t_i] from the assigned inferred clock (which is known to the co-simulation master).
+Refer to the clock time progress definition (<<clock-types-for-evaluation-of-clocked-model-partitions>>) for periodic clocks.
+
+If required, the FMU can internally derive the clock interval stem:[\Delta T_i] based on the last clock tick time stem:[t_{i-1}] i.e. last activation time for this model partition.
+
+A model partition can only be activated once per activation time point latexmath:[t_i].
+
+Model partitions that are associated to triggered clocks will accordingly provide the result values of the model partition's variables for the current triggered clock tick time latexmath:[t_i] of the active triggered clock.
+The activation of such a triggered clock is not directly controlled by the co-simulation master but internally by the FMU.
+
+==== Intermediate Variable Access Support [[math-intermediate-variable-access]]
+
+Intermediate variable access has three main uses:
+
+1. *An FMU is able to produce valid output variables at intermediate points
+during a communication interval.* This is typically the result of an internal
+solver taking multiple integration steps at each communication interval.
+The FMU exposes intermediate output variables for the master whenever they are
+available. These can be used for e.g. extrapolation, interpolation, filtering
+or asynchronous co-simulation.
+
+2. *Intermediate input variables for an FMU is available in the co-simulation
+master.* The FMU requests updated intermediate input variables every time they
+are required by the internal solver. This can be either at temporary solver
+states or after successful integration steps.
+
+3. *Intermediate input variables for the FMU can be computed by the
+co-simulation master.* The computation requires intermediate output
+variables from the FMU. Whenever the internal solver in the FMU needs
+updated intermediate input variables, it provides the intermediate
+output variables for and requests the intermediate input variables from
+the master.
+
+Combinations of the above methods are also allowed.
+
+Access to intermediate variables enables several features such as:
+
+* Advanced interpolation/extrapolation techniques
+* Asynchronous communication
+* Anti-alias filtering
+* Smoothing of inputs

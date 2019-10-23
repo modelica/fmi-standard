@@ -1,0 +1,126 @@
+//////////////////////////
+// Define callback
+
+// Global variables
+fmi3IntermediateUpdateInfo s_intermediateUpdateInfo;
+
+// Callback
+fmi3Status clockedCoSimulation_intermediateUpdate(fmi3InstanceEnvironment instanceEnvironment, fmi3IntermediateUpdateInfo* intermediateUpdateInfo)
+{
+  // Save intermediateUpdateInfo for later use
+  s_intermediateUpdateInfo = *intermediateUpdateInfo;
+}
+
+//////////////////////////
+// Initialization sub-phase
+
+// Set callback functions,
+fmi3CallbackFunctions cbf;
+fmi3EventInfo s_eventInfo;
+cbf.logger = loggerFunction; // Logger function
+cbf.allocateMemory = calloc;
+cbf.freeMemory = free;
+// Signal that early return is supported by master
+cbf.intermediateUpdate = clockedCoSimulation_intermediateUpdate;
+cbf.lockPreemption = NULL // Preemption not active
+cbf.unlockPreemption = NULL // Preemption not active
+
+
+// Instantiate slave
+// Create pointer to information for identifying the FMU in callbacks
+// (note: this is pseudo code, no correct pointer handling)
+cbf.componentEnvironment = NULL;
+
+//set Co-Simulation mode
+fmi3CoSimulationConfiguration coSimulationConfiguration;
+coSimulationConfiguration.intermediateVariableGetRequired = false;
+coSimulationConfiguration.intermediateInternalVariableGetRequired = false;
+coSimulationConfiguration.intermediateVariableSetRequired = false;
+coSimulationConfiguration.coSimulationMode = fmi3ModeHybridCoSimulation;
+
+// Instantiate slave
+fmi3Instance s = fmi3Instantiate("Tool", fmi3CoSimulation, GUID, "", &cbf, fmi3False, fmi3True, &coSimulationConfiguration);
+
+if (s == NULL) then return FAILURE;
+
+// Start and stop time
+startTime = 0;
+stopTime = 10;
+// Communication constant step size
+h = 0.01;
+
+// Set all variable start values (of "ScalarVariable / <type> / start")
+fmi3SetReal/Integer/Boolean/String(s, ...);
+
+// Initialize slave
+fmi3SetupExperiment(s, fmi3False, 0.0, startTime, fmi3True, stopTime);
+fmi3EnterInitializationMode(s);
+
+// Set the input values at time = startTime
+fmi3SetReal/Integer/Boolean/String(s, ...);
+
+fmi3ExitInitializationMode(s);
+
+//////////////////////////
+// Simulation sub-phase
+tc = startTime; // Starting master time
+tStop = stopTime; // Steopping master time
+step = h; // Starting non-zero step size
+inferredClocksTickedS = false;
+
+mode = continuousTimeMode;
+
+while (tc < tStop) do {
+  if (/* Inferred clock is active at current time tc */) then {
+    /*Set possible active inferred clocks to true or to false*/
+    if(mode == continuousTimeMode) then {
+      fmi3EnterEventMode(s);
+      mode = eventMode;
+    };
+    fmi3SetClock(s, ...);
+    fmi3SetInterval(s, ...); /*Only needed if interval changes*/
+  };
+
+  if(mode == eventMode) then fmi3NewDiscreteStates(s, s_eventInfo);
+
+  if(mode == continuousTimeMode) then {
+    // Continuous mode (default mode)
+    fmi3Real tend = tc+step;
+    fmi3Real t = tend*2;
+    fmi3Boolean earlyReturn = fmi3False;
+    status = fmi3DoStep(s, tc, step, ..., earlyReturn);
+
+    if(earlyReturn) then {
+      t = s_intermediateUpdateInfo.intermediateUpdateTime;
+      /*rollback FMUs to earliest event time*/
+      fmi3EnterEventMode(s);
+      mode = eventMode;
+      tc = t;
+    }
+    else{
+      tc = tend;
+    };
+  };
+
+  if(s_intermediateUpdatedInfo.clocksTicked) then {
+    fmi3GetClock(s, ...);
+    fmi3GetInterval(s, /*Intervals*/, ...);
+  };
+
+  if((mode == eventMode) && (s_eventInfo.newDiscreteStatesNeeded == fmi3False) && (/*no clocks from GetClock() are active*/)) then {
+    fmi3EnterContinuousTimeMode(s);
+    mode = continuousTimeMode;
+    step = min(/*Intervals*/, s_eventInfo.nextEventTime, ...);
+  };
+
+  // Get outputs
+  fmi3GetReal/Integer/Boolean/String(s, ...);
+  // Set inputs
+  fmi3SetReal/Integer/Boolean/String(s, ...);
+};
+
+//////////////////////////
+// Shutdown sub-phase
+if ((status != fmi3Error) && (status != fmi3Fatal)) then fmi3Terminate(s);
+
+if (status != fmi3Fatal) then fmi3FreeInstance(s);
