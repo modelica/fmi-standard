@@ -3,11 +3,14 @@
 This is defined in <<fmi-description-schema>>.
 Additionally, the co-simulation specific element "Implementation" is defined in the next section.
 
-==== Co-Simulation FMU (CoSimulation) [[CoSimulation]]
+==== Co-Simulation FMU (CoSimulation) [[schema-co-simulation]]
+//TODO: find better place for attribute description!
+//TODO: check wording "slave"
 
 If the XML file defines an FMU for Co-Simulation, element "CoSimulation" must be present.
 It is defined as:
 
+//TODO: update XML images
 image::images/cs_xml_1.png[width=80%, align="center"]
 
 image::images/cs_xml_2.png[width=70%, align="center"]
@@ -32,21 +35,6 @@ _[Typically, this information is only utilized for information purposes.
 For example, a co-simulation master can inform the user that a tool has to be available on the computer where the slave is instantiated.
 The name of the tool can be taken from attribute `generationTool` of `fmiModelDescription`.]_
 
-|`canHandleVariableCommunicationStepSize`
-|The slave can handle variable communication step size.
-The communication step size (parameter communicationStepSize of `fmi3DoStep`) has not to be constant for each call.
-
-|`canInterpolateInputs`
-|The slave is able to interpolate continuous inputs.
-Calling of `fmi3SetRealInputDerivatives` has an effect for the slave.
-
-|`maxOutputDerivativeOrder`
-|The slave is able to provide derivatives of outputs with maximum order.
-Calling of `fmi3GetRealOutputDerivatives` is allowed up to the order defined by `maxOutputDerivativeOrder`.
-
-|`canRunAsynchronuously`
-|This flag describes the ability to carry out the `fmi3DoStep` call asynchronously.
-
 |`canBeInstantiatedOnlyOncePerProcess`
 |This flag indicates cases (especially for embedded code), where only one instance per FMU is possible. (For multiple instantiation the default is `false`; if multiple instances are needed, the FMUs must be instantiated in different processes.).
 
@@ -64,6 +52,41 @@ If this is the case, then flag `canGetAndSetFMUState` must be true as well.
 
 |`providesDirectionalDerivative`
 |If true, the directional derivative of the equations at communication points can be computed with `fmi3GetDirectionalDerivative`.
+
+|`canInterpolateInputs`
+|The slave is able to interpolate continuous inputs.
+Calling of `fmi3SetRealInputDerivatives` has an effect for the slave.
+
+|`maxOutputDerivativeOrder`
+|The slave is able to provide derivatives of outputs with maximum order.
+Calling of `fmi3GetRealOutputDerivatives` is allowed up to the order defined by `maxOutputDerivativeOrder`.
+
+|`canHandleVariableCommunicationStepSize`
+|The slave can handle variable communication step size.
+The communication step size (parameter communicationStepSize of `fmi3DoStep`) has not to be constant for each call.
+
+|`providesIntermediateVariableAccess`
+|The slave is able to provide access to selected variables during callback function call `intermediateUpdate()`. 
+The accessible variables are marked with attribute `intermediateAccess` equals true. 
+
+|`canReturnEarlyAfterIntermediateUpdate`
+|If true, the slave is able to return early from `fmi3DoStep()` if master calls `fmi3DoEarlyReturn()` during callback function call `intermediateUpdate()` and `canReturnEarly` equals true in `fmi3IntermediateUpdateInfo`.
+_[If set to true and `providesHybridCoSimulation` is set to false, the FMU supports the basic functionality of ending DoSteps before the planned next communication point time. 
+This is controlled by the simulation master for avoiding unnecessary computations and roll backs of the FMU due to external events known by the simulation master]_
+
+|`providesHybridCoSimulation`
+|If true, the slave can be set to co-simulation mode `fmi3ModeHybridCoSimulation` during instantiation of FMU. 
+If set to true also `canReturnEarlyAfterIntermediateUpdate` must be set to true.
+
+|`providesScheduledExecutionSimulation`
+|If true, the slave can be set to co-simulation mode `fmi3ModeScheduledExecutionSimulation` during instantiation of FMU.
+
+|`canNotUseBasicCoSimulation`
+|If false, the slave can be set to co-simulation mode `fmi3ModeCoSimulation` during instantiation of FMU.
+_[the support of basic co-simulation should be possible for most co-simulation FMUs, thus the default value is false.]_
+
+
+
 |====
 
 The flags have the following default values. +
@@ -73,7 +96,7 @@ unsignedInt: 0 +
 Note that if `needsExecutionTool = true`, then it is required that the original tool is available to be executed in co-simulation mode.
 If `needsExecutionTool = false`, the slave is completely contained inside the FMU in source code or binary format (DLL/SharedObject).
 
-==== Example XML Description File
+===== Example XML Description File [[xml-example-co-simulation]]
 
 The example below is the same one as shown in <<xml-example-model-exchange>> for a ModelExchange FMU.
 The only difference is the replacement of element ModelExchange by element CoSimulation (with additional attributes) and the removal of local variables, which are associated with continuous states and their derivatives.
@@ -82,4 +105,78 @@ The XML file may have the following content:
 [source, xml]
 ----
 include::examples/co_simulation.xml[]
+----
+
+==== Early Return from Current Communication Step
+
+The simulation master collects the information about the capability of an FMU to perform an early return by analyzing the modelDescription.xml as defined in section <<fmi-description-schema>> and <<CoSimulation>>.
+
+
+===== Co-Simulation FMU (CoSimulation)
+In order to support the early return in `fmi3DoStep` the capability flag  `canReturnEarlyAfterIntermediateUpdate` in the XML should be `true`. 
+
+===== Example XML Description File
+
+
+Here is an example of an XML of an FMU supporting early return.
+
+[source, xml]
+----
+include::examples/co_simulation_early_return.xml[]
+----
+
+:INSTANTIATE: fmi3Instantiate()
+
+==== Co-Simulation with Clock Support [[schema-clocked-co-simulation]]
+
+The co-simulation master collects the information about the number and properties of clocks supported by the FMU by analyzing the modelDescription.xml, see section <<clock-type-definition>>.
+
+The definition of clocks is optional.
+
+Each inferred clock that ticks outside of the FMU, is activated for an FMU based on their _valueReferences_.
+Triggered clocks inside of an FMU signal their activation based on their _valueReferences_.
+
+_[If dependencies (_fmi3VariableDependency_) are defined in the _Modelstructure_ section of the _modelDescription.xml_, it is recommended to define such dependencies only within a model partition of a model (i.e. between variables that are assigned to the same clock).]_
+
+If dependencies are defined for variables across model partitions, such variables can not be assigned to a clock via _clockReference_.
+
+For FMI for Co-Simulation, variables that are assigned to a model partition of the model based on _clockReference_ are not necessarily "clocked".
+Such variables can be Continuous-time or Discrete-time variables if the clock is of clockType = CPClock.
+
+
+===== Capability Flags [[xml-flags-clocked-co-simulation]]
+
+If the XML file defines an FMU for Clocked Co-Simulation, element "CoSimulation" must be present as described in section <<CoSimulation>>.
+
+In order to provide a Clocked Co-Simulation, the attribute `providesHybridCoSimulation` has set to be set to true.
+
+
+===== Example XML Description File [[xml-example-clocked-co-simulation]]
+
+The example below is the same one as shown in <<xml-example-co-simulation>> for a Co-Simulation FMU.
+The only differences are, that `providesHybridCoSimulation` is set to true and clocks are defined in the modelDescription.xml. #[TODO]: Recheck later#
+The XML file may have the following content:
+
+[source, xml]
+----
+//include::examples/co_simulation_clocked_cosimulation.xml[]
+----
+
+==== Scheduled Execution Simulation Support [[schema-scheduled-execution-simulation]]
+
+The simulation master collects the information about the number and properties of clocks supported by the FMU via analyzing the modelDescription.xml as defined in section 2.2. and 4.3.
+
+Each clock that ticks outside of the FMU is activated for an FMU based on its clockReference. 
+There is a direct one-to-one relation for a clock and a model partition.
+
+If clocks are defined and the flag `providesScheduledExecutionSimulation` equals true, the co-simulation master can set the fmuType to `fmi3ScheduledExecutionSimulation`. 
+If no inferred clocks are defined the flag `providesScheduledExecutionSimulation` shall not be set to true.
+
+===== Example XML Description File
+
+The example below is the same one as shown in section [TBD] for a `fmi3ClockedCoSimulation` FMU.
+
+[source, xml]
+----
+//include::examples/co_simulation_scheduled_execution.xml[]
 ----

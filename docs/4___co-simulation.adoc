@@ -1,9 +1,75 @@
-== FMI for Co‑Simulation [[fmi-for-co-simulation]]
+== FMI for Co‑Simulation [[fmi-for-co-simulation]] [[CoSimulation]]
+:DOSTEP: fmi3DoStep()
 
 This chapter defines the Functional Mock-up Interface (FMI) for the coupling of two or more simulation models in a co-simulation environment (FMI for Co-Simulation).
-Co-simulation is a rather general approach to the simulation of coupled technical systems and coupled physical phenomena in engineering with focus on instationary (time-dependent) problems.
+It is designed both for coupling with subsystem models, which have been exported by their simulators together with its solvers as runnable code (<<figure-co-simulation-with-generated-code>>), and for coupling of simulation tools (simulator coupling, tool coupling (<<figure-co-simulation-with-tool-coupling>> and <<figure-distributed-co-simulation>>)).
 
-FMI for Co-Simulation is designed both for coupling with subsystem models, which have been exported by their simulators together with its solvers as runnable code (<<figure-co-simulation-with-generated-code>>), and for coupling of simulation tools (simulator coupling, tool coupling (<<figure-co-simulation-with-tool-coupling>> <<figure-co-simulation-with-generated-code>>)).
+In FMI version 3.0 the following new features have been added:  
+
+* Signal clock ticks (i.e. events/interrupts) from FMU to simulation environment
+* Signal clock ticks from simulation environment to FMU
+* Define multiple model rates (periodic, variable/triggerable) in one FMU
+* Access intermediate values of FMU variables between two communication points.
+
+Please refer to the different sections for a more detailed explanation of the motivation and use of the new features.
+
+*Co-Simulation* [[co-simulation]]
+
+Co-simulation is a rather general approach to the simulation of coupled technical systems and coupled physical phenomena in engineering with focus on instationary (time-dependent) problems.
+The basic co-simulation mode is similar to the feature set of FMI 2.0 for Co-Simulation.
+The asynchronous mode for FMUs has been removed since this mode was not supported by tools and it can be suitably replaced by co-simulation master implementations that control the asynchronous computation of FMUs via separate tasks/threads created for each FMU.
+
+*Early Return* [[co-simulation-with-early-return]]
+ 
+In FMI 3.0, an FMU is allowed to stop the execution of `{DOSTEP}` and return without reaching the predefined communication instant, i.e. `currentCommunicationPoint + communicationStepSize`.
+This mechanism is called early-return.
+With the early return feature, an FMU shall be able to signal triggered clock events or internal state changes, i.e., discontinuity events to the co-simulation master at any time (not only at the end of `{DOSTEP}` function calls). 
+When an FMU internal event happens at a time instant, the FMU informs the master that a new communication point for the co-simulation can be created.
+Note that, an event signal is not seen in the narrow sense of solver induced discontinuity events but in the general sense of a simulation event that has to be handled by the co-simulation master (e.g. state changes that require extended handling).
+On a multi-node architecture, in particular, significant co-simulation speed-up may be obtained if the co-simulation master can avoid waiting until the end of the slowest `{DOSTEP}` when many FMUs are integrating in parallel and an event occurred.
+To exploit such efficiency gains also the co-simulation master can command the FMU to return early from the current communication step.
+This is even helpful if the FMU or the co-simulation master do not support the advanced handling of events based on the `fmi3ModeHybridCoSimulation` functionalities.
+In this way multiple event types and also triggered clock ticks or interrupts can be supported based on the early return functionality and additional functionalities provided in the mode `fmi3ModeHybridCoSimulation`.
+
+*Clocked Co-Simulation*  [[clocked-co-simulation]]
+
+The mode `fmi3ModeHybridCoSimulation` provides functionalities to control and observe the ticking of clocks.
+For FMI for Co-Simulation, the ticking of a clock is interpreted as an activity of the associated model partition.
+During simulation, the co-simulation master updates and manages values of inputs and outputs of FMUs and further models at communication points (CP) for each model partition.
+The ratio between communication points created for a model partition and time can be seen as a model rate. 
+In that sense multiple model partitions of a model define multiple model rates in a model.
+
+
+*Scheduled Execution Simulation* [[scheduled-execution-simulation]]
+
+The co-simulation mode `fmi3ModeHybridCoSimulation` provides an indirect control over the computation of model partitions. 
+With the mode `fmi3ModeScheduledExecutionSimulation` it is possible that a co-simulation master takes direct control over the time of computation (i.e. scheduling) for such model partitions.
+
+The co-simulation mode `fmi3ModeScheduledExecutionSimulation` addresses simulation use cases that require:
+
+. That at any time (even for unpredictable events) an event can be signaled to an FMU
+. If multiple FMUs share (execution) resources then the time requirements (e.g. execution time, communication deadlines) of all model partitions have to be observed and respected
+.. Time requirements may exist due to communication constraints that are not apparent at FMU simulation level that have to be fulfilled by the simulation master
+.. That requires a global execution order and preemption policy for all model partitions of the multiple FMUs 
+.. Priority information provided by the FMUs has to be evaluated and merged to an overall priority for available model partitions
+. Data shall move between the different FMU model partitions for the same or next activation time, if direct communication via FMUs exist.
+.. Get/set actions must also be possible for the same activation time for different model partitions between the computation of these model partitions.
+
+This co-simulation mode provides support for a concurrent computation of model partitions (i.e. a support of multiple rates) on a single computational resource (e.g. CPU-core) for an FMU. 
+For that a preemptive multitasking regime is intended (cooperative multitasking is not covered by this description).
+
+_[A parallel computation of model partitions is not part of the FMI 3.0 API. 
+An FMU may still internally use parallel computation on multiple cores, but handling this is (currently) not part of the FMI standard. Such an internal parallel computation is not visible to the simulation master.
+It is a tool vendor specific solution that has ties to the used OS and the co-simulation environment]_
+
+*Intermediate Variable Access* [[intermediate-variable-access]]
+
+An FMU shall be able to inform a co-simulation master that is able to provide intermediate output variables and/or receive intermediate input variables at any time, i.e. not only at the end of a current `{DOSTEP}` function call.
+It shall be possible for the FMU to inform the master whether the internal solver is in a temporary state or if it has just completed an internal integration step.
+If the internal solver is at a temporary state, intermediate output variables shall only be used for directly computing intermediate input variables.
+If the internal integration step is completed, the master can forward intermediate outputs to interconnected simulation units.
+
+*Coupling Scenarios*
 
 .Co-simulation with generated code on a single computer (for simplicity shown for one slave only).
 [#figure-co-simulation-with-generated-code]
@@ -28,3 +94,89 @@ image::images/co-simulation-distributed-infrastructure.svg[width=90%, align="cen
 The master has to implement the communication layer.
 Additional parameters for establishing the network communication (for example, identification of the remote computer, port numbers, user account) are to be set via the GUI of the master.
 These data are not transferred via the FMI API.
+
+*Co-Simulation Feature Selection* [[co-simulation-feature-selection]]
+
+The following co-simulation modes are supported in FMI 3.0
+
+. Basic Co-Simulation (`fmi3ModeCoSimulation`, section <<co-simulation>>)
+. Hybrid Co-Simulation (`fmi3ModeHybridCoSimulation`, section <<co-simulation-with-early-return>> and section <<clocked-co-simulation>>)
+. Scheduled Execution Simulation (`fmi3ModeScheduledExecutionSimulation`, section <<scheduled-execution-simulation>>)
+
+Each mode defines a specific set of features explained in the referenced subsections.
+
+In each co-simulation mode also the intermediate variable access option can be activated, if the FMU and the master supports this. More information can be found in section <<intermediate-variable-access>>
+
+It is required that the co-simulation master signals to the FMU which features shall be used for the current use of the FMU.
+
+For that the following function is used: 
+
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tag=Instantiate]
+----
+
+For details about this function please refer to section <<fmi-application-programming-interface>>.
+
+The co-simulation master must set the function parameter `fmuType` to `fmi3CoSimulation` in order to activate the co-simulation use in general.
+
+Additionally the co-simulation master has to configure the co-simulation mode used for the current instance of the FMU via setting the argument `fmuCoSimulationConfiguration` which is defined as follows:
+
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tag=CoSimulationConfiguration]
+----
+
+The element `coSimulationMode` in the above struct is an enumeration variable of type `fmi3CoSimulationMode` which has to be set by the master for this FMU instance.
+`coSimulationMode` can be one of the following enumeration values:
+
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tag=CoSimulationMode]
+----
+
+The master can only activate co-simulation modes for an FMU that the FMU defines as supported via modelDescription.xml.
+
+For setting the FMU to certain co-simulation modes the following capability flags (i.e. attributes) have to be true.
+
+[cols="1,2"]
+|===
+|*Co-Simulation Mode*
+|*Attributes the mode requires to be true*
+
+|`fmi3ModeCoSimulation`
+|only if `canNotUseBasicCoSimulation` equals false
+
+|`fmi3ModeHybridCoSimulation`
+|`providesHybridCoSimulation`, `canReturnEarlyAfterIntermediateUpdate`
+
+|`fmi3ModeScheduledExecutionSimulation`
+|`providesScheduledExecutionSimulation`,
+ 
+|===
+
+A detailed description of the capability flags is given in the following sections.
+
+Generally it is assumed that an FMI 3.0 for Co-Simulation FMU always supports the co-simulation mode `fmi3ModeCoSimulation`.
+If that is not possible for an FMU
+- e.g. if the FMU can not provide an emulation of inferred clock tick occurrences -
+it has to include the capability flag `canNotUseBasicCoSimulation` equals true in the modelDescription.XML.
+
+If the FMU cannot provide a support for a co-simulation mode it has to refuse this mode via return value NULL for `fmi3Instantiate()`.
+
+*Multiple Co-Simulation Mode Support in one FMU*
+
+If the fmuType is `fmi3CoSimulation`, then it is encouraged to support multiple co-simulation modes in one FMU so it can be used in differently capable co-simulation master implementations and for different use cases.
+_[That improves the reusability of FMUs.
+A common application of this multiple mode support is the reuse of FMUs for real-time and non-real-time simulations.]_ 
+
+The described multi mode support is based on wrapping functionality into the `fmi3DoStep()` function via emulating missing features of the mode the FMU has been originally exported for.
+
+An FMU that supports the mode `fmi3ModeScheduledExecutionSimulation` will support in most cases also the mode `fmi3ModeHybridCoSimulation`.
+
+_[Remark:_
+_Wrapping towards other co-simulation modes can influence the simulation results._ 
+_Depending on the model especially wrapping towards the mode fmi3ModeCoSimulation may result in divergent simulation results._
+_Especially aperiodic inferred clocks can not always be sufficiently emulated in modes that do not directly support clocks._
+_Therefore it is recommended that the FMU provides logging information to the user about the influence of the current mode on simulation results, if non-optimal modes are used by the simulation environment.
+]_
