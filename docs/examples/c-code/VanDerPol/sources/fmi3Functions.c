@@ -234,9 +234,9 @@ fmi3Status fmi3ExitInitializationMode(fmi3Instance instance) {
 fmi3Status fmi3EnterEventMode(fmi3Instance instance,
                               fmi3Boolean inputEvent,
                               fmi3Boolean stepEvent,
-                              fmi3Boolean stateEvent,
-                              fmi3Boolean timeEvent,
-                              fmi3Float64 eventTime) {
+                              const fmi3Boolean rootsFound[],
+                              size_t nEventIndicators,
+                              fmi3Boolean timeEvent) {
     ModelInstance *comp = (ModelInstance *)instance;
     if (invalidState(comp, "fmi3EnterEventMode", MASK_fmi3EnterEventMode))
         return fmi3Error;

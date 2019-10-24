@@ -118,7 +118,8 @@ while (!terminateSimulation) {
     if (enterEventMode || stateEvent || timeEvent) {
 
         if (!initialEventMode) {
-            M_fmi3EnterEventMode(m, fmi3False, fmi3False, stateEvent, timeEvent, time);
+            // TODO: pass rootsFound
+            M_fmi3EnterEventMode(m, fmi3False, fmi3False, NULL, 0, timeEvent);
         }
 
         // event iteration
