@@ -115,10 +115,10 @@ while (!terminateSimulation) {
     tNext = time + h;
 
     // handle events
-    if (enterEventMode || timeEvent || stateEvent) {
+    if (enterEventMode || stateEvent || timeEvent) {
 
         if (!initialEventMode) {
-            M_fmi3EnterEventMode(m);
+            M_fmi3EnterEventMode(m, fmi3False, fmi3False, stateEvent, timeEvent, time);
         }
 
         // event iteration
