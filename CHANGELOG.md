@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.0.1 (2019-10-07)
+## v2.0.1 (2019-10-31)
 
 Specification document:
 
