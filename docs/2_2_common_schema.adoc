@@ -168,7 +168,8 @@ image:images/fmiModelDescription_schema_2.png[width=80%, align="center"]
 
 |`fmiVersion`
 |Version of "FMI for Model Exchange or Co-Simulation" that was used to generate the XML file.
-The value for this version is "2.0".
+The value for this version is "2.0". +
+_[Clarification for FMI 2.0.1: The version string for FMUs generated acoording to FMI 2.0.1 shall be “2.0” to be compatible with FMI 2.0 importers.]_
 
 |`modelName`
 |The name of the model as used in the modeling environment that generated the XML file,
@@ -242,7 +243,7 @@ If 1 or more units are defined, this element must be present.].
 A `Unit` is defined by its `name` attribute such as "N.m" or "N*m" or "Nm",
 which must be unique with respect to all other defined elements of the `UnitDefinitions` list.
 If a variable is associated with a `Unit`,
-then the value of the variable has to be provided with the `fmi2SetXXX` functions or else is returned by the `fmi2GetXXX` functions with respect to this `Unit`.
+then the value of the variable has to be provided with the `fmi2SetXXX` functions and is returned by the `fmi2GetXXX` functions with respect to this `Unit`.
 _[The purpose of the name is to uniquely identify a unit and,
 for example, use it to display the unit in menus or in plots.
 Since there is no standard to represent units in strings,
@@ -573,7 +574,7 @@ be used to increase numerical stability and accuracy by setting the correspondin
 if the corresponding variable or an alias of it is a continuous state variable.]_
 
 |Item
-|Items of an enumeration has a sequence of `"name"` and `"value"` pairs.
+|Item of an enumeration has a sequence of `"name"` and `"value"` pairs.
 The values can be any integer number
 but must be unique within the same enumeration (in order that the mapping between `"name"` and `"value"` is bijective).
 An `Enumeration` element must have at least one Item.
@@ -807,18 +808,18 @@ Allowed values of this enumeration:
 - `"fixed"`: The value of the variable is fixed after initialization,
 in other words, after `fmi2ExitInitializationMode` was called the variable value does not change anymore.
 
-- `"tunable"`: The value of the variable is constant between `external events` (ModelExchange) and between _Communication Points_ (CoSimulation) due to changing variables with `causality = "parameter"` or `"input"` and `variability = "tunable"`.
+- `"tunable"`: The value of the variable is constant between `external events` (ModelExchange) and between _Communication Points_ (Co-Simulation) due to changing variables with `causality = "parameter"` or `"input"` and `variability = "tunable"`.
 Whenever a parameter or input signal with `variability = "tunable"` changes,
-an event is triggered externally (ModelExchange), or the change is performed at the next _Communication Point_ (CoSimulation) and the variables with `variability = "tunable"` and `causality = "calculatedParameter"` or `"output"` must be newly computed.
+an event is triggered externally (ModelExchange), or the change is performed at the next _Communication Point_ (Co-Simulation) and the variables with `variability = "tunable"` and `causality = "calculatedParameter"` or `"output"` must be newly computed.
 
 - `"discrete"`: +
 ModelExchange: The value of the variable is constant between _external_ and _internal events_ (= time,
 state, step events defined implicitly in the FMU). +
-CoSimulation: By convention, the variable is from a "real" sampled data system and its value is only changed at Communication Points (also inside the slave).
+Co-Simulation: By convention, the variable is from a "real" sampled data system and its value is only changed at Communication Points (also inside the slave).
 
 - `"continuous"`: Only a variable of `type = "Real"` can be `"continuous"`. +
 ModelExchange: No restrictions on value changes. +
-CoSimulation: By convention, the variable is from a differential
+Co-Simulation: By convention, the variable is from a differential
 
 The default is `"continuous"`.
 
@@ -1278,7 +1279,7 @@ because the Enumeration items are defined in `TypeDefinitions / SimpleType`.
 _[Therefore, calling `fmi2SetXXX` to set start values is only necessary, if a different value as stored
 in the xml file is desired.
 WARNING: It is not recommended to change the start values in the modelDescription.xml file of an FMU, as this would break the consistency with the hard-coded start values in the C-Code.
-This could lead to unpredictable behaviour of the FMU in different importing tools, as it is not mandatory to call `fmi2SetXXX` to set start values during initialization. Instead it is recommended to use the SSP Standard to handle modified parameters of FMUs or different parameter sets.]_
+This could lead to unpredictable behaviour of the FMU in different importing tools, as it is not mandatory to call `fmi2SetXXX` to set start values during initialization. Instead it is recommended to use the SSP Standard (https://ssp-standard.org/) to handle modified parameters of FMUs or different parameter sets.]_
 
 The interpretation of start is defined by `ScalarVariable / initial`.
 A different start value can be provided with an `fmi2SetXXX` function before `fmi2ExitInitializationMode` is called (but not for variables with `variability = "constant"`).
@@ -1427,7 +1428,7 @@ since then the <Derivatives> list does not change
 if the declaration order of states in the source model is not changed.
 This is for example, important for linearization,
 in order that the interpretation of the state vector does not change for a re-exported FMU._].
-The number of Unknown elements in the Derivatives element uniquely define the number of continuous time state variables,
+The number of Unknown elements in the Derivatives element uniquely defines the number of continuous time state variables,
 as required by the corresponding Model Exchange functions (integer argument "nx" of `fmi2GetContinuousStates`, `fmi2SetcontinuousStates`, `fmi2GetDerivatives`, `fmi2GetNominalsOfContinuousStates` see hereafter) that require it.
 The corresponding continuous-time states are defined by attribute `derivative` of the corresponding `ScalarVariable` state derivative element.
 _[Note that higher order derivatives must be mapped to first order derivatives but the mapping definition can be preserved due to attribute `derivative`.
@@ -1635,17 +1636,17 @@ _This equation system can be defined as:_
 [source, xml]
 ----
 <ModelVariables>
-   <ScalarVariable name="p"      , ...> … </ScalarVariable>  <!—index="1" -->
-   <ScalarVariable name="u1"     , ...> … </ScalarVariable>  <!—index="2" -->
-   <ScalarVariable name="u2"     , ...> … </ScalarVariable>  <!—index="3" -->
-   <ScalarVariable name="u3"     , ...> … </ScalarVariable>  <!—index="4" -->
-   <ScalarVariable name="x1"     , ...> … </ScalarVariable>  <!—index="5" -->
-   <ScalarVariable name="x2"     , ...> … </ScalarVariable>  <!—index="6" -->
-   <ScalarVariable name="x3"     , ...> … </ScalarVariable>  <!—index="7" -->
-   <ScalarVariable name="der(x1)", ...> … </ScalarVariable>  <!—index="8" -->
-   <ScalarVariable name="der(x2)", ...> … </ScalarVariable>  <!—index="9" -->
-   <ScalarVariable name="der(x3)", ...> … </ScalarVariable>  <!—index="10" -->
-   <ScalarVariable name="y"      , ...> … </ScalarVariable>  <!—index="11" -->
+   <ScalarVariable name="p"       ...> … </ScalarVariable>  <!--index="1" -->
+   <ScalarVariable name="u1"      ...> … </ScalarVariable>  <!--index="2" -->
+   <ScalarVariable name="u2"      ...> … </ScalarVariable>  <!--index="3" -->
+   <ScalarVariable name="u3"      ...> … </ScalarVariable>  <!--index="4" -->
+   <ScalarVariable name="x1"      ...> … </ScalarVariable>  <!--index="5" -->
+   <ScalarVariable name="x2"      ...> … </ScalarVariable>  <!--index="6" -->
+   <ScalarVariable name="x3"      ...> … </ScalarVariable>  <!--index="7" -->
+   <ScalarVariable name="der(x1)" ...> … </ScalarVariable>  <!--index="8" -->
+   <ScalarVariable name="der(x2)" ...> … </ScalarVariable>  <!--index="9" -->
+   <ScalarVariable name="der(x3)" ...> … </ScalarVariable>  <!--index="10" -->
+   <ScalarVariable name="y"       ...> … </ScalarVariable>  <!--index="11" -->
 </ModelVariables>
 
 <ModelStructure>
@@ -1730,10 +1731,10 @@ The definition of the model structure is then:_
 [source, xml]
 ----
 <ModelVariables>
-   <ScalarVariable name="u"     , ...> … </ScalarVariable>  <!—index="1" -->
-   <ScalarVariable name="y"     , ...> … </ScalarVariable>  <!—index="2" -->
-   <ScalarVariable name="x"     , ...> … </ScalarVariable>  <!—index="3" -->
-   <ScalarVariable name="der(x)", ...> … </ScalarVariable>  <!—index="4" -->
+   <ScalarVariable name="u"     , ...> … </ScalarVariable>  <!--index="1" -->
+   <ScalarVariable name="y"     , ...> … </ScalarVariable>  <!--index="2" -->
+   <ScalarVariable name="x"     , ...> … </ScalarVariable>  <!--index="3" -->
+   <ScalarVariable name="der(x)", ...> … </ScalarVariable>  <!--index="4" -->
 </ModelVariables>
 
 <ModelStructure>
@@ -1838,8 +1839,7 @@ unsignedInteger = digit { digit }
 The tree of names is mapped to an ordered list of `ScalarVariable.name`pass:[s]
 in http://en.wikipedia.org/wiki/Depth-first_search[depth-first] order.
 
-_[Clarification for FMI 2.0.1, the scalarVariables of the xml must not be ordered in depth first, they can be ordered arbitrary.
-It is only required that the names are given in such a way that a depth first tree can be constructed from the names, except for array elements.]_
+_[Clarification for FMI 2.0.1: this constraint has been removed.]_
 
 Example:
 
