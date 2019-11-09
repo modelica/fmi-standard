@@ -793,6 +793,305 @@ A tool may ignore this information.
 However, it is convenient for a user that `startTime`, `stopTime`, `tolerance` and `stepSize` have already a meaningful default value for the model at hand.
 Furthermore, for CoSimulation the `stepSize` defines the preferred `communicationStepSize`.
 
+==== Definition of Terminals (Terminals)
+
+===== Rationale
+
+Terminals are fully optional and can be ignored by any importing tool.
+
+Definition "Terminal": A terminal is...
+
+* a structured interface for connections to other models
+* intended to be used for signal flow between models, parameter propagation, and compatibility checks of the model configuration
+* a sequence of references to variables with connection meta data
+
+Predefined rules for variable matching in a connection are given below.
+Predefined variable kinds are used to describe how the member variables have to be handled.
+Domain specific connection rules, terminals and their member variables can be provided by other standards.
+
+_[CoSimulation errors are not addressed by the terminals._
+_The CoSimulation algorithm has to be chosen and implemented by the importing tool._
+_Features that might be required for specific CoSimulation algorithms had to be implemented by the FMU exporting tool._
+
+_Algebraic loops in systems of connected ModelExchange FMUs are not addressed or resolved by the terminals._
+_It is not required that the causality of the terminal member variables in connected terminals match._
+
+_The SSP standard refers to a "connectorKind"._
+_This "connectorKind" is not related to the `terminalKind` or `variableKind` described in the following sections.]_
+
+===== Terminals
+
+Element `Terminals` of `fmiModelDescription` is defined as:
+
+image::images/fmiModelDescription_Terminals_Schema.png[width=40%, pdfwidth=40%, align="center"]
+
+All instances of `Terminal` have the type `fmi3Terminal` and are listed in the `Terminals` sequence:
+
+image::images/fmiModelDescription_Terminals_Terminal_Schema.png[width=60%, pdfwidth=60%, align="center"]
+
+The normalized string attribute `name` of the `Terminal` element is the instance name of the terminal. The terminal name must be unique on each level.
+//_[The terminal name may contain dots, to enable structured terminals.]_
+
+The normalized string attribute `matchingRule` describes the rules for variable matching in a connection.
+There are three predefined matching rules: plug, bus, and sequence.
+Other standards may define new matching rules.
+_[It is recommended that vendor specific rules start with "_vendorName" or "_toolName" to avoid namespace clashes.]_
+
+There is a sequence of terminal member variables, terminal stream member variables, and nested terminals in the `Terminal` element.
+The member variables are the exchanged variables.
+The type of the nested terminals is `fmi3Terminal`, and they can be used to implement structured terminals.
+
+[cols="1,3",options="header"]
+|====
+|_matchingRule_
+|_Description_
+
+|"plug"
+|Matching of the variables is based on `memberName`.
+An importing tool should connect terminals only if all member variables are present and match.
+
+|"bus"
+|Matching of the variables is based on `memberName`.
+An importing tool may connect terminals if some or no terminal member variables are present.
+
+|"sequence"
+|Matching of the variables is based on the order of the terminal member variables.
+An importing tool should connect terminals only if the number of member variables matches.
+
+|====
+
+The normalized string `terminalKind` is an optional attribute. Other standards may define terminal kinds.
+It is intended that the `terminalKind` is used to define domain specific member variable sequences, member names and order, or high level restrictions for connections.
+
+_[Other terminal kinds should refer to the predefined matchingRules.
+Vendor specific terminal kinds should start with "_vendorName" or "_toolName" to avoid namespace clashes._
+
+_Examples for terminalKind: StandardXXX_Mechanical_Translational, Modelica.Mechanics.Translational.Interfaces.Flange_a, vendorNameA_customTypeA, _vendorNameB_customLibrary_customTypeB_
+
+_The structured naming convention of the `ModelVariables` is independent from the terminal names and member variable names._
+
+_A tool may choose to connect terminals with a different or unknown `terminalKind`, if the `matchingRule` matches.]_
+
+===== Terminal Member Variable
+
+The `TerminalMemberVariable` is defined as:
+
+image::images/fmi3Terminal_TerminalMemberVariable_Schema.png[width=50%, pdfwidth=50%, align="center"]
+
+The normalized string `variableKind` is used to provide general information about the variable.
+This information defines how the connection of this variable has to be implemented (e.g. Kirchhoff's current law or common signal flow).
+
+The normalized string `memberName` is the representation in tools which apply name-based matching in connections.
+The member name has to be unique in a terminal.
+
+The normalized string `variableName` is used to identify the terminal member variable in the list of `ModelVariables`.
+_[The `name` attribute of the model variable is equal to the `variableName` of the `TerminalMemberVariable`._
+_An importing tool may use the `variableName` attribute to identify a specific alias to get additional information, such as minimum, maximum, and nominal values.]_
+
+One variable can be part of several terminals, which is considered aliasing according to the rules of <<aliasing-of-variables>>.
+
+_[Tools which apply sequence based matching should also provide unique member names, so that all importing tools which use name based matching use the same member names._
+
+_The suggested variable naming scheme for the structured naming convention is: <ModelVariable name> = <terminalName>.<memberName>_
+
+_Not all `ModelVariables` which have the prefix "<terminalName>." are a member variable, and there may exist member variables which don't have this prefix._
+
+_Example 1 (suggested scheme): <ModelVariable name> is "portA.U", <terminalName> is "portA", <memberName> is "U"._
+
+_Example 2 (suggested scheme): <ModelVariable name> is "hierarchConn.innerConn.U", <outer terminal name> is "hierarchConn", <inner terminal name> is "innerConn", <memberName> is "U"._
+
+_Example 3 (no prefix): <ModelVariable name> is "u", <terminalName> is "portA", <memberName> is "u"._
+
+_Example 4 (prefix but not a member): <ModelVariable name> is "portA.u", there is a terminal with <terminalName> "portA", but this variable is not a terminal member._
+
+_The suggested variable naming scheme for the non-structured naming convention is: <ModelVariable name> = <memberName>_
+
+_Matching is not restricted by variability, causality or variable type._
+_Example: A fixed variable may be connected to a tunable variable, a variable of type Real may be connected to a variable of type Integer._
+_However, it is recommended that the variable types and variabilities are equal._
+
+_The `matchingRule` refers to the `TerminalMemberVariables` on the same level only. Nested terminals can have different `matchingRules`._
+
+_There is no special handling of derivatives._
+_If a derivative is a terminal member variable then it is considered as normal member variable._
+_However, if a derivative of a terminal member variable is not terminal member, then this derivative information may be used by an importing tool.]_
+
+The predefined variable kinds are:
+[cols="1,3",options="header"]
+|====
+|_variableKind_
+|_Description_
+
+|"signal"
+|The values in connected terminals are intended to be equal.
+Restricted to input and output, parameter and calculatedParameter.
+_[Example: Signal flow, parameter propagation, equality checks]_
+
+|"inflow" / "outflow"
+|Variables which fulfill Kirchhoff’s current law.
+Restricted to input and output, parameter and calculatedParameter.
+_[Example: Electric current]_
+|====
+
+===== General remark on signal
+
+_[The signal `variableKind` can be applied for different use cases._
+_The first use case is a signal flow from an output of one FMU to an input of another FMU. The output value has to be forwarded to the input._
+
+_The signal flow can cause algebraic loops._
+_If variables in connected terminals have the causality output, then an importing tool may iterate an undefined input of an FMU to ensure that the connected output values are equal._
+
+_Another use case is the parameter propagation._
+_If a variable in both connected terminals has the causality parameter, then an importing tool could ask the user for the value of one of those parameters only, and propagate this value to the other FMU._
+_If only one of the variables has causality parameter, and the other is a constant output or calculatedParameter, then the importing tool could also propagate the parameter value without presenting a parameter to the user._
+_One example of use would be the name of a substance flowing through a pipe._
+_If the fluid flows from one pipe FMU to another, the substance should be the same._
+_This substance name could be propagated over several FMUs._
+
+_Finally the `variableKind` "signal" can be applied to implement compatibility checks._
+_If for example the variability of the variables in connected terminals are constant, then the importing tool can implement an equality assertion._
+_This is also possible with calculated parameters._
+_One example of use would be the cross sectional flow area in pipes which is calculated from geometry parameters._
+_A change in the cross sectional flow area is relevant for the momentum equation, and therefore the connection has to be deemed incompatible if these variables are present and unequal.]_
+
+===== General remark on inflow and outflow
+
+_[Flow variables have a direction and must fulfill a zero sum constraint i.e. the sum of all flow variables connected together must be zero (Kirchhoff’s current law)._
+_In addition because different tools might have different direction definitions both, "inflow" and "outflow" `variableKinds` are available._
+_For variables with "inflow" a positive value means that the flow is inwards, and for "outflow" a positive value means that the flow is outwards._
+_For the sake of simplicity in the following latexmath:[\dot{m}_i] denotes an inflowing quantity:_
+
+latexmath:[0 = \sum{\dot{m}_i}]
+
+_Connecting a single output "outflow" to a single input "inflow", or vice versa automatically fulfills the flow constraint, while connecting two single signals of the same flow type requires a negation of the signal.]_
+
+===== Terminal Stream Member Variable
+
+The `TerminalStreamMemberVariable` is defined as:
+
+image::images/fmi3Terminal_TerminalStreamMemberVariable_Schema.png[width=60%, pdfwidth=60%, align="center"]
+
+This element is used for variables which fulfill the balance equation for transported quantities.
+It is restricted to input and output, parameter and calculatedParameter.
+
+The Stream concept is described in the appendix D.3 of the Modelica specification.
+Only one terminal member variable with the `variableKind` "inflow" or "outflow" per terminal is allowed, if a TerminalStreamMemberVariable is present.
+_[More sophisticated structures can be implemented using hierarchical terminals.]_
+
+The attribute `inStreamVariableName` and `outStreamVariableName` are used to identify the `ModelVariables`.
+If the referenced model variables are arrays, then the size of the `inStreamVariableName` and `outStreamVariableName` has to be equal.
+A terminal may have more than one TerminalStreamMemberVariable.
+The `inStreamMemberName` and `outStreamMemberName` describe the terminal member name for matching purposes, similar to the `memberName` attribute in the `TerminalMemberVariable`.
+
+_[An example of use for an array of stream variables is a gas mixture flow._
+_The gas composition could be implemented as a mass fraction vector._
+_The `outStreamVariableName` refers to_ latexmath:[portA.q_\textit{outStream}\textit{[\]}] _and the `inStreamVariableName` refers to_  latexmath:[portA.q_\textit{inStream}\textit{[\]}] _._
+_The `inStreamMemberName` and `outStreamMemberName` are "_ latexmath:[q_\textit{inStream}\textit{[\]}] _" and "_ latexmath:[q_\textit{outStream}\textit{[\]}] _"._
+
+_Balance equation for transported quantities:_
+
+_latexmath:[0 = \sum{q_i\dot{m}_i}]_
+
+_latexmath:[0 = \sum{\dot{m}_i}\cdot
+\left\{\begin{array}{ll}
+q_{\textit{$i$, outStream}} &\textit{if $\dot{m}$ is outflowing through terminal $i$}\\
+q_{\textit{$i$, inStream}} &\textit{if $\dot{m}$ is inflowing through terminal $i$}
+\end{array}\right.]_
+
+_The_ latexmath:[q_\textit{$i$, outStream}] _is the convective quantity in case the matter flows out of the FMU._
+latexmath:[q_\textit{$i$, inStream}] _is the convective quantity in case the matter flows into the FMU. Both variables are present in the terminal._
+_The outStream variable has the causality output or calculatedParameter because this information has to be provided by each FMU._
+_The inStream variable has the causality input or parameter._
+_To display the actual value in an importing tool, this actual value has to be selected depending on the sign of the terminal member variable with `variableKind` "inflow" or "outflow"._
+_However, calculating the actual value is not necessary._
+
+_If only two terminals with a variable  are connected and their causality matches, then the values of the outStream variables can be forwarded to the corresponding inStream values._
+
+_In Modelica the inStream variable is not directly visible, the value can only be accessed using "inStream()", therefore an additional ModelVariable has to be added during the export._
+_It is suggested that Modelica tools exporting an FMU derive the member name for the inStream variable according to the scheme "<outStream name>_inStream"._
+_E.g. if the outStream name is "h_outflow" then the inStream name should be "h_outflow_inStream".]_
+
+==== Definition of a Graphical Representation (GraphicalRepresentation)
+
+===== Rationale
+
+The graphical representation of the FMU and terminals are needed in order to more easily comprehend the meaning of connected FMUs and to help an importing tool to display the terminals and the FMU icon in the way the exporter intended.
+
+The graphical representation is fully optional.
+The graphical representation of terminals is separate from the terminal definitions in the `Terminals` element.
+
+There are three optional elements in the `GraphicalRepresentation`:
+
+. The `CoordinateSystem` defines the extent of the whole icon (graphical items may exceed that rectangle).
+. The `Icon` defines an image source for the FMU.
+. The `Terminal` sequence contains the graphical representation of the visible terminals.
+
+image::images/fmiModelDescription_GraphicalRepresentation_Schema.png[width=60%, pdfwidth=60%, align="center"]
+
+===== CoordinateSystem
+
+image::images/fmiModelDescription_GraphicalRepresentation_CoordinateSystem_Schema.png[width=60%, pdfwidth=60%, align="center"]
+
+The `CoordinateSystem` element and its defined extent is used as reference for other graphical items. It also provides a scaling factor to millimeter.
+
+The coordinate system is defined by the coordinates of two points, the left lower (`x1`, `y1`) corner and the right upper (`x2`, `y2`) corner, where the coordinates of the first point shall be less than the coordinates of the second point _[a first quadrant coordinate system]_.
+The x-axis directed to the right, the y-axis is directed upwards.
+
+_[The exporting tool should define how the coordinate system unit relates to mm display or print out size._
+_However, an importing tool might choose to use the factor from the default coordinate system extent to the actual coordinate system extent to calculate a scaling factor, to match the default icon size in the importing tool._
+
+_The area defined by the coordinate system suggested to be used as "clickable icon size" in other tools._
+_A `Terminal` might be placed outside of this area, so the visible bounding box has to be determined by the importing tool.]_
+
+The coordinate system default is x1=-100, y1=-100, x2=100, y2=100. This extent is used if the `CoordinateSystem` element is missing.
+The default `suggestedScalingFactorTo_mm` is 0.1.
+So the default coordinate system display size should be 20 mm width and 20 mm height.
+
+The FMU icon and all graphical representations provide the position and extent with the attributes `x1`, `y1`, `x2`, `y2`.
+The values of these attributes directly relate to this coordinate system and are not normalized.
+Flipping of the FMU icon or a terminal can be realized by setting its attributes x2 < x1 or y2 < y1 without changing the coordinate system.
+
+===== Icon
+
+image::images/fmiModelDescription_GraphicalRepresentation_Icon_Schema.png[width=30%, pdfwidth=30%, align="center"]
+
+In the `Icon` element the FMU icon without terminals is defined, its extent and position.
+
+The `iconSource_PNG` attribute is mandatory to simplify the import in other tools, so a PNG file has to be provided in any case.
+Optionally an SVG file can be provided.
+This enables high quality rendering and printing in importing tools.
+
+===== Terminals
+
+image::images/fmiModelDescription_GraphicalRepresentation_Terminal_Schema.png[width=50%, pdfwidth=50%, align="center"]
+
+For `fmi3Terminals` (terminals which are listed in the `Terminals` element) the name of the terminal in the `GraphicalRepresentation` is equal to the name of the terminal in the `Terminals` element (e.g. "port_a").
+_[If the graphical representation is used for an input or output (e.g. a Real input "u"), then a `Terminal` has to be added to the `Terminals` element which has one `TerminalMemberVariable`._
+_The name of the `Terminal` and the name of the `TerminalMemberVariable` should be equal to the name of the input/output.]_
+
+The `iconSource_PNG` is mandatory for a terminal, optionally an SVG file can be provided.
+The default connection stroke size and color can be provided, to define the intended connection line layout in the importing tool. The stroke size is given relative to the coordinate system extent.
+The stroke color is given in RGB values from 0 to 255. E.g.: "255 255 0".
+
+The VendorAnnotations element can be used by vendors to store additional information for the graphical representation.
+_[It is suggested that Modelica tools store the Modelica annotation of the connector under the tool name "Modelica3Annotation" in the attribute "annotation" of an element "connector". The attribute "name" of the connector element is equal to the "name" attribute of the referenced `fmi3Terminal`.]_
+
+_[Only terminals from the `Terminals` element can have a graphical representation. For simple inputs/outputs a terminal with one member has to be added.]_
+
+===== Placement, Extent, and Painting Order of Graphical Items
+
+image::images/GraphicalRepresentation.svg[width=70%, pdfwidth=70%, align="center"]
+
+The clickable icon size is defined by the CoordinateSystem element.
+The FMU icon itself may exceed this extent (or bounding box).
+The bounding box of the terminals is given by the extent in the terminals element.
+Their location is neither limited to the extent of the icon nor the extent of the coordinate system.
+_[An importing tool has to determine the outer bounding box enclosing all graphical items.]_
+
+Transparent SVG or PNG files are allowed and wanted. The order of the elements in the XML file defines the order of painting.
+The first element in the GraphicalRepresentation is painted first and therefore behind the others, the last element is painted on top of the others and because of that in front of them.
+_[So the FMU icon should be placed first in the XML file, terminal below.]_
+
 ==== Definition of Vendor Annotations (VendorAnnotations)
 
 Element `VendorAnnotations` of `fmiModelDescription` is defined as:
@@ -1397,6 +1696,8 @@ With this interpretation, changing parameters online is "clean", as long as thes
 _FMI for Co-Simulation:_
 _Changing of tunable parameters is allowed before an `fmi3DoStep` call (so, whenever an input can be set with `fmi3SetXXX`) and before `fmi3ExitInitializationMode` is called (that is before and during Initialization Mode).
 The FMU internally carries out event handling if necessary.]_
+
+===== Aliasing of Variables [[aliasing-of-variables]]
 
 Variables of the same base type (like `fmi3Real`) that have identical `valueReference` definitions are called "alias" variables.
 The main purpose of "alias" variables is to enhance efficiency.
