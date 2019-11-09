@@ -390,6 +390,20 @@ typedef fmi3Status fmi3GetDirectionalDerivativeTYPE(fmi3Instance instance,
                                                     fmi3Float64 deltaUnknowns[],
                                                     size_t nDeltaOfUnknowns);
 /* end::GetDirectionalDerivative[] */
+  
+/* tag::GetAdjointDerivative[] */
+typedef fmi3Status fmi3GetAdjointDerivativeTYPE(fmi3Instance instance,
+                                                    const fmi3ValueReference unknowns[],
+                                                    size_t nUnknowns,
+                                                    const fmi3ValueReference knowns[],
+                                                    size_t nKnowns,
+                                                    const fmi3Float64 deltaUnknowns[],
+                                                    size_t nDeltaOfUnknowns,
+                                                    fmi3Float64 deltaKnowns[],
+                                                    size_t nDeltaKnowns);
+/* end::GetAdjointDerivative[] */  
+  
+  
 
 /* Entering and exiting the Configuration or Reconfiguration Mode */
 /* tag::EnterConfigurationMode[] */
