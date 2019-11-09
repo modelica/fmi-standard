@@ -158,6 +158,7 @@ Common Functions
 
 /* Getting partial derivatives */
 #define fmi3GetDirectionalDerivative fmi3FullName(fmi3GetDirectionalDerivative)
+#define fmi3GetAdjointDerivative fmi3FullName(fmi3GetAdjointDerivative)
 
 /* Entering and exiting the Configuration or Reconfiguration Mode */
 #define fmi3EnterConfigurationMode   fmi3FullName(fmi3EnterConfigurationMode)
