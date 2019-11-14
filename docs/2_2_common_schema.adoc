@@ -1231,11 +1231,11 @@ Whenever a parameter or input signal with `variability = "tunable"` changes, an 
 - `"discrete"`: +
 ModelExchange: The value of the variable is constant between _external_ and _internal events_ (= time,
 state, step events defined implicitly in the FMU). +
-CoSimulation: By convention, the variable is from a "real" sampled data system and its value is only changed at Communication Points (also inside the slave).
+Co-Simulation: By convention, the variable is from a "real" sampled data system and its value is only changed at Communication Points (also inside the slave).
 
 - `"continuous"`: Only a variable of `type = "Real"` can be `"continuous"`. +
 ModelExchange: No restrictions on value changes. +
-CoSimulation: By convention, the variable is from a differential
+Co-Simulation: By convention, the variable is from a differential
 
 - `"clock"`: Only a variable of type "Clock" can have this variablity.
 
@@ -1753,11 +1753,14 @@ For `Enumeration` it is required, because the Enumeration items are defined in `
 |`start`
 |Initial or guess value of variable.
 *This value is also stored in the C functions*.
-_[Therefore, calling_ `fmi3SetXXX` _to set start values is only necessary, if a different value as stored in the XML file is desired.]_ The interpretation of start is defined by `Variable / initial`.
-A different start value can be provided with an `fmi3SetXXX` function before `fmi3ExitInitializationMode` is called (but not for variables with `variability = "constant"`).
+_[Therefore, calling_ `fmi3SetXXX` _to set start values is only necessary, if a different value as stored in the XML file is desired._
+_The interpretation of start is defined by `Variable / initial`._
+_A different start value can be provided with an `fmi3SetXXX` function before `fmi3ExitInitializationMode` is called (but not for variables with `variability = "constant"`)._
+_WARNING: It is not recommended to change the start values in the modelDescription.xml file of an FMU, as this would break the consistency with the hard-coded start values in the C-Code._
+_This could lead to unpredictable behaviour of the FMU in different importing tools, as it is not mandatory to call `fmi2SetXXX` to set start values during initialization. Instead it is recommended to use the SSP Standard (https://ssp-standard.org/) to handle modified parameters of FMUs or different parameter sets._
 
-_[The standard approach is to set the start value before `fmi3EnterInitializationMode`.
-However, if the initialization shall be modified in the calling environment (for example, changing from initialization of states to steady-state initialization), it is also possible to use the start value as iteration variable of an algebraic loop: using an additional condition in the environment, such as_ latexmath:[\color{blue}{\dot{x} = 0}] _, the actual start value is determined.]_
+_The standard approach is to set the start value before `fmi3EnterInitializationMode`._
+_However, if the initialization shall be modified in the calling environment (for example, changing from initialization of states to steady-state initialization), it is also possible to use the start value as iteration variable of an algebraic loop: using an additional condition in the environment, such as_ latexmath:[\color{blue}{\dot{x} = 0}] _, the actual start value is determined.]_
 
 If `initial = "exact"` or `"approx"` or `causality = "input"`, a `start` value must be provided.
 
@@ -1858,15 +1861,16 @@ The functional dependency is defined as (dependencies of variables that are fixe
 
 |`Derivatives`
 |Ordered list of all state derivatives, in other words, a list of `Variable` value references where every corresponding `Variable` must be a state derivative.
-_[Note that only continuous Real variables are listed here.
-If a state or a derivative of a state shall not be exposed from the FMU, or if states are not statically associated with a variable (due to dynamic state selection), then dummy `Variable`pass:[s] have to be introduced, for example, `x[4]`, or `xDynamicStateSet2[5]`.
-The ordering of the variables in this list is defined by the exporting tool.
-Usually, it is best to order according to the declaration order of the states in the source model, since then the <Derivatives> list does not change if the declaration order of states in the source model is not changed.
-This is for example, important for linearization, in order that the interpretation of the state vector does not change for a re-exported FMU._].
+_[Note that only continuous Real variables are listed here._
+_If a state or a derivative of a state shall not be exposed from the FMU, or if states are not statically associated with a variable (due to dynamic state selection), then dummy `Variable`pass:[s] have to be introduced, for example, `x[4]`, or `xDynamicStateSet2[5]`._
+_The ordering of the variables in this list is defined by the exporting tool._
+_Usually, it is best to order according to the declaration order of the states in the source model, since then the <Derivatives> list does not change if the declaration order of states in the source model is not changed._
+_This is for example, important for linearization, in order that the interpretation of the state vector does not change for a re-exported FMU.]_
+
 The corresponding continuous-time states are defined by attribute `derivative` of the corresponding `Variable` state derivative element.
-_[Note that higher order derivatives must be mapped to first order derivatives but the mapping definition can be preserved due to attribute `derivative`.
-Example: if_ latexmath:[\color{blue}{\frac{\text{ds}}{\text{dt}} = v,\ \frac{\text{dv}}{\text{dt}} =f(..)}] _,then_ latexmath:[\color{blue}{\left\{ v,\ \frac{\text{dv}}{\text{dt}} \right\}}] _ is the vector of state derivatives and attribute `derivative` of_ latexmath:[\color{blue}{v}] _references_ latexmath:[\color{blue}{s}] _,
-and attribute `derivative` of_ latexmath:[\color{blue}{\frac{\text{dv}}{\text{dt}}}] _references_ latexmath:[\color{blue}{v}] _.]_ +
+
+_[Note that higher order derivatives must be mapped to first order derivatives but the mapping definition can be preserved due to attribute `derivative`._
+_Example: if_ latexmath:[\color{blue}{\frac{\text{ds}}{\text{dt}} = v,\ \frac{\text{dv}}{\text{dt}} =f(..)}] _,then_ latexmath:[\color{blue}{\left\{ v,\ \frac{\text{dv}}{\text{dt}} \right\}}] _is the vector of state derivatives and attribute `derivative` of_ latexmath:[\color{blue}{v}] _references_ latexmath:[\color{blue}{s}] _, and attribute `derivative` of_ latexmath:[\color{blue}{\frac{\text{dv}}{\text{dt}}}] _references_ latexmath:[\color{blue}{v}] _.]_ +
 For Co-Simulation, element `Derivatives` is ignored if capability flag `providesDirectionalDerivative` has a value of `false`, in other words, it cannot be computed. _[This is the default.
 If an FMU supports both ModelExchange and CoSimulation, then the `Derivatives` element might be present, since it is needed for ModelExchange.
 If the above flag is set to false for the CoSimulation case, then the `Derivatives` element is ignored for CoSimulation.
@@ -2171,7 +2175,6 @@ arrayIndices    = "[" unsignedInteger {"," unsignedInteger} "]"
 unsignedInteger = digit { digit }
 ----
 
-The tree of names is mapped to an ordered list of `Variable.name`pass:[s] in http://en.wikipedia.org/wiki/Depth-first_search[depth-first] order.
 Example:
 
 ----
