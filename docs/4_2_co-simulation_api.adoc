@@ -123,7 +123,7 @@ The following state machine defines the supported calling sequences.
 [#figure-co-simulation-state-machine]
 image::images/calling-sequence-co-simulation.svg[width=80%, align="center"]
 
-In this co-simulation mode the following functions must not be called: `fmi3ActivateModelPartition()`, `fmi3NewDiscreteStates()`, <<fmi3EnterEventMode>>, `fmi3SetClock()`, `fmi3GetClock()`, `fmi3SetIntervalFraction()`, `fmi3GetIntervalFraction()`, `fmi3SetIntervalDecimal()`, `fmi3GetIntervalDecimal()` including all functions that are specific to fmuType `fmi3ModelExchange`.
+In this co-simulation mode the following functions must not be called: `fmi3ActivateModelPartition()`, <<fmi3NewDiscreteStates>>, <<fmi3EnterEventMode>>, `fmi3SetClock()`, `fmi3GetClock()`, `fmi3SetIntervalFraction()`, `fmi3GetIntervalFraction()`, `fmi3SetIntervalDecimal()`, `fmi3GetIntervalDecimal()` including all functions that are specific to fmuType `fmi3ModelExchange`.
 
 ====== State: slaveSetableFMUstate [[state-slave-setable-fmu-state-co-simulation]]
 In all states of this super state it is allowed to call
@@ -466,7 +466,7 @@ If the FMU signals an `earlyReturn` equals `fmi3True` and `fmi3OK`after returnin
 
 The following `fmi3Boolean` variables define the reasons for the `fmi3CallbackIntermediateUpdate` call. Several variables can be set by the FMU. Default value of variables is `fmi3False`.
 
-*	when `eventOccurred` is `fmi3True`, the master must call `{DER}` to do an early return and handle the event via entering event mode. In this case, `earlyReturnTime` argument of `{DER}` is ignored. In `Event Mode` the master shall call the `fmi3NewDiscreteStates()` function for gathering `fmi3eventInfo` related information about the event occurred at `{IUTIME}`.
+*	when `eventOccurred` is `fmi3True`, the master must call `{DER}` to do an early return and handle the event via entering event mode. In this case, `earlyReturnTime` argument of `{DER}` is ignored. In `Event Mode` the master shall call the <<fmi3NewDiscreteStates>> function for gathering `fmi3eventInfo` related information about the event occurred at `{IUTIME}`.
 
 *	when `clocksTicked`  is `fmi3True`, it means that `fmi3GetClock()` function should be called for gathering all clock related information about ticking output clocks at `{IUTIME}`.
 If this flag is `fmi3True` the master must call `{DER}` to do an early return and handle the clock event in `Event Mode`.
@@ -483,7 +483,7 @@ If `canReturnEarly` is `fmi3False` the FMU will not do the early return, regardl
 
 Note that only the first discontinuity event at a Newtonian time instant shall be signaled that way. But in `Event Mode`, there may be an event iteration at a Newtonian time instant and have super dense time instants.
 
-Based on the information delivered in `{STIUI}`, additional information about the discontinuity at that time instant can be obtained from the `fmi3EventInfo` structure after calling  `fmi3NewDiscreteStates()`  and/or `fmi3GetClock()`.
+Based on the information delivered in `{STIUI}`, additional information about the discontinuity at that time instant can be obtained from the `fmi3EventInfo` structure after calling  <<fmi3NewDiscreteStates>>  and/or `fmi3GetClock()`.
 
 The FMU must not call the `{INTERMEDIATEUPDATE}` callback function with a `{INTERMEDIATEUPDATEINFO}.intermediateUpdateTime` value that is smaller than the `{INTERMEDIATEUPDATEINFO}.intermediateUpdateTime` value given in a previous call of `{INTERMEDIATEUPDATE}` with `{INTERMEDIATEUPDATEINFO}.intermediateStepFinished` is `fmi3True`.
 
@@ -505,22 +505,22 @@ The co-simulation master signals to the FMU that it supports and has recognized 
 
 The FMU stops computation at the first encountered internal event (if any) and the event time is provided through `{STIUI}.{IUTIME}`.
 If `{DOSTEP}` returns with `earlyReturn = fmi3True` and an event has happened, i.e., `{STIUI}.eventOccurred` is `fmi3True`, then an event handling has to be done by the co-simulation master.
-In order to start event handling the co-simulation master has to call <<fmi3EnterEventMode>> for that FMU to push the FMU into `Event Mode`. In this mode the co-simulation master is supposed to catch all events through the `fmi3NewDiscreteStates()` function and the `fmi3EventInfo` structure.
+In order to start event handling the co-simulation master has to call <<fmi3EnterEventMode>> for that FMU to push the FMU into `Event Mode`. In this mode the co-simulation master is supposed to catch all events through the <<fmi3NewDiscreteStates>> function and the `fmi3EventInfo` structure.
 
 If the early-return request of the co-simulation master is ignored by the FMU, then `{DOSTEP}` returns with `earlyReturn = fmi3False`.
 The master can start a resynchronization of FMUs at an event time, if the _currentCommunicationPoint_ has passed the event time, the master can roll-back the FMU and repeat the step with a suitable _communicationStepSize_ (if the FMU supports the roll-back).
 
-In `Event Mode` and only after `{DOSTEP}` returns with `earlyReturn = fmi3True` a `fmi3NewDiscreteStates()` call returns `fmi3EventInfo` structure as a return argument.
+In `Event Mode` and only after `{DOSTEP}` returns with `earlyReturn = fmi3True` a <<fmi3NewDiscreteStates>> call returns `fmi3EventInfo` structure as a return argument.
 Not all elements of `fmi3EventInfo` are relevant and only the following elements may be considered:
 
--	when _newDiscreteStatesNeeded_ is true it means that the master should stay in Event Mode and another call to `fmi3NewDiscreteStates()` is required.
+-	when _newDiscreteStatesNeeded_ is true it means that the master should stay in Event Mode and another call to <<fmi3NewDiscreteStates>> is required.
 
 -	when _nextEventTimeDefined_ is true it means that an event time is available and the value is given by the `nextEventTime` value.
 This is the case when the model can report in advance the accurate time of the next predictable time event.
 
 -	when _terminateSimulation_ is true it means that the model wants to stop integration and the co-simulation master should call <<fmi3Terminate>>.
 
-In Event Mode it is allowed to `fmi3Get{VariableType}` variable values of the FMU after the call of `fmi3NewDiscreteStates()` and it is allowed to `fmi3Set{VariableType}` variable values before calling `fmi3NewDiscreteStates()`.
+In Event Mode it is allowed to `fmi3Get{VariableType}` variable values of the FMU after the call of <<fmi3NewDiscreteStates>> and it is allowed to `fmi3Set{VariableType}` variable values before calling <<fmi3NewDiscreteStates>>.
 The FMU leaves Event Mode when the master calls `fmi3EnterStepMode()` for that FMU.
 
 It is not allowed to call <<fmi3EnterEventMode>> or `fmi3EnterStepMode()` for an FMU in mode `fmi3ModeCoSimulation` or `fmi3ModeScheduledExecutionSimulation`.
@@ -618,19 +618,19 @@ In order to handle discrete events and clock ticks, the FMU is pushed into the e
 
 Allowed Function Calls::
 <<fmi3Terminate>>::
-Upon return of `fmi3NewDiscreteStates()`, if `fmi3EventInfo->terminateSimulation` equals to fmi3True, the master should finish the cosimulation by calling fmi3Terminate() on all FMUs.
+Upon return of <<fmi3NewDiscreteStates>>, if `fmi3EventInfo->terminateSimulation` equals to fmi3True, the master should finish the cosimulation by calling fmi3Terminate() on all FMUs.
 
 <<fmi3EnterConfigurationMode>>::
 With this function call the Reconfiguration Mode is entered.
 This function must not be called if the FMU contains no tunable structural parameters (i.e. with `causality="structuralParameter"` and `variability="tunable"`).
 
-`fmi3NewDiscreteStates()`::
-In order to handle discrete events `fmi3NewDiscreteStates()` is called.
+<<fmi3NewDiscreteStates>>::
+In order to handle discrete events <<fmi3NewDiscreteStates>> is called.
 This function returns the `fmi3EventInfo* eventInfo` structure.
-When `eventInfo.newDiscreteStatesNeeded` equals to true, the FMU should stay in Event Mode and another call to `fmi3NewDiscreteStates()` is required.
+When `eventInfo.newDiscreteStatesNeeded` equals to true, the FMU should stay in Event Mode and another call to <<fmi3NewDiscreteStates>> is required.
 
 `fmi3EnterStepMode()`::
-Once all events are handled and `fmi3NewDiscreteStates()` returns with `eventInfo.newDiscreteStatesNeeded` equals to false, the FMU should return back to the Step Mode, unless the FMU requests to terminate the co-simulation by setting  `fmi3EventInfo->terminateSimulation` to true.
+Once all events are handled and <<fmi3NewDiscreteStates>> returns with `eventInfo.newDiscreteStatesNeeded` equals to false, the FMU should return back to the Step Mode, unless the FMU requests to terminate the co-simulation by setting  `fmi3EventInfo->terminateSimulation` to true.
 In order to push the FMU into the `Step Mode`, the `fmi3EnterStepMode()` function is used.
 In this case, a new step can be started from the current communication point time.
 
@@ -772,7 +772,7 @@ _[The value of global variables can be influenced by more than one model partiti
 The computational effort has to be predictable, thus all computationally expensive operations needed to calculate a model partition have to be contained within the `fmi3ActivateModelPartition()` function.
 The simulation master can assume that `fmi3Get{VariableType} and fmi3Set{VariableType}` operations are not computationally expensive.
 In mode `fmi3ModeScheduledExecutionSimulation` the handling of `fmi3CallbackIntermediateUpdate()` callbacks is the same as in section <<clocked-co-simulation>>.
-The only difference is that an early return has no meaning in this mode and  no additional event handling based on `fmi3NewDiscreteStates()` is conducted.
+The only difference is that an early return has no meaning in this mode and  no additional event handling based on <<fmi3NewDiscreteStates>> is conducted.
 All internal events that shall be handled by the co-simulation master are signaled via `fmi3CallbackIntermediateUpdate()`.
 _[In this mode it is recommended to restrict such updates by the FMU to output clock ticks for reducing the computational load in real-time simulations.]_
 
@@ -826,7 +826,7 @@ All states must not be entered or exited concurrently for model partitions of an
 [caption="Figure 10: "]
 image::images/calling-sequence-co-simulation_scheduled_execution.svg[width=80%, align="center"]
 
-In this co-simulation mode the following functions must not be called: `fmi3DoStep()`, `fmi3NewDiscreteStates()`, `fmi3SetClock()`, `fmi3SetIntervalDecimal()`, `fmi3SetIntervalFraction()`, `fmi3DoEarlyReturn()`, <<fmi3EnterEventMode>>, `fmi3EnterStepMode()` including all functions that are specific to fmuType `fmi3ModelExchange`.
+In this co-simulation mode the following functions must not be called: `fmi3DoStep()`, <<fmi3NewDiscreteStates>>, `fmi3SetClock()`, `fmi3SetIntervalDecimal()`, `fmi3SetIntervalFraction()`, `fmi3DoEarlyReturn()`, <<fmi3EnterEventMode>>, `fmi3EnterStepMode()` including all functions that are specific to fmuType `fmi3ModelExchange`.
 
 The states `Configuration Mode`, `Instantiated`, `Initialization Mode`, `Terminated`, `Fatal` are handled in the same way as in mode `fmi3ModeCoSimulation` with the exception that the generally not allowed functions of the co-simulation mode `fmi3ModeScheduledExecutionSimulation` must not be called.
 

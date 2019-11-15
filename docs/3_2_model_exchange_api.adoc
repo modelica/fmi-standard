@@ -79,6 +79,7 @@ If `nEventIndicators == 0` the value of `rootsFound` is not defined.
 
 `timeEvent`:: a time event occurred
 
+[[fmi3NewDiscreteStates,`fmi3NewDiscreteStates`]]
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=NewDiscreteStates]
@@ -87,8 +88,8 @@ include::../headers/fmi3FunctionTypes.h[tags=EventInfo]
 ----
 
 The FMU is in *Event Mode* and the super dense time is incremented by this call. +
-If the super dense time before a call to `fmi3NewDiscreteStates` was latexmath:[(t_R,t_I)], then the time instant after the call is latexmath:[(t_R,t_I)]. +
-If return argument `pass:[fmi3eventInfo->newDiscreteStatesNeeded]` = `fmi3True`, the FMU should stay in Event Mode, and the FMU requires to set new inputs to the FMU (`fmi3SetXXX` on inputs) to compute and get the outputs (`fmi3GetXXX` on outputs) and to call `fmi3NewDiscreteStates` again.
+If the super dense time before a call to <<fmi3NewDiscreteStates>> was latexmath:[(t_R,t_I)], then the time instant after the call is latexmath:[(t_R,t_I)]. +
+If return argument `pass:[fmi3eventInfo->newDiscreteStatesNeeded]` = `fmi3True`, the FMU should stay in Event Mode, and the FMU requires to set new inputs to the FMU (`fmi3SetXXX` on inputs) to compute and get the outputs (`fmi3GetXXX` on outputs) and to call <<fmi3NewDiscreteStates>> again.
 Depending on the connection with other FMUs, the environment shall
 
 - call <<fmi3Terminate>>, if `terminateSimulation` = `fmi3True` is returned by at least one FMU,
@@ -147,7 +148,7 @@ _All variables that are used in a "delay(..)" operator are stored in an appropri
 . _Dynamic state selection: +
 It is checked whether the dynamically selected states are still numerically appropriate.
 If yes, the function returns with `enterEventMode` = `fmi3False`  otherwise with `enterEventMode` = `fmi3True`._
-_In the latter case, <<fmi3EnterEventMode>> has to be called and the states are dynamically changed by a subsequent `fmi3NewDiscreteStates`._
+_In the latter case, <<fmi3EnterEventMode>> has to be called and the states are dynamically changed by a subsequent <<fmi3NewDiscreteStates>>._
 
 _Note that this function is not used to detect time or state events, for example, by comparing event indicators of the previous with the current call of `fmi3CompletedIntegratorStep`.
 These types of events are detected in the environment, and the environment has to call <<fmi3EnterEventMode>> independently in these cases,
@@ -184,7 +185,7 @@ include::../headers/fmi3FunctionTypes.h[tags=GetNominalsOfContinuousStates]
 ----
 
 Return the nominal values of the continuous states.
-This function should always be called after calling function `fmi3NewDiscreteStates` if it returns with `eventInfo->nominalsOfContinuousStatesChanged = fmi3True`, since then the nominal values of the continuous states have changed _[for example, because the association of the continuous states to variables has changed due to internal dynamic state selection]_.
+This function should always be called after calling function <<fmi3NewDiscreteStates>> if it returns with `eventInfo->nominalsOfContinuousStatesChanged = fmi3True`, since then the nominal values of the continuous states have changed _[for example, because the association of the continuous states to variables has changed due to internal dynamic state selection]_.
 If the FMU does not have information about the nominal value of a continuous state i, a nominal value `x_nominal[i] = 1.0` should be returned.
 Note that it is required that `x_nominal[i] > 0.0`.
 _[Typically, the nominal values of the continuous states are used to compute the absolute tolerance required by the integrator.
@@ -229,7 +230,7 @@ The event time of a state event may be determined if a domain change of at least
 Event Mode::
 If an event is triggered in *Continuous-Time Mode*, then *Event Mode* is entered by calling <<fmi3EnterEventMode>>.
 In this mode all continuous-time and discrete-time equations are active and the unknowns at an event can be computed and retrieved.
-After an event is completely processed, `fmi3NewDiscreteStates` must be called and depending on the return argument, `newDiscreteStatesNeeded`, the state chart stays in *Event Mode* or switches to *Continuous-Time Mode*.
+After an event is completely processed, <<fmi3NewDiscreteStates>> must be called and depending on the return argument, `newDiscreteStatesNeeded`, the state chart stays in *Event Mode* or switches to *Continuous-Time Mode*.
 When the *Initialization Mode* is terminated with <<fmi3ExitInitializationMode>>, then *Event Mode* is directly entered, and the continuous-time and discrete-time variables at the initial time are computed based on the initial continuous-time states determined in the *Initialization Mode*.
 
 Reconfiguration Mode::
@@ -241,7 +242,7 @@ terminated::
 In this state, the solution at the final time of a simulation can be retrieved.
 
 Note that simulation backward in time is only allowed over continuous time intervals.
-As soon as an event occurred (<<fmi3EnterEventMode>> was called), going back in time is forbidden, because <<fmi3EnterEventMode>> / `fmi3NewDiscreteStates` can only compute the next discrete state, not the previous one.
+As soon as an event occurred (<<fmi3EnterEventMode>> was called), going back in time is forbidden, because <<fmi3EnterEventMode>> / <<fmi3NewDiscreteStates>> can only compute the next discrete state, not the previous one.
 
 Note that during *Initialization*, *Event*, and *Continuous-Time Mode* input variables can be set with `fmi3SetXXX` and output variables can be retrieved with `fmi3GetXXX` interchangeably according to the model structure defined under element `<ModelStructure>` in the XML file.
 _[For example, if one output `y1` depends on two inputs `u1`, `u2`, then these two inputs must be set, before `y1` can be retrieved.
@@ -364,8 +365,8 @@ Clocks are automatically deactivated if the corresponding discrete-time equation
 Before a new loop iteration is started, the environment must activate the clocks again and reset discrete states using the `fmi3SetXXX` functions.
 
 Leave event mode::
-The function `fmi3NewDiscreteStates` evaluates the discrete-time equations, provided the corresponding clock is active and the discrete-time equations have not already been evaluated with calls to `fmi3GetXXX` functions.
-Clocks are automatically deactivated by `fmi3NewDiscreteStates` and by <<fmi3Reset>>.
+The function <<fmi3NewDiscreteStates>> evaluates the discrete-time equations, provided the corresponding clock is active and the discrete-time equations have not already been evaluated with calls to `fmi3GetXXX` functions.
+Clocks are automatically deactivated by <<fmi3NewDiscreteStates>> and by <<fmi3Reset>>.
 _[This handling of discrete states and time events is forward compatible with FMI 2.0 for any model that could be treated with FMI 2.0 and is exported again using the new features.
 The environment may ignore the new functions `fmi3SetClock`, `fmi3GetClock`, `fmi3SetIntervalDecimal`, `fmi3SetIntervalFraction`, `fmi3GetIntervalDecimal` and `fmi3GetIntervalFraction`.
 The new functions are needed for FMUs with input sample times and to set discrete-time states in model-based control applications or if algebraic loops are present among discrete-time equations of multiple connected FMUs.]_
