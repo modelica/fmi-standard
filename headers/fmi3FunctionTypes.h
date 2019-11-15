@@ -413,15 +413,17 @@ typedef fmi3Status fmi3SetClockTYPE(fmi3Instance instance,
                                     const fmi3Clock values[], const fmi3Boolean *subactive);
 /* end::SetClock[] */
 
-/* tag::GetInterval[] */
+/* tag::GetIntervalDecimal[] */
 typedef fmi3Status fmi3GetIntervalDecimalTYPE(fmi3Instance instance,
                                               const fmi3ValueReference valueReferences[], size_t nValueReferences,
                                               fmi3Float64 interval[]);
+/* end::GetIntervalDecimal[] */
 
+/* tag::GetIntervalFraction[] */
 typedef fmi3Status fmi3GetIntervalFractionTYPE(fmi3Instance instance,
                                                const fmi3ValueReference valueReferences[], size_t nValueReferences,
                                                fmi3UInt64 intervalCounter[], fmi3UInt64 resolution[]);
-/* end::GetInterval[] */
+/* end::GetIntervalFraction[] */
 
 /* tag::SetInterval[] */
 typedef fmi3Status fmi3SetIntervalDecimalTYPE(fmi3Instance instance,
