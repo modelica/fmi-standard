@@ -168,7 +168,7 @@ With this function call the Reconfiguration Mode is entered.
 This function must not be called if the FMU contains no tunable structural parameters (i.e. with `causality="structuralParameter"` and `variability="tunable"`).
 
 <<fmi3DoStep>>::
-Within fmi3DoStep() the FMU may call `fmi3CallbackIntermediateUpdate()`
+Within fmi3DoStep() the FMU may call <<fmi3CallbackIntermediateUpdate>>
 If the function returns with `fmi3OK` or `fmi3Warning` the FMU stays in this state.
 If the function returns with `fmi3Discard` the FMU enters state `Step Discarded`.
 
@@ -210,7 +210,7 @@ Forbidden Function Calls::
 In this state the master can retrieve information from the FMU between communication points.
 Functions called in this state must not return `fmi3Discard`.
 
-The FMU enters this state by calling `fmi3CallbackIntermediateUpdate()` within <<fmi3DoStep>> and leaves the state towards state `Step Mode` if the function returns `fmi3OK` or `fmi3Warning`.
+The FMU enters this state by calling <<fmi3CallbackIntermediateUpdate>> within <<fmi3DoStep>> and leaves the state towards state `Step Mode` if the function returns `fmi3OK` or `fmi3Warning`.
 If the function returns `fmi3Error` the FMU enters state `Terminated`.
 If the function returns `fmi3Fatal` the FMU enters state `Fatal`.
 
@@ -384,9 +384,10 @@ include::examples/c-code/co_simulation.c[tags=CoSimulation]
 ==== Early-return Requested by the Co-Simulation Master in fmi3ModeCoSimulation [[earlyreturn-co-simulation]]
 The boolean capability flag `canReturnEarlyAfterIntermediateUpdate` in the modelDescription XML file indicates whether the FMU supports the early-return feature.
 The default value of this capability flag is false.
-Each time an internal discontinuity or an event happens inside an FMU with capability flag `canReturnEarlyAfterIntermediateUpdate=true`, the callback function `fmi3CallbackIntermediateUpdate()` is invoked by the FMU and the associated structure `fmi3IntermediateUpdateInfo` is sent back to the co-simulation master.
+Each time an internal discontinuity or an event happens inside an FMU with capability flag `canReturnEarlyAfterIntermediateUpdate=true`, the callback function <<fmi3CallbackIntermediateUpdate>> is invoked by the FMU and the associated structure `fmi3IntermediateUpdateInfo` is sent back to the co-simulation master.
 The master can only use this early return functionality if it provides the `{CBIU}` callback function pointer in <<fmi3CallbackFunctions>> in <<fmi3Instantiate>>.
 
+[[fmi3CallbackIntermediateUpdate,`fmi3CallbackIntermediateUpdate`]]
 [source, c]
 ----
 include::../headers/fmi3FunctionTypes.h[tag=CallbackIntermediateUpdate]
@@ -397,7 +398,7 @@ include::../headers/fmi3FunctionTypes.h[tag=CallbackIntermediateUpdate]
 include::../headers/fmi3FunctionTypes.h[tag=IntermediateUpdateInfo]
 ----
 
-The co-simulation master can request the FMU to end the <<fmi3DoStep>> at a Newtonian time instant and to do an early return by calling the `fmi3DoEarlyReturn()` function inside the callback function `fmi3CallbackIntermediateUpdate()`.
+The co-simulation master can request the FMU to end the <<fmi3DoStep>> at a Newtonian time instant and to do an early return by calling the `fmi3DoEarlyReturn()` function inside the callback function <<fmi3CallbackIntermediateUpdate>>.
 The co-simulation master is only allowed to call this function, if the boolean variable `fmi3IntermediateUpdateInfo->canReturnEarly` is `fmi3True`.
 If the master does not call `fmi3DoEarlyReturn()` the FMU continues the <<fmi3DoStep>> computation until the next predefined communication instant (i.e., _currentCommunicationPoint_+ _communicationStepSize_) or until the next call of `{CBIU}`.
 
@@ -450,7 +451,7 @@ If an event happens or a output clock ticks, `{IUTIME}` is the time of event or 
 If the FMU signals an `earlyReturn` equals `fmi3True` and `fmi3OK`after returning from <<fmi3DoStep>> then `{IUTIME}` is the internal simulation time of the FMU of the last `{CBIU}` call that signaled `canReturnEarly` equals `fmi3true`.
 `{IUTIME}` is also the time of intermediate steps of the internal FMU solver.
 
-The following `fmi3Boolean` variables define the reasons for the `fmi3CallbackIntermediateUpdate` call. Several variables can be set by the FMU. Default value of variables is `fmi3False`.
+The following `fmi3Boolean` variables define the reasons for the <<fmi3CallbackIntermediateUpdate>> call. Several variables can be set by the FMU. Default value of variables is `fmi3False`.
 
 *	when `eventOccurred` is `fmi3True`, the master must call `{DER}` to do an early return and handle the event via entering event mode. In this case, `earlyReturnTime` argument of `{DER}` is ignored. In `Event Mode` the master shall call the <<fmi3NewDiscreteStates>> function for gathering <<fmi3EventInfo>> related information about the event occurred at `{IUTIME}`.
 
@@ -757,15 +758,15 @@ _[The value of global variables can be influenced by more than one model partiti
 
 The computational effort has to be predictable, thus all computationally expensive operations needed to calculate a model partition have to be contained within the `fmi3ActivateModelPartition()` function.
 The simulation master can assume that `fmi3Get{VariableType} and fmi3Set{VariableType}` operations are not computationally expensive.
-In mode `fmi3ModeScheduledExecutionSimulation` the handling of `fmi3CallbackIntermediateUpdate()` callbacks is the same as in section <<clocked-co-simulation>>.
+In mode `fmi3ModeScheduledExecutionSimulation` the handling of <<fmi3CallbackIntermediateUpdate>> callbacks is the same as in section <<clocked-co-simulation>>.
 The only difference is that an early return has no meaning in this mode and  no additional event handling based on <<fmi3NewDiscreteStates>> is conducted.
-All internal events that shall be handled by the co-simulation master are signaled via `fmi3CallbackIntermediateUpdate()`.
+All internal events that shall be handled by the co-simulation master are signaled via <<fmi3CallbackIntermediateUpdate>>.
 _[In this mode it is recommended to restrict such updates by the FMU to output clock ticks for reducing the computational load in real-time simulations.]_
 
 ===== Computation in fmi3ModeScheduledExecutionSimulation
 
 If this mode is set, the master has to directly control the time of computation of model partitions associated to input clocks.
-The activation states of output clocks are transported via `fmi3CallbackIntermediateUpdate()` and <<fmi3GetClock>>.
+The activation states of output clocks are transported via <<fmi3CallbackIntermediateUpdate>> and <<fmi3GetClock>>.
 
 [[fmi3ActivateModelPartition]]
 Each `fmi3ActivateModelPartition()` call is now associated to the computation of a (publicly disclosed, externally controlled) model partition of the model and therefore to a single defined input clock.
@@ -888,8 +889,8 @@ _fmi3Get{VariableType} on outputs_ +
 |====
 ]_
 
-`fmi3CallbackIntermediateUpdate()`::
-Only in this state the FMU is allowed to call the callback `fmi3CallbackIntermediateUpdate()`.
+<<fmi3CallbackIntermediateUpdate>>::
+Only in this state the FMU is allowed to call the callback <<fmi3CallbackIntermediateUpdate>>.
 The callback may be called from concurrent tasks within `fmi3ActivateModelPartition()`.
 The function must not return `fmi3Discard`.
 
@@ -915,7 +916,7 @@ Additionally to the generally forbidden functions in this co-simulation mode as 
 In this state the master can retrieve information from the FMU between communication points.
 Functions called in this state must not return `fmi3Discard`.
 
-The FMU enters this state by calling `fmi3CallbackIntermediateUpdate()`  within `fmi3ActivateModelPartition()` and leaves the state towards state `Clock Activation Mode` if the function returns `fmi3OK` or `fmi3Warning`.
+The FMU enters this state by calling <<fmi3CallbackIntermediateUpdate>>  within `fmi3ActivateModelPartition()` and leaves the state towards state `Clock Activation Mode` if the function returns `fmi3OK` or `fmi3Warning`.
 If the function returns `fmi3Error` the FMU enters state `Terminated`.
 If the function returns `fmi3Fatal` the FMU enters state `Fatal`.
 
@@ -929,7 +930,7 @@ The FMU sets the reported activation state immediately back to `fmi3False` for t
 The master can call fmi3Set{VariableType} and fmi3Get{VariableType} during the callback for variables associated to a output clock that is active during this callback.
 Also intermediate variable access is allowed as defined in <<state-intermediate-update-mode-co-simulation>>
 
-_[Based on the FMI standard it cannot be determined which part of the code of an FMU has called the callback function `fmi3CallbackIntermediateUpdate()`.
+_[Based on the FMI standard it cannot be determined which part of the code of an FMU has called the callback function <<fmi3CallbackIntermediateUpdate>>.
 This is especially the case for the co-simulation mode `fmi3ModeScheduledExecutionSimulation` in which multiple model partitions can be active at the same time.
 This causes no issues since all function call prerequisites are connected to the activation state of clocks, modelDescription.xml information and additionally available information of the struct `fmi3IntermediateUpdateInfo`]_
 
@@ -1055,7 +1056,7 @@ include::examples/pseudo_code_co_simulation_scheduled_execution_simulation.txt[]
 ==== Intermediate Variable Access [[api-intermediate-variable-access]]
 :DOSTEP: fmi3DoStep()
 
-If the co-simulation master signals the support for intermediate variable access see section <<co-simulation-feature-selection>> and an FMU has at least one variable with `intermediateAccess=true`, the FMU can invoke the `fmi3CallbackIntermediateUpdate()` callback function to sent the `fmi3IntermediateUpdateInfo` back to the co-simulation master.
+If the co-simulation master signals the support for intermediate variable access see section <<co-simulation-feature-selection>> and an FMU has at least one variable with `intermediateAccess=true`, the FMU can invoke the <<fmi3CallbackIntermediateUpdate>> callback function to sent the `fmi3IntermediateUpdateInfo` back to the co-simulation master.
 
 [source, C]
 ----
@@ -1064,7 +1065,7 @@ include::../headers/fmi3FunctionTypes.h[tag=IntermediateUpdateInfo]
 
 The following flags in the `fmi3IntermediateInfo` struct are used for intermediate variable access:
 
-*   `intermediateTime` is the simulation time at which the `fmi3CallbackIntermediateUpdate()` callback-function got called by the FMU.
+*   `intermediateTime` is the simulation time at which the <<fmi3CallbackIntermediateUpdate>> callback-function got called by the FMU.
 
 *   If `intermediateVariableSetAllowed` is `fmi3True`, the co-simulation master may provide intermediate input variables by calling `fmi3Set{VariableType}` functions for variables with `intermediateAccess=true`.
 
