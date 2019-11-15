@@ -42,8 +42,7 @@ _[Example of a definition in this header file: +
 `typedef fmi3Status fmi3SetTimeTYPE(fmi3Instance, fmi3Real);`]_
 
 `fmi3Functions.h`::
-contains the function prototypes of an FMU that can be accessed in simulation environments and that are defined in <<fmi-common-concepts>>, <<fmi-for-model-exchange>> and
-<<fmi-for-co-simulation>>.
+contains the function prototypes of an FMU that can be accessed in simulation environments and that are defined in <<fmi-common-concepts>>, <<fmi-for-model-exchange>> and <<fmi-for-co-simulation>>.
 +
 This header file includes `fmi3PlatformTypes.h` and `fmi3FunctionTypes.h`.
 The header file version number for which the model was compiled, can be inquired in the target simulator with `fmi3GetVersion` (see <<inquire-platform-and-version-number>>). +
@@ -57,6 +56,12 @@ In order for this to be possible,
 the names of the functions in different FMUs must be different, or function pointers must be used.
 To support the first variant macros are provided in `fmi3Functions.h` to build the actual
 function names by using a function prefix that depends on how the FMU is shipped.
+
+_[These macros can be defined differently in a target specific variant of `fmi3Functions.h` to adjust them to the requirements of the supported compilers and platforms of the importing tool.]_
+
+An FMU C-file must include at the beginning a `define` of `FMI3_FUNCTION_PREFIX` as the `modelIdentifier` attribute defined in `<fmiModelDescription><ModelExchange>` or `<fmiModelDescription><CoSimulation>`together with `pass:[_]` at the end (see sections <<ModelExchange>> and <<schema-co-simulation>>).
+
+This `define` must be directly follwed with an `#include "fmi2Functions.h"` statement.
 
 Typically, FMU functions are used as follows:
 
@@ -80,12 +85,12 @@ A function that is defined as `fmi3GetReal` is changed by the macros to a functi
 - If the FMU is shipped with C source code or with static link library: +
 The constructed function name is `MyModel_fmi3GetReal`.
 In other words the function name is prefixed with the model name and an `pass:[_]`.
-As `FMI3_FUNCTION_PREFIX` the `modelIdentifier` attribute defined in `<fmiModelDescription><ModelExchange>`, or `<fmiModelDescription><CoSimulation>` is used, together with `pass:[_]` at the end (see <<ModelExchange>> and <<CoSimulation>>).
 A simulation environment can therefore construct the relevant function names by generating code for the actual function call.
 In case of a static link library, the name of the library is MyModel.lib on Windows and libMyModel.a on Linux; in other words the `modelIdentifier` attribute is used to create the library name.
 
 - If the FMU is shipped with DLL/SharedObject: +
 The constructed function name is `fmi3GetReal`, in other words, it is not changed.
+_[This can be realized in the case of a source code FMU with a target-specific version of `fmi2Functions.h` that does not use FMI3_FUNCTION_PREFIX to construct the function names.]_
 A simulation environment will then dynamically load this library and will explicitly import the function symbols by providing the FMI function names as strings.
 The name of the library is `MyModel.dll` on Windows or `MyModel.so` on Linux; in other words the `modelIdentifier` attribute is used as library name.
 
@@ -380,6 +385,7 @@ include::../headers/fmi3FunctionTypes.h[tags=SetDebugLogging]
 The function controls debug logging that is output via the logger function callback.
 
 If `loggingOn=fmi3True`, debug logging is enabled, otherwise it is switched off.
+If `loggingOn = fmi2True` and `nCategories = 0`, then all debug messages shall be output.
 If `loggingOn=fmi3True` and `nCategories > 0`, then only debug messages according to the `categories` argument shall be printed via the `logMessage` function.
 Vector `categories` has `nCategories` elements.
 The allowed values of `categories` are defined by the modeling environment that generated the FMU.
@@ -395,7 +401,7 @@ include::../headers/fmi3FunctionTypes.h[tags=SetupExperiment]
 ----
 
 Informs the FMU to setup the experiment.
-This function can be called after `fmi3Instantiate` and before `fmi3EnterInitializationMode` is called.
+This function must be called after `fmi3Instantiate` and before `fmi3EnterInitializationMode` is called.
 Arguments `toleranceDefined` and `tolerance` depend on the FMU type:
 
 `fmuType = fmi3ModelExchange`::
@@ -905,7 +911,7 @@ If the capability attribute `providesDirectionalDerivative` is `true`, `fmi3GetD
 
 [latexmath]
 ++++
-\Delta \mathbf{v}_{unknown} = \frac{\delta \mathbf{h}}{\delta \mathbf{v}_{known}}\mathbf{v}_{known}
+\Delta \mathbf{v}_{unknown} = \frac{\partial \mathbf{h}}{\partial \mathbf{v}_{known}}\mathbf{v}_{known}
 ++++
 
 Accordingly, it computes the directional derivative vector
