@@ -895,11 +895,11 @@ If such a variable is not defined, the directional derivative with respect to th
 
 * latexmath:[\color{blue}{\mathbf{v}_{rest}}] is the set of input variables of function *h* that either changes its value in the actual Mode but are non-Real variables, or do not change their values in this Mode, but change their values in other Modes _[for example, discrete-time inputs in Continuous-Time Mode]_.
 
-If the capability attribute `providesDirectionalDerivative` is `true`, `fmi3GetDirectionalDerivative` computes a linear combination of the partial derivatives of *h* with respect to the selected input variables latexmath:[\color{blue}{\mathbf{v}_{known}}]:
+If the capability attribute `providesDirectionalDerivative` is `true`, `fmi3GetDirectionalDerivative` computes a linear combination of the partial derivatives of *h* with respect to all elements of the selected input variables latexmath:[\color{blue}{\mathbf{v}_{known}}]:
 
 [latexmath]
 ++++
-\Delta \mathbf{v}_{unknown} = \frac{\delta \mathbf{h}}{\delta \mathbf{v}_{known}}\mathbf{v}_{known}
+\Delta \mathbf{v}_{unknown} = \sum_i \frac{\partial \mathbf{h}}{\partial \mathbf{v}(i)_{known}}\Delta \mathbf{v}(i)_{known}
 ++++
 
 Accordingly, it computes the directional derivative vector
@@ -977,6 +977,49 @@ Efficient graph coloring algorithms are freely available, such as library ColPac
 After each such call, the elements of the resulting directional derivative vector are copied into their correct locations of the partial derivative matrix._
 
 _More details and implementational notes are available from (Akesson et.al. 2012).]_
+
+Directional derivative for higher dimension variables are almost teated in the same way. 
+Consider, for example, an FMU which multiplies its 2x2 input by a 3x2 constnat gain latexmath:[\color{blue}{Y=K U}] , i.e., where 
+ 
+[latexmath]
+++++
+K=
+\begin{bmatrix}
+a, b
+\\
+c, d
+\\
+e, f
+\end{bmatrix}
+++++
+The output is a matrix of size 3x2. 
+The directional derivative of an output element latexmath:[\color{blue}{Y(i,j)}] with respect to the input is: 
+
+latexmath:[\color{blue}{\Delta Y(i,j) = 
+\frac{\delta Y}{\delta U(1,1)} \cdot \Delta U(1,1)} +
+\frac{\delta Y}{\delta U(1,2)} \cdot \Delta U(1,2)} + 
+\frac{\delta Y}{\delta U(2,1)} \cdot \Delta U(2,1)} +
+\frac{\delta Y}{\delta U(2,2)} \cdot \Delta U(2,2)}]
+
+[latexmath]
+++++
+\Delta \mathbf{Y} =
+\begin{bmatrix}
+a \Delta U(1,1)+b \Delta U(2,1), a \Delta U(1,2)+ b \Delta U(2,2)
+\\
+c \Delta U(1,1)+d \Delta U(2,1), c \Delta U(1,2)+ d \Delta U(2,2)
+\\
+e \Delta U(1,1)+f \Delta U(2,1), e \Delta U(1,2)+ f \Delta U(2,2)
+\end{bmatrix}
+++++
+
+ So in order to retrieve the directional derivative of Y with respect to U(2,1) this command should be used
+ `fmi3GetDirectionalDerivative(m, vr_Y, 1, vr_U, 1, {0,0,1.0,0}, 4, dd, 6);`
+ where vr_Y and vr_U are references of the variable Y and U respectively. 
+ Note that in order to retrive the directional derivative of Y with respect to U(2,1), the seed value {0, 0, 1.0, 0} has been used.
+ The output dd is a matrix of size 3x2, so  nDvUnknown is 6.
+
+
 
 ==== Getting Number of Event Indicators
 
