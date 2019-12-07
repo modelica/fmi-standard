@@ -6,7 +6,7 @@ def lint_file(filename):
 
     messages = []
 
-    with open(filename, 'r') as file:
+    with open(filename, 'r', encoding='utf-8') as file:
 
         for i, line in enumerate(file):
 
