@@ -53,8 +53,7 @@ for root, _, files in os.walk(top):
                 print()
 
                 for message, line in messages:
-                    print(line)
-                    print(message)
+                    print("line %d: %s" % (line, message))
                     print()
 
             total_problems += len(messages)
