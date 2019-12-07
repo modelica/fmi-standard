@@ -14,7 +14,8 @@ def lint_file(filename):
 
             if not all(c):
                 marker = ''.join([' ' if x else '^' for x in c])
-                messages.append((f"Non-ASCII characters found:\n{line[:-1]}\n{marker}", i))
+                message = "Non-ASCII characters found:\n%s\n%s" % (line[:-1], marker)
+                messages.append((message, i))
 
             if len(line) > 1 and line[-2] in {' '}:
                 messages.append(("Whitespace at the end of the line", i))
@@ -34,7 +35,7 @@ top = os.path.abspath(__file__)
 top = os.path.dirname(top)
 top = os.path.dirname(top)
 
-print(f"Linting *.adoc files in {top}")
+print("Linting *.adoc files in %s" % top)
 
 for root, _, files in os.walk(top):
 
@@ -48,11 +49,11 @@ for root, _, files in os.walk(top):
 
             if messages:
 
-                print(f"{len(messages)} problems found in {filename}:")
+                print("%d problems found in %s:" % (len(messages), filename))
                 print()
 
                 for message, line in messages:
-                    print(f"line {line}: {message}")
+                    print("line %d: %s" % (line, message))
                     print()
 
             total_problems += len(messages)
