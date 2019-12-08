@@ -15,7 +15,7 @@ This feature is called "[underline]#caching of variables#" in the sequel. +
 Caching requires that the model evaluation can detect when the input arguments, like time or states, have changed.
 This is achieved by setting them explicitly with a function call, since every such function call signals precisely a change of the corresponding variables.
 For this reason, this section contains functions to set the input arguments of the equation evaluation functions.
-This is unproblematic for time and states, but is more involved for <<parameter,`parameters`>> and inputs, since the latter may have different data types.
+This is unproblematic for time and states, but is more involved for <<parameter,`parameters`>> and <<input,`inputs`>>, since the latter may have different data types.
 
 [[fmi3SetTime,`fmi3SetTime`]]
 [source, C]
@@ -32,7 +32,7 @@ include::../headers/fmi3FunctionTypes.h[tags=SetContinuousStates]
 ----
 
 Set a new (continuous) state vector and re-initialize caching of variables that depend on the states.
-Argument nx is the length of vector x and is provided for checking purposes (variables that depend solely on constants, <<parameter,`parameters`>>, time, and inputs do not need to be newly computed in the sequel, but the previously computed values can be reused).
+Argument nx is the length of vector x and is provided for checking purposes (variables that depend solely on constants, <<parameter,`parameters`>>, time, and <<input,`inputs`>> do not need to be newly computed in the sequel, but the previously computed values can be reused).
 Note that the continuous states might also be changed in Event Mode.
 Note that `fmi3Status = fmi3Discard` is possible.
 
@@ -41,7 +41,7 @@ Note that `fmi3Status = fmi3Discard` is possible.
 fmi3Status fmi3SetXXX(..);
 ----
 
-Set new values for (<<independent>>) <<parameter,`parameters`>>, start values and inputs and re-initialize caching of variables that depend on these variables.
+Set new values for (<<independent>>) <<parameter,`parameters`>>, start values and <<input,`inputs`>> and re-initialize caching of variables that depend on these variables.
 The details of these functions are defined in <<get-and-set-variable-values>>.
 
 _[The functions above have the slight drawback that values must always be copied.
@@ -93,7 +93,7 @@ include::../headers/fmi3FunctionTypes.h[tags=EventInfo]
 
 The FMU is in *Event Mode* and the super dense time is incremented by this call. +
 If the super dense time before a call to <<fmi3NewDiscreteStates>> was latexmath:[(t_R,t_I)], then the time instant after the call is latexmath:[(t_R,t_I)]. +
-If return argument `pass:[fmi3eventInfo->newDiscreteStatesNeeded]` = `fmi3True`, the FMU should stay in Event Mode, and the FMU requires to set new inputs to the FMU (`fmi3SetXXX` on inputs) to compute and get the outputs (`fmi3GetXXX` on outputs) and to call <<fmi3NewDiscreteStates>> again.
+If return argument `pass:[fmi3eventInfo->newDiscreteStatesNeeded]` = `fmi3True`, the FMU should stay in Event Mode, and the FMU requires to set new inputs to the FMU (`fmi3SetXXX` on <<input,`inputs`>>) to compute and get the outputs (`fmi3GetXXX` on outputs) and to call <<fmi3NewDiscreteStates>> again.
 Depending on the connection with other FMUs, the environment shall
 
 - call <<fmi3Terminate>>, if `terminateSimulation` = `fmi3True` is returned by at least one FMU,
@@ -142,7 +142,7 @@ When the integrator step is completed and one or more event indicators change si
 then the integrator or the environment has to determine the time instant of the sign change that is closest to the previous completed step up to a certain precision (usually a small multiple of the machine epsilon).
 This is usually performed by an iteration where time is varied and state variables needed during the iteration are determined by interpolation.
 Function <<fmi3CompletedIntegratorStep>> must be called after this state event location procedure and not after the successful computation of the time step by the integration algorithm.
-The intended purpose of the function call is to indicate to the FMU that at this stage all inputs and state variables have valid (accepted) values.
+The intended purpose of the function call is to indicate to the FMU that at this stage all <<input,`inputs`>> and state variables have valid (accepted) values.
 After <<fmi3CompletedIntegratorStep>> is called, it is still allowed to go back in time (calling <<fmi3SetTime>>) and inquire values of variables at previous time instants with `fmi3GetXXX` _[for example, to determine values of non-state variables at output points]_.
 However, it is not allowed to go back in time over the previous <<fmi3CompletedIntegratorStep>> or the previous <<fmi3EnterEventMode>> call.
 
@@ -215,7 +215,7 @@ image::images/calling-sequence-model-exchange.svg[width=80%, align="center"]
 
 The objective of the start chart is to define the allowed calling sequences for functions of the FMI: Calling sequences not accepted by the state chart are not supported by the FMI.
 The behavior of an FMU is undefined for such a calling sequence.
-For example, the state chart indicates that when an FMU for Model Exchange is in state *Continuous-Time Mode*, a call to `fmi3SetReal` for a <<discrete>> input is not supported.
+For example, the state chart indicates that when an FMU for Model Exchange is in state *Continuous-Time Mode*, a call to `fmi3SetReal` for a <<discrete>> <<input>> is not supported.
 The state chart is given here as UML 2.0 state machine.
 If a transition is labelled with one or more function names (for example, `fmi3GetReal`, `fmi3GetInteger`), this means that the transition is taken if any of these functions is successfully called.
 Note that the FMU can always determine in which state it is since every state is entered by a particular function call (such as <<fmi3EnterEventMode>>), or a particular return value (such as `fmi3Fatal`).
@@ -234,7 +234,7 @@ This state is entered from state *instantiated* by calling <<fmi3EnterConfigurat
 Initialization Mode::
 In this state, equations are active to determine all continuous-time states, as well as all outputs (and optionally other variables exposed by the exporting tool).
 The variables that can be retrieved by `fmi3GetXXX` calls are (1) defined in the XML file under `<ModelStructure><InitialUnknowns>` and (2) variables with `causality` = `"output"`.
-Variables with `initial` = <<exact>>, as well as variables with `variability` = `"input"` can be set.
+Variables with `initial` = <<exact>>, as well as variables with `variability` = <<input>> can be set.
 
 Continuous-Time Mode::
 In this state, the continuous-time model equations are active and integrator steps are performed.
@@ -257,9 +257,9 @@ In this state, the solution at the final time of a simulation can be retrieved.
 Note that simulation backward in time is only allowed over continuous time intervals.
 As soon as an event occurred (<<fmi3EnterEventMode>> was called), going back in time is forbidden, because <<fmi3EnterEventMode>> / <<fmi3NewDiscreteStates>> can only compute the next discrete state, not the previous one.
 
-Note that during *Initialization*, *Event*, and *Continuous-Time Mode* input variables can be set with `fmi3SetXXX` and output variables can be retrieved with `fmi3GetXXX` interchangeably according to the model structure defined under element `<ModelStructure>` in the XML file.
-_[For example, if one output `y1` depends on two inputs `u1`, `u2`, then these two inputs must be set, before `y1` can be retrieved.
-If additionally an output `y2` depends on an input `u3`, then `u3` can be set and `y2` can be retrieved afterwards.
+Note that during *Initialization*, *Event*, and *Continuous-Time Mode* <<input>> variables can be set with `fmi3SetXXX` and output variables can be retrieved with `fmi3GetXXX` interchangeably according to the model structure defined under element `<ModelStructure>` in the XML file.
+_[For example, if one output `y1` depends on two <<input,`inputs`>> `u1`, `u2`, then these two <<input,`inputs`>> must be set, before `y1` can be retrieved.
+If additionally an output `y2` depends on an <<input>> `u3`, then `u3` can be set and `y2` can be retrieved afterwards.
 As a result, artificial or "real" algebraic loops over connected FMUs in any of these three modes can be handled by using appropriate numerical algorithms.]_
 
 The allowed function calls in the respective states are summarized in the following table (functions marked in "[yellow-background]#yellow#" are only available for Model Exchange, the other functions are available both for Model Exchange and Co-Simulation):
@@ -320,10 +320,10 @@ The allowed function calls in the respective states are summarized in the follow
 <<exact>> or <<approx>> +
 *2* for a variable with `causality = "output"`, or continuous-time states or state derivatives +
 *3* for a variable with `variability` latexmath:[\neq] <<constant>> that has `initial` = <<exact>>,
-or `causality` = `"input"` +
-*4* for a variable with `causality` = `"input"`,
+or `causality` = <<input>>  +
+*4* for a variable with `causality` = <<input>>,
 or (`causality` = <<parameter>> and `variability` = <<tunable>>) +
-*5* for a variable with `causality` = `"input"` and `variability` = <<continuous>> +
+*5* for a variable with `causality` = <<input>> and `variability` = <<continuous>> +
 *7* always, but retrieved values are usable for debugging only
 
 ==== Code Example
@@ -365,12 +365,12 @@ The event mode is entered after initialization (call to function <<fmi3ExitIniti
 
 Synchronize clock activation and intervals with the environment::
 
-The clock activation status can be inquired with the function <<fmi3GetClock>>. The environment calls the function <<fmi3SetClock>> for periodic clocks and input clocks.
+The clock activation status can be inquired with the function <<fmi3GetClock>>. The environment calls the function <<fmi3SetClock>> for periodic clocks and <<input>> clocks.
 Moreover the current clock intervals may be inquired with the function <<fmi3GetIntervalDecimal>> or <<fmi3GetIntervalFraction>> and set with the function <<fmi3SetIntervalDecimal>> <<fmi3SetIntervalFraction>>.
 _[In the Modelica language this is the value returned by the interval() operator. The initialization of intervals is needed for output and input sample times if a clock ticks the first time. The FMU determines the interval itself at subsequent clock ticks.]_
 
 Solve algebraic loops among discrete-time equations of multiple FMUs or repeated evaluation in model-based control applications (optional)::
-With the `fmi3SetXXX` functions the input variables of the clocked partition can be set.
+With the `fmi3SetXXX` functions the <<input>> variables of the clocked partition can be set.
 If algebraic loops are present among clocked partitions of multiple FMUs, then with the `fmi3GetXXX` functions all variables on the corresponding clock can be inquired.
 The latter function call triggers the evaluation of the discrete-time equations, provided the corresponding clock is active at this time instant.
 If the corresponding clock is not active, the last evaluated value of the variable is returned.

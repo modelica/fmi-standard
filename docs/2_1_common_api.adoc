@@ -24,7 +24,7 @@ Three header files are provided that define the interface of an FMU.
 In all header files the convention is used that all C function and type definitions start with the prefix `[underline]#fmi3#`:
 
 `fmi3PlatformTypes.h`::
-contains the type definitions of the input and output arguments of the functions.
+contains the type definitions of the <<input>> and output arguments of the functions.
 This header file must
 be used both by the FMU and by the target simulator.
 If the target simulator has different definitions in
@@ -534,7 +534,7 @@ It is also possible to [underline]#set# the values of [underline]#certain# varia
 include::../headers/fmi3FunctionTypes.h[tags=Setters]
 ----
 
-Set <<parameter,`parameters`>>, inputs, and start values, and re-initialize caching of variables that depend on these variables (see <<definition-of-model-variables>> for the exact rules on which type of variables `fmi3SetXXX` can be called, as well as <<state-machine-model-exchange>> in case of Model Exchange and <<state-machine-co-simulation>> in case of Co-Simulation).
+Set <<parameter,`parameters`>>, <<input,`inputs`>>, and start values, and re-initialize caching of variables that depend on these variables (see <<definition-of-model-variables>> for the exact rules on which type of variables `fmi3SetXXX` can be called, as well as <<state-machine-model-exchange>> in case of Model Exchange and <<state-machine-co-simulation>> in case of Co-Simulation).
 
 - Argument `vr` is a vector of `nValueReferences` value handles that define the variables that shall be set.
 
@@ -556,7 +556,7 @@ Clocks are defined for the evaluation of *clocked model partitions* and the rela
 Two types of clocks are available, desinged to address similar use cases with differences in details.
 One clock type (Synchronous Clocks) complies with the limitations imposed by the synchronous clock theory, the other clock type (Communication Point Clocks) is a general purpose Co-Simulation clock for providing suitable communication points for the timed evaluation of model partitions.
 The term clock and clocked is therefore used for both clock types.
-Both clock types can handle two different variants, the *input clocks* and the *output clocks*. First the two different clock types are presented with the mathematical definition of their use cases.
+Both clock types can handle two different variants, the *<<inputClock>>* and the *output clocks*. First the two different clock types are presented with the mathematical definition of their use cases.
 After that the two clock variants are described. The section ends with a short description of connecting clocked FMUs.
 
 ===== Clock Types for Evaluation of Clocked Model Partitions [[clock-types-for-evaluation-of-clocked-model-partitions]]
@@ -585,7 +585,7 @@ y_j=g_j(x_{j-1},u_j,t_j);
 ++++
 
 Variables latexmath:[x_j] are called `states of a clocked partition`, or `discrete-time states` and latexmath:[j] is the latexmath:[j+1]th tick of the associated clock.
-Variables latexmath:[u_j] are the (external or local) inputs and latexmath:[y_j] are the (external or local) outputs of a clocked partition.
+Variables latexmath:[u_j] are the (external or local) <<input,`inputs`>> and latexmath:[y_j] are the (external or local) outputs of a clocked partition.
 A discrete-time state can be from any type of a Variable (with exception of a clock) such as of type `fmi3Float64` or `fmi3Boolean`.
 A clocked partition is not executed during initialization mode, but it is executed the first time at its first clock tick.
 The associated clock of the model partion is synchronous to its discrete-time states.
@@ -638,12 +638,12 @@ Example:
 
 ====== Input Clocks
 
-An input <<clock>> is a periodic or non-periodic clock that is defined directly or indirectly by a clock outside of the FMU.
+An <<inputClock>> is a periodic or non-periodic clock that is defined directly or indirectly by a clock outside of the FMU.
 Its interval is initialized by the environment.
 
 _[Inside of the FMU it is not known in advance when this clock ticks. Instead, only when the clock is activated by the environment of the FMU, then the FMU is informed that the clock ticks at this time instant.]_
 _[Example:]_
-_[A clocked PI controller can be defined as FMU and the input and output signal of the controller can be defined to be on the same input <<clock>>. In such a case, the environment deduces the clock ticks from the components that are connected to the PI controller (e.g. a component connected to the input, or to the output may define the relevant clock).]_
+_[A clocked PI controller can be defined as FMU and the input and output signal of the controller can be defined to be on the same <<inputClock>>. In such a case, the environment deduces the clock ticks from the components that are connected to the PI controller (e.g. a component connected to the input, or to the output may define the relevant clock).]_
 
 ===== Additional Clock Properties [[additional-clock-properties]]
 
@@ -651,7 +651,7 @@ This section gives a definition of additional clock properties.
 
 ====== Periodic Clock Ticks
 
-Either output or input, a periodic clock ticks at equidistant sample time points that are known a priori (defined in modelDescription.xml) or are alternatively determined by the environment in case of input clocks. Mathematically, the next clock tick at time instant ti is defined as:
+Either output or <<input>>, a periodic clock ticks at equidistant sample time points that are known a priori (defined in modelDescription.xml) or are alternatively determined by the environment in case of <<input>> clocks. Mathematically, the next clock tick at time instant ti is defined as:
 
 [latexmath]
 ++++
@@ -676,8 +676,8 @@ where:
 |===
 
 The interval latexmath:[\Delta T] and latexmath:[t_{offset}] must be defined for periodic clocks in the xml-file.
-In case of periodic input clocks these values are the start interval values if they are not given by the simulation master.
-_[This information can be used for emulating periodic input clocks in Co-Simulation mode `fmi3ModeCoSimulation`]_.
+In case of periodic <<input>> clocks these values are the start interval values if they are not given by the simulation master.
+_[This information can be used for emulating periodic <<input>> clocks in Co-Simulation mode `fmi3ModeCoSimulation`]_.
 
 If latexmath:[\Delta T] is fixed for an FMU and cannot be changed it is a strictly periodic clock.
 The clock is periodic, if latexmath:[\Delta T] can be defined before calling fmi3EnterInitializationMode via <<fmi3SetIntervalDecimal>> or <<fmi3SetIntervalFraction>>.
@@ -695,12 +695,12 @@ For periodic clocks it is recommended to derive the priorities based on a rate m
 
 ====== Clock Relationships for Communication Point Clocks [[clock-relationships-for-communication-point-clocks]]
 
-If output clocks and input clocks are defined it is possible to define a tick relationship from an output <<clock>> to an input clock.
+If output clocks and <<input>> clocks are defined it is possible to define a tick relationship from an output <<clock>> to an <<input>> clock.
 This is needed to allow for an external resource management to achieve an optimal control of model partitions.
-The output clocks and the associtated input clocks define a union of clocks.
-In that sense, if an output <<clock>> ticks the associated input <<clock>> ticks at the same time instant in such a union.
-It is only meaningful to combine one or multiple output clocks with a single aperiodic input <<clock>> in such a union.
-It is possible to define multiple unions of clocks, with the maximum number defined by the number of available aperiodic input clocks.
+The output clocks and the associtated <<input>> clocks define a union of clocks.
+In that sense, if an output <<clock>> ticks the associated <<inputClock>> ticks at the same time instant in such a union.
+It is only meaningful to combine one or multiple output clocks with a single aperiodic <<inputClock>> in such a union.
+It is possible to define multiple unions of clocks, with the maximum number defined by the number of available aperiodic <<input>> clocks.
 
 [cols="1,2"]
 |===
@@ -717,19 +717,19 @@ It is possible to define multiple unions of clocks, with the maximum number defi
 |-
 |===
 
-A clock union can be defined based on the `clockReference` attribute of input <<clock>> variables.
+A clock union can be defined based on the `clockReference` attribute of <<inputClock>> variables.
 
 [#ExampleUseCase]
 image::images/example_usecase.png[]
 
 ===== Connecting Clocked FMUs [[connecting-clocked-fmus]]
 
-When connecting imported FMUs together, input and output variables can readily be connected together only when they are defined on a clock with identical properties.
+When connecting imported FMUs together, <<input>> and output variables can readily be connected together only when they are defined on a clock with identical properties.
 If this is not possible, an explicit cast of one clock to another clock is typically defined in the environment.
 
 The environment can evaluate required clock adaptions/casts for connections basing on the clockReference attribute of assigned variables _[i.e. the variables that are assigned to a clock based on modelDescription.xml information]_.
 
-_[Example: Elementary blocks like a PI controller will have all variables on an input <<clock>> with identical properties._
+_[Example: Elementary blocks like a PI controller will have all variables on an <<inputClock>> with identical properties._
 _Connecting such blocks together will therefore be possible without computationally expensive clock cast operations (and the environment can readily do the computation of assigned variables of the connected blocks based on the same clock).]_
 
 ==== FMI Application Programming Interface for setting/getting Clock activation state [[fmi-api-setting-getting-clock-activation-state]]
@@ -793,7 +793,7 @@ The following table summarizes the use of the API functions by the environment f
 |===
 |*API function*
 |*Output clock*
-|*Input Clock*
+|<<inputClock>>
 
 |_fmi3GetClock_
 |Call during event mode
@@ -819,7 +819,7 @@ Repeated calls if recomputations of clock state are needed during event mode.
 ==== Getting and Setting the Complete FMU State [[get-set-fmu-state]]
 
 The FMU has an internal state consisting of all values that are needed to continue a simulation.
-This internal state consists especially of the values of the continuous-time states, iteration variables, <<parameter>> values, input values, delay buffers, file identifiers, and FMU internal status information.
+This internal state consists especially of the values of the continuous-time states, iteration variables, <<parameter>> values, <<input>> values, delay buffers, file identifiers, and FMU internal status information.
 With the functions of this section, the internal FMU state can be copied and the pointer to this copy is returned to the environment.
 The FMU state copy can be set as actual FMU state, in order to continue the simulation from it.
 
@@ -921,16 +921,16 @@ where
 ** _Step Mode (Co-Simulation)_: The variables listed under `<ModelStructure><Outputs>` with type Real and `variability` = <<continuous>> or <<discrete>>.
 If `<ModelStructure><Derivatives>` is present, also the variables listed here as state derivatives.
 
-* latexmath:[\color{blue}{\mathbf{v}_{known}}] is the vector of Real input variables of function *h*
+* latexmath:[\color{blue}{\mathbf{v}_{known}}] is the vector of Real <<input>> variables of function *h*
 that changes its value in the actual Mode.
 Details are described in the description of element `dependencies` in <<ModelStructure>>.
-_[For example continuous-time inputs in Continuous-Time Mode.
+_[For example continuous-time <<input,`inputs`>> in Continuous-Time Mode.
 If a variable with `causality` = <<independent>> is explicitly defined under `Variable`pass:[s], a directional derivative with respect to this variable can be computed.
 If such a variable is not defined, the directional derivative with respect to the <<independent>> variable cannot be calculated]._
 
-* latexmath:[\color{blue}{\mathbf{v}_{rest}}] is the set of input variables of function *h* that either changes its value in the actual Mode but are non-Real variables, or do not change their values in this Mode, but change their values in other Modes _[for example, discrete-time inputs in Continuous-Time Mode]_.
+* latexmath:[\color{blue}{\mathbf{v}_{rest}}] is the set of <<input>> variables of function *h* that either changes its value in the actual Mode but are non-Real variables, or do not change their values in this Mode, but change their values in other Modes _[for example, discrete-time <<input,`inputs`>> in Continuous-Time Mode]_.
 
-If the capability attribute `providesDirectionalDerivative` is `true`, `fmi3GetDirectionalDerivative` computes a linear combination of the partial derivatives of *h* with respect to the selected input variables latexmath:[\color{blue}{\mathbf{v}_{known}}]:
+If the capability attribute `providesDirectionalDerivative` is `true`, `fmi3GetDirectionalDerivative` computes a linear combination of the partial derivatives of *h* with respect to the selected <<input>> variables latexmath:[\color{blue}{\mathbf{v}_{known}}]:
 
 [latexmath]
 ++++
@@ -942,8 +942,8 @@ latexmath:[\color{blue}{\Delta \mathbf{v}_{unknown}}] (`dvUnknown`) from the see
 latexmath:[\color{blue}{\Delta \mathbf{v}_{known}}] (`dvKnown`)
 
 _[The variable relationships are different in different modes.
-For example, during Continuous-Time Mode, a continuous-time output y does not depend on discrete-time inputs (because they are held constant between events).
-However, at Event Mode, y depends on discrete-time inputs.]_ + _The function may compute the directional derivatives by numerical differentiation taking into account the sparseness of the equation system, or (preferred) by analytic derivatives._
+For example, during Continuous-Time Mode, a continuous-time output y does not depend on discrete-time <<input,`inputs`>> (because they are held constant between events).
+However, at Event Mode, y depends on discrete-time <<input,`inputs`>>.]_ + _The function may compute the directional derivatives by numerical differentiation taking into account the sparseness of the equation system, or (preferred) by analytic derivatives._
 
 _Example:_ +
 _Assume an FMU has the output equations_
@@ -973,7 +973,7 @@ Depending on the environment where the FMUs are connected, these derivatives can
 
 _Note that a direct implementation of this function with analytic derivatives:_
 
-(a) _Provides the directional derivative for all input variables; so in the above example: latexmath:[\color{blue}{\Delta y_1 = \frac{\delta g_1}{\delta x} \cdot \Delta x + \frac{\delta g_1}{\delta u_1} \cdot \Delta u_1 + \frac{\delta g_1}{\delta u_3} \cdot \Delta u_3 + \frac{\delta g_1}{\delta u_4} \cdot \Delta u_4}]_
+(a) _Provides the directional derivative for all <<input>> variables; so in the above example: latexmath:[\color{blue}{\Delta y_1 = \frac{\delta g_1}{\delta x} \cdot \Delta x + \frac{\delta g_1}{\delta u_1} \cdot \Delta u_1 + \frac{\delta g_1}{\delta u_3} \cdot \Delta u_3 + \frac{\delta g_1}{\delta u_4} \cdot \Delta u_4}]_
 
 (b) _Initializes all seed-values to zero; so in the above example: latexmath:[\color{blue}{\Delta x = \Delta u_1 = \Delta u_3 = \Delta u_4 = 0}]_
 
@@ -983,7 +983,7 @@ _[Note, function fmi3GetDirectionalDerivative can be utilized for the following 
 
 - _Numerical integrators of stiff methods need matrix latexmath:[\color{blue}{\frac{\delta \mathbf{f}}{\delta \mathbf{x}}}]._
 
-- _If the FMU is connected with other FMUs, the partial derivatives of the state derivatives and outputs with respect to the continuous states and the inputs are needed in order to compute the Jacobian for the system of the connected FMUs._
+- _If the FMU is connected with other FMUs, the partial derivatives of the state derivatives and outputs with respect to the continuous states and the <<input,`inputs`>> are needed in order to compute the Jacobian for the system of the connected FMUs._
 
 - _If the FMU shall be linearized, the same derivatives as in the previous item are needed._
 

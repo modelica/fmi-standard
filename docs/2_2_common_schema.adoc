@@ -133,7 +133,7 @@ These definitions are used in the XML element `ModelVariables`.
 |Defines the structure of the model.
 Especially, the ordered lists of outputs, continuous-time states and initial unknowns (the unknowns during Initialization Mode) are defined here.
 Furthermore, the dependency of the unkowns from the knowns can be optionally defined.
-_[This information can be, for example, used to compute efficiently a sparse Jacobian for simulation, or to utilize the input/output dependency in order to detect that in some cases there are actually no algebraic loops when connecting FMUs together]_.
+_[This information can be, for example, used to compute efficiently a sparse Jacobian for simulation, or to utilize the <<input>> / output dependency in order to detect that in some cases there are actually no algebraic loops when connecting FMUs together]_.
 |====
 
 At least one element of `ModelExchange` or `CoSimulation` must be present to identify the type of the FMU.
@@ -518,7 +518,7 @@ _If "rad" is either part of the `BaseUnit` of "a" and/or of "c", then the `BaseU
 Example: If BaseUnit(a)="kg.m/s2" and BaseUnit(c)="m/s2", then the BaseUnit(b) can be deduced to be "kg".
 In such a case `Unit.name` of b cannot be deduced from the `Unit.name` of a and c, and a tool would typically construct the `Unit.name` of b from the deduced `BaseUnit`.]_
 
-Additionally to the unit definition, optionally a set of display units can be defined that can be utilized for input/output of a value:
+Additionally to the unit definition, optionally a set of display units can be defined that can be utilized for <<input>> / output of a value:
 
 image::images/DisplayUnit_schema.png[width=80%, align="center"]
 
@@ -633,7 +633,7 @@ _[Attributes `min` and `max` can be set for variables of type Real, Integer or E
 The question is how `fmi3SetReal`, `fmi3SetInteger`, `fmi3GetReal`,
 `fmi3GetInteger` shall utilize this definition.
 There are several conflicting requirements:_ +
-_Avoiding forbidden regions (for example, if "u" is an input and "sqrt(u)" is computed in the FMU, min=0 on "u" shall guarantee that only values of "u" in the allowed regions are provided)._
+_Avoiding forbidden regions (for example, if "u" is an <<input>> and "sqrt(u)" is computed in the FMU, min=0 on "u" shall guarantee that only values of "u" in the allowed regions are provided)._
 _Numerical algorithms (ODE-solver, optimizers. nonlinear solvers) do not guarantee constraints.
 If a variable is outside of the bounds, the solver tries to bring it back into the bounds.
 As a consequence, calling `fmi3GetReal` during an iteration of such a solver might return values that are not in the defined min/max region.
@@ -643,14 +643,14 @@ For maximum performance on a real-time system the checks might not be performed.
 _The approach in FMI is therefore that min/max definitions are an information from the FMU to the environment defining the region in which the FMU is designed to operate.
 The environment is free to utilize this information (typically, in debug mode of the environment the min/max is checked in the cases as stated above).
 In any case, it is expected that the FMU handles variables appropriately where the region definition is critical.
-For example, dividing by an input (so the input should not be in a small range of zero) or taking the square root of an input (so the input should not be negative) may either result in fmi3Error, or the FMU is able to handle this situation in other ways._
+For example, dividing by an <<input>> (so the <<input>> should not be in a small range of zero) or taking the square root of an <<input>> (so the <<input>> should not be negative) may either result in fmi3Error, or the FMU is able to handle this situation in other ways._
 
 _If the FMU is generated so that min/max shall be checked whenever meaningful (for example, for debug purposes), then the following strategy should be used:_
 
 _If `fmi3SetReal` or `fmi3SetInteger` is called violating the min/max attribute settings of the corresponding variable, the following actions are performed:_
 
 - _On a <<fixed>> or <<tunable>> <<parameter>> `fmi3Status = fmi3Discard` is returned._
-- _On an input, the FMU decides what to return (If no computation is possible, it could return `fmi3Status =  fmi3Discard`, in other situations it may return `fmi3Warning` or `fmi3Error`, or `fmi3OK`, if it is uncritical)._
+- _On an <<input>>, the FMU decides what to return (If no computation is possible, it could return `fmi3Status =  fmi3Discard`, in other situations it may return `fmi3Warning` or `fmi3Error`, or `fmi3OK`, if it is uncritical)._
 
 _If an FMU defines min/max values for Integer and Enumerations (local and output variables), then the expected behavior of the FMU is that `fmi3GetInteger` returns values in the defined range._
 
@@ -703,7 +703,7 @@ If the optional attribute `strict` is set to "false" another interval or offset 
 It is not allowed to set `strict` to "true" if `periodic` equals "false".
 
 |intervalCounter, shiftCounter, resolution
-|The interval of output or input periodic clocks is defined with unsignedLong valued `intervalCounter` and `resolution`
+|The interval of output or <<input>> periodic clocks is defined with unsignedLong valued `intervalCounter` and `resolution`
 
 interval = `intervalCounter` / `resolution`.
 
@@ -924,22 +924,22 @@ The predefined variable kinds are:
 
 |"signal"
 |The values in connected terminals are intended to be equal.
-Restricted to input and output, <<parameter>> and <<calculatedParameter>>.
+Restricted to <<input>> and output, <<parameter>> and <<calculatedParameter>>.
 _[Example: Signal flow, parameter propagation, equality checks]_
 
 |"inflow" / "outflow"
 |Variables which fulfill Kirchhoff’s current law.
-Restricted to input and output, <<parameter>> and <<calculatedParameter>>.
+Restricted to <<input>> and output, <<parameter>> and <<calculatedParameter>>.
 _[Example: Electric current]_
 |====
 
 ===== General remark on signal
 
 _[The signal `variableKind` can be applied for different use cases._
-_The first use case is a signal flow from an output of one FMU to an input of another FMU. The output value has to be forwarded to the input._
+_The first use case is a signal flow from an output of one FMU to an <<input>> of another FMU. The output value has to be forwarded to the <<input>>._
 
 _The signal flow can cause algebraic loops._
-_If variables in connected terminals have the causality output, then an importing tool may iterate an undefined input of an FMU to ensure that the connected output values are equal._
+_If variables in connected terminals have the causality output, then an importing tool may iterate an undefined <<input>> of an FMU to ensure that the connected output values are equal._
 
 _Another use case is the parameter propagation._
 _If a variable in both connected terminals has the causality <<parameter>>, then an importing tool could ask the user for the value of one of those <<parameter,`parameters`>> only, and propagate this value to the other FMU._
@@ -963,7 +963,7 @@ _For the sake of simplicity in the following latexmath:[\dot{m}_i] denotes an in
 
 latexmath:[0 = \sum{\dot{m}_i}]
 
-_Connecting a single output "outflow" to a single input "inflow", or vice versa automatically fulfills the flow constraint, while connecting two single signals of the same flow type requires a negation of the signal.]_
+_Connecting a single output "outflow" to a single <<input>> "inflow", or vice versa automatically fulfills the flow constraint, while connecting two single signals of the same flow type requires a negation of the signal.]_
 
 ===== Terminal Stream Member Variable
 
@@ -972,7 +972,7 @@ The `TerminalStreamMemberVariable` is defined as:
 image::images/fmi3Terminal_TerminalStreamMemberVariable_Schema.png[width=60%, pdfwidth=60%, align="center"]
 
 This element is used for variables which fulfill the balance equation for transported quantities.
-It is restricted to input and output, <<parameter>> and <<calculatedParameter>>.
+It is restricted to <<input>> and output, <<parameter>> and <<calculatedParameter>>.
 
 The Stream concept is described in the appendix D.3 of the Modelica specification.
 Only one terminal member variable with the `variableKind` "inflow" or "outflow" per terminal is allowed, if a TerminalStreamMemberVariable is present.
@@ -1001,7 +1001,7 @@ q_{\textit{$i$, inStream}} &\textit{if $\dot{m}$ is inflowing through terminal $
 _The_ latexmath:[q_\textit{$i$, outStream}] _is the convective quantity in case the matter flows out of the FMU._
 latexmath:[q_\textit{$i$, inStream}] _is the convective quantity in case the matter flows into the FMU. Both variables are present in the terminal._
 _The outStream variable has the causality output or <<calculatedParameter>> because this information has to be provided by each FMU._
-_The inStream variable has the causality input or <<parameter>>._
+_The inStream variable has the causality <<input>> or <<parameter>>._
 _To display the actual value in an importing tool, this actual value has to be selected depending on the sign of the terminal member variable with `variableKind` "inflow" or "outflow"._
 _However, calculating the actual value is not necessary._
 
@@ -1066,8 +1066,8 @@ This enables high quality rendering and printing in importing tools.
 image::images/fmiModelDescription_GraphicalRepresentation_Terminal_Schema.png[width=50%, pdfwidth=50%, align="center"]
 
 For `fmi3Terminals` (terminals which are listed in the `Terminals` element) the name of the terminal in the `GraphicalRepresentation` is equal to the name of the terminal in the `Terminals` element (e.g. "port_a").
-_[If the graphical representation is used for an input or output (e.g. a Real input "u"), then a `Terminal` has to be added to the `Terminals` element which has one `TerminalMemberVariable`._
-_The name of the `Terminal` and the name of the `TerminalMemberVariable` should be equal to the name of the input/output.]_
+_[If the graphical representation is used for an <<input>> or output (e.g. a Real <<input>> "u"), then a `Terminal` has to be added to the `Terminals` element which has one `TerminalMemberVariable`._
+_The name of the `Terminal` and the name of the `TerminalMemberVariable` should be equal to the name of the <<input>> / output.]_
 
 The `iconSource_PNG` is mandatory for a terminal, optionally an SVG file can be provided.
 The default connection stroke size and color can be provided, to define the intended connection line layout in the importing tool. The stroke size is given relative to the coordinate system extent.
@@ -1076,7 +1076,7 @@ The stroke color is given in RGB values from 0 to 255. E.g.: "255 255 0".
 The VendorAnnotations element can be used by vendors to store additional information for the graphical representation.
 _[It is suggested that Modelica tools store the Modelica annotation of the connector under the tool name "Modelica3Annotation" in the attribute "annotation" of an element "connector". The attribute "name" of the connector element is equal to the "name" attribute of the referenced `fmi3Terminal`.]_
 
-_[Only terminals from the `Terminals` element can have a graphical representation. For simple inputs/outputs a terminal with one member has to be added.]_
+_[Only terminals from the `Terminals` element can have a graphical representation. For simple <<input,`inputs`>> / outputs a terminal with one member has to be added.]_
 
 ===== Placement, Extent, and Painting Order of Graphical Items
 
@@ -1170,11 +1170,12 @@ Allowed values of this enumeration:
 `variability` must be <<fixed>> or <<tunable>>.
 `initial` must be <<approx>>, <<calculated>> or not present (meaning <<calculated>>).
 
-- `"input"`: The variable value can be provided from another model or slave.
+[[input,`input`]]
+- `input`: The variable value can be provided from another model or slave.
 It is not allowed to define `initial`.
 
 - `"output"`: The variable value can be used by another model or slave.
-The algebraic relationship to the inputs is defined via the `dependencies` attribute of `<fmiModelDescription><ModelStructure><Outputs><Unknown>`.
+The algebraic relationship to the <<input,`inputs`>> is defined via the `dependencies` attribute of `<fmiModelDescription><ModelStructure><Outputs><Unknown>`.
 
 - `"local"`: Local variable that is calculated from other variables or is a continuous-time state (see <<ModelStructure>>).
 It is not allowed to use the variable value in another model or slave.
@@ -1203,7 +1204,8 @@ Example:
 
 structural parameters that are referenced in `Dimension` elements may have a `min` attribute with 0 but the `start` attribute, which is mandatory for structural parameters, must have a value larger than 0 for structural parameters used in `Dimension` elements. [This allows importing tools to ignore structural parameters because that start value reflects the internal default setting of that structural parameter.].
 
-- `"input"`: the variable defines an input <<clock>> that is controlled by the master.
+[[inputClock,`input clock`]]
+- `input`: the variable defines an <<inputClock>> that is controlled by the master.
 Variability must be "clock".
 Only a variable of type "Clock" can have this causality.
 
@@ -1231,8 +1233,8 @@ Allowed values of this enumeration:
 - `fixed`: The value of the variable is fixed after initialization, in other words, after <<fmi3ExitInitializationMode>> was called the variable value does not change anymore.
 
 [[tunable,`tunable`]]
-- `tunable`: The value of the variable is constant between external events (Model Exchange) and between _Communication Points_ (Co-Simulation) due to changing variables with `causality` = <<parameter>> or `"input"` and `variability` = <<tunable>>.
-Whenever a <<parameter>> or input signal with `variability` = <<tunable>> changes, an event is triggered externally (Model Exchange), or the change is performed at the next _Communication Point_ (Co-Simulation) and the variables with `variability` = <<tunable>> and `causality` = <<calculatedParameter>> or `"output"` must be newly computed.
+- `tunable`: The value of the variable is constant between external events (Model Exchange) and between _Communication Points_ (Co-Simulation) due to changing variables with `causality` = <<parameter>> or <<input>> and `variability` = <<tunable>>.
+Whenever a <<parameter>> or <<input>> signal with `variability` = <<tunable>> changes, an event is triggered externally (Model Exchange), or the change is performed at the next _Communication Point_ (Co-Simulation) and the variables with `variability` = <<tunable>> and `causality` = <<calculatedParameter>> or `"output"` must be newly computed.
 
 [[discrete,`discrete`]]
 - `discrete`: +
@@ -1254,7 +1256,7 @@ _[Note that the information about continuous states is defined with element `fmi
 
 |`initial`
 |Enumeration that defines how the variable is initialized.
-It is not allowed to provide a value for `initial` if `causality = "input"` or <<independent>>:
+It is not allowed to provide a value for `initial` if `causality` = <<input>> or <<independent>>:
 
 [[exact,`exact`]]
 - = `exact`: The variable is initialized with the start value (provided under `Real`, `Integer`, `Boolean`, `String` or `Enumeration`).
@@ -1267,28 +1269,28 @@ It is not allowed to provide a value for `initial` if `causality = "input"` or <
 It is not allowed to provide a `"start"` value.
 
 If `initial` is not present, it is defined by the table below based on `causality` and `variability`.
-If `initial` = <<exact>> or <<approx>>, or `causality = "input"`, a start value must be provided.
+If `initial` = <<exact>> or <<approx>>, or `causality` = <<input>>, a start value must be provided.
 If `initial` = <<calculated>>, or `causality` = <<independent>>, it is not allowed to provide a start value.
 
-_[The environment decides when to use the start value of a variable with `causality = "input"`.
-Examples: (a) automatic tests of FMUs are performed, and the FMU is tested by providing the start value as <<constant>> input.
+_[The environment decides when to use the start value of a variable with `causality` = <<input>>.
+Examples: (a) automatic tests of FMUs are performed, and the FMU is tested by providing the start value as <<constant>> <<input>>.
 (b) For a Model Exchange FMU, the FMU might be part of an algebraic loop.
-If the input variable is iteration variable of this algebraic loop, then initialization starts with its start value.]_
+If the <<input>> variable is iteration variable of this algebraic loop, then initialization starts with its start value.]_
 
-If causality equals `input` the value for `initial` has to be set to <<exact>> and it is required to provide a start value for describing the expected initial contidion of master clocks for that FMU. If an input <<clock>> has `fmi3True` as an start value the master should activate the clock the first time it enters event mode. The master can nevertheless choose different start values if it is not possible to fulfill the conditions in a simulation setup.
+If causality equals <<input>> the value for `initial` has to be set to <<exact>> and it is required to provide a start value for describing the expected initial contidion of master clocks for that FMU. If an <<inputClock>> has `fmi3True` as an start value the master should activate the clock the first time it enters event mode. The master can nevertheless choose different start values if it is not possible to fulfill the conditions in a simulation setup.
 
 If causality equals `output` the initial attribute value is set to <<calculated>> and no start value is provided.
 
-If `fmi3SetXXX` is not called on a variable with `causality = "input"`, then the FMU must use the start value as value of this input.
+If `fmi3SetXXX` is not called on a variable with `causality` = <<input>>, then the FMU must use the start value as value of this <<input>>.
 
 |`canHandleMultipleSetPerTimeInstant`
 |Only for Model Exchange (if only Co-Simulation FMU, this attribute must not be present.
 If both Model Exchange and Co-Simulation FMU, this attribute is ignored for Co-Simulation): +
-Only for variables with `variability = "input"`: +
+Only for variables with `variability` = <<input>> : +
 If present with value equals false, then only one `fmi3SetXXX` call is allowed at one super dense time instant (model evaluation) on this variable.
-That is, this input is not allowed to appear in a (real) algebraic loop requiring multiple calls of `fmi3SetXXX` on this variable _[for example, due to a Newton iteration]_. +
+That is, this <<input>> is not allowed to appear in a (real) algebraic loop requiring multiple calls of `fmi3SetXXX` on this variable _[for example, due to a Newton iteration]_. +
 _[This flag must be set by FMUs where (internal) discrete-time states are directly updated when assigned (xd := f(xd) instead of xd = f(previous(xd)),
-and at least one output depends on this input and on discrete states._ +
+and at least one output depends on this <<input>> and on discrete states._ +
 _It is strongly recommended that such an FMU checks the fulfillment of the requirement by itself during run-time, because an environment might not be able to check it; usually, there is a generic mechanism to import an FMU in an environment, but the mechanism to connect FMUs together is unrelated to the import mechanism.
 For example, there is no mechanism in the Modelica language to formulate connection restrictions for C functions (the FMU) called in a Modelica model.]_
 
@@ -1304,10 +1306,10 @@ It is not possible to associate more than one clock to a variable.
 Communication Point Clock (clockType equals `CPClock`): If present, the variable is associated with the clock referenced by valueReference and defined in element `ModelVariables`.
 It is possible to associate multiple clocks to a variable. Variables that are assigned to a Communication Point Clock are not necessarily "clocked" in the sense of synchronous time clock theory. Such variables can also be continuous-time or discrete-time variables.
 
-If output clocks and input clocks of clockType equals `CPClock` are defined in the modelDescription.xml it is possible to define a tick relationship from a output <<clock>> to an aperiodic input <<clock>> based on `clockReference` (<<clock-relationships-for-communication-point-clocks>>).
-This is done for aperiodic input clocks that have the clockType = `CPClock` via providing a list of valueReferences of output clocks of the same FMU.
-If a output <<clock>> of this valueReference list ticks the master has to create a tick for the associated aperiodic input <<clock>> at the same time instant.
-It is not allowed to combine output clocks with periodic or strict periodic input clocks based on `clockReference`.
+If output clocks and <<input>> clocks of clockType equals `CPClock` are defined in the modelDescription.xml it is possible to define a tick relationship from a output <<clock>> to an aperiodic <<inputClock>> based on `clockReference` (<<clock-relationships-for-communication-point-clocks>>).
+This is done for aperiodic <<input>> clocks that have the clockType = `CPClock` via providing a list of valueReferences of output clocks of the same FMU.
+If a output <<clock>> of this valueReference list ticks the master has to create a tick for the associated aperiodic <<inputClock>> at the same time instant.
+It is not allowed to combine output clocks with periodic or strict periodic <<input>> clocks based on `clockReference`.
 
 The attribute clockReference must not be used if `causality` equals "output" for a variable.
 
@@ -1333,18 +1335,18 @@ This attribute is only used for Co-Simulation. The default value of this attribu
 
 - if `initial` = <<exact>> _[in order to set the corresponding `start` value]_, or
 
-- if `causality = "input"` _[in order to provide new values for inputs]_,
+- if `causality` = <<input>> _[in order to provide new values for <<input,`inputs`>>]_,
 
 *fmi3SetXXX* can be called on any variable for *Model Exchange at an event instant* (after calling <<fmi3EnterEventMode>> and before <<fmi3EnterContinuousTimeMode>> is called), and *for Co-Simulation at every communication point*,
 
 - if `causality` = <<parameter>> and `variability` = <<tunable>> _[in order to change the value of the <<tunable>> <<parameter>> at an event instant or at a communication point]_, or
 
-- if causality = "input" _[in order to provide new values for inputs]_
+- if `causality` = <<input>> _[in order to provide new values for <<input,`inputs`>>]_
 
 *fmi3SetXXX* can be called on any variable for *Model Exchange in Continuous-Time Mode*
 
-- if `causality = "input"` and `variability` = <<continuous>> +
-_[in order to provide new values for inputs during continuous integration]_
+- if `causality` = <<input>> and `variability` = <<continuous>> +
+_[in order to provide new values for <<input,`inputs`>> during continuous integration]_
 
 If `initial` is not present, its value is defined by the following tables based on the values of `causality` and `variability`:
 
@@ -1359,11 +1361,11 @@ If `initial` is not present, its value is defined by the following tables based 
 ^|*structual* <<parameter>>
 ^|<<parameter>>
 ^|<<calculated>> <<parameter>>
-^|*input*
+^|<<input>>
 ^|*output*
 ^|*local*
 ^|<<independent>>
-^|*input*
+^|<<input>>
 ^|*output*
 
 .7+^|*variability*
@@ -1480,7 +1482,7 @@ with
 |====
 
 _[Note: (1) If `causality` = <<independent>>, it is neither allowed to define a value for `initial` nor a value for start.
-(2) If `causality = "input"`, it is not allowed to define a value for `initial` and a value for start must be defined.
+(2) If `causality` = <<input>>, it is not allowed to define a value for `initial` and a value for start must be defined.
 (3) If \(C) and `initial` = <<exact>>, then the variable is explicitly defined by its start value in Initialization Mode (so directly after calling <<fmi3ExitInitializationMode>>, the value of the variable is either the start value stored in element `<Variable><XXX start=YYY/>` or the value provided by `fmi3SetXXX`, if this function was called on this variable).]_
 
 The following combinations of variability/causality settings are allowed:
@@ -1492,11 +1494,11 @@ The following combinations of variability/causality settings are allowed:
 ^|*structural* <<parameter>>
 ^|<<parameter>>
 ^|<<calculated>> <<parameter>>
-^|*input*
+^|<<input>>
 ^|*output*
 ^|*local*
 ^|<<independent>>
-^|*input*
+^|<<input>>
 ^|*output*
 
 .6+^|*variability*
@@ -1578,7 +1580,7 @@ _Discussion of the combinations that are [underline]#not allowed#_:
 |_Explanation why this combination is not allowed_
 
 ^|_[red]#(a)#_
-|_The combinations <<constant>> / <<parameter>>, <<constant>> / <<calculatedParameter>> and <<constant>> / `"input"` do not make sense, since parameters and inputs are set from the environment, whereas a constant has always a value._
+|_The combinations <<constant>> / <<parameter>>, <<constant>> / <<calculatedParameter>> and <<constant>> / <<input>> do not make sense, since <<parameter,`parameters`>> and <<input,`inputs`>> are set from the environment, whereas a constant has always a value._
 
 ^|_[red]#(b)#_
 |_The combinations <<discrete>> / `"structuralParameter"`, <<discrete>> / <<parameter>>, <<discrete>> / <<calculatedParameter>> , <<continuous>> / "structuralParameter", <<continuous>> / <<parameter>> and <<continuous>> / <<calculatedParameter>> do not make sense, since `causality = "structuralParameter"`, `causality` = <<parameter>> and <<calculatedParameter>> define variables that do not depend on time, whereas <<discrete>> and <<continuous>> define variables where the values can change during simulation._
@@ -1587,7 +1589,7 @@ _Discussion of the combinations that are [underline]#not allowed#_:
 |_For an <<independent>> variable only `variability` = <<continuous>> makes sense._
 
 ^|_[red]#(d)#_
-|_A <<fixed>> or <<tunable>> input has exactly the same properties as a <<fixed>> or <<tunable>> <<parameter>>.
+|_A <<fixed>> or <<tunable>> <<input>> has exactly the same properties as a <<fixed>> or <<tunable>> <<parameter>>.
 For simplicity, only <<fixed>> and <<tunable>> <<parameter,`parameters`>> shall be defined._
 
 ^|_[red]#(e)#_
@@ -1620,12 +1622,12 @@ _Discussion of the combinations that are_ [underline]#allowed#:
 |_<<tunable,`Tunable`>> dependent <<parameter>> (changing an <<independent>> <<parameter>> triggers an external event (Model Exchange) or takes effect at the next Communication Point (Co-Simulation), and <<tunable>> dependent <<parameter,`parameters`>> and <<tunable>> local variables might change their values)._
 
 >|_[green]#(5)#_
-|_<<discrete>> input_
-|_<<discrete,`Discrete`>> input variable from another model._
+|_<<discrete>> <<input>>_
+|_<<discrete,`Discrete`>> <<input>> variable from another model._
 
 >|_[green]#(6)#_
-|_<<continuous>> input_
-|_<<continuous,`Continuous`>> input variable from another model._
+|_<<continuous>> <<input>>_
+|_<<continuous,`Continuous`>> <<input>> variable from another model._
 
 >|_[green]#(7)#_
 |_<<constant>> output_
@@ -1706,7 +1708,7 @@ _Basically this means that a new simulation run is started from the previous FMU
 With this interpretation, changing <<parameter,`parameters`>> online is "clean", as long as these changes appear at an event instant._
 
 _FMI for Co-Simulation:_
-_Changing of <<tunable>> <<parameter,`parameters`>> is allowed before an <<fmi3DoStep>> call (so, whenever an input can be set with `fmi3SetXXX`) and before <<fmi3ExitInitializationMode>> is called (that is before and during Initialization Mode).
+_Changing of <<tunable>> <<parameter,`parameters`>> is allowed before an <<fmi3DoStep>> call (so, whenever an <<input>> can be set with `fmi3SetXXX`) and before <<fmi3ExitInitializationMode>> is called (that is before and during Initialization Mode).
 The FMU internally carries out event handling if necessary.]_
 
 ===== Aliasing of Variables [[aliasing-of-variables]]
@@ -1734,7 +1736,7 @@ _[For example, if v1, v2 are two alias variables with `v1=v2` and `v1.max=10` an
 
 _[The dependency definition in `fmiModelDescription.ModelStructure` is completely unrelated to the alias definition.
 In particular, the "direct dependency" definition can be a superset of the "real" direct dependency definition, even if the "alias" information shows that this is too conservative.
-For example, if it is stated that the output `y1` depends on input `u1` and the output `y2` depends on input `u2`, and `y1` is an alias to `y2`, then this definition is fine, although it can be deduced that in reality neither `y1` nor `y2` depend on any input.]._
+For example, if it is stated that the output `y1` depends on <<input>> `u1` and the output `y2` depends on <<input>> `u2`, and `y1` is an alias to `y2`, then this definition is fine, although it can be deduced that in reality neither `y1` nor `y2` depend on any <<input>>.]._
 
 Type specific properties are defined in the required choice element, where exactly one of `Real`, `Integer`, `Boolean`, `String`, `Enumeration` must be present in the XML file:
 
@@ -1771,15 +1773,15 @@ A different start value can be provided with an `fmi3SetXXX` function before <<f
 _[The standard approach is to set the start value before <<fmi3EnterInitializationMode>>.
 However, if the initialization shall be modified in the calling environment (for example, changing from initialization of states to steady-state initialization), it is also possible to use the start value as iteration variable of an algebraic loop: using an additional condition in the environment, such as_ latexmath:[\color{blue}{\dot{x} = 0}] _, the actual start value is determined.]_
 
-If `initial` = <<exact>> or <<approx>> or `causality = "input"`, a `start` value must be provided.
+If `initial` = <<exact>> or <<approx>> or `causality` = <<input>>, a `start` value must be provided.
 
 If `initial` = <<calculated>> or `causality` = <<independent>>, it is not allowed to provide a start value.
 
-Variables with `causality` = <<parameter>> or `"input"`, as well as variables with `variability = "constant"`, must have a `start` value.
+Variables with `causality` = <<parameter>> or <<input>>, as well as variables with `variability = "constant"`, must have a `start` value.
 
 - If `causality` = <<parameter>>, the start-value is the value of it.
 
-- If `causality = "input"`, the start value is used by the model as value of the input, if the input is not set by the environment.
+- If `causality` = <<input>>, the start value is used by the model as value of the <<input>>, if the <<input>> is not set by the environment.
 
 - If `variability` = <<constant>>, the start value is the value of the constant.
 
@@ -1789,7 +1791,7 @@ Variables with `causality` = <<parameter>> or `"input"`, as well as variables wi
 |If present, this variable is the derivative of variable with `Variable` value reference  "derivative".
 _[For example,
 if there are 10 `Variable`pass:[s] and `derivative = 3` for `Variable` 8, then `Variable` 8 is the derivative of `Variable` 3 with respect to the <<independent>> variable (usually time).
-This information might be especially used if an input or an output is the derivative of another input or output, or to define the states.]_
+This information might be especially used if an <<input>> or an output is the derivative of another <<input>> or output, or to define the states.]_
 
 The state derivatives of an FMU are listed under element `<ModelStructure><Derivatives>`.
 All `Variable`pass:[s] listed in this element must have attribute `derivative` (in order that the continuous-time states are uniquely defined).
@@ -1825,12 +1827,12 @@ In both cases the model has the same continuous-time states.
 In the second case the internal implementation is a discrete-time system, but from the outside this is still a continuous-time model that is solved with an integration method.]_
 
 The required part defines an ordering of the outputs and of the (exposed) derivatives, and defines the unknowns that are available during Initialization _[Therefore, when linearizing an FMU, every tool will use the same ordering for the outputs, states, and derivatives for the linearized model.
-The ordering of the inputs should be performed in this case according to the ordering in `ModelVariables`.]_
+The ordering of the <<input,`inputs`>> should be performed in this case according to the ordering in `ModelVariables`.]_
 A Model Exchange FMU must expose all derivatives of its continuous-time states in element `Derivatives`.
 A Co- Simulation FMU does not need to expose these state derivatives.
 _[If a Co-Simulation FMU exposes its state derivatives, they are usually not utilized for the co-simulation, but, for example, to linearize the FMU at a communication point.]_
 
-The optional part defines in which way derivatives and outputs depend on inputs, and continuous-time states at the current super dense time instant (Model Exchange) or at the current Communication Point (Co-Simulation).
+The optional part defines in which way derivatives and outputs depend on <<input,`inputs`>>, and continuous-time states at the current super dense time instant (Model Exchange) or at the current Communication Point (Co-Simulation).
 _[The listed dependencies declare the dependencies between whole (multi-dimensional-)variables and not individual elements of the variables.]_
 _[A simulation environment can utilize this information to improve the efficiency, for example, when connecting FMUs together, or when computing the partial derivative of the derivatives with respect to the states in the simulation engine.]_
 
@@ -1925,12 +1927,12 @@ where
 
 - latexmath:[\color{blue}{v_{unknown}}] is the unknown variable defined with this element _[for example, an output or a state derivative]._
 
-- latexmath:[\color{blue}{\mathbf{v}_{known}}] is the vector of input arguments of function _h_ that changes its value in the actual Mode _[for example, continuous-time inputs in Continuous-Time Mode]_.
+- latexmath:[\color{blue}{\mathbf{v}_{known}}] is the vector of input arguments of function _h_ that changes its value in the actual Mode _[for example, continuous-time <<input,`inputs`>> in Continuous-Time Mode]_.
 
 - latexmath:[\color{blue}{\mathbf{v}_{freeze}}] is the set of input arguments of function _h_ that do not change their values in this Mode, but change their values in other Modes _[for example, <<fixed>> <<parameter,`parameters`>> in Continuous-Time Mode]_.
 
 Attribute `dependencies` of `Unknown` defines the dependency of latexmath:[\color{blue}{v_{unknown}}] with respect to latexmath:[\color{blue}{\mathbf{v}_{known}}]. +
-_[If, for example, a continuous-time output_ latexmath:[\color{blue}{y_{2}}] _is a function of the continuous-time inputs_ latexmath:[\color{blue}{u_{3}}] _and_ latexmath:[\color{blue}{u_{5}}], _and these inputs have changed, then_ `fmi3SetXXX` _on_ latexmath:[\color{blue}{u_{3}}] _and_ latexmath:[\color{blue}{u_{5}}] _must always be called before calling_ `fmi3GetXXX` _on_ latexmath:[\color{blue}{y_{2}}] _.]_
+_[If, for example, a continuous-time output_ latexmath:[\color{blue}{y_{2}}] _is a function of the continuous-time <<input,`inputs`>>_ latexmath:[\color{blue}{u_{3}}] _and_ latexmath:[\color{blue}{u_{5}}], _and these <<input,`inputs`>> have changed, then_ `fmi3SetXXX` _on_ latexmath:[\color{blue}{u_{3}}] _and_ latexmath:[\color{blue}{u_{5}}] _must always be called before calling_ `fmi3GetXXX` _on_ latexmath:[\color{blue}{y_{2}}] _.]_
 
 |`DiscreteStates`
 |Ordered list of all exposed discrete states, in other words a list of Variable indices. Every corresponding Variable may have attribute previous defined. Discrete states must have a `clockReference` attribute.
@@ -1943,7 +1945,7 @@ _[If, for example, a continuous-time output_ latexmath:[\color{blue}{y_{2}}] _is
 It could be a combination of all three in one FMU. Discussion and conclusion:
 Introduce a flag “hasInternalState”, see also #148.]
  [Need to clarify causality of discrete states (local, output?) and if fmi3SetReal is allowed for continuous states, see #243.]
-Attribute dependencies defines the dependencies of the discrete states from the known inputs, continuous-time states and previous discrete-time states.
+Attribute dependencies defines the dependencies of the discrete states from the known <<input,`inputs`>>, continuous-time states and previous discrete-time states.
 ----------*TODO*-------------
 |====
 
@@ -1965,7 +1967,7 @@ If present as empty list, the `Unknown` depends on none of the `Knowns`.
 Otherwise the `Unknown` depends on the `Knowns` defined by the given `Variable` value references. +
 `Knowns` latexmath:[\color{blue}{\mathbf{v}_{\text{known}}}] in _Event_ and _Continuous-Time Mode_ (Model Exchange) and at _Communication Points_ (Co-Simulation) for elements `Outputs`, `Derivatives`:
 
-- inputs (variables with `causality = "input"`)
+- inputs (variables with `causality` = <<input>>)
 
 - continuous-time states
 
@@ -1974,7 +1976,7 @@ If an <<independent>> variable is not explicitly defined under `Variable`pass:[s
 
 `Knowns` latexmath:[\color{blue}{\mathbf{v}_{\text{known}}}] in _Initialization Mode_ (for elements `InitialUnknowns`):
 
-- inputs (variables with `causality = "input"`)
+- inputs (variables with `causality` = <<input>>)
 
 - variables with `initial` = <<exact>> +
 _[for example, <<independent>> <<parameter,`parameters`>> or initial states.]_
@@ -2041,7 +2043,7 @@ y &= g_1(x_2, x_3)
 \end{align*},
 ++++
 
-_where_ latexmath:[\color{blue}{u_{1}}] _is a continuous-time input (`variability` = <<continuous>>),_ latexmath:[\color{blue}{u_{2}}] _is any type of input,_ latexmath:[\color{blue}{u_{3}}] _is a Real discrete-time input (`variability="discrete"`), and_ latexmath:[\color{blue}{p}] _is a <<fixed>> <<parameter>> (`variability` = <<fixed>>).
+_where_ latexmath:[\color{blue}{u_{1}}] _is a continuous-time <<input>> (`variability` = <<continuous>>),_ latexmath:[\color{blue}{u_{2}}] _is any type of <<input>>,_ latexmath:[\color{blue}{u_{3}}] _is a Real discrete-time <<input>> (`variability="discrete"`), and_ latexmath:[\color{blue}{p}] _is a <<fixed>> <<parameter>> (`variability` = <<fixed>>).
 The initialization is defined by:_
 
 [latexmath]
@@ -2077,7 +2079,7 @@ y = \left\{ \begin{matrix}
 \end{matrix}\right.
 ++++
 
-_where_ latexmath:[\color{blue}{u}] _is a continuous-time input with `valueReference="1"` and_ latexmath:[\color{blue}{y}] _is a continuous-time output with `valueReference="2"`.
+_where_ latexmath:[\color{blue}{u}] _is a continuous-time <<input>> with `valueReference="1"` and_ latexmath:[\color{blue}{y}] _is a continuous-time output with `valueReference="2"`.
 The definition of the model structure is then:_
 
 [source, xml]
@@ -2098,7 +2100,7 @@ y = \left\{ \begin{matrix}
 \end{matrix}\right.
 ++++
 
-_where_ latexmath:[\color{blue}{u}] _is a continuous-time input with `valueReference="1"` and_ latexmath:[\color{blue}{y}] _is a continuous-time output with `valueReference="2"`.
+_where_ latexmath:[\color{blue}{u}] _is a continuous-time <<input>> with `valueReference="1"` and_ latexmath:[\color{blue}{y}] _is a continuous-time output with `valueReference="2"`.
 The definition of the model structure is then:_
 
 [source, xml]
@@ -2117,8 +2119,8 @@ Examples:_
 - _If a state derivative `der_x` is a function of a <<parameter>> p (so of a start value of a variable with `causality` = <<parameter>> and `variability` = <<fixed>>), and the FMU does not support an iteration over `p` during `InitializationMode` (for example, to iterate over p such that the state derivative `der_x` is zero), then the dependencies list of `der_x` should not include `p`.
 If an FMU is imported in an environment and such an iteration is set up, then the tool can figure out that the resulting algebraic system of equations is structurally singular and therefore can reject such a definition._
 
-- _For standard Co-Simulation FMUs, it is common that no algebraic loops over the input/output variables nor over start-values is supported.
-In such a case, all `dependencies` lists for output variables under the `InitialUnknowns` element should be defined as empty lists defining that the setting of inputs and/or of start values does not influence the outputs.
+- _For standard Co-Simulation FMUs, it is common that no algebraic loops over the <<input>> / output variables nor over start-values is supported.
+In such a case, all `dependencies` lists for output variables under the `InitialUnknowns` element should be defined as empty lists defining that the setting of <<input,`inputs`>> and/or of start values does not influence the outputs.
 As a result, it is not possible to formulate algebraic loops of connected FMUs during InitializationMode.]_
 
 ==== Variable Naming Conventions (variableNamingConvention) [[variableNamingConvention]]

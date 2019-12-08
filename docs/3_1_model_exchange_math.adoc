@@ -98,7 +98,7 @@ image::images/PieceWiseContinuousVariables.svg[width=60%]
 
 An [underline]#event instant# latexmath:[t_i] is defined by one of the following conditions that give the smallest time instant:
 
-. The environment of the FMU triggers an event at the current time instant because at least one discrete-time input changes its value, a continuous-time input has a discontinuous change, or a <<tunable>> <<parameter>> changes its value.
+. The environment of the FMU triggers an event at the current time instant because at least one discrete-time <<input>> changes its value, a continuous-time <<input>> has a discontinuous change, or a <<tunable>> <<parameter>> changes its value.
 Such an event is called [underline]#external event#.
  _[Note that if an FMU A is connected to an FMU B, and an event is triggered for A, then potentially all outputs of A will be discontinuous at this time instant.
  It is therefore adviceable to trigger an external event for B at this time instant too, if an output of A is connected to B.
@@ -150,8 +150,8 @@ Dependent <<parameter,`parameters`>> (variables with `causality` = <<calculatedP
 ^|latexmath:[\mathbf{u}(t)]
 |Input variables.
 The values of these variables are defined outside of the model.
-Variables of this type are defined with attribute `causality = "input"`.
-Whether the input is a discrete-time or continuous-time variable is defined via attribute `variability` = <<discrete>> or <<continuous>> (see <<definition-of-model-variables>>).
+Variables of this type are defined with attribute `causality` = <<input>>.
+Whether the <<input>> is a discrete-time or continuous-time variable is defined via attribute `variability` = <<discrete>> or <<continuous>> (see <<definition-of-model-variables>>).
 
 ^|latexmath:[\mathbf{y}(t)]
 |Output variables.
@@ -214,9 +214,9 @@ In FMI 2.0 there is no mechanism that the FMU can provide the information whethe
 Therefore, the environment has to assume that at an event instant always all discrete-time variables are computed, although internally in the FMU only a subset might be newly computed.
 
 When connecting FMUs together, loop structures can occur that lead to particular difficulties because linear or non-linear algebraic systems of equations in Real variables but also in Boolean or Integer variables might be present.
-In order to solve such systems of equations over FMUs efficiently, the dependency information is needed stating, for example, which outputs depend directly on inputs.
+In order to solve such systems of equations over FMUs efficiently, the dependency information is needed stating, for example, which outputs depend directly on <<input,`inputs`>>.
 This data is optionally provided in the XML file under element `<ModelStructure>`.
-If this data is not provided, the worst case must be assumed (for example, all output variables depend algebraically on all input variables).
+If this data is not provided, the worst case must be assumed (for example, all output variables depend algebraically on all <<input>> variables).
 
 _[Example: In <<figure-connected-fmus>> two different types of connected FMUs are shown (the "dotted lines" characterize the dependency information):_
 
@@ -263,7 +263,7 @@ discrete-time and continuous-time equations)#| `[lime]#fmi3EnterInitializationMo
 |Set variables latexmath:[\mathbf{v}_{initial=exact}] that have a start value with
 `initial` = <<exact>> (<<independent>> <<parameter,`parameters`>> latexmath:[\mathbf{p}] and
 continuous-time states with start values latexmath:[\mathbf{x}_{c,initial=exact}] are included here) | `fmi3SetXXX`
-|Set continuous-time and discrete-time inputs latexmath:[\mathbf{u}(\color{grey}t_{\color{grey} 0})]| `fmi3SetXXX`
+|Set continuous-time and discrete-time <<input,`inputs`>>  latexmath:[\mathbf{u}(\color{grey}t_{\color{grey} 0})]| `fmi3SetXXX`
 |[blue]#latexmath:[\mathbf{v}_{initialUnknowns}:=f_{init}(\mathbf{u_c}, \mathbf{u_d}, \color{grey}t_{\color{grey} 0}, \mathbf{v}_{initial=exact}])# | `[blue]#fmi3GetXXX#`, `[blue]#fmi3GetContinuousStates#`
 |[lime]#Exit Initialization Mode (de-activate initialization equations)#| `[lime]#fmi3ExitInitializationMode#`
 2+|*_Equations during Event Mode_*
@@ -275,7 +275,7 @@ continuous-time states with start values latexmath:[\mathbf{x}_{c,initial=exact}
 (and do not set other <<parameter,`parameters`>> latexmath:[\mathbf{p}_{other}])
 |`fmi3SetXXX`
 
-|Set continuous-time and discrete-time inputs latexmath:[\mathbf{u}(t_i)]
+|Set continuous-time and discrete-time <<input,`inputs`>> latexmath:[\mathbf{u}(t_i)]
 |`fmi3SetXXX`
 
 |Set continuous-time states latexmath:[\mathbf{x}_c(t_i)]|`fmi3SetXXX`,
@@ -307,7 +307,7 @@ latexmath:[\qquad \qquad T_{next}=T_{next}(\mathbf{x}_c,{}^\bullet\mathbf{x}_d, 
 
 |Set <<independent>> variable time latexmath:[t(>t_{enter  mode}): t:=(t_R, 0)]|<<fmi3SetTime>>
 
-|Set continuous-time inputs latexmath:[\mathbf{u}_{c}(t)]
+|Set continuous-time <<input,`inputs`>> latexmath:[\mathbf{u}_{c}(t)]
 |`fmi3SetXXX`
 
 |Set continuous-time states latexmath:[\mathbf{x}_{c}(t)] |`fmi3SetXXX`,
@@ -338,11 +338,11 @@ Additionally, the output argument need not be a function of all input arguments,
 _This is essential when FMUs are connected in a loop, as shown in <<figure-connected-fmus>>. For example, since_ latexmath:[y_{2a}] _depends only on_
 latexmath:[u_{1a}] _, but not on_ latexmath:[u_{1b}]_, it is possible to call_ `fmi3SetXXX` _to set_ latexmath:[u_{1a}] _, and then inquire_ latexmath:[y_{2a}] _with_ `fmi3GetXXX` _without setting_ latexmath:[u_{1b}] _beforehand._
 
-_It is non-trivial to provide code for `fmi3SetXXX`, `fmi3GetXXX`, if the environment can call_ `fmi3SetXXX` _on the inputs in quite different orders.
+_It is non-trivial to provide code for `fmi3SetXXX`, `fmi3GetXXX`, if the environment can call_ `fmi3SetXXX` _on the <<input,`inputs`>> in quite different orders.
 A simple remedy is to provide the [underline]#dependency information#, not according to the "real" functional dependency, but according to the [underline]#sorted equations in the generated code#.
 Example:_
 
-Assume an FMU is described by the following equations (`u1`, `u2` are inputs, `y1`, `y2` are outputs,`w1`, `w2` are internal variables):
+Assume an FMU is described by the following equations (`u1`, `u2` are <<input,`inputs`>>, `y1`, `y2` are outputs,`w1`, `w2` are internal variables):
 -----
 w1 = w2 + u1
 w2 = u2
@@ -378,7 +378,7 @@ For FMI, the following basic mathematical model for discrete-time systems is use
 
 image::images/remark_2_source.png[width=70%]
 
-_At an event instant, the discrete system is described by algebraic equations as function of the previous (internal) discrete-time states_ latexmath:[_{‍}^{\bullet}\mathbf{x}_{d}] _and the discrete-time inputs_ latexmath:[\mathbf{u}_{d}]__.
+_At an event instant, the discrete system is described by algebraic equations as function of the previous (internal) discrete-time states_ latexmath:[_{‍}^{\bullet}\mathbf{x}_{d}] _and the discrete-time <<input,`inputs`>>_ latexmath:[\mathbf{u}_{d}]__.
 If FMUs are connected in a loop, these algebraic equations are called iteratively, until the solution is found.
 If the actual discrete-time states__ latexmath:[\mathbf{x}_{d}] __and the previous discrete-time states__ latexmath:[_{‍}^{\bullet}\mathbf{x}_{d}] _are not identical, the discrete-time states are updated, the Integer part of the time is incremented and a new event iteration is performed.
 Other discrete-time models must be mapped to this description form.
@@ -395,7 +395,7 @@ _In such a system there is only one memory location for a discrete-time state an
 As a result, <<fmi3NewDiscreteStates>> is basically just used to start a new (super dense) time instant.
 This is unproblematic, as long as no algebraic loops occur.
 FMUs of this type can therefore not be used in "real" algebraic loops if the involved variables depend on a discrete-time state.
-This restriction is communicated to the environment of the FMU by the `ScalarVariable` definition of the corresponding input with flag `canHandleMultipleSetPerTimeInstant = false` (so an input with this flag is not allowed to be called in an algebraic loop)._
+This restriction is communicated to the environment of the FMU by the `ScalarVariable` definition of the corresponding <<input>> with flag `canHandleMultipleSetPerTimeInstant = false` (so an <<input>> with this flag is not allowed to be called in an algebraic loop)._
 
 _Remark 3 - Event Indicators / Freezing Relations:_
 
@@ -457,7 +457,7 @@ then the environment need not to call <<fmi3EnterContinuousTimeMode>> but can di
 before <<fmi3EnterEventMode>> is called.]_
 
 An FMU is initialized in Initialization Mode with latexmath:[\mathbf{f}_{init}(\ldots)].
-The input arguments to this function consist of the input variables (= variables with `causality = "input"`), of the <<independent>> variable (= variable with `causality` = <<independent>>; usually the default value `"time"`), and of all variables that have a start value with (explicitly or implicitly) `initial` = <<exact>> in order to compute the continuous-time states and the output variables at the initial time latexmath:[t_0].
+The input arguments to this function consist of the <<input>> variables (= variables with `causality` = <<input>>), of the <<independent>> variable (= variable with `causality` = <<independent>>; usually the default value `"time"`), and of all variables that have a start value with (explicitly or implicitly) `initial` = <<exact>> in order to compute the continuous-time states and the output variables at the initial time latexmath:[t_0].
 In the above table, the variables with `initial` = <<exact>> are collected together in variable latexmath:[\mathbf{v}_{initial=exact}].
 For example, initialization might be defined by providing initial start values for the states, latexmath:[\mathbf{x}_{c0}], or by stating that the state derivatives are zero (latexmath:[\dot{\mathbf{x}}_{c} = \mathbf{0}]).
 Initialization is a difficult topic by itself, and it is required that an FMU solves a well-defined initialization problem inside the FMU in Initialization Mode. +
@@ -466,7 +466,7 @@ If these variables are present in an algebraic loop, iteration can be used to co
 Once finalized, <<fmi3NewDiscreteStates>> must be called, and depending on the value of the return argument, the FMU either continues the event iteration at the initial time instant or switches to Continuous-Time Mode. +
 After switching to Continuous-Time Mode, the integration is started.
 Basically, in this phase the derivatives of the continuous states are computed.
-If FMUs and/or submodels are connected together, then the inputs of these models are the outputs of other models, and therefore, the corresponding FMU outputs must be computed.
+If FMUs and/or submodels are connected together, then the <<input,`inputs`>> of these models are the outputs of other models, and therefore, the corresponding FMU outputs must be computed.
 Whenever result values shall be stored, usually at output points defined before the start of the simulation, the `fmi3GetXXX` function with respect to the desired variables must be called. +
 Continuous integration is stopped at an event instant.
 An event instant is determined by a time, state or step event, or by an external event triggered by the environment.
@@ -476,7 +476,7 @@ After an event is triggered, the FMU needs to be switched to Event Mode.
 In this mode, systems of equations over connected FMUs might be solved (similarily as in Continuous-Time Mode).
 Once convergence is reached, <<fmi3NewDiscreteStates>> must be called to increment super dense time (and conceptually update the discrete-time states defined internally in the FMU by latexmath:[^{\bullet}\mathbf{x}_d := \mathbf{x}_d]).
 Depending on the discrete-time model, a new event iteration might be needed (for example, because the FMU describes internally a state machine
-and transitions are still able to fire, but new inputs shall be taken into account). +
+and transitions are still able to fire, but new <<input,`inputs`>> shall be taken into account). +
 The function calls in the table above describe precisely which input arguments are needed to compute the desired output argument(s).
 There is no 1:1 mapping of these mathematical functions to C functions.
 Instead, all input arguments are set with `fmi3SetXXX` C function calls, and then the result argument(s) can be determined with the C functions defined in the right column of the above table.
