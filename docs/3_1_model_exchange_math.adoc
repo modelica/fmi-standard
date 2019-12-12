@@ -100,8 +100,8 @@ An [underline]#event instant# latexmath:[t_i] is defined by one of the following
 
 . The environment of the FMU triggers an event at the current time instant because at least one discrete-time <<input>> changes its value, a continuous-time <<input>> has a discontinuous change, or a <<tunable>> <<parameter>> changes its value.
 Such an event is called [underline]#external event#.
- _[Note that if an FMU A is connected to an FMU B, and an event is triggered for A, then potentially all outputs of A will be discontinuous at this time instant.
- It is therefore adviceable to trigger an external event for B at this time instant too, if an output of A is connected to B.
+ _[Note that if an FMU A is connected to an FMU B, and an event is triggered for A, then potentially all <<output,`outputs`>> of A will be discontinuous at this time instant.
+ It is therefore adviceable to trigger an external event for B at this time instant too, if an <<output>> of A is connected to B.
  This means to call <<fmi3EnterEventMode>> on B.]_ +
 All the following events are internal events.
 
@@ -140,7 +140,7 @@ An FMI Model-Exchange model is described by the following variables:
 see <<definition-of-model-variables>>).
 A subset of the variables is selected via a subscript.
 Example: latexmath:[\mathbf{v}_{initial=exact}] are variables defined with attribute `initial` = <<exact>> (see <<definition-of-model-variables>>).
-These are <<independent>> <<parameter,`parameters`>> and startvalues of other variables, such as initial values for states, state derivatives or outputs.
+These are <<independent>> <<parameter,`parameters`>> and startvalues of other variables, such as initial values for states, state derivatives or <<output,`outputs`>>.
 
 ^|latexmath:[\mathbf{p}]
 |Parameters that are constant during simulation.
@@ -157,8 +157,8 @@ Whether the <<input>> is a discrete-time or continuous-time variable is defined 
 |Output variables.
 The values of these variables are computed in the FMU and they are designed to be used in a model connection.
 For instance, output variables might be used in the environment as input values to other FMUs or other submodels.
-Variables of this type are defined with attribute `causality = "output"`.
-Whether the output is a discrete-time or continuous-time variable is defined via attribute `variability` = <<discrete>> or `"continuous"` (see <<definition-of-model-variables>>).
+Variables of this type are defined with attribute `causality` = <<output>>.
+Whether the <<output>> is a discrete-time or continuous-time variable is defined via attribute `variability` = <<discrete>> or `"continuous"` (see <<definition-of-model-variables>>).
 
 ^|latexmath:[\mathbf{w}(t)]
 |Local variables of the FMU that cannot be used for FMU connections.
@@ -170,8 +170,8 @@ Variables of this type are defined with attribute `causality = "local"`, see <<d
 ^|latexmath:[\mathbf{x}_c(t)]
 |A vector of real continuous-time variables representing the continuous-time states.
 For notational convenience,
-a continuous-time state is conceptually treated as a different type of variable as an output or a local variable for the mathematical description below.
-In reality, a continuous-time state is however part of the outputs latexmath:[\mathbf{y}] or the local variables latexmath:[\mathbf{w}] of an FMU.
+a continuous-time state is conceptually treated as a different type of variable as an <<output>> or a local variable for the mathematical description below.
+In reality, a continuous-time state is however part of the <<output,`outputs`>> latexmath:[\mathbf{y}] or the local variables latexmath:[\mathbf{w}] of an FMU.
 
 ^|latexmath:[\mathbf{x}_d(t)] +
 latexmath:[^{\bullet}\mathbf{x}_d(t)]
@@ -180,7 +180,7 @@ latexmath:[{}^{\bullet}\mathbf{x}_d(t)] a is the value of latexmath:[\mathbf{x}_
 Given the previous values of the discrete-time states,
 latexmath:[{}^{\bullet}\mathbf{x}_d(t)], at the actual time instant latexmath:[t], all other discrete-time variables, especially the discrete states latexmath:[\mathbf{x}_d(t)], can be computed. +
 Discrete states are not visible in the interface of an FMU and are only introduced here to clarify the mathematical description.
-Formally, a discrete state is part of the outputs latexmath:[\mathbf{y}] or the local variables latexmath:[\mathbf{w}] of an FMU.
+Formally, a discrete state is part of the <<output,`outputs`>> latexmath:[\mathbf{y}] or the local variables latexmath:[\mathbf{w}] of an FMU.
 
 ^|latexmath:[T_{next}(t_{i})]
 |At initialization or at an event insant, an FMU can define the next time instant latexmath:[T_{next}], at which the next event occurs (see also the definition of events above).
@@ -214,7 +214,7 @@ In FMI 2.0 there is no mechanism that the FMU can provide the information whethe
 Therefore, the environment has to assume that at an event instant always all discrete-time variables are computed, although internally in the FMU only a subset might be newly computed.
 
 When connecting FMUs together, loop structures can occur that lead to particular difficulties because linear or non-linear algebraic systems of equations in Real variables but also in Boolean or Integer variables might be present.
-In order to solve such systems of equations over FMUs efficiently, the dependency information is needed stating, for example, which outputs depend directly on <<input,`inputs`>>.
+In order to solve such systems of equations over FMUs efficiently, the dependency information is needed stating, for example, which <<output,`outputs`>> depend directly on <<input,`inputs`>>.
 This data is optionally provided in the XML file under element `<ModelStructure>`.
 If this data is not provided, the worst case must be assumed (for example, all output variables depend algebraically on all <<input>> variables).
 
@@ -342,7 +342,7 @@ _It is non-trivial to provide code for `fmi3SetXXX`, `fmi3GetXXX`, if the enviro
 A simple remedy is to provide the [underline]#dependency information#, not according to the "real" functional dependency, but according to the [underline]#sorted equations in the generated code#.
 Example:_
 
-Assume an FMU is described by the following equations (`u1`, `u2` are <<input,`inputs`>>, `y1`, `y2` are outputs,`w1`, `w2` are internal variables):
+Assume an FMU is described by the following equations (`u1`, `u2` are <<input,`inputs`>>, `y1`, `y2` are <<output,`outputs`>>,`w1`, `w2` are internal variables):
 -----
 w1 = w2 + u1
 w2 = u2
@@ -466,7 +466,7 @@ If these variables are present in an algebraic loop, iteration can be used to co
 Once finalized, <<fmi3NewDiscreteStates>> must be called, and depending on the value of the return argument, the FMU either continues the event iteration at the initial time instant or switches to Continuous-Time Mode. +
 After switching to Continuous-Time Mode, the integration is started.
 Basically, in this phase the derivatives of the continuous states are computed.
-If FMUs and/or submodels are connected together, then the <<input,`inputs`>> of these models are the outputs of other models, and therefore, the corresponding FMU outputs must be computed.
+If FMUs and/or submodels are connected together, then the <<input,`inputs`>> of these models are the <<output,`outputs`>> of other models, and therefore, the corresponding FMU outputs must be computed.
 Whenever result values shall be stored, usually at output points defined before the start of the simulation, the `fmi3GetXXX` function with respect to the desired variables must be called. +
 Continuous integration is stopped at an event instant.
 An event instant is determined by a time, state or step event, or by an external event triggered by the environment.

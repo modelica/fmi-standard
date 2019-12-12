@@ -6,7 +6,7 @@ This section contains the interface description to evaluate different model part
 
 Depending on the situation, different variables need to be computed.
 In order to be [underline]#efficient#, it is important that the interface requires only the [underline]#computation# of variables that are needed in the [underline]#present  context#.
-For example, during the iteration of an integrator step, only the state derivatives need to be computed, provided the output of a model is not connected.
+For example, during the iteration of an integrator step, only the state derivatives need to be computed, provided the <<output>> of a model is not connected.
 It might be that at the same time instant other variables are needed.
 For example, if an integrator step is completed, the event indicator functions need to be computed as well.
 If the state derivatives have already been computed at the present time instant, then it is important for efficiency that they are not newly computed in the call to compute the event indicator functions.
@@ -93,7 +93,7 @@ include::../headers/fmi3FunctionTypes.h[tags=EventInfo]
 
 The FMU is in *Event Mode* and the super dense time is incremented by this call. +
 If the super dense time before a call to <<fmi3NewDiscreteStates>> was latexmath:[(t_R,t_I)], then the time instant after the call is latexmath:[(t_R,t_I)]. +
-If return argument `pass:[fmi3eventInfo->newDiscreteStatesNeeded]` = `fmi3True`, the FMU should stay in Event Mode, and the FMU requires to set new inputs to the FMU (`fmi3SetXXX` on <<input,`inputs`>>) to compute and get the outputs (`fmi3GetXXX` on outputs) and to call <<fmi3NewDiscreteStates>> again.
+If return argument `pass:[fmi3eventInfo->newDiscreteStatesNeeded]` = `fmi3True`, the FMU should stay in Event Mode, and the FMU requires to set new inputs to the FMU (`fmi3SetXXX` on <<input,`inputs`>>) to compute and get the <<output,`outputs`>> (`fmi3GetXXX` on <<output,`outputs`>>) and to call <<fmi3NewDiscreteStates>> again.
 Depending on the connection with other FMUs, the environment shall
 
 - call <<fmi3Terminate>>, if `terminateSimulation` = `fmi3True` is returned by at least one FMU,
@@ -232,8 +232,8 @@ This state is entered from state *instantiated* by calling <<fmi3EnterConfigurat
 <<fmi3EnterConfigurationMode>> can only be called if the FMU contains at least one structural parameter.
 
 Initialization Mode::
-In this state, equations are active to determine all continuous-time states, as well as all outputs (and optionally other variables exposed by the exporting tool).
-The variables that can be retrieved by `fmi3GetXXX` calls are (1) defined in the XML file under `<ModelStructure><InitialUnknowns>` and (2) variables with `causality` = `"output"`.
+In this state, equations are active to determine all continuous-time states, as well as all <<output,`outputs`>> (and optionally other variables exposed by the exporting tool).
+The variables that can be retrieved by `fmi3GetXXX` calls are (1) defined in the XML file under `<ModelStructure><InitialUnknowns>` and (2) variables with `causality` = <<output>>.
 Variables with `initial` = <<exact>>, as well as variables with `variability` = <<input>> can be set.
 
 Continuous-Time Mode::
@@ -258,8 +258,8 @@ Note that simulation backward in time is only allowed over continuous time inter
 As soon as an event occurred (<<fmi3EnterEventMode>> was called), going back in time is forbidden, because <<fmi3EnterEventMode>> / <<fmi3NewDiscreteStates>> can only compute the next discrete state, not the previous one.
 
 Note that during *Initialization*, *Event*, and *Continuous-Time Mode* <<input>> variables can be set with `fmi3SetXXX` and output variables can be retrieved with `fmi3GetXXX` interchangeably according to the model structure defined under element `<ModelStructure>` in the XML file.
-_[For example, if one output `y1` depends on two <<input,`inputs`>> `u1`, `u2`, then these two <<input,`inputs`>> must be set, before `y1` can be retrieved.
-If additionally an output `y2` depends on an <<input>> `u3`, then `u3` can be set and `y2` can be retrieved afterwards.
+_[For example, if one <<output>> `y1` depends on two <<input,`inputs`>> `u1`, `u2`, then these two <<input,`inputs`>> must be set, before `y1` can be retrieved.
+If additionally an <<output>> `y2` depends on an <<input>> `u3`, then `u3` can be set and `y2` can be retrieved afterwards.
 As a result, artificial or "real" algebraic loops over connected FMUs in any of these three modes can be handled by using appropriate numerical algorithms.]_
 
 The allowed function calls in the respective states are summarized in the following table (functions marked in "[yellow-background]#yellow#" are only available for Model Exchange, the other functions are available both for Model Exchange and Co-Simulation):
@@ -318,7 +318,7 @@ The allowed function calls in the respective states are summarized in the follow
 *number* means: call is allowed if the indicated condition holds: +
 *1* for a variable with `variability` latexmath:[\neq] <<constant>> that has `initial` =
 <<exact>> or <<approx>> +
-*2* for a variable with `causality = "output"`, or continuous-time states or state derivatives +
+*2* for a variable with `causality` = <<output>>, or continuous-time states or state derivatives +
 *3* for a variable with `variability` latexmath:[\neq] <<constant>> that has `initial` = <<exact>>,
 or `causality` = <<input>>  +
 *4* for a variable with `causality` = <<input>>,
@@ -367,7 +367,7 @@ Synchronize clock activation and intervals with the environment::
 
 The <<clock>> activation status can be inquired with the function <<fmi3GetClock>>. The environment calls the function <<fmi3SetClock>> for periodic <<clock,`clocks`>> and <<inputClock,`input clocks`>>.
 Moreover the current <<clock>> intervals may be inquired with the function <<fmi3GetIntervalDecimal>> or <<fmi3GetIntervalFraction>> and set with the function <<fmi3SetIntervalDecimal>> <<fmi3SetIntervalFraction>>.
-_[In the Modelica language this is the value returned by the interval() operator. The initialization of intervals is needed for output and input sample times if a <<clock>> ticks the first time. The FMU determines the interval itself at subsequent <<clock>> ticks.]_
+_[In the Modelica language this is the value returned by the interval() operator. The initialization of intervals is needed for <<output>> and <<input>> sample times if a <<clock>> ticks the first time. The FMU determines the interval itself at subsequent <<clock>> ticks.]_
 
 Solve algebraic loops among discrete-time equations of multiple FMUs or repeated evaluation in model-based control applications (optional)::
 With the `fmi3SetXXX` functions the <<input>> variables of the clocked partition can be set.
