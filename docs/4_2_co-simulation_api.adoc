@@ -478,7 +478,7 @@ The FMU must not call the <<fmi3CallbackIntermediateUpdate>> callback function w
 ===== Handling a Successful Early-Return by the Co-Simulation Master in fmi3ModeHybridCoSimulation
 
 If the FMU is successful in conducting an early return, the return value of the `earlyReturn` argument in <<fmi3DoStep>> is `fmi3True`, otherwise `fmi3False`.
-If the FMU returns from <<fmi3DoStep>> with the `earlyReturn = fmi3True` the Co-Simulation master has to call <<fmi3EnterEventMode>> for that FMU.
+If the FMU returns from <<fmi3DoStep>> with the `earlyReturn` = `fmi3True` the Co-Simulation master has to call <<fmi3EnterEventMode>> for that FMU.
 
 [source, C]
 ----
@@ -492,13 +492,13 @@ The master should indicate to the FMU that this early-return feature is also sup
 The Co-Simulation master signals to the FMU that it supports and has recognized the early return Co-Simulation capabilities of the FMU by setting the CoSimulation mode to `fmi3ModeHybridCoSimulation` in the <<fmi3Instantiate>> function.
 
 The FMU stops computation at the first encountered internal event (if any) and the event time is provided through `{STIUI}.{IUTIME}`.
-If <<fmi3DoStep>> returns with `earlyReturn = fmi3True` and an event has happened, i.e., `{STIUI}.eventOccurred` is `fmi3True`, then an event handling has to be done by the Co-Simulation master.
+If <<fmi3DoStep>> returns with `earlyReturn` = `fmi3True` and an event has happened, i.e., `{STIUI}.eventOccurred` is `fmi3True`, then an event handling has to be done by the Co-Simulation master.
 In order to start event handling the Co-Simulation master has to call <<fmi3EnterEventMode>> for that FMU to push the FMU into `Event Mode`. In this mode the Co-Simulation master is supposed to catch all events through the <<fmi3NewDiscreteStates>> function and the <<fmi3EventInfo>> structure.
 
-If the early-return request of the Co-Simulation master is ignored by the FMU, then <<fmi3DoStep>> returns with `earlyReturn = fmi3False`.
+If the early-return request of the Co-Simulation master is ignored by the FMU, then <<fmi3DoStep>> returns with `earlyReturn` = `fmi3False`.
 The master can start a resynchronization of FMUs at an event time, if the `currentCommunicationPoint` has passed the event time, the master can roll-back the FMU and repeat the step with a suitable `communicationStepSize` (if the FMU supports the roll-back).
 
-In `Event Mode` and only after <<fmi3DoStep>> returns with `earlyReturn = fmi3True` a <<fmi3NewDiscreteStates>> call returns <<fmi3EventInfo>> structure as a return argument.
+In `Event Mode` and only after <<fmi3DoStep>> returns with `earlyReturn` = `fmi3True` a <<fmi3NewDiscreteStates>> call returns <<fmi3EventInfo>> structure as a return argument.
 Not all elements of <<fmi3EventInfo>> are relevant and only the following elements may be considered:
 
 -	when `newDiscreteStatesNeeded` = `true` it means that the master should stay in Event Mode and another call to <<fmi3NewDiscreteStates>> is required.
@@ -527,7 +527,7 @@ If an FMU provides <<clock,`clocks`>>, but the Co-Simulation master does not sup
 
 _[Remark:_
 _Wrapping towards other Co-Simulation modes can influence the simulation results._
-_Depending on the model especially wrapping towards the mode fmi3ModeCoSimulation may result in divergent simulation results._
+_Depending on the model especially wrapping towards the mode `fmi3ModeCoSimulation` may result in divergent simulation results._
 _Especially aperiodic <<inputClock,`input clocks`>> can not always be sufficiently emulated in modes that do not directly support <<clock,`clocks`>>._
 _Therefore it is recommended that the FMU provides logging information to the user about the influence of the current mode on simulation results, if non-optimal modes are used by the simulation environment.
 ]_
@@ -612,7 +612,7 @@ In order to handle discrete events and <<clock>> ticks, the FMU is pushed into t
 
 Allowed Function Calls::
 <<fmi3Terminate>>::
-Upon return of <<fmi3NewDiscreteStates>>, if `fmi3EventInfo->terminateSimulation` = `fmi3True`, the master should finish the cosimulation by calling fmi3Terminate() on all FMUs.
+Upon return of <<fmi3NewDiscreteStates>>, if `fmi3EventInfo->terminateSimulation` = `fmi3True`, the master should finish the cosimulation by calling `fmi3Terminate` on all FMUs.
 
 <<fmi3EnterConfigurationMode>>::
 With this function call the Reconfiguration Mode is entered.
@@ -932,9 +932,9 @@ Forbidden Function Calls::
 The same functions which are not allowed to be called in `Clock Activation Mode` must not be called in this state. Additionally the following functions must not be called `fmi3ActivateModelPartition()`, <<fmi3EnterConfigurationMode>>, <<fmi3Terminate>>.
 
 Allowed Function Calls::
-For a <<outputClock>> only the first call of fmi3GetClock() for a specific activation of this <<clock>> signals `fmi3True`.
-The FMU sets the reported activation state immediately back to `fmi3False` for the following fmi3GetClock() calls for that <<clock>> (in the same or other model partitions of the FMU) until this <<outputClock>> is internally activated again.
-The master can call fmi3Set{VariableType} and fmi3Get{VariableType} during the callback for variables associated to a <<outputClock>> that is active during this callback.
+For a <<outputClock>> only the first call of `fmi3GetClock` for a specific activation of this <<clock>> signals `fmi3True`.
+The FMU sets the reported activation state immediately back to `fmi3False` for the following `fmi3GetClock` calls for that <<clock>> (in the same or other model partitions of the FMU) until this <<outputClock>> is internally activated again.
+The master can call `fmi3Set{VariableType}` and `fmi3Get{VariableType}` during the callback for variables associated to a <<outputClock>> that is active during this callback.
 Also intermediate variable access is allowed as defined in <<state-intermediate-update-mode-co-simulation>>
 
 _[Based on the FMI standard it cannot be determined which part of the code of an FMU has called the callback function <<fmi3CallbackIntermediateUpdate>>.
@@ -981,7 +981,7 @@ It is also recommended to reduce dependencies (defined in XML model structure) b
 
 The Co-Simulation master has no knowledge about the FMU internal communication between the model partitions of a single FMU and does not handle it.
 
-The simulation master schedules the `fmi3ActivateModelPartition()` (as well as related fmi3Get{VariableType} and fmi3Set{VariableType}) calls based on given priorities for <<inputClock,`input clocks`>> defined in the modelDescription.xml.
+The simulation master schedules the `fmi3ActivateModelPartition()` (as well as related `fmi3Get{VariableType}` and `fmi3Set{VariableType}`) calls based on given priorities for <<inputClock,`input clocks`>> defined in the modelDescription.xml.
 
 Priority (see <<clock-type-definition>>):
 
