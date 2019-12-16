@@ -131,7 +131,7 @@ These definitions are used in the XML element `ModelVariables`.
 
 |`ModelStructure`
 |Defines the structure of the model.
-Especially, the ordered lists of <<output,`outputs`>>, continuous-time states and initial unknowns (the unknowns during Initialization Mode) are defined here.
+Especially, the ordered lists of <<output,`outputs`>>, continuous-time <<state,`states`>> and initial unknowns (the unknowns during Initialization Mode) are defined here.
 Furthermore, the dependency of the unkowns from the knowns can be optionally defined.
 _[This information can be, for example, used to compute efficiently a sparse Jacobian for simulation, or to utilize the <<input>> / <<output>> dependency in order to detect that in some cases there are actually no algebraic loops when connecting FMUs together]_.
 |====
@@ -621,7 +621,7 @@ _where `tolerance` is, for example, the relative tolerance defined in `<DefaultE
 |unbounded
 |If `true`, indicates that during time integration, the variable gets a value much larger than its nominal value `nominal`.
 _[Typical examples are the monotonically increasing rotation angles of crank shafts and the longitudinal position of a vehicle along the track in long distance simulations.
-This information can, for example, be used to increase numerical stability and accuracy by setting the corresponding bound for the relative error to zero (relative tolerance = 0.0), if the corresponding variable or an alias of it is a continuous state variable.]_
+This information can, for example, be used to increase numerical stability and accuracy by setting the corresponding bound for the relative error to zero (relative tolerance = 0.0), if the corresponding variable or an alias of it is a continuous <<state>> variable.]_
 
 |Item
 |Items of an enumeration has a sequence of `name` and `value` pairs.
@@ -751,7 +751,7 @@ If a tool supports one of these log categories and wants to expose it, then an e
 |Log the solution of nonlinear systems of equations.
 
 |`logDynamicStateSelection`
-|Log the dynamic selection of states.
+|Log the dynamic selection of <<state,`states`>>.
 
 |`logStatusWarning`
 |Log messages when returning `fmi3Warning` status from any function.
@@ -1184,7 +1184,7 @@ It is not allowed to define `initial`.
 The algebraic relationship to the <<input,`inputs`>> is defined via the `dependencies` attribute of `<fmiModelDescription><ModelStructure><Outputs><Unknown>`.
 
 [[local,`local`]]
-- `local`: Local variable that is calculated from other variables or is a continuous-time state (see <<ModelStructure>>).
+- `local`: Local variable that is calculated from other variables or is a continuous-time <<state>> (see <<ModelStructure>>).
 It is not allowed to use the variable value in another model or slave.
 
 [[independent,`independent`]]
@@ -1223,7 +1223,7 @@ Variability must be <<clock>>.
 Only a variable of type `Clock` can have this causality.
 
 The default of causality is <<local>>. +
-A continuous-time state must have `causality` = <<local>> or <<output>>, see also <<ModelStructure>>.
+A continuous-time <<state>> must have `causality` = <<local>> or <<output>>, see also <<ModelStructure>>.
 
 _[`causality` = <<calculatedParameter>> and `causality` = <<local>> with `variability` = <<fixed>> or <<tunable>> are similar.
 The difference is that a <<calculatedParameter>> can be used in another model or slave, whereas a <<local>> variable cannot.
@@ -1261,7 +1261,7 @@ Co-Simulation: By convention, the variable is from a differential
 
 The default is <<continuous>> for variables of type `Float32` and `Float64`, and <<discrete>> for all other types.
 
-_[Note that the information about continuous states is defined with element `fmiModelDescription.ModelStructure.Derivatives`.]_
+_[Note that the information about continuous <<state,`states`>> is defined with element `fmiModelDescription.ModelStructure.Derivatives`.]_
 
 |`initial`
 |Enumeration that defines how the variable is initialized.
@@ -1298,8 +1298,8 @@ If both Model Exchange and Co-Simulation FMU, this attribute is ignored for Co-S
 Only for variables with `variability` = <<input>> : +
 If present with value equals `false`, then only one `fmi3SetXXX` call is allowed at one super dense time instant (model evaluation) on this variable.
 That is, this <<input>> is not allowed to appear in a (real) algebraic loop requiring multiple calls of `fmi3SetXXX` on this variable _[for example, due to a Newton iteration]_. +
-_[This flag must be set by FMUs where (internal) discrete-time states are directly updated when assigned (xd := f(xd) instead of xd = f(previous(xd)),
-and at least one <<output>> depends on this <<input>> and on discrete states._ +
+_[This flag must be set by FMUs where (internal) discrete-time <<state,`states`>> are directly updated when assigned (xd := f(xd) instead of xd = f(previous(xd)),
+and at least one <<output>> depends on this <<input>> and on discrete <<state,`states`>>._ +
 _It is strongly recommended that such an FMU checks the fulfillment of the requirement by itself during run-time, because an environment might not be able to check it; usually, there is a generic mechanism to import an FMU in an environment, but the mechanism to connect FMUs together is unrelated to the import mechanism.
 For example, there is no mechanism in the Modelica language to formulate connection restrictions for C functions (the FMU) called in a Modelica model.]_
 
@@ -1323,10 +1323,10 @@ It is not allowed to combine <<outputClock,`output clocks`>> with periodic or st
 The attribute clockReference must not be used if `causality` = <<output>> for a variable.
 
 |`previous`
-|If present, this variable is a discrete-time state xd.
+|If present, this variable is a discrete-time <<state>> xd.
 The value of xd at the previous super-dense time instant is stored in the variable with valueReference previous.
 The previous variable must have `initial` = <<exact>> and a <<start>> value defined.
-_[For example, if there are 10 Variables and previous equals 3 for Variable 8, then at a super-dense time instant Variable 8 holds the value of this discrete state at the actual time instant and Variable 3 holds the value of this state from the previous super-dense time instant.]_
+_[For example, if there are 10 Variables and previous equals 3 for Variable 8, then at a super-dense time instant Variable 8 holds the value of this discrete <<state>> at the actual time instant and Variable 3 holds the value of this <<state>> from the previous super-dense time instant.]_
 
 |`intermediateAccess`
 |
@@ -1711,7 +1711,7 @@ Instead, this is a short hand notation for:_
 
 . _Change the values of the <<tunable>> (structural) <<parameter,`parameters`>>. For <<tunable>> structural parameters, the *Reconfiguration Mode* state must be entered before and left afterwards._
 
-. _Compute all <<parameter,`parameters`>> (and sizes of variables, states, <<derivative,`derivatives`>>, event indicators, ...) that depend on the <<tunable>> (structural) <<parameter,`parameters`>>._
+. _Compute all <<parameter,`parameters`>> (and sizes of variables, <<state,`states`>>, <<derivative,`derivatives`>>, event indicators, ...) that depend on the <<tunable>> (structural) <<parameter,`parameters`>>._
 
 . _Newly start the simulation using as initial values the current values of all previous variables and the new values of the <<parameter,`parameters`>>._
 
@@ -1807,17 +1807,17 @@ Variables with `causality` = <<parameter>> or <<input>>, as well as variables wi
 If present, this variable is the derivative of variable with `Variable` value reference `derivative`.
 _[For example,
 if there are 10 `Variable`pass:[s] and `derivative = 3` for `Variable` 8, then `Variable` 8 is the derivative of `Variable` 3 with respect to the <<independent>> variable (usually time).
-This information might be especially used if an <<input>> or an <<output>> is the derivative of another <<input>> or <<output>>, or to define the states.]_
+This information might be especially used if an <<input>> or an <<output>> is the derivative of another <<input>> or <<output>>, or to define the <<state,`states`>>.]_
 
-The state derivatives of an FMU are listed under element `<ModelStructure><Derivatives>`.
-All `Variable`pass:[s] listed in this element must have attribute `derivative` (in order that the continuous-time states are uniquely defined).
+The <<state>> <<derivative,`derivatives`>> of an FMU are listed under element `<ModelStructure><Derivatives>`.
+All `Variable`pass:[s] listed in this element must have attribute `derivative` (in order that the continuous-time <<state,`states`>> are uniquely defined).
 
 |`reinit`
 |Only for Model Exchange (if only Co-Simulation FMU, this attribute must not be present.
 If both Model Exchange and Co-Simulation FMU, this attribute is ignored for Co-Simulation): +
-Can only be present for a continuous-time state. +
-If `true`, state can be reinitialized at an event by the FMU. +
-If `false`, state will not be reinitialized at an event by the FMU.
+Can only be present for a continuous-time <<state>>. +
+If `true`, <<state>> can be reinitialized at an event by the FMU. +
+If `false`, <<state>> will not be reinitialized at an event by the FMU.
 
 |`min / max`
 |The optional attributes `min` and `max` in element `Enumeration` restrict the allowed values of the enumeration.
@@ -1839,18 +1839,18 @@ The structure of the model is defined in element `ModelStructure` within `fmiMod
 This structure is with respect to the underlying model equations, independently how these model equations are solved.
 _[For example, when exporting a model both in Model Exchange and Co-Simulation format; then the model structure is identical in both cases.
 The Co-Simulation FMU has either an integrator included that solves the model equations, or the discretization formula of the integrator and the model equations are solved together ("inline integration").
-In both cases the model has the same continuous-time states.
+In both cases the model has the same continuous-time <<state,`states`>>.
 In the second case the internal implementation is a discrete-time system, but from the outside this is still a continuous-time model that is solved with an integration method.]_
 
-The required part defines an ordering of the <<output,`outputs`>> and of the (exposed) <<derivative,`derivatives`>>, and defines the unknowns that are available during Initialization _[Therefore, when linearizing an FMU, every tool will use the same ordering for the <<output,`outputs`>>, states, and <<derivative,`derivatives`>> for the linearized model.
+The required part defines an ordering of the <<output,`outputs`>> and of the (exposed) <<derivative,`derivatives`>>, and defines the unknowns that are available during Initialization _[Therefore, when linearizing an FMU, every tool will use the same ordering for the <<output,`outputs`>>, <<state,`states`>>, and <<derivative,`derivatives`>> for the linearized model.
 The ordering of the <<input,`inputs`>> should be performed in this case according to the ordering in `ModelVariables`.]_
-A Model Exchange FMU must expose all <<derivative,`derivatives`>> of its continuous-time states in element `Derivatives`.
+A Model Exchange FMU must expose all <<derivative,`derivatives`>> of its continuous-time <<state,`states`>> in element `Derivatives`.
 A Co- Simulation FMU does not need to expose these state derivatives.
 _[If a Co-Simulation FMU exposes its state derivatives, they are usually not utilized for the co-simulation, but, for example, to linearize the FMU at a communication point.]_
 
-The optional part defines in which way <<derivative,`derivatives`>> and <<output,`outputs`>> depend on <<input,`inputs`>>, and continuous-time states at the current super dense time instant (Model Exchange) or at the current communication point (Co-Simulation).
+The optional part defines in which way <<derivative,`derivatives`>> and <<output,`outputs`>> depend on <<input,`inputs`>>, and continuous-time <<state,`states`>> at the current super dense time instant (Model Exchange) or at the current communication point (Co-Simulation).
 _[The listed dependencies declare the dependencies between whole (multi-dimensional-)variables and not individual elements of the variables.]_
-_[A simulation environment can utilize this information to improve the efficiency, for example, when connecting FMUs together, or when computing the partial derivative of the <<derivative,`derivatives`>> with respect to the states in the simulation engine.]_
+_[A simulation environment can utilize this information to improve the efficiency, for example, when connecting FMUs together, or when computing the partial derivative of the <<derivative,`derivatives`>> with respect to the <<state,`states`>> in the simulation engine.]_
 
 `ModelStructure` has the following definition:
 
@@ -1889,18 +1889,18 @@ The functional dependency is defined as (dependencies of variables that are fixe
 |`Derivatives`
 |Ordered list of all state derivatives, in other words, a list of `Variable` value references where every corresponding `Variable` must be a state derivative.
 _[Note that only <<continuous>> Real variables are listed here.
-If a state or a <<derivative>> of a state shall not be exposed from the FMU, or if states are not statically associated with a variable (due to dynamic state selection), then dummy `Variable`pass:[s] have to be introduced, for example, `x[4]`, or `xDynamicStateSet2[5]`.
+If a <<state>> or a <<derivative>> of a <<state>> shall not be exposed from the FMU, or if states are not statically associated with a variable (due to dynamic state selection), then dummy `Variable`pass:[s] have to be introduced, for example, `x[4]`, or `xDynamicStateSet2[5]`.
 The ordering of the variables in this list is defined by the exporting tool.
-Usually, it is best to order according to the declaration order of the states in the source model, since then the <Derivatives> list does not change if the declaration order of states in the source model is not changed.
+Usually, it is best to order according to the declaration order of the <<state,`states`>> in the source model, since then the <Derivatives> list does not change if the declaration order of states in the source model is not changed.
 This is for example, important for linearization, in order that the interpretation of the state vector does not change for a re-exported FMU._].
-The corresponding continuous-time states are defined by attribute <<derivative>> of the corresponding `Variable` state derivative element.
+The corresponding continuous-time <<state,`states`>> are defined by attribute <<derivative>> of the corresponding `Variable` state derivative element.
 _[Note that higher order derivatives must be mapped to first order derivatives but the mapping definition can be preserved due to attribute <<derivative>>.
 Example: if_ latexmath:[\color{blue}{\frac{\text{ds}}{\text{dt}} = v,\ \frac{\text{dv}}{\text{dt}} =f(..)}] _,then_ latexmath:[\color{blue}{\left\{ v,\ \frac{\text{dv}}{\text{dt}} \right\}}] _ is the vector of state derivatives and attribute <<derivative>> of_ latexmath:[\color{blue}{v}] _references_ latexmath:[\color{blue}{s}] _,
 and attribute <<derivative>> of_ latexmath:[\color{blue}{\frac{\text{dv}}{\text{dt}}}] _references_ latexmath:[\color{blue}{v}] _.]_ +
 For Co-Simulation, element `Derivatives` is ignored if capability flag `providesDirectionalDerivative` has a value of `false`, in other words, it cannot be computed. _[This is the default.
 If an FMU supports both Model Exchange and Co-Simulation, then the `Derivatives` element might be present, since it is needed for Model Exchange.
 If the above flag is set to `false` for the Co-Simulation case, then the `Derivatives` element is ignored for Co-Simulation.
-If "inline integration" is used for a Co-Simulation slave, then the model still has continuous-time states and just a special solver is used (internally the implementation results in a discrete-time system, but from the outside, it is still a continuous-time system).]_ +
+If "inline integration" is used for a Co-Simulation slave, then the model still has continuous-time <<state,`states`>> and just a special solver is used (internally the implementation results in a discrete-time system, but from the outside, it is still a continuous-time system).]_ +
 Attribute `dependencies` defines the dependencies of the state derivatives from the knowns at the current super dense time instant in Event and in Continuous-Time Mode (Model Exchange) and at the current communication point (Co-Simulation).
 The functional dependency is defined as (dependencies of variables that are fixed in Event and Continuous-Time Mode and at communication points are not shown): +
 [blue]#latexmath:[\color{blue}{\dot{\mathbf{x}_c} := \mathbf{f}_{der}(\mathbf{x}_c, \mathbf{u}_c, \mathbf{u}_d, t, \mathbf{p}_{tune})}]#
@@ -1913,15 +1913,15 @@ This list consists of all variables with
 
 2. `causality` = <<calculatedParameter>> and
 
-3. all continuous-time states and all state derivatives (defined with element `<Derivatives>` from `<ModelStructure>`) with `initial` = <<approx>> or <<calculated>> _[if a Co-Simulation FMU does not define the <Derivatives> element, (3) cannot be present]_.
+3. all continuous-time <<state,`states`>> and all state derivatives (defined with element `<Derivatives>` from `<ModelStructure>`) with `initial` = <<approx>> or <<calculated>> _[if a Co-Simulation FMU does not define the <Derivatives> element, (3) cannot be present]_.
 
-The resulting list is not allowed to have duplicates (for example, if a state is also an <<output>>, it is included only once in the list). +
+The resulting list is not allowed to have duplicates (for example, if a <<state>> is also an <<output>>, it is included only once in the list). +
 Attribute `dependencies` defines the dependencies of the `Unknowns` from the `Knowns` in Initialization Mode at the initial time.
 The functional dependency is defined as:
 
 [blue]#latexmath:[\color{blue}{\dot{\mathbf{v}}_{initialUnknowns} := \mathbf{f}_{init}(\mathbf{u}_c, \mathbf{u}_d, t_0, \mathbf{v}_{initial=exact})}]#
 
-Since, <<output,`outputs`>>, continuous-time states and state derivatives are either present as `Knowns` (if `initial` = <<exact>>) or as `Unknowns` (if `initial` = <<approx>> or <<calculated>>),
+Since, <<output,`outputs`>>, continuous-time <<state,`states`>> and state derivatives are either present as `Knowns` (if `initial` = <<exact>>) or as `Unknowns` (if `initial` = <<approx>> or <<calculated>>),
 they can be inquired with `fmi3GetXXX` in InitializationMode.
 
 _[Example: Assume an FMU is defined in the following way:_
@@ -1951,7 +1951,7 @@ Attribute `dependencies` of `Unknown` defines the dependency of latexmath:[\colo
 _[If, for example, a continuous-time <<output>>_ latexmath:[\color{blue}{y_{2}}] _is a function of the continuous-time <<input,`inputs`>>_ latexmath:[\color{blue}{u_{3}}] _and_ latexmath:[\color{blue}{u_{5}}], _and these <<input,`inputs`>> have changed, then_ `fmi3SetXXX` _on_ latexmath:[\color{blue}{u_{3}}] _and_ latexmath:[\color{blue}{u_{5}}] _must always be called before calling_ `fmi3GetXXX` _on_ latexmath:[\color{blue}{y_{2}}] _.]_
 
 |`DiscreteStates`
-|Ordered list of all exposed discrete states, in other words a list of Variable indices. Every corresponding Variable may have attribute previous defined. Discrete states must have a `clockReference` attribute.
+|Ordered list of all exposed discrete <<state,`states`>>, in other words a list of Variable indices. Every corresponding Variable may have attribute previous defined. Discrete <<state,`states`>> must have a `clockReference` attribute.
 //TODO unclear why this is not solved or updated yet
 ----------*TODO*-------------
 [There are three cases:
@@ -1995,7 +1995,7 @@ If an <<independent>> variable is not explicitly defined under `Variable`pass:[s
 - inputs (variables with `causality` = <<input>>)
 
 - variables with `initial` = <<exact>> +
-_[for example, <<independent>> <<parameter,`parameters`>> or initial states.]_
+_[for example, <<independent>> <<parameter,`parameters`>> or initial <<state,`states`>>.]_
 
 - <<independent>> variable (usually time; `causality` = <<independent>>).
 If an <<independent>> variable is not explicitly defined under `Variable`pass:[s], it is assumed that the `Unknown` depends explicitly on the <<independent>> variable.

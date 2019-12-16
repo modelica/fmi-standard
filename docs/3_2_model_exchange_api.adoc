@@ -31,9 +31,9 @@ Set a new time instant and re-initialize caching of variables that depend on tim
 include::../headers/fmi3FunctionTypes.h[tags=SetContinuousStates]
 ----
 
-Set a new (continuous) state vector and re-initialize caching of variables that depend on the states.
-Argument nx is the length of vector x and is provided for checking purposes (variables that depend solely on constants, <<parameter,`parameters`>>, time, and <<input,`inputs`>> do not need to be newly computed in the sequel, but the previously computed values can be reused).
-Note that the continuous states might also be changed in Event Mode.
+Set a new (continuous) state vector and re-initialize caching of variables that depend on the <<state,`states`>>.
+Argument `nx` is the length of vector `x` and is provided for checking purposes (variables that depend solely on constants, <<parameter,`parameters`>>, time, and <<input,`inputs`>> do not need to be newly computed in the sequel, but the previously computed values can be reused).
+Note that the continuous <<state,`states`>> might also be changed in Event Mode.
 Note that `fmi3Status = fmi3Discard` is possible.
 
 [source, C]
@@ -103,9 +103,10 @@ Depending on the connection with other FMUs, the environment shall
 - stay in *Event Mode* otherwise.
 
 When the FMU is terminated, it is assumed that an appropriate message is printed by the logMessage function (see <<creation-destruction-and-logging>>) to explain the reason for the termination. +
-If `nominalsOfContinuousStatesChanged = fmi3True`, then the nominal values of the states have changed due to the function call and can be inquired with <<fmi3GetNominalsOfContinuousStates>>. +
+If `nominalsOfContinuousStatesChanged = fmi3True`, then the nominal values of the <<state,`states`>> have changed due to the function call and can be inquired with <<fmi3GetNominalsOfContinuousStates>>. +
 If `valuesOfContinuousStatesChanged = fmi3True`, then at least one element of the continuous state vector has changed its value due to the function call.
-The new values of the states can be inquired with <<fmi3GetContinuousStates>>.
+[[state,`state`]]
+The new values of the <<state,`states`>> can be inquired with <<fmi3GetContinuousStates>>.
 If no element of the continuous state vector has changed its value, `valuesOfContinuousStatesChanged` must return `fmi3False`.
 _[If `fmi3True` would be returned in this case, an infinite event loop may occur.]_ +
 If `nextEventTimeDefined = fmi3True`, then the simulation shall integrate at most until `time = nextEventTime`, and shall call <<fmi3EnterEventMode>> at this time instant.
@@ -136,13 +137,13 @@ This function must be called by the environment after every completed step of th
 Argument `noSetFMUStatePriorToCurrentPoint` is `fmi3True` if `fmi3SetFMUState` will no longer be called for time instants prior to current time in this simulation run [the FMU can use this flag to flush a result buffer]. +
 The function returns `enterEventMode` to signal to the environment if the FMU shall call <<fmi3EnterEventMode>>, and it returns `terminateSimulation` to signal if the simulation shall be terminated.
 If `enterEventMode = fmi3False` and `terminateSimulation = fmi3False` the FMU stays in *Continuous-Time Mode* without calling <<fmi3EnterContinuousTimeMode>> again.
-When the integrator step is completed and the states are modified by the integrator afterwards (for example, correction by a BDF method),
+When the integrator step is completed and the <<state,`states`>> are modified by the integrator afterwards (for example, correction by a BDF method),
 then <<fmi3SetContinuousStates>> has to be called with the updated states before <<fmi3CompletedIntegratorStep>> is called. +
 When the integrator step is completed and one or more event indicators change sign (with respect to the previously completed integrator step),
 then the integrator or the environment has to determine the time instant of the sign change that is closest to the previous completed step up to a certain precision (usually a small multiple of the machine epsilon).
-This is usually performed by an iteration where time is varied and state variables needed during the iteration are determined by interpolation.
+This is usually performed by an iteration where time is varied and <<state>> variables needed during the iteration are determined by interpolation.
 Function <<fmi3CompletedIntegratorStep>> must be called after this state event location procedure and not after the successful computation of the time step by the integration algorithm.
-The intended purpose of the function call is to indicate to the FMU that at this stage all <<input,`inputs`>> and state variables have valid (accepted) values.
+The intended purpose of the function call is to indicate to the FMU that at this stage all <<input,`inputs`>> and <<state>> variables have valid (accepted) values.
 After <<fmi3CompletedIntegratorStep>> is called, it is still allowed to go back in time (calling <<fmi3SetTime>>) and inquire values of variables at previous time instants with `fmi3GetXXX` _[for example, to determine values of non-state variables at output points]_.
 However, it is not allowed to go back in time over the previous <<fmi3CompletedIntegratorStep>> or the previous <<fmi3EnterEventMode>> call.
 
@@ -172,7 +173,7 @@ include::../headers/fmi3FunctionTypes.h[tags=GetDerivatives]
 include::../headers/fmi3FunctionTypes.h[tags=GetEventIndicators]
 ----
 
-Compute state derivatives and event indicators at the current time instant and for the current states.
+Compute state derivatives and event indicators at the current time instant and for the current <<state,`states`>>.
 The <<derivative,`derivatives`>> are returned as a vector with `nx` elements.
 A state event is triggered when the domain of an event indicator changes from latexmath:[z_j > 0] to latexmath:[z_j \leq 0] or vice versa.
 The FMU must guarantee that at an event restart latexmath:[z_j \neq 0], for example, by shifting latexmath:[z_j] with a small value.
@@ -188,7 +189,7 @@ Note that `fmi3Status = fmi3Discard` is possible for both functions.
 include::../headers/fmi3FunctionTypes.h[tags=GetContinuousStates]
 ----
 
-Return the new (continuous) state vector x.
+Return the new (continuous) state vector `x`.
 This function has to be called directly after calling function <<fmi3EnterContinuousTimeMode>> if it returns with `eventInfo->valuesOfContinuousStatesChanged = fmi3True` (indicating that the (continuous-time) state vector has changed).
 
 [[fmi3GetNominalsOfContinuousStates,`fmi3GetNominalsOfContinuousStates`]]
@@ -197,11 +198,11 @@ This function has to be called directly after calling function <<fmi3EnterContin
 include::../headers/fmi3FunctionTypes.h[tags=GetNominalsOfContinuousStates]
 ----
 
-Return the nominal values of the continuous states.
-This function should always be called after calling function <<fmi3NewDiscreteStates>> if it returns with `eventInfo->nominalsOfContinuousStatesChanged = fmi3True`, since then the nominal values of the continuous states have changed _[for example, because the association of the continuous states to variables has changed due to internal dynamic state selection]_.
-If the FMU does not have information about the nominal value of a continuous state i, a nominal value `x_nominal[i] = 1.0` should be returned.
+Return the nominal values of the continuous <<state,`states`>>.
+This function should always be called after calling function <<fmi3NewDiscreteStates>> if it returns with `eventInfo->nominalsOfContinuousStatesChanged = fmi3True`, since then the nominal values of the continuous <<state,`states`>> have changed _[for example, because the association of the continuous <<state,`states`>> to variables has changed due to internal dynamic state selection]_.
+If the FMU does not have information about the nominal value of a continuous <<state>> i, a nominal value `x_nominal[i] = 1.0` should be returned.
 Note that it is required that `x_nominal[i] > 0.0`.
-_[Typically, the nominal values of the continuous states are used to compute the absolute tolerance required by the integrator.
+_[Typically, the nominal values of the continuous <<state,`states`>> are used to compute the absolute tolerance required by the integrator.
 Example: +
 `absoluteTolerance[i] = 0.01*tolerance*x_nominal[i];`]_
 
@@ -380,6 +381,6 @@ Before a new loop iteration is started, the environment must activate the <<cloc
 Leave event mode::
 The function <<fmi3NewDiscreteStates>> evaluates the discrete-time equations, provided the corresponding <<clock>> is active and the discrete-time equations have not already been evaluated with calls to `fmi3GetXXX` functions.
 Clocks are automatically deactivated by <<fmi3NewDiscreteStates>> and by <<fmi3Reset>>.
-_[This handling of discrete states and time events is forward compatible with FMI 2.0 for any model that could be treated with FMI 2.0 and is exported again using the new features.
+_[This handling of discrete <<state,`states`>> and time events is forward compatible with FMI 2.0 for any model that could be treated with FMI 2.0 and is exported again using the new features.
 The environment may ignore the new functions <<fmi3SetClock>>, <<fmi3GetClock>>, <<fmi3SetIntervalDecimal>>, <<fmi3SetIntervalFraction>>, <<fmi3GetIntervalDecimal>> and <<fmi3GetIntervalFraction>>.
-The new functions are needed for FMUs with input sample times and to set discrete-time states in model-based control applications or if algebraic loops are present among discrete-time equations of multiple connected FMUs.]_
+The new functions are needed for FMUs with input sample times and to set discrete-time <<state,`states`>> in model-based control applications or if algebraic loops are present among discrete-time equations of multiple connected FMUs.]_
