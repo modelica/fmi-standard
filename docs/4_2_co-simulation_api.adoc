@@ -1,4 +1,4 @@
-=== FMI Application Programming Interface
+<<fmi3DoEarlyReturn>>=== FMI Application Programming Interface
 
 ==== Mode fmi3ModeCoSimulation
 
@@ -387,8 +387,10 @@ include::examples/c-code/co_simulation.c[tags=CoSimulation]
 ==== Early-return Requested by the Co-Simulation Master in fmi3ModeCoSimulation [[earlyreturn-co-simulation]]
 The boolean capability flag `canReturnEarlyAfterIntermediateUpdate` in the modelDescription XML file indicates whether the FMU supports the early-return feature.
 The default value of this capability flag is `false`.
-Each time an internal discontinuity or an event happens inside an FMU with capability flag `canReturnEarlyAfterIntermediateUpdate=true`, the callback function <<fmi3CallbackIntermediateUpdate>> is invoked by the FMU and the associated structure `fmi3IntermediateUpdateInfo` is sent back to the Co-Simulation master.
+Each time an internal discontinuity or an event happens inside an FMU with capability flag `canReturnEarlyAfterIntermediateUpdate=true`, the callback function <<fmi3CallbackIntermediateUpdate>> is invoked by the FMU and the associated structure <<fmi3IntermediateUpdateInfo>> is sent back to the Co-Simulation master.
 The master can only use this early return functionality if it provides the <<fmi3CallbackIntermediateUpdate>> callback function pointer in <<fmi3CallbackFunctions>> in <<fmi3Instantiate>>.
+
+fmi3IntermediateUpdate
 
 [[fmi3CallbackIntermediateUpdate,`fmi3CallbackIntermediateUpdate`]]
 [source, c]
@@ -396,6 +398,7 @@ The master can only use this early return functionality if it provides the <<fmi
 include::../headers/fmi3FunctionTypes.h[tag=CallbackIntermediateUpdate]
 ----
 
+[[fmi3IntermediateUpdateInfo,`fmi3IntermediateUpdateInfo`]]
 [source, c]
 ----
 include::../headers/fmi3FunctionTypes.h[tag=IntermediateUpdateInfo]
@@ -425,7 +428,6 @@ The Co-Simulation master can decide if a rollback of the FMU to reach the `early
 Note that `Event Mode` is not supported in `fmi3ModeCoSimulation`.
 
 ==== Mode fmi3ModeHybridCoSimulation [[api-hybrid-co-simulation]]
-:STIUI: fmi3IntermediateUpdateInfo
 :IUTIME: intermediateUpdateTime
 
 
@@ -438,8 +440,8 @@ The <<fmi3CallbackIntermediateUpdate>> callback allows internal events (e.g. ass
 If `fmu3Type` is set to `fmi3CoSimulation` and the Co-simulation mode is set to `fmi3ModeHybridCoSimulation`, the <<fmi3CallbackIntermediateUpdate>> callback must be defined in <<fmi3CallbackFunctions>> in <<fmi3Instantiate>>.
 In other cases a NULL pointer can be assigned to the <<fmi3CallbackIntermediateUpdate>> callback, such as if the `fmu3Type` is set to  `fmi3ModelExchange`.
 
-The `{STIUI}`  argument in the <<fmi3CallbackIntermediateUpdate>> function is a structure which is used to signal <<outputClock>> ticks and internal events to the master.
-Whenever the FMU invokes the <<fmi3CallbackIntermediateUpdate>> callback function, it fills the `{STIUI}` structure to pass information concerning the call to the Co-Simulation master.
+The <<fmi3IntermediateUpdateInfo>>  argument in the <<fmi3CallbackIntermediateUpdate>> function is a structure which is used to signal <<outputClock>> ticks and internal events to the master.
+Whenever the FMU invokes the <<fmi3CallbackIntermediateUpdate>> callback function, it fills the <<fmi3IntermediateUpdateInfo>> structure to pass information concerning the call to the Co-Simulation master.
 The structure is defined as follows:
 
 [source, C]
@@ -447,16 +449,16 @@ The structure is defined as follows:
 include::../headers/fmi3FunctionTypes.h[tag=IntermediateUpdateInfo]
 ----
 
-* `{IUTIME}` is the internal simulation time of the FMU at which the callback has been called.
-If an event happens or a <<outputClock>> ticks, `{IUTIME}` is the time of event or <<outputClock>> tick.
-If the FMU signals an `earlyReturn = fmi3True` and `fmi3OK` after returning from <<fmi3DoStep>> then `{IUTIME}` is the internal simulation time of the FMU of the last <<fmi3CallbackIntermediateUpdate>> call that signaled `canReturnEarly = fmi3true`.
-`{IUTIME}` is also the time of intermediate steps of the internal FMU solver.
+* `intermediateUpdateTime` is the internal simulation time of the FMU at which the callback has been called.
+If an event happens or a <<outputClock>> ticks, `intermediateUpdateTime` is the time of event or <<outputClock>> tick.
+If the FMU signals an `earlyReturn = fmi3True` and `fmi3OK` after returning from <<fmi3DoStep>> then `intermediateUpdateTime` is the internal simulation time of the FMU of the last <<fmi3CallbackIntermediateUpdate>> call that signaled `canReturnEarly = fmi3true`.
+`intermediateUpdateTime` is also the time of intermediate steps of the internal FMU solver.
 
 The following `fmi3Boolean` variables define the reasons for the <<fmi3CallbackIntermediateUpdate>> call. Several variables can be set by the FMU. Default value of variables is `fmi3False`.
 
-* when `eventOccurred` is `fmi3True`, the master must call <<fmi3DoEarlyReturn>> to do an early return and handle the event via entering event mode. In this case, `earlyReturnTime` argument of <<fmi3DoEarlyReturn>> is ignored. In `Event Mode` the master shall call the <<fmi3NewDiscreteStates>> function for gathering <<fmi3EventInfo>> related information about the event occurred at `{IUTIME}`.
+* when `eventOccurred` is `fmi3True`, the master must call <<fmi3DoEarlyReturn>> to do an early return and handle the event via entering event mode. In this case, `earlyReturnTime` argument of <<fmi3DoEarlyReturn>> is ignored. In `Event Mode` the master shall call the <<fmi3NewDiscreteStates>> function for gathering <<fmi3EventInfo>> related information about the event occurred at `intermediateUpdateTime`.
 
-* when `clocksTicked`  is `fmi3True`, it means that <<fmi3GetClock>> function should be called for gathering all <<clock>> related information about ticking <<outputClock,`output clocks`>> at `{IUTIME}`.
+* when `clocksTicked`  is `fmi3True`, it means that <<fmi3GetClock>> function should be called for gathering all <<clock>> related information about ticking <<outputClock,`output clocks`>> at `intermediateUpdateTime`.
 If this flag is `fmi3True` the master must call <<fmi3DoEarlyReturn>> to do an early return and handle the <<clock>> event in `Event Mode`.
 In this case, `earlyReturnTime` argument of <<fmi3DoEarlyReturn>> is ignored.
 
@@ -466,12 +468,12 @@ In this case, `earlyReturnTime` argument of <<fmi3DoEarlyReturn>> is ignored.
 
 * when `intermediateStepFinished` is `fmi3True`, the FMU signals that the internal solver step for this time instant is complete.
 
-* when `canReturnEarly` is `fmi3True` the master can request the FMU to return early at the current `{IUTIME}` time instant via calling `{DER}` within the callback function <<fmi3CallbackIntermediateUpdate>>.
+* when `canReturnEarly` is `fmi3True` the master can request the FMU to return early at the current `intermediateUpdateTime` time instant via calling <<fmi3DoEarlyReturn>> within the callback function <<fmi3CallbackIntermediateUpdate>>.
 If `canReturnEarly` is `fmi3False` the FMU will not do the early return, regardless of the master request.
 
 Note that only the first discontinuity event at a Newtonian time instant shall be signaled that way. But in `Event Mode`, there may be an event iteration at a Newtonian time instant and have super dense time instants.
 
-Based on the information delivered in `{STIUI}`, additional information about the discontinuity at that time instant can be obtained from the <<fmi3EventInfo>> structure after calling  <<fmi3NewDiscreteStates>>  and/or <<fmi3GetClock>>.
+Based on the information delivered in <<fmi3IntermediateUpdateInfo>>, additional information about the discontinuity at that time instant can be obtained from the <<fmi3EventInfo>> structure after calling  <<fmi3NewDiscreteStates>>  and/or <<fmi3GetClock>>.
 
 The FMU must not call the <<fmi3CallbackIntermediateUpdate>> callback function with a `intermediateUpdateInfo.intermediateUpdateTime` value that is smaller than the `intermediateUpdateInfo.intermediateUpdateTime` value given in a previous call of <<fmi3CallbackIntermediateUpdate>> with `intermediateUpdateInfo.intermediateStepFinished` is `fmi3True`.
 
@@ -939,7 +941,7 @@ Also intermediate variable access is allowed as defined in <<state-intermediate-
 
 _[Based on the FMI standard it cannot be determined which part of the code of an FMU has called the callback function <<fmi3CallbackIntermediateUpdate>>.
 This is especially the case for the Co-Simulation mode `fmi3ModeScheduledExecutionSimulation` in which multiple model partitions can be active at the same time.
-This causes no issues since all function call prerequisites are connected to the activation state of <<clock,`clocks`>>, `modelDescription.xml` information and additionally available information of the struct `fmi3IntermediateUpdateInfo`]_
+This causes no issues since all function call prerequisites are connected to the activation state of <<clock,`clocks`>>, `modelDescription.xml` information and additionally available information of the struct <<fmi3IntermediateUpdateInfo>>]_
 
 ====== State: Reconfiguration Mode
 In this state <<structuralParameter,`structural parameters`>> with <<variability>> = <<tunable>> can be changed.
@@ -1063,7 +1065,7 @@ include::examples/pseudo_code_co_simulation_scheduled_execution_simulation.txt[]
 ==== Intermediate Variable Access [[api-intermediate-variable-access]]
 :DOSTEP: fmi3DoStep()
 
-If the Co-Simulation master signals the support for intermediate variable access see section <<co-simulation-feature-selection>> and an FMU has at least one variable with <<intermediateAccess>> = `true`, the FMU can invoke the <<fmi3CallbackIntermediateUpdate>> callback function to sent the `fmi3IntermediateUpdateInfo` back to the Co-Simulation master.
+If the Co-Simulation master signals the support for intermediate variable access see section <<co-simulation-feature-selection>> and an FMU has at least one variable with <<intermediateAccess>> = `true`, the FMU can invoke the <<fmi3CallbackIntermediateUpdate>> callback function to sent the <<fmi3IntermediateUpdateInfo>> back to the Co-Simulation master.
 
 [source, C]
 ----
