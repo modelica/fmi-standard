@@ -358,10 +358,12 @@ typedef fmi3Status fmi3GetVariableDependenciesTYPE(fmi3Instance instance,
 /* Getting and setting the internal FMU state */
 /* tag::GetFMUState[] */
 typedef fmi3Status fmi3GetFMUStateTYPE (fmi3Instance instance, fmi3FMUState* FMUState);
-/* end::GetState[] */
+/* end::GetFMUState[] */
+
 /* tag::SetFMUState[] */
 typedef fmi3Status fmi3SetFMUStateTYPE (fmi3Instance instance, fmi3FMUState  FMUState);
-/* end::SetFreeState[] */
+/* end::SetFMUState[] */
+
 /* tag::FreeFMUState[] */
 typedef fmi3Status fmi3FreeFMUStateTYPE(fmi3Instance instance, fmi3FMUState* FMUState);
 /* end::FreeFMUState[] */
