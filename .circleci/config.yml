@@ -12,11 +12,23 @@ jobs:
           name: Install GCC
           command: apt-get update && apt-get install -y gcc g++
       - run:
-          name: Compile headers
-          command: gcc ~/project/headers/fmi3Functions.h
-      - run:
           name: Install CMake
           command: apt-get update && sudo apt-get install -y cmake
+      - run:
+          name: Install lxml
+          command: apt-get install -y python3-lxml
+      - run:
+          name: Validate XML
+          command: python3 .circleci/validate_xml.py
+      - run:
+          name: Lint AsciiDoc files
+          command: python3 .circleci/lint_docs.py
+          # this script prints non-ascii characters to the console
+          environment:
+            PYTHONIOENCODING: UTF-8
+      - run:
+          name: Compile headers
+          command: gcc ~/project/headers/fmi3Functions.h
       - run:
           name: Run CMake generator
           command: cmake docs/examples/c-code -Bbuild
@@ -39,10 +51,11 @@ jobs:
       - checkout
       - run:
           name: Generate HTML
-          command: docker run -v ~/project/:/documents/ --name asciidoc-to-html asciidoctor/docker-asciidoctor asciidoctor --base-dir /documents/ --backend html5 --failure-level WARN docs/index.adoc
+          command: docker run -v ~/project/:/documents/ --name asciidoc-to-html asciidoctor/docker-asciidoctor asciidoctor --base-dir /documents/ --backend html5 --failure-level WARN --verbose docs/index.adoc
       - run:
           name: Validate HTML
           command: docker run -v ~/project/docs/:/documents/ 18fgsa/html-proofer /documents --only-4xx
+          no_output_timeout: 60m
       - run:
           name: Create archive
           command: |
