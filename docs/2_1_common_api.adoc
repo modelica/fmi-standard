@@ -2,7 +2,7 @@
 
 This section contains the common interface definitions to execute functions of an FMU from a C program.
 
-Note that he following general properties hold for an FMU:
+Note that the following general properties hold for an FMU:
 
 - FMI functions of one instance do not need to be thread-safe. +
 _[For example, if the functions of one instance of an FMU are accessed from more than one thread;
@@ -10,7 +10,7 @@ the multi-threaded environment that uses the FMU must guarantee that the calling
 The FMU itself does not implement any services to support this.]_
 
 - FMI functions must not change global settings which affect other processes/threads.
-An FMI function may change settings of the process/thread in which it is called (such as floating point control registers), provided these changes are restored before leaving the function or before a callback function is called. +
+An FMI function may change settings of the thread in which it is called (such as floating point control registers), provided these changes are restored before leaving the function or before a callback function is called. +
 _[This property ensures that functions of different FMU instances can be called safely in any order._
 _Additionally, they can be called in parallel provided the functions are called in different process/threads._
 _If an FMI function changes for example the floating point control word of the CPU, it must restore the previous value before return of the function._
@@ -24,25 +24,25 @@ Three header files are provided that define the interface of an FMU.
 In all header files the convention is used that all C function and type definitions start with the prefix `fmi3`:
 
 `fmi3PlatformTypes.h`::
-contains the type definitions of the <<input>> and output arguments of the functions.
+contains the type definitions of the <<input>> and output arguments of the functions as well as some C preprocessor macro defintions for constants.
 This header file must
 be used both by the FMU and by the target simulator.
 If the target simulator has different definitions in
-the header file (for example, `typedef float fmi3Real` instead of `typedef double** fmi3Real`),
-then the FMU needs to be re-compiled with the header file used by the target simulator.
-+
+the header file (for example, `typedef float fmi3Float64` instead of `typedef double fmi3Float64`),
+then the [underline]#FMU# needs to be [underline]#re-compiled# with the header file used by the [underline]#target simulator#.
 // TODO: include example from header
 _[Example of a definition in this header file:_
 +
 [source, C]
 ----
-typedef double fmi3Real;
+typedef double fmi3Float64;
 ----
 +
 _]_
 
 `fmi3FunctionTypes.h`::
-contains `typedef` definitions of all function prototypes of an FMU.
+contains `typedef` definitions of all function prototypes of an FMU as well as enumerations for constants.
+This header file includes `fmi3PlatformTypes.h`.
 When dynamically loading an FMU, these definitions can be used to type-cast the function pointers to the respective function definition.
 // TODO: add note why "TYPE" suffix is necessary
 +
@@ -51,7 +51,7 @@ _[Example of a definition in this header file:_
 +
 [source, C]
 ----
-typedef fmi3Status fmi3SetTimeTYPE(fmi3Instance, fmi3Real);
+typedef fmi3Status fmi3SetTimeTYPE(fmi3Instance, fmi3Float64);
 ----
 +
 _]_
@@ -83,10 +83,12 @@ Typically, FMU functions are used as follows:
 // FMU is shipped with C source code, or with static link library
 #define FMI3_FUNCTION_PREFIX MyModel_
 #include "fmi3Functions.h"
-< usage of the FMU functions >
+< usage of the FMU functions e.g. fmi3SetTime >
+
 // FMU is shipped with DLL/SharedObject
-#include "fmi3Functions.h"
-< usage of the FMU functions >
+#include "fmi3FunctionTypes.h"
+fmi3SetTimeTYPE *myname_setTime = < load symbol "fmi3SetTime" from DLL/SharedObject >;
+< usage of the FMU function pointers, e.g. myname_setTime >
 ----
 
 A function that is defined as `fmi3GetReal` is changed by the macros to a function name as follows:
@@ -151,11 +153,11 @@ include::../headers/fmi3PlatformTypes.h[tags=ValueReference]
 ----
 
 This is a handle to a (base type) variable value of the model.
-Handle and base type (such as `fmi3Real`) uniquely identify the value of a variable.
+Handle and base type (such as `fmi3Float64`) uniquely identify the value of a variable.
 Variables of the same base type that have the same handle, always have identical values, but other parts of the variable definition might be different _[for example, min/max attributes]_.
 
-All structured entities, such as records or arrays, are flattened into a set of scalar values of type `fmi3Real`, `fmi3Integer` etc.
-An `fmi3ValueReference` references one such scalar.
+All structured entities, such as records or arrays, are flattened into a set of scalar values of type `fmi3Float64`, `fmi3Int32` etc.
+An `fmi3ValueReference` references one such entity, record or array.
 The coding of `fmi3ValueReference` is a "secret" of the environment that generated the FMU.
 The interface to the equations only provides access to variables via this handle.
 Extracting concrete information about a variable is specific to the used environment that reads the Model Description File in which the value handles are defined.
@@ -266,7 +268,6 @@ In that case, `functions->logMessage` is called with detailed information about 
 An FMU can be instantiated many times (provided capability flag `canBeInstantiatedOnlyOncePerProcess = false`).
 
 This function must be called successfully before any of the following functions can be called.
-For Co-Simulation, this function call has to perform all actions of a slave which are necessary before a simulation run starts (for example, loading the model file, compilation...).
 
 Argument `instanceName` is a unique identifier for the FMU instance.
 It is used to name the instance, for example, in error or information messages generated by one of the `fmi3XXX` functions.
@@ -323,11 +324,9 @@ It is NULL for fmuType `fmi3ModelExchange`.
 include::../headers/fmi3FunctionTypes.h[tags=CallbackFunctions]
 ----
 
-The struct contains pointers to functions provided by the environment to be used by the FMU.
+These function pointers are provided by the environment to be used by the FMU.
 It is not allowed to change these functions between <<fmi3Instantiate>> and <<fmi3Terminate>> calls.
 Additionally, a pointer to the environment is provided (instanceEnvironment) that needs to be passed to all of the callback functions, in order that those functions can utilize data from the environment, such as mapping a <<valueReference>> to a string, or assigning memory to a certain FMU instance.
-In the unlikely case that `fmi3Instance` is also needed in those functions, it has to be passed via argument `instanceEnvironment`.
-Argument `instanceEnvironment` may be a null pointer.
 
 The `instanceEnvironment` pointer is also passed to the <<fmi3CallbackIntermediateUpdate>> function in order that the environment can provide an efficient way to identify the slave that called <<fmi3CallbackIntermediateUpdate>>.
 
@@ -529,17 +528,17 @@ Since state derivatives are also `Variable`pass:[s], it is possible to get the v
 This is useful when connecting FMUs together.
 Furthermore, the actual value of every variable defined in the `modelDescription.xml` file can be determined at the actually defined time instant (see <<definition-of-model-variables>>).]_
 
-- Argument `vr` is a vector of `nValueReferences` value handles that define the variables that shall be inquired.
+- Argument `valueReferences` is a vector of `nValueReferences` value handles that define the variables that shall be inquired.
 
-- Argument `value` is a vector with the actual values of these variables.
+- Argument `values` is a vector with the actual values of these variables.
 
-- Argument `size` is a vector with the actual sizes of the values for binary variables.
+- Argument `sizes` is a vector with the actual sizes of the values for binary variables.
 
-- Argument `nValues` provides the number of values in the `value` vector (and `size` vector, where applicable) which is only equal to `nValueReferences` if all <<valueReference>>pass:[s] point to scalar variables.
+- Argument `nValues` provides the number of values in the `values` vector (and `sizes` vector, where applicable) which is only equal to `nValueReferences` if all <<valueReference>>pass:[s] point to scalar variables.
 
 - The strings returned by `fmi3GetString`, as well as the binary values returned by `fmi3GetBinary`, must be copied in the target environment because the allocated memory for these strings might be deallocated by the next call to any of the fmi3 interface functions or it might be an internal string buffer that is reused.
 
-- For Model Exchange: `fmi3Status = fmi3Discard` is possible for `fmi3GetReal` only, but not for `fmi3GetInteger`, `fmi3GetBoolean`, `fmi3GetString`, `fmi3GetBinary`, because these are discrete-time variables and their values can only change at an event instant where `fmi3Discard` does not make sense.
+- For Model Exchange: `fmi3Status = fmi3Discard` is possible for `fmi3GetFloat32` and `fmi3GetFloat64` only, but not for `fmi3Get*Int*`, `fmi3GetBoolean`, `fmi3GetString`, `fmi3GetBinary`, because these are discrete-time variables and their values can only change at an event instant where `fmi3Discard` does not make sense.
 
 It is also possible to set the values of certain variables at particular instants in time using the following functions:
 
@@ -550,13 +549,13 @@ include::../headers/fmi3FunctionTypes.h[tags=Setters]
 
 Set <<parameter,`parameters`>>, <<input,`inputs`>>, and <<start>> values, and re-initialize caching of variables that depend on these variables (see <<definition-of-model-variables>> for the exact rules on which type of variables `fmi3SetXXX` can be called, as well as <<state-machine-model-exchange>> in case of Model Exchange and <<state-machine-co-simulation>> in case of Co-Simulation).
 
-- Argument `vr` is a vector of `nValueReferences` value handles that define the variables that shall be set.
+- Argument `valueReferences` is a vector of `nValueReferences` value handles that define the variables that shall be set.
 
-- Argument `value` is a vector with the actual values of these variables.
+- Argument `values` is a vector with the actual values of these variables.
 
-- Argument `size` is a vector with the actual sizes of the values of binary variables.
+- Argument `sizes` is a vector with the actual sizes of the values of binary variables.
 
-- Argument `nValues` provides the number of values in the `value` vector which is only equal to `nValueReferences` if all <<valueReference>>pass:[s] point to scalar variables.
+- Argument `nValues` provides the number of values in the `values` vector which is only equal to `nValueReferences` if all <<valueReference>>pass:[s] point to scalar variables.
 
 - All strings passed as arguments to `fmi3SetString`, as well as all binary values passed as arguments to `fmi3SetBinary`, must be copied inside these functions, because there is no guarantee of the lifetime of strings or binary values, when these functions return.
 
