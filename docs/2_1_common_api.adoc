@@ -63,15 +63,15 @@ contains the function prototypes of an FMU that can be accessed in simulation en
 This header file includes `fmi3PlatformTypes.h` and `fmi3FunctionTypes.h`.
 The header file version number for which the model was compiled, can be inquired in the target simulator with <<fmi3GetVersion>> (see <<inquire-platform-and-version-number>>). +
 +
-_[Example of a definition in this header file_ footnote:[For Microsoft and Cygwin compilers; `FMI3_Export` is defined as `pass:[__]declspec(dllexport)` and for Gnu-Compilers `FMI3_Export` is defined as `pass:[__]attribute__ ( ( visibility("default") ) )` in order to export the name for dynamic loading.
-Otherwise it is an empty definition.] _:_
+_[Example of a definition in this header file:_
 +
 [source, C]
 ----
 FMI3_Export fmi3SetTimeTYPE fmi3SetTime;
 ----
 +
-_]_
+_For Microsoft and Cygwin compilers `FMI3_Export` is defined as_ `pass:[__]declspec(dllexport)` _and for Gnu-Compilers as_ `pass:[__]attribute__ ( ( visibility("default") ) )` _in order to export the name for dynamic loading._
+_Otherwise it is an empty definition.]_
 
 The goal is that both textual and binary representations of FMUs are supported and that several FMUs might be present at the same time in an executable (for example, FMU A may use an FMU B).
 In order for this to be possible, the names of the functions in different FMUs must be different, or function pointers must be used.
@@ -204,15 +204,16 @@ Function <<logMessage>> was called in the model (see below), and it is expected 
 this function has shown the prepared information message to the user.
 
 `fmi3Discard`::
-this return status is only possible if explicitly defined for the corresponding function footnote:[Functions `fmi3SetXXX` are usually not performing calculations but just store the passed values in internal buffers.
-The actual calculation is performed by `fmi3GetXXX` functions.
-Still `fmi3SetXXX` functions could check whether the input arguments are in their validity range.
-If not, these functions could return with `fmi3Discard`.]:
-(Model Exchange: `fmi3SetReal`, `fmi3SetInteger`, `fmi3SetBoolean`, `fmi3SetString`, <<fmi3SetContinuousStates>>, `fmi3GetReal`, <<fmi3GetDerivatives>>,
-<<fmi3GetContinuousStates>>, <<fmi3GetEventIndicators>>; Co-Simulation: `fmi3SetReal`, `fmi3SetInteger`, `fmi3SetBoolean`, `fmi3SetString`, <<fmi3DoStep>>,
-`fmi3GetXXXStatus`): +
+this return status is only possible if explicitly defined for the corresponding function.
+_[Functions `fmi3SetXXX` are usually not performing calculations but just store the passed values in internal buffers._
+_The actual calculation is performed by `fmi3GetXXX` functions._
+_Still `fmi3SetXXX` functions could check whether the input arguments are in their validity range._
+_If not, these functions could return with `fmi3Discard`.]_
+(Model Exchange: `fmi3SetReal`, `fmi3SetInteger`, `fmi3SetBoolean`, `fmi3SetString`, <<fmi3SetContinuousStates>>, `fmi3GetReal`, <<fmi3GetDerivatives>>, <<fmi3GetContinuousStates>>, <<fmi3GetEventIndicators>>; Co-Simulation: `fmi3SetReal`, `fmi3SetInteger`, `fmi3SetBoolean`, `fmi3SetString`, <<fmi3DoStep>>, `fmi3GetXXXStatus`):
++
 For Model Exchange: It is recommended to perform a smaller step size and evaluate the model equations again, for example because an iterative solver in the model did not converge or because a function is outside of its domain _[for example, `sqrt(<negative number>)`]_.
-If this is not possible, the simulation has to be terminated. +
+If this is not possible, the simulation has to be terminated.
++
 For Co-Simulation: `fmi3Discard` is returned also if the slave is not able to return the required status information.
 The master has to decide if the simulation run can be continued. +
 In both cases, function <<logMessage>> was called in the FMU (see below), and it is expected that this function has shown the prepared information message to the user if the FMU was called in debug mode (`loggingOn = fmi3True`).
@@ -223,7 +224,9 @@ the FMU encountered an error.
 The simulation cannot be continued with this FMU instance.
 If one of the functions returns `fmi3Error`, it can be tried to restart the simulation from a formerly stored FMU state by calling <<fmi3SetFMUState>>.
 This can be done if the capability flag `canGetAndSetFMUState = true` and <<fmi3GetFMUState>> was called before in non-erroneous state.
-If not, the simulation cannot be continued and <<fmi3FreeInstance>> or <<fmi3Reset>> [.underline]#must# be called afterwards.footnote:[Typically, `fmi3Error` return is for non-numerical reasons, like "disk full". There might be cases where the environment can fix such errors (eventually with the help oft the user), and then simulation can continue at the last consistent state defined with <<fmi3SetFMUState>>.] +
+If not, the simulation cannot be continued and <<fmi3FreeInstance>> or <<fmi3Reset>> [.underline]#must# be called afterwards.
+_[Typically, `fmi3Error` return is for non-numerical reasons, like "disk full"._
+_There may be cases where the environment can fix such errors (possibly with the help of the user), and the simulation can continue at the last consistent state set with <<fmi3SetFMUState>>.]_ +
 Further processing is possible after this call; especially other FMU instances are not affected.
 Function <<logMessage>> was called in the FMU (see below), and it is expected that this function has shown the prepared information message to the user.
 
@@ -426,8 +429,10 @@ In case the slave utilizes a numerical integrator with variable step size and er
 An FMU for Co-Simulation might ignore this argument.
 
 The arguments `startTime` and `stopTime` can be used to check whether the model is valid within the given boundaries or to allocate memory which is necessary for storing results.
-Argument `startTime` is the <<fixed>> <<initial>> value of the <<independent>> variable footnote:[The variable that is defined with <<causality>> = <<independent>> in the `fmiModelDescription.xml` file.] value _[if the <<independent>> variable is `time`, `startTime` is the starting time of initializaton]_.
-If `stopTimeDefined = fmi3True`, then `stopTime` is the defined final value of the <<independent>> variable _[if the <<independent>> variable is `time`, `stopTime` is the stop time of the simulation]_ and if the environment tries to compute past `stopTime` the FMU has to return `fmi3Status = fmi3Error`.
+Argument `startTime` is the <<fixed>> <<initial>> value of the <<independent>> variable _[(that is defined with <<causality>> = <<independent>> in the `fmiModelDescription.xml`]_). _[If the <<independent>> variable is `time`, `startTime` is the starting time of initializaton.]_
+If `stopTimeDefined = fmi3True`, then `stopTime` is the defined final value of the <<independent>> variable.
+_[If the <<independent>> variable is `time`, `stopTime` is the stop time of the simulation.]_
+If the environment tries to compute past `stopTime` the FMU has to return `fmi3Status = fmi3Error`.
 If `stopTimeDefined = fmi3False`, then no final value of the <<independent>> variable is defined and argument `stopTime` is meaningless.
 
 [[fmi3EnterConfigurationMode,`fmi3EnterConfigurationMode`]]
