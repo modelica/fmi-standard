@@ -374,7 +374,7 @@ If attribute `canNotUseMemoryManagementFunctions = true` in `<fmiModelDescriptio
 
 [[intermediateUpdate,`intermediateUpdate`]]
 Function `intermediateUpdate`::
-This callback allows internal events of different types (e.g. associated to <<output-clock>> ticks or intermediate variable access) to be signaled from an FMU to the Co-Simulation master.
+This callback allows internal events of different types (e.g. associated to <<outputClock>> ticks or intermediate variable access) to be signaled from an FMU to the Co-Simulation master.
 If `fmu3Type` is set to `fmi3HybridCoSimulation` or `fmi3ScheduledExecutionCoSimulation` or any of the intermediate variable access modes is set to `true`, then the <<fmi3CallbackIntermediateUpdate>> callback must be defined in <<fmi3CallbackFunctions>> in <<fmi3Instantiate>>.
 In other cases a NULL pointer can be assigned to the `intermediateUpdate` callback, such as if the `fmu3Type` is set to `fmi3ModelExchange`.
 
@@ -573,7 +573,7 @@ Clocks are defined for the evaluation of *clocked model partitions* and the rela
 Two types of <<clock,`clocks`>> are available, designed to address similar use cases with differences in details.
 One <<clock>> type (Synchronous Clocks) complies with the limitations imposed by the synchronous clock theory, the other clock type (Communication Point Clocks) is a general purpose Co-Simulation clock for providing suitable communication points for the timed evaluation of model partitions.
 The term <<clock>> and clocked is therefore used for both <<clock>> types.
-Both clock types can handle two different variants, the <<inputClock,`input clocks`>> and the <<output-clock,`output clocks`>>.
+Both clock types can handle two different variants, the <<inputClock,`input clocks`>> and the <<outputClock,`output clocks`>>.
 First the two different clock types are presented with the mathematical definition of their use cases.
 After that the two clock variants are described. The section ends with a short description of connecting clocked FMUs.
 
@@ -644,12 +644,12 @@ This section gives a definition of the two clock variants.
 
 ====== Output Clocks
 
-An <<output-clock>> is a general <<clock>> that ticks when a time-, state- or step-event occurs in the continuous-model partition of the FMU (for CPClocks these <<output-clock>> tick events can occour in all model partitions) and are identified based on their <<clockReference>> (see 2.2.3).
+An <<outputClock>> is a general <<clock>> that ticks when a time-, state- or step-event occurs in the continuous-model partition of the FMU (for CPClocks these <<outputClock>> tick events can occour in all model partitions) and are identified based on their <<clockReference>> (see 2.2.3).
 It can be periodic or non-periodic.
-_[Example: If_ latexmath:[b = x > 0] _, and a state event is defined when b changes from `false` to `true`, and b is defined as <<output-clock>>, then this <<clock>> is active whenever x changes from negative to positive values.]_
+_[Example: If_ latexmath:[b = x > 0] _, and a state event is defined when b changes from `false` to `true`, and b is defined as <<outputClock>>, then this <<clock>> is active whenever x changes from negative to positive values.]_
 
-Since <<output-clock,`output clocks`>> are ticking based on model internal information it is required in case of FMI for Co-Simulation to signal the ticking of an <<output-clock>> to the simulation environment during a `fmi3DoStep` computation.
-In most cases the signaling of an <<output-clock>> tick is a `strong event` that requires creating a communication point for exchanging additional information (i.e. variable values) with the simulation environment.
+Since <<outputClock,`output clocks`>> are ticking based on model internal information it is required in case of FMI for Co-Simulation to signal the ticking of an <<outputClock>> to the simulation environment during a `fmi3DoStep` computation.
+In most cases the signaling of an <<outputClock>> tick is a `strong event` that requires creating a communication point for exchanging additional information (i.e. variable values) with the simulation environment.
 Additional cases need to be handled if a <<clock>> tick is not associated to an event that requires the creation of a communication point for the model partition that generated the event.
 
 _[Outside of the FMU it is not known in advance when this <<clock>> ticks._
@@ -721,11 +721,11 @@ For periodic <<clock,`clocks`>> it is recommended to derive the priorities based
 
 ====== Clock Relationships for Communication Point Clocks [[clock-relationships-for-communication-point-clocks]]
 
-If <<output-clock,`output clocks`>> and <<inputClock,`input clocks`>> are defined it is possible to define a tick relationship from an <<output-clock>> to an <<inputClock>>.
+If <<outputClock,`output clocks`>> and <<inputClock,`input clocks`>> are defined it is possible to define a tick relationship from an <<outputClock>> to an <<inputClock>>.
 This is needed to allow for an external resource management to achieve an optimal control of model partitions.
-The <<output-clock,`output clocks`>> and the associated <<inputClock,`input clocks`>> define a union of <<clock,`clocks`>>.
-In that sense, if an <<output-clock>> ticks the associated <<inputClock>> ticks at the same time instant in such a union.
-It is only meaningful to combine one or multiple <<output-clock,`output clocks`>> with a single aperiodic <<inputClock>> in such a union.
+The <<outputClock,`output clocks`>> and the associated <<inputClock,`input clocks`>> define a union of <<clock,`clocks`>>.
+In that sense, if an <<outputClock>> ticks the associated <<inputClock>> ticks at the same time instant in such a union.
+It is only meaningful to combine one or multiple <<outputClock,`output clocks`>> with a single aperiodic <<inputClock>> in such a union.
 It is possible to define multiple unions of <<clock,`clocks`>>, with the maximum number defined by the number of available aperiodic <<inputClock,`input clocks`>>.
 
 [cols="1,2"]
@@ -782,7 +782,7 @@ include::../headers/fmi3FunctionTypes.h[tag=GetClock]
 
 Inquires whether a set of <<clock,`clocks`>> is active by providing the value references of the corresponding <<clock>> varaibels.
 A <<clock>> with <<valueReference>>[i] is active at the current time instant if `value[i] = fmi3True`, otherwise the <<clock>> is not active. It is allowed to call this function within the callback function `fmi3IntermediateUpdate()`.
-It is required for an FMU to directly internally set back the activation <<state>> of an <<output-clock>> latexmath:[i] to `fmi3False` if the function <<fmi3GetClock>> is called for a <<clock>> latexmath:[i] and the interface is set to `fmi3ScheduledExecutionCoSimulation`.
+It is required for an FMU to directly internally set back the activation <<state>> of an <<outputClock>> latexmath:[i] to `fmi3False` if the function <<fmi3GetClock>> is called for a <<clock>> latexmath:[i] and the interface is set to `fmi3ScheduledExecutionCoSimulation`.
 _[This is required to allow preemption.]_
 // TODO: add xref to 4.4.5
 
@@ -820,7 +820,7 @@ The following table summarizes the use of the API functions by the environment f
 [cols="1,2,3"]
 |===
 |*API function*
-|<<output-clock,`Output clock`>>
+|<<outputClock,`Output clock`>>
 |<<inputClock,`Input clock`>>
 
 |_fmi3GetClock_
