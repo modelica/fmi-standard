@@ -69,7 +69,7 @@ typedef enum {
     fmi3ModelExchange,
     fmi3CoSimulation,
     fmi3HybridCoSimulation,
-    fmi3ScheduledExecutionCoSimulation
+    fmi3ScheduledExecutionSimulation
 } fmi3InterfaceType;
 /* end::InterfaceType[] */
 
