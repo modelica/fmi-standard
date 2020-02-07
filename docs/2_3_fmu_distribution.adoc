@@ -6,8 +6,8 @@ All relevant files are stored in a ZIP file with a pre-defined structure.
 The implementation must either implement all the functions of FMI for Model Exchange or all the functions of FMI for Co-Simulation or both.
 Specifically it is required that all functions specified for Model Exchange and/or Co-Simulation are present, even if they are only needed for capabilities that the FMU does not support.
 The behavior of those functions is unspecified, so while calling environments can rely on the functions being present, they cannot rely on any particular behavior for functions only needed for capabilities the FMU does not support.
-The extension of the ZIP file must be "**.fmu**", for example, "HybridVehicle.fmu".
-The compression method used for the ZIP file must be "deflate" _[(most free tools, such as zlib, offer only the common compression method "deflate")]_.
+The extension of the ZIP file must be `.fmu` _[, for example, `HybridVehicle.fmu`]_.
+The compression method used for the ZIP file must be `deflate` _[(most free tools, such as zlib, offer only the common compression method `deflate`)]_.
 
 Every FMU is distributed with its own ZIP file.
 This ZIP file has the following structure:
@@ -49,13 +49,13 @@ extra                         // Additional (meta-)data of the FMU (optional)
 ----
 
 An FMU has to implement all common functions (according to tables in <<state-machine-model-exchange>> and <<state-machine-co-simulation>>).
-Model Exchange FMUs have to provide additionally the respective Model Exchange function, CoSimulation FMUs the Co-Simulation functions.
+Model Exchange FMUs have to provide additionally the respective Model Exchange function, Co-Simulation FMUs the Co-Simulation functions.
 
-The FMU must be distributed with [underline]#at least# one implementation, in other words, either [underline]#sources# or one of the [underline]#binaries# for a particular machine.
+The FMU must be distributed with at least one implementation, in other words, either sources or one of the binaries for a particular machine.
 It is also possible to provide the sources and binaries for different target machines together in one ZIP file.
 The names of the binary directories are standardized by the "platform tuple".
 Further names can be introduced by vendors.
-Dynamic link libraries must include all referenced resources that are not available on a standard target machine _[for example, DLLs on Windows machines must be built with option "MT" to include the run-time environment of VisualStudio in the DLL, and not use the option "MD" where this is not the case]_.
+Dynamic link libraries must include all referenced resources that are not available on a standard target machine _[for example, DLLs on Windows that are built  with Visual Studio should be compiled with the `/MT` option to include the required symbols from the Visual C runtime in the DLL, and not use the option `/MD` where this is not the case]_.
 When compiling a shared object on Linux, `RPATH="$ORIGIN"` has to be set when generating the shared object in order that shared objects used from it, can be dynamically loaded.
 
 The binaries must be placed in the respective <platformTuple> directory with the general format `<arch>-<sys>{-<abi>{<abi_ver>}{<abi_sub>}}`.
@@ -178,7 +178,7 @@ Sub-ABI `<abi_sub>`::
 Typical scenarios are to provide binaries only for one machine type (for example, on the machine where the target simulator is running and for which licenses of run-time libraries are available) or to provide only sources (for example, for translation and download for a particular micro-processor).
 If run-time libraries cannot be shipped due to licensing, special handling is needed, for example, by providing the run-time libraries at appropriate places by the receiver.
 
-FMI provides the means for two kinds of implementation: `needsExecutionTool = "true"` and `needsExecutionTool = "false"`.
+FMI provides the means for two kinds of implementation: `needsExecutionTool = true` and `needsExecutionTool = false`.
 In the first case a tool specific wrapper DLL/SharedObject has to be provided as the binary, in the second a compiled or source code version of the model with its solver is stored (see <<fmi-for-co-simulation>> for details).
 
 In an FMU both a version for ModelExchange and for CoSimulation might be present.
@@ -212,21 +212,22 @@ _[As template makefile, CMake (http://www.cmake.org), a cross- platform, open-so
 In directory `resources`, additional data can be provided in FMU specific formats, typically for tables and maps used in the FMU.
 This data must be read into the model at the latest during initialization (that is, before <<fmi3ExitInitializationMode>> is called).
 The actual file names in the ZIP file to access the data files can either be hard-coded in the generated FMU functions, or the file names can be provided as string parameters via the `fmi3SetString` function.
-_[Note that the absolute file name of the resource directory is provided by the initialization functions]_.
-In the case of a Co-Simulation implementation of `needsExecutionTool = "true"` type, the `resources` directory can contain the model file in the tool specific file format.
+_[Note that the absolute file name of the resource directory is provided by the initialization functions.]_
+In the case of a Co-Simulation implementation of `needsExecutionTool = true` type, the `resources` directory can contain the model file in the tool specific file format.
 
 _[Note that the header files `fmi3PlatformTypes.h` and `fmi3FunctionTypes.h/fmi3Functions.h` are not included in the FMU due to the following reasons:_
 
-_pass:[]`fmi3PlatformTypes.h` makes no sense in the `sources` directory, because if sources are provided, then the target simulator defines this header file and not the FMU. +
-This header file is not included in the `binaries` directory, because it is implicitly defined by the platform directory (for example, i686-windows for a 32-bit machine or x86_64-linux for a 64-bit machine)._
+_pass:[]`fmi3PlatformTypes.h` makes no sense in the `sources` directory, because if sources are provided, then the target simulator defines this header file and not the FMU._ +
+_This header file is not included in the `binaries` directory, because it is implicitly defined by the platform directory (for example, `i686-windows` for a 32-bit machine or `x86_64-linux` for a 64-bit machine)._
 
-_pass:[]`fmi3FunctionTypes.h` / `fmi3Functions.h` are not needed in the `sources` directory, because they are implicitly defined by attribute `fmiVersion` in file `modelDescription.xml`.
-Furthermore, in order that the C compiler can check for consistent function arguments, the header file from the target simulator should be used when compiling the C sources.
-It would therefore be counter-productive (unsafe) if this header file was present. +
-These header files are not included in the `binaries` directory, since they are already utilized to build the target simulator executable.
-The version number of the header file used to construct the FMU can be deduced via attribute `fmiVersion` in file `modelDescription.xml` or via function call <<fmi3GetVersion>>.]_
+_pass:[]`fmi3FunctionTypes.h` / `fmi3Functions.h` are not needed in the `sources` directory, because they are implicitly defined by attribute `fmiVersion` in file `modelDescription.xml`._
+_Furthermore, in order that the C compiler can check for consistent function arguments, the header file from the target simulator should be used when compiling the C sources._
+_It would therefore be counter-productive (unsafe) if this header file was present._ +
+_These header files are not included in the `binaries` directory, since they are already utilized to build the target simulator executable._
+_The version number of the header file used to construct the FMU can be deduced via attribute `fmiVersion` in file `modelDescription.xml` or via function call <<fmi3GetVersion>>.]_
 
 The ZIP archive may contain additional entries with the prefix `extra/` that can be used to store additional data and meta-data.
 In order to avoid ambiguities the extra files should be provided in subdirectories using a reverse domain name notation of a domain that is controlled by the entity defining the semantics and content of the additional entries _[(for example `extra/com.example/SimTool/meta.xml` or `extra/org.example.stdname/data.asd`)]_.
 The use of subdirectories beginning with `org.modelica` and `org.fmi-standard` is explicitly reserved for use by MAP FMI-defined layered standards, i.e. other uses must not use subdirectory names beginning with these prefixes.
-It is explicitly allowed for tools and users other than the original creator of an FMU to modify, add or delete entries in the `extra/` directory without affecting the validity of the FMU in all other aspects. Specifically all validation or digital signature schemes used to protect the content of the FMU should take the variability of extra file content into account _[(for example by having seperate checksums or signatures for FMU core content and extra content, or not having signatures at all for extra content)]_.
+It is explicitly allowed for tools and users other than the original creator of an FMU to modify, add or delete entries in the `extra/` directory without affecting the validity of the FMU in all other aspects.
+Specifically all validation or digital signature schemes used to protect the content of the FMU should take the variability of extra file content into account _[(for example by having seperate checksums or signatures for FMU core content and extra content, or not having signatures at all for extra content)]_.
