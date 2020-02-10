@@ -57,8 +57,7 @@ typedef fmi3Status fmi3SetTimeTYPE(fmi3Instance, fmi3Float64);
 _]_
 
 `fmi3Functions.h`::
-contains the function prototypes of an FMU that can be accessed in simulation environments and that are defined in <<fmi-common-concepts>>, <<fmi-for-model-exchange>> and
-<<fmi-for-co-simulation>>.
+contains the function prototypes of an FMU that can be accessed in simulation environments and that are defined in <<fmi-common-concepts>>, <<fmi-for-model-exchange>> and <<fmi-for-co-simulation>>.
 +
 This header file includes `fmi3PlatformTypes.h` and `fmi3FunctionTypes.h`.
 The header file version number for which the model was compiled, can be inquired in the target simulator with <<fmi3GetVersion>> (see <<inquire-platform-and-version-number>>). +
@@ -76,6 +75,13 @@ _Otherwise it is an empty definition.]_
 The goal is that both textual and binary representations of FMUs are supported and that several FMUs might be present at the same time in an executable (for example, FMU A may use an FMU B).
 In order for this to be possible, the names of the functions in different FMUs must be different, or function pointers must be used.
 To support the first variant macros are provided in `fmi3Functions.h` to build the actual function names by using a function prefix that depends on how the FMU is shipped.
+
+_[These macros can be defined differently in a target specific variant of `fmi3Functions.h` to adjust them to the requirements of the supported compilers and platforms of the importing tool.]_
+
+An FMU C-file must include at the beginning a `define` of `FMI3_FUNCTION_PREFIX` as the `modelIdentifier` attribute defined in `<fmiModelDescription><ModelExchange>` or `<fmiModelDescription><CoSimulation>`together with `pass:[_]` at the end (see sections <<ModelExchange>> and <<schema-co-simulation>>).
+
+This `define` must be directly followed with an `#include "fmi3Functions.h"` statement.
+
 Typically, FMU functions are used as follows:
 
 [source, C]
@@ -96,12 +102,12 @@ A function that is defined as `fmi3GetReal` is changed by the macros to a functi
 - If the FMU is shipped with C source code or with static link library: +
 The constructed function name is `MyModel_fmi3GetReal`.
 In other words the function name is prefixed with the model name and an `pass:[_]`.
-As `FMI3_FUNCTION_PREFIX` the `modelIdentifier` attribute defined in `<fmiModelDescription><ModelExchange>`, or `<fmiModelDescription><CoSimulation>` is used, together with `pass:[_]` at the end (see <<ModelExchange>> and <<fmi-for-co-simulation>>).
 A simulation environment can therefore construct the relevant function names by generating code for the actual function call.
 In case of a static link library, the name of the library is `MyModel.lib` on Windows and `libMyModel.a` on Linux; in other words the `modelIdentifier` attribute is used to create the library name.
 
 - If the FMU is shipped with DLL/SharedObject: +
 The constructed function name is `fmi3GetReal`, in other words, it is not changed.
+_[This can be realized in the case of a source code FMU with a target-specific version of `fmi3Functions.h` that does not use FMI3_FUNCTION_PREFIX to construct the function names.]_
 A simulation environment will then dynamically load this library and will explicitly import the function symbols by providing the FMI function names as strings.
 The name of the library is `MyModel.dll` on Windows or `MyModel.so` on Linux; in other words the `modelIdentifier` attribute is used as library name.
 
@@ -397,8 +403,10 @@ If a null pointer is provided for `c`, the function call is ignored (does not ha
 ----
 include::../headers/fmi3FunctionTypes.h[tags=SetDebugLogging]
 ----
+The function controls debug logging that is output via the logger function callback.
 
 If `loggingOn = fmi3True`, debug logging is enabled, otherwise it is switched off.
+If `loggingOn = fmi3True` and `nCategories = 0`, then all debug messages shall be output.
 If `loggingOn = fmi3True` and `nCategories > 0`, then only debug messages according to the `categories` argument shall be printed via the <<logMessage>> function.
 Vector `categories` has `nCategories` elements.
 The allowed values of `categories` are defined by the modeling environment that generated the FMU.
@@ -415,7 +423,7 @@ include::../headers/fmi3FunctionTypes.h[tags=SetupExperiment]
 ----
 
 Informs the FMU to setup the experiment.
-This function can be called after <<fmi3Instantiate>> and before <<fmi3EnterInitializationMode>> is called.
+This function must be called after <<fmi3Instantiate>> and before <<fmi3EnterInitializationMode>> is called.
 Arguments `toleranceDefined` and `tolerance` depend on the FMU type:
 
 `fmuType = fmi3ModelExchange`::
@@ -493,11 +501,12 @@ Before starting a new run, <<fmi3SetupExperiment>> and <<fmi3EnterInitialization
 
 ==== Getting and Setting Variable Values [[get-and-set-variable-values]]
 
-All variable values of an FMU are identified with a variable handle called "value reference".
-The handle is defined in the `modelDescription.xml` file (as attribute <<valueReference>> in variable elements).
-Element <<valueReference>> shall be unique for all variables.
+All variables of an FMU are identified with a handle called "value reference".
+The handle is defined in the `modelDescription.xml` file as attribute <<valueReference>> in variable elements.
+Each variable must have a unique <<valueReference>>.
 
-Variables can be scalar or array variables. When getting or setting the values of array variables, the serialization of array variable values used in C-API function calls, as well as in the XML <<start>> attributes is defined as row major - i.e. dimension order from left->right for the C-API (e.g. `array[dim1][dim2]...[dimN]`), and document order in the XML attributes.
+Variables can be scalar or array variables.
+When getting or setting the values of array variables, the serialization of array variable values used in C-API function calls, as well as in the XML <<start>> attributes is defined as row major - i.e. dimension order from left to right for the C-API (e.g. `array[dim1][dim2]...[dimN]`), and document order in the XML attributes.
 
 _[Example: A 2D matrix_
 [latexmath]
@@ -566,6 +575,8 @@ Set <<parameter,`parameters`>>, <<input,`inputs`>>, and <<start>> values, and re
 - Note, `fmi3Status = fmi3Discard` is possible for the `fmi3SetXXX` functions.
 
 For Co-Simulation FMUs, additional functions are defined in <<transfer-of-input-output-and-parameters>> to set and inquire <<derivative,`derivatives`>> of variables with respect to time in order to allow interpolation.
+
+The value of a variable may only be accessed with the respective `fmi3Get/Set{VariableType}` for its type.
 
 ==== Operation on Clocks [[operation-on-clocks]]
 In the following section the operations on <<clock,`clocks`>> are described.
@@ -980,7 +991,7 @@ If the capability attribute `providesDirectionalDerivative = true`, <<fmi3GetDir
 
 [latexmath]
 ++++
-\Delta \mathbf{v}_{unknown} = \frac{\delta \mathbf{h}}{\delta \mathbf{v}_{known}}\mathbf{v}_{known}
+\Delta \mathbf{v}_{unknown} = \frac{\partial \mathbf{h}}{\partial \mathbf{v}_{known}} \Delta \mathbf{v}_{known}
 ++++
 
 Accordingly, it computes the directional derivative vector latexmath:[\color{blue}{\Delta \mathbf{v}_{unknown}}] (`dvUnknown`) from the seed vector latexmath:[\color{blue}{\Delta \mathbf{v}_{known}}] (`dvKnown`)

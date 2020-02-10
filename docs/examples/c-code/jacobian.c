@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
     fmi3Float64 J[2][2];
     fmi3CallbackFunctions callbacks = { NULL };
     fmi3Instance m;
-    
+
     callbacks.allocateMemory = cb_allocateMemory;
     callbacks.freeMemory     = cb_freeMemory;
     callbacks.logMessage     = cb_logMessage;
