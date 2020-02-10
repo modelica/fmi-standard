@@ -9,6 +9,12 @@ The behavior of those functions is unspecified, so while calling environments ca
 The extension of the ZIP file must be `.fmu` _[, for example, `HybridVehicle.fmu`]_.
 The compression method used for the ZIP file must be `deflate` _[(most free tools, such as zlib, offer only the common compression method `deflate`)]_.
 
+The ZIP format specification can be found here: https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT
+
+_[Note: especially section 4.4.17 states that backslashes "\" are forbidden as path separator, only forward slashes "/" are allowed.]_
+
+_[Note: non-ASCII directory names are not explicitly forbidden, but might pose a problem on different operating systems and are thus discouraged.]_
+
 Every FMU is distributed with its own ZIP file.
 This ZIP file has the following structure:
 
@@ -19,6 +25,9 @@ model.png                     // image file of FMU icon (optional)
 documentation                 // directory containing the documentation (optional)
    index.html                 // entry point of the documentation
    <other documentation files>
+   licenses // Optional directory for licenses
+      license.{txt,html}      // Entry point for license information
+      <license files>         // For example BSD licenses
 sources                       // directory containing the C sources (optional)
    // all needed C sources and C header files to compile and link the FMU
    // with exception of: fmi3PlatformTypes.h, fmi3FunctionTypes.h and fmi3Functions.h
@@ -37,6 +46,10 @@ binaries                      // directory containing the binaries (optional)
       <modelIdentifier>.so    // shared library of the FMI implementation
    x86_64-darwin              // binaries for macOS
       <modelIdentifier>.dylib // shared library of the FMI implementation
+   // If an FMU is run through one of its binaries all items in that binary
+   // folder are recommended to be unpacked at the same location as the binary
+   // < modelIdentifier >.* is unpacked. If not it is likely that, if the FMU
+   // has dependencies on those items, it will not be able to find them.
 resources                     // resources needed by the FMU (optional)
    // data in FMU specific files which will be read during initialization;
    // also more folders can be added under resources (tool/model specific).
@@ -209,6 +222,10 @@ If default options of the compiler are sufficient, it might then be possible to 
 An exporting tool should give documentation on how to build an executable, either via a documentation file and/or via a template makefile for a particular platform, from which a user can construct the makefile for his/her target platform.
 This documentation should be stored in the `documentation` directory, possibly with a link to the template makefile (stored in the `sources` directory).
 _[As template makefile, CMake (http://www.cmake.org), a cross- platform, open-source build system might be used.]_ +
+_[The sub-directory "licenses" can be used to bundle all license files._
+_It is strongly recommended to include all license and copyright related information in the licenses folder of an FMU (especially but not only for contained open source software) - the `license.{txt,html}` file can serve as an entry point for describing the contained licenses._
+_This will help the users to comply with license conditions when passing source or binary code contained in an FMU to other persons or organizations.]_
+
 In directory `resources`, additional data can be provided in FMU specific formats, typically for tables and maps used in the FMU.
 This data must be read into the model at the latest during initialization (that is, before <<fmi3ExitInitializationMode>> is called).
 The actual file names in the ZIP file to access the data files can either be hard-coded in the generated FMU functions, or the file names can be provided as string parameters via the `fmi3SetString` function.

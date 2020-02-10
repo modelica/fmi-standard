@@ -154,6 +154,7 @@ These definitions are used in the XML element `ModelVariables`.
 |`ModelStructure`
 |Defines the structure of the model.
 Especially, the ordered lists of <<output,`outputs`>>, continuous-time <<state,`states`>> and initial unknowns (the unknowns during *Initialization Mode*) are defined here.
+For more details on ModelStructure, see section <<ModelStructure>>.
 Furthermore, the dependency of the unkowns from the knowns can be optionally defined.
 _[This information can be, for example, used to compute efficiently a sparse Jacobian for simulation, or to utilize the <<input>> / <<output>> dependency in order to detect that in some cases there are actually no algebraic loops when connecting FMUs together]_.
 |====
@@ -174,7 +175,7 @@ image::images/fmiModelDescription_schema_2.png[width=80%, align="center"]
 |`fmiVersion`
 |Version of FMI for Model Exchange or FMI for Co-Simulation that was used to generate the XML file.
 The value for this version is `3.0`.
-Future minor revisions are denoted as `3.0.1`, `3.1`, ...
+Future minor revisions are denoted as `3.1`, `3.2` ...
 
 _[During development prototype FMU implementations can indicate compliance with a certain development version based on the tags available at https://github.com/modelica/fmi-standard/tags._
 _For example the value for the FMI 3.0 Alpha 2 release is `3.0-alpha.2`.]_
@@ -606,6 +607,8 @@ The quantity names are not standardized]_
 |`unit`
 |Unit of the variable defined with `UnitDefinitions.Unit.name` that is used for the model equations.
 _[For example, `N.m`: in this case a `Unit.name = `N.m` must be present under `UnitDefinitions`.]_
+_[Note that for variables that are without a unit, the element should not have a `unit` attribute.]_
+_[Giving an empty string as a `unit` attribute specifies a valid unit that needs to be defined among the unit definitions.]_
 
 |`displayUnit`
 |Default display unit. The conversion to the `unit` is defined with the element `<fmiModelDescription><UnitDefinitions>`.
@@ -1380,6 +1383,7 @@ This attribute is only used for Co-Simulation. The default value of this attribu
 *fmi3SetXXX* can be called on any variable with <<variability>> &#8800; <<constant>> *before initialization* (before calling <<fmi3EnterInitializationMode>>)
 
 - if <<initial>> = <<exact>> or <<approx>> _[in order to set the corresponding <<start>> value.]_
+_[Note that this prevents any changes to the input before <<fmi3EnterInitializationMode>> is called.]_
 
 *fmi3SetXXX* can be called on any variable with <<variability>> &#8800; <<constant>> *during initialization* (after calling <<fmi3EnterInitializationMode>> and before <<fmi3ExitInitializationMode>> is called)
 
@@ -1786,6 +1790,9 @@ _[The dependency definition in `fmiModelDescription.ModelStructure` is completel
 _In particular, the "direct dependency" definition can be a superset of the "real" direct dependency definition, even if the alias information shows that this is too conservative._
 _For example, if it is stated that the <<output>> `y1` depends on <<input>> `u1` and the <<output>> `y2` depends on <<input>> `u2`, and `y1` is an alias to `y2`, then this definition is fine, although it can be deduced that in reality neither `y1` nor `y2` depend on any <<input>>.]._
 
+_[In case of different variability among the set of alias variables, and if that set of aliases does not contain an input or parameter, the variability should be the highest of the variables in the set, e.g. continuous > discrete > tunable > fixed._
+_If the set includes a parameter or input the aliases will have the stated variability of that parameter or input.]_
+
 Type specific properties are defined in the required choice element, where exactly one of `Real`, `Integer`, `Boolean`, `String`, `Enumeration` must be present in the XML file:
 
 image::images/Real_Schema_large.png[width=50%, align="center"]
@@ -1818,7 +1825,11 @@ For `Enumeration` it is required, because the Enumeration items are defined in `
 [[start,`start`]]
 Initial or guess value of variable.
 *This value is also stored in the C functions*.
-_[Therefore, calling_ `fmi3SetXXX` _to set <<start>> values is only necessary, if a different value as stored in the XML file is desired.]_ The interpretation of <<start>> is defined by variable attribute <<initial>>.
+_[Therefore, calling_ `fmi3SetXXX` _to set <<start>> values is only necessary, if a different value as stored in the XML file is desired.]_
+_WARNING: It is not recommended to change the start values in the `modelDescription.xml` file of an FMU, as this would break the consistency with the hard-coded start values in the C-Code._
+_This could lead to unpredictable behavior of the FMU in different importing tools, as it is not mandatory to call `fmi3SetXXX` to set start values during initialization. Instead it is recommended to use the SSP Standard (https://ssp-standard.org/) to handle modified parameters of FMUs or different parameter sets._
+
+The interpretation of <<start>> is defined by variable attribute <<initial>>.
 A different <<start>> value can be provided with an `fmi3SetXXX` function before <<fmi3ExitInitializationMode>> is called (but not for variables with <<variability>> = <<constant>>).
 
 _[The standard approach is to set the <<start>> value before <<fmi3EnterInitializationMode>>._
@@ -1928,6 +1939,8 @@ _If a <<state>> or a <<derivative>> of a <<state>> shall not be exposed from the
 _The ordering of the variables in this list is defined by the exporting tool._
 _Usually, it is best to order according to the declaration order of the <<state,`states`>> in the source model, since then the <Derivatives> list does not change if the declaration order of states in the source model is not changed._
 _This is for example, important for linearization, in order that the interpretation of the state vector does not change for a re-exported FMU.]_
+The number of Unknown elements in the Derivatives element uniquely define the number of continuous time state variables, as required by the corresponding Model Exchange functions (integer argument `nx` of <<fmi3GetContinuousStates>>, <<fmi3SetContinuousStates>>, <<fmi3GetDerivatives>>, <<fmi3GetNominalsOfContinuousStates>> see hereafter) that require it.
+
 The corresponding continuous-time <<state,`states`>> are defined by attribute <<derivative>> of the corresponding variable state derivative element.
 _[Note that higher order derivatives must be mapped to first order derivatives but the mapping definition can be preserved due to attribute <<derivative>>._
 _Example: if_ latexmath:[\color{blue}{\frac{\text{ds}}{\text{dt}} = v,\ \frac{\text{dv}}{\text{dt}} =f(..)}] _,then_ latexmath:[\color{blue}{\left\{ v,\ \frac{\text{dv}}{\text{dt}} \right\}}] _is the vector of state derivatives and attribute <<derivative>> of_ latexmath:[\color{blue}{v}] _references_ latexmath:[\color{blue}{s}] _, and attribute <<derivative>> of_ latexmath:[\color{blue}{\frac{\text{dv}}{\text{dt}}}] _references_ latexmath:[\color{blue}{v}] _.]_ +
@@ -2168,6 +2181,18 @@ include::examples/model_structure_example3.xml[tags=ModelStructure]
 _[Note that_ latexmath:[\color{blue}{y = c}] _where_ latexmath:[\color{blue}{c}] _changes only during *Event Mode* (_ latexmath:[\color{blue}{c = 2}] _or_ latexmath:[\color{blue}{3\ }] _depending on relation_ latexmath:[\color{blue}{u > 0}] _that changes only at *Event Mode*)._
 _Therefore <<dependenciesKind>> = <<dependenciesKind,`dependent`>> because it is not a linear relationship on_ latexmath:[\color{blue}{u}]. _]_
 
+_Example 4:_
+[latexmath]
+++++
+\frac{dx}{dt}=u, y=x
+++++
+where `u` is continuous-time input value reference "1", `y` is a continuous-time output with value reference "2" and `dxdt` is a continuous-time derivative with value reference="4". The definition of the model structure is then:
+
+[source, xml]
+----
+include::examples/model_structure_example4.xml[tags=VariablesAndStructure]
+----
+
 _Defining FMU features with the_ <<dependencies>> _list:_
 
 _[Note that via the <<dependencies>> list the supported features of the FMU can be defined._
@@ -2194,7 +2219,10 @@ In the following definitions, the http://en.wikipedia.org/wiki/Extended_BNF[EBNF
 |   or
 ----
 
-The following conventions for variable names are defined:
+The names must be unique, non-empty strings. +
+_[It is recommended that the names are visually clearly different from each other; but it is not required.]_
+
+The following conventions for scalar names are defined:
 
 *`variableNamingConvention = flat`*
 
@@ -2203,9 +2231,6 @@ name = Unicode-char { Unicode-char } // identical to xs:normalizedString
 Unicode-char = any Unicode character without carriage return (#xD),
 line feed (#xA) nor tab (#x9)
 ----
-
-The names must be unique, non-empty strings. +
-_[It is recommended that the names are visually clearly different from each other; but it is not required.]_
 
 *`variableNamingConvention` = structured`*
 

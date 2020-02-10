@@ -104,7 +104,7 @@ When the FMU is terminated, it is assumed that an appropriate message is printed
 If `nominalsOfContinuousStatesChanged = fmi3True`, then the nominal values of the <<state,`states`>> have changed due to the function call and can be inquired with <<fmi3GetNominalsOfContinuousStates>>. +
 If `valuesOfContinuousStatesChanged = fmi3True`, then at least one element of the continuous state vector has changed its value due to the function call.
 [[state,`state`]]
-The new values of the <<state,`states`>> can be inquired with <<fmi3GetContinuousStates>>.
+The new values of the <<state,`states`>> can be inquired with <<fmi3GetContinuousStates>> or individually for each state for which `reinit = true` by calling `fmi3GetFloat*`.
 If no element of the continuous state vector has changed its value, `valuesOfContinuousStatesChanged` must return `fmi3False`.
 _[If `fmi3True` would be returned in this case, an infinite event loop may occur.]_ +
 If `nextEventTimeDefined = fmi3True`, then the simulation shall integrate at most until `time = nextEventTime`, and shall call <<fmi3EnterEventMode>> at this time instant.
@@ -186,7 +186,6 @@ include::../headers/fmi3FunctionTypes.h[tags=GetContinuousStates]
 ----
 
 Return the new (continuous) state vector `x`.
-This function has to be called directly after calling function <<fmi3EnterContinuousTimeMode>> if it returns with `eventInfo->valuesOfContinuousStatesChanged = fmi3True` (indicating that the (continuous-time) state vector has changed).
 
 [[fmi3GetNominalsOfContinuousStates,`fmi3GetNominalsOfContinuousStates`]]
 [source, C]
@@ -220,8 +219,8 @@ Note that the FMU can always determine in which state it is since every state is
 The transition conditions `external event`, `time event`, and `state event` are defined in <<math-model-exchange>>.
 Each state of the state machine corresponds to a certain phase of a simulation as follows:
 
-Instantiated::
-In this state, <<start>> and guess values (= variables that have <<initial>> = <<exact>> or <<approx>>) can be set.
+instantiated::
+In this state, <<start>> and guess values (= variables that have <<initial>> = <<exact>> or <<approx>>) set and <<variability>> latexmath:[\neq] <<constant>> can be set, this does not include inputs as they do not have an <<initial>> attribute.
 
 Configuration Mode::
 In this state <<structuralParameter,`structural parameters`>> with <<variability>> = <<fixed>> or <<variability>> = <<tunable>> can be changed.
@@ -231,14 +230,14 @@ This state is entered from state *Instantiated* by calling <<fmi3EnterConfigurat
 Initialization Mode::
 In this state, equations are active to determine all continuous-time states, as well as all <<output,`outputs`>> (and optionally other variables exposed by the exporting tool).
 The variables that can be retrieved by `fmi3GetXXX` calls are (1) defined in the XML file under `<ModelStructure><InitialUnknowns>` and (2) variables with <<causality>> = <<output>>.
-Variables with <<initial>> = <<exact>>, as well as variables with <<variability>> = <<input>> can be set.
+Variables with <<initial>> = <<exact>> and <<variability>> latexmath:[\neq] <<constant>>, as well as variables with <<causality>> = <<input>> can be set.
 
 Continuous-Time Mode::
 In this state, the continuous-time model equations are active and integrator steps are performed.
 The event time of a state event may be determined if a domain change of at least one event indicator is detected at the end of a completed integrator step.
 
 Event Mode::
-If an event is triggered in *Continuous-Time Mode*, then *Event Mode* is entered by calling <<fmi3EnterEventMode>>.
+If an event is triggered in *Continuous-Time Mode*, *Event Mode* is entered by calling <<fmi3EnterEventMode>>.
 In this mode all continuous-time and discrete-time equations are active and the unknowns at an event can be computed and retrieved.
 After an event is completely processed, <<fmi3NewDiscreteStates>> must be called and depending on the return argument, `newDiscreteStatesNeeded`, the state chart stays in *Event Mode* or switches to *Continuous-Time Mode*.
 When the *Initialization Mode* is terminated with <<fmi3ExitInitializationMode>>, then *Event Mode* is directly entered, and the continuous-time and discrete-time variables at the initial time are computed based on the initial continuous-time states determined in the *Initialization Mode*.
@@ -252,7 +251,7 @@ Terminated::
 In this state, the solution at the final time of a simulation can be retrieved.
 
 Note that simulation backward in time is only allowed over continuous time intervals.
-As soon as an event occurred (<<fmi3EnterEventMode>> was called), going back in time is forbidden, because <<fmi3EnterEventMode>> / <<fmi3NewDiscreteStates>> can only compute the next discrete state, not the previous one.
+As soon as an event occurrs (<<fmi3EnterEventMode>> was called), going back in time is forbidden, because <<fmi3EnterEventMode>> / <<fmi3NewDiscreteStates>> can only compute the next discrete state, not the previous one.
 
 Note that during *Initialization*, *Event*, and *Continuous-Time Mode* <<input>> variables can be set with `fmi3SetXXX` and output variables can be retrieved with `fmi3GetXXX` interchangeably according to the model structure defined under element `<ModelStructure>` in the XML file.
 _[For example, if one <<output>> `y1` depends on two <<input,`inputs`>> `u1`, `u2`, then these two <<input,`inputs`>> must be set, before `y1` can be retrieved._
@@ -291,7 +290,7 @@ The allowed function calls in the respective states are summarized in the follow
 |fmi3SetReal                       |  |1 |3 |4 |5 |  |  |
 |fmi3SetInteger                    |  |1 |3 |4 |  |  |  |
 |fmi3SetBoolean                    |  |1 |3 |4 |  |  |  |
-|<<fmi3SetString                     |  |1 |3 |4 |  |  |  |
+|fmi3SetString                     |  |1 |3 |4 |  |  |  |
 |<<fmi3GetFMUState>>                   |  |x |x |x |x |x |7 |
 |<<fmi3SetFMUState>>                   |  |x |x |x |x |x |x |
 |<<fmi3FreeFMUState>>                  |  |x |x |x |x |x |x |
@@ -303,7 +302,7 @@ The allowed function calls in the respective states are summarized in the follow
 |<<fmi3NewDiscreteStates>>             {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |x |  |  |  |
 |<<fmi3EnterContinuousTimeMode>>       {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |x |  |  |  |
 |<<fmi3CompletedIntegratorStep>>       {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |  |x |  |  |
-|<<fmi3SetTime>>                       {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |x |x |  |  |
+|<<fmi3SetTime>>                       {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |8 |x |  |  |
 |<<fmi3SetContinuousStates>>           {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |  |x |  |  |
 |<<fmi3GetEventIndicators>>            {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |x |x |x |x |7 |
 |<<fmi3GetContinuousStates>>           {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |x |x |x |x |7 |
@@ -322,6 +321,7 @@ or <<causality>> = <<input>>  +
 or (<<causality>> = <<parameter>> and <<variability>> = <<tunable>>) +
 *5* for a variable with <<causality>> = <<input>> and <<variability>> = <<continuous>> +
 *7* always, but retrieved values are usable for debugging only
+*8* only for a pure discrete-time FMU. This exits the current event mode and sets the time for the next event instant. `fmi3NewDiscreteStates` must have been called with `newDiscreteStatesNeeded = fmi3False` at least once before this can be done.
 
 ==== Code Example
 
