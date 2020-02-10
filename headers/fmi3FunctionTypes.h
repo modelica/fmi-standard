@@ -473,7 +473,7 @@ typedef fmi3Status fmi3SetClockTYPE(fmi3Instance instance,
                                     const fmi3ValueReference valueReferences[],
                                     size_t nValueReferences,
                                     const fmi3Clock values[],
-                                    const fmi3Boolean *subactive);
+                                    const fmi3Boolean subactive[]);
 /* end::SetClock[] */
 
 /* tag::GetIntervalDecimal[] */

@@ -89,7 +89,7 @@ Typically, FMU functions are used as follows:
 // FMU is shipped with C source code, or with static link library
 #define FMI3_FUNCTION_PREFIX MyModel_
 #include "fmi3Functions.h"
-< usage of the FMU functions e.g. fmi3SetTime >
+< usage of the FMU functions e.g. MyModel_fmi3SetTime >
 
 // FMU is shipped with DLL/SharedObject
 #include "fmi3FunctionTypes.h"
@@ -159,11 +159,11 @@ include::../headers/fmi3PlatformTypes.h[tags=ValueReference]
 ----
 
 This is a handle to a (base type) variable value of the model.
-Handle and base type (such as `fmi3Float64`) uniquely identify the value of a variable.
-Variables of the same base type that have the same handle, always have identical values, but other parts of the variable definition might be different _[for example, min/max attributes]_.
+Handle uniquely identify the value of a variable.
+Variables that have the same handle, always have identical values, but other parts of the variable definition might be different _[for example, min/max attributes]_.
 
-All structured entities, such as records or arrays, are flattened into a set of scalar values of type `fmi3Float64`, `fmi3Int32` etc.
-An `fmi3ValueReference` references one such entity, record or array.
+Structured entities, such as records, are flattened into a set of values of type `fmi3Float64`, `fmi3Int32` etc.
+An `fmi3ValueReference` references one such value.
 The coding of `fmi3ValueReference` is a "secret" of the environment that generated the FMU.
 The interface to the equations only provides access to variables via this handle.
 Extracting concrete information about a variable is specific to the used environment that reads the Model Description File in which the value handles are defined.
@@ -569,7 +569,7 @@ Set <<parameter,`parameters`>>, <<input,`inputs`>>, and <<start>> values, and re
 
 - Argument `sizes` is a vector with the actual sizes of the values of binary variables.
 
-- Argument `nValues` provides the number of values in the `values` vector which is only equal to `nValueReferences` if all <<valueReference>>pass:[s] point to scalar variables.
+- Argument `nValues` provides the number of values in the `values` vector (and `sizes` vector, where applicable) which is only equal to `nValueReferences` if all <<valueReference>>pass:[s] point to scalar variables.
 
 - All strings passed as arguments to `fmi3SetString`, as well as all binary values passed as arguments to `fmi3SetBinary`, must be copied inside these functions, because there is no guarantee of the lifetime of strings or binary values, when these functions return.
 
@@ -780,7 +780,7 @@ include::../headers/fmi3FunctionTypes.h[tag=SetClock]
 ----
 
 Sets the <<clock>> activation status by providing the value references of the corresponding <<clock>> variables and their values.
-A <<clock>> with <<valueReference>>[i] is activated at the current time instant if value[i] is set to `fmi3True`, otherwise the <<clock>> is deactivated.
+A <<clock>> with <<valueReference>>s[i] is activated at the current time instant if values[i] is set to `fmi3ClockActive`, otherwise the <<clock>> is deactivated.
 The clocked partition is evaluated in subactive mode (only output equations) if the argument subactive is non NULL and `subactive[i] = fmi3True`.
 The <<parameter>> `subactive` has no meaning for CommunicationPointClocks (`fmi3CPClock`) and is ignored for such <<clock,`clocks`>>.
 It is not allowed to call this function within the callback function `fmi3IntermediateUpdate()`.
@@ -792,8 +792,8 @@ include::../headers/fmi3FunctionTypes.h[tag=GetClock]
 ----
 
 Inquires whether a set of <<clock,`clocks`>> is active by providing the value references of the corresponding <<clock>> varaibels.
-A <<clock>> with <<valueReference>>[i] is active at the current time instant if `value[i] = fmi3True`, otherwise the <<clock>> is not active. It is allowed to call this function within the callback function `fmi3IntermediateUpdate()`.
-It is required for an FMU to directly internally set back the activation <<state>> of an <<outputClock>> latexmath:[i] to `fmi3False` if the function <<fmi3GetClock>> is called for a <<clock>> latexmath:[i] and the Co-Simulation mode is set to `fmi3ModeScheduledExecutionSimulation`.
+A <<clock>> with <<valueReference>>s[i] is active at the current time instant if `values[i] = fmi3fmi3ClockActive`, otherwise the <<clock>> is not active. It is allowed to call this function within the callback function `fmi3IntermediateUpdate()`.
+It is required for an FMU to directly internally set back the activation <<state>> of an <<outputClock>> latexmath:[i] to `fmi3ClockInactive` if the function <<fmi3GetClock>> is called for a <<clock>> latexmath:[i] and the Co-Simulation mode is set to `fmi3ModeScheduledExecutionSimulation`.
 _[This is required to allow preemption.]_
 // TODO: add xref to 4.4.5
 
@@ -945,17 +945,17 @@ include::../headers/fmi3FunctionTypes.h[tags=GetDirectionalDerivative]
 
 This function computes the directional derivatives of an FMU.
 
-- Argument `vrUnknown` contains the <<valueReference>>pass:[s] of the unknown variables.
-The number of <<valueReference>>pass:[s] is given by the argument `nUnknown`.
+- Argument `unknowns` contains the <<valueReference>>pass:[s] of the unknown variables.
+The number of <<valueReference>>pass:[s] is given by the argument `nUnknowns`.
 
-- Argument `vrKnown` contains the <<valueReference>>pass:[s] of the known variables.
-The number of <<valueReference>>pass:[s] is given by the argument `nKnown`.
+- Argument `knowns` contains the <<valueReference>>pass:[s] of the known variables.
+The number of <<valueReference>>pass:[s] is given by the argument `nKnowns`.
 
-- Arguments `dvKnown` and `dvUnknown` contain the serialized values of the referenced variables (serialization of values as defined in <<get-and-set-variable-values>>).
+- Arguments `deltaKnowns` and `deltaUnknowns` contain the serialized values of the referenced variables (serialization of values as defined in <<get-and-set-variable-values>>).
 
-- Argument `nDvKnown` provides the number of values in `dvKnown` which is only equal to `nKnown` if all <<valueReference>>pass:[s] of `vrKnown` point to variables.
+- Argument `nDeltaKnowns` provides the number of values in `deltaKnowns` which is only equal to `nKnowns` if all <<valueReference>>pass:[s] of `knowns` point to scalar variables.
 
-- Argument `nDvUnknown` provides the number of values in `dvUnknown` which is only equal to `nUnknown` if all <<valueReference>>pass:[s] of `vrUnknown` point to variables.
+- Argument `nDeltaUnknowns` provides the number of values in `deltaUnknowns` which is only equal to `nUnknowns` if all <<valueReference>>pass:[s] of `unknowns` point to scalar variables.
 
 An FMU has different modes and in every mode an FMU might be described by different equations and different unknowns.
 The precise definitions are given in the mathematical descriptions of Model Exchange (<<math-model-exchange>>) and Co-Simulation (<<math-co-simulation>>).
@@ -994,7 +994,7 @@ If the capability attribute `providesDirectionalDerivative = true`, <<fmi3GetDir
 \Delta \mathbf{v}_{unknown} = \frac{\partial \mathbf{h}}{\partial \mathbf{v}_{known}} \Delta \mathbf{v}_{known}
 ++++
 
-Accordingly, it computes the directional derivative vector latexmath:[\color{blue}{\Delta \mathbf{v}_{unknown}}] (`dvUnknown`) from the seed vector latexmath:[\color{blue}{\Delta \mathbf{v}_{known}}] (`dvKnown`)
+Accordingly, it computes the directional derivative vector latexmath:[\color{blue}{\Delta \mathbf{v}_{unknown}}] (`deltaUnknowns`) from the seed vector latexmath:[\color{blue}{\Delta \mathbf{v}_{known}}] (`deltaKnowns`)
 
 _[The variable relationships are different in different modes._
 _For example, during *Continuous-Time Mode*, a continuous-time output y does not depend on discrete-time <<input,`inputs`>> (because they are held constant between events)._
@@ -1118,7 +1118,7 @@ include::../headers/fmi3FunctionTypes.h[tags=GetNumberOfVariableDependencies]
 
 This function returns the number of <<dependencies>> for a given variable.
 
-- Argument `vr` specifies the <<valueReference>> of the variable for which the number of <<dependencies>> should be returned.
+- Argument `valueReference` specifies the <<valueReference>> of the variable for which the number of <<dependencies>> should be returned.
 - Argument `nDependencies` points to the `size_t` variable that will receive the number of <<dependencies>>.
 
 The actual <<dependencies>> (of type `fmi3DependencyKind`) can be retrieved by calling the function `fmi3GetVariableDependencies`:
@@ -1132,25 +1132,25 @@ include::../headers/fmi3FunctionTypes.h[tags=GetVariableDependencies]
 
 This function returns the dependency information for a single variable.
 
-- Argument `vrDependent` specifies the <<valueReference>> of the variable for which the dependencies should be returned.
+- Argument `dependent` specifies the <<valueReference>> of the variable for which the dependencies should be returned.
 
 - Argument `nDependencies` specifies the number of dependencies that the calling environment allocated space for in the result buffers, and should correspond to the returned by calling <<fmi3GetNumberOfVariableDependencies>>.
 
-- Argument `elementIndexDependent` must point to a buffer of `size_t` values of size `nDependencies` allocated by the calling environment.
+- Argument `elementIndicesOfDependent` must point to a buffer of `size_t` values of size `nDependencies` allocated by the calling environment.
 It is filled in by this function with the element index of the dependent variable that dependency information is provided for.
 The element indices start with 1. Using the element index 0 means all elements of the variable.
 (Note: If an array has more than one dimension the indices are serialized in the same order as defined for values).
 
-- Argument `vrIndependent` must point to a buffer of `fmi3ValueReference` values of size `nDependencies` allocated by the calling environment.
+- Argument `independents` must point to a buffer of `fmi3ValueReference` values of size `nDependencies` allocated by the calling environment.
 It is filled in by this function with the value reference of the <<independent>> variable that this dependency entry is dependent upon.
 
-- Argument `elementIndexIndependent` must point to a buffer of `size_t` values of size `nDependencies` allocated by the calling environment.
+- Argument `elementIndicesIndependents` must point to a buffer of `size_t` values of size `nDependencies` allocated by the calling environment.
 It is filled in by this function with the element index of the <<independent>> variable that this dependency entry is dependent upon.
 The element indices start with 1.
 Using the element index 0 means all elements of the variable.
 (Note: If an array has more than one dimension the indices are serialized in the same order as defined for values).
 
-- Argument `dependencyType` must point to a buffer of `fmi3DependencyKind` values of size `nDependencies` allocated by the calling environment.
+- Argument `dependencyKinds` must point to a buffer of `fmi3DependencyKind` values of size `nDependencies` allocated by the calling environment.
 It is filled in by this function with the enumeration value describing the dependency of this dependency entry.
 
 If this function is called before the <<fmi3ExitInitializationMode>> call, it returns the initial dependencies.
