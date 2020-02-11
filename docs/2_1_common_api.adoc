@@ -323,7 +323,6 @@ _Which `LogCategories` the FMU sets is unspecified.]_
 
 Argument `fmuCoSimulationConfiguration` is used to configure Co-Simulation features used by the Co-Simulation master.
 //TODO: add cross reference
-Refer to section `<<co-simulation-feature-selection>>` and `<<intermediate-variable-access>>`.
 It is only used if `fmuType = fmi3CoSimulation`.
 It is NULL for fmuType `fmi3ModelExchange`.
 
@@ -382,12 +381,12 @@ If attribute `canNotUseMemoryManagementFunctions = true` in `<fmiModelDescriptio
 [[intermediateUpdate,`intermediateUpdate`]]
 Function `intermediateUpdate`::
 This callback allows internal events of different types (e.g. associated to <<outputClock>> ticks or intermediate variable access) to be signaled from an FMU to the Co-Simulation master.
-If `fmu3Type` is set to `fmi3CoSimulation` and either the `coSimulationMode` in `fmi3CoSimulationConfiguration` is set to `fmi3ModeHybridCoSimulation` or `fmi3ModeScheduledExecutionSimulation` or any of the intermediate variable access modes is set to `true`, then the <<fmi3CallbackIntermediateUpdate>> callback must be defined in <<fmi3CallbackFunctions>> in <<fmi3Instantiate>>.
+If `fmu3Type` is set to `fmi3HybridCoSimulation` or `fmi3ScheduledExecutionSimulation` or any of the intermediate variable access modes is set to `true`, then the <<fmi3CallbackIntermediateUpdate>> callback must be defined in <<fmi3CallbackFunctions>> in <<fmi3Instantiate>>.
 In other cases a NULL pointer can be assigned to the `intermediateUpdate` callback, such as if the `fmu3Type` is set to `fmi3ModelExchange`.
 
 Function `lockPreemption` and `unlockPreemption`::
 To provide more options to secure the code against unwanted preemption these callback functions are defined.
-They can be used to prevent preemption for certain code parts enclosed by `lockPreemption` and `unlockPreemption` in Co-Simulation mode `fmi3ModeScheduledExecutionSimulation`.
+They can be used to prevent preemption for certain code parts enclosed by `lockPreemption` and `unlockPreemption` in `fmi3ScheduledExecutionSimulation`.
 Even if the Co-Simulation master does not support preemption, at least an empty implementation of these callback functions must be provided to allow the reuse of code for different modes together with an efficient preemption.
 
 [[fmi3FreeInstance,`fmi3FreeInstance`]]
@@ -432,7 +431,7 @@ If `toleranceDefined = fmi3True`, then the model is called with a numerical inte
 In such a case all numerical algorithms used inside the model (for example, to solve non-linear algebraic equations) should also operate with an error estimation of an appropriate smaller relative tolerance.
 
 `fmuType = fmi3CoSimulation`::
-If `toleranceDefined = fmi3True`, then the communication interval of the slave is controlled by error estimation.
+If `toleranceDefined = fmi3True`, then the communication step size of the slave is controlled by error estimation.
 In case the slave utilizes a numerical integrator with variable step size and error estimation, it is suggested to use `tolerance` for the error estimation of the internal integrator (usually as relative tolerance). +
 An FMU for Co-Simulation might ignore this argument.
 
@@ -585,7 +584,8 @@ Clocks are defined for the evaluation of *clocked model partitions* and the rela
 Two types of <<clock,`clocks`>> are available, designed to address similar use cases with differences in details.
 One <<clock>> type (Synchronous Clocks) complies with the limitations imposed by the synchronous clock theory, the other clock type (Communication Point Clocks) is a general purpose Co-Simulation clock for providing suitable communication points for the timed evaluation of model partitions.
 The term <<clock>> and clocked is therefore used for both <<clock>> types.
-Both clock types can handle two different variants, the <<inputClock,`input clocks`>> and the <<outputClock,`output clocks`>>. First the two different clock types are presented with the mathematical definition of their use cases.
+Both clock types can handle two different variants, the <<inputClock,`input clocks`>> and the <<outputClock,`output clocks`>>.
+First the two different clock types are presented with the mathematical definition of their use cases.
 After that the two clock variants are described. The section ends with a short description of connecting clocked FMUs.
 
 ===== Clock Types for Evaluation of Clocked Model Partitions [[clock-types-for-evaluation-of-clocked-model-partitions]]
@@ -715,7 +715,7 @@ It is defined as a rational number based on `intervalCounter` and `resolution` v
 
 The interval latexmath:[\Delta T] and latexmath:[t_{offset}] must be defined for periodic <<clock,`clocks`>> in the XML file.
 In case of periodic <<inputClock,`input clocks`>> these values are the start interval values if they are not given by the simulation master.
-_[This information can be used for emulating periodic <<inputClock,`input clocks`>> in Co-Simulation mode `fmi3ModeCoSimulation`]_.
+_[This information can be used for emulating periodic <<inputClock,`input clocks`>> in the interface `fmi3CoSimulation`]_.
 
 If latexmath:[\Delta T] is fixed for an FMU and cannot be changed it is a strictly periodic <<clock>>.
 The <<clock>> is periodic, if latexmath:[\Delta T] can be defined before calling `fmi3EnterInitializationMode` via <<fmi3SetIntervalDecimal>> or <<fmi3SetIntervalFraction>>.
@@ -793,7 +793,7 @@ include::../headers/fmi3FunctionTypes.h[tag=GetClock]
 
 Inquires whether a set of <<clock,`clocks`>> is active by providing the value references of the corresponding <<clock>> varaibels.
 A <<clock>> with <<valueReference>>[i] is active at the current time instant if `value[i] = fmi3True`, otherwise the <<clock>> is not active. It is allowed to call this function within the callback function `fmi3IntermediateUpdate()`.
-It is required for an FMU to directly internally set back the activation <<state>> of an <<outputClock>> latexmath:[i] to `fmi3False` if the function <<fmi3GetClock>> is called for a <<clock>> latexmath:[i] and the Co-Simulation mode is set to `fmi3ModeScheduledExecutionSimulation`.
+It is required for an FMU to directly internally set back the activation <<state>> of an <<outputClock>> latexmath:[i] to `fmi3False` if the function <<fmi3GetClock>> is called for a <<clock>> latexmath:[i] and the interface is set to `fmi3ScheduledExecutionSimulation`.
 _[This is required to allow preemption.]_
 // TODO: add xref to 4.4.5
 
@@ -987,11 +987,11 @@ _If such a variable is not defined, the directional derivative with respect to t
 
 * latexmath:[\color{blue}{\mathbf{v}_{rest}}] is the set of <<input>> variables of function *h* that either changes its value in the actual mode but are non-Real variables, or do not change their values in this mode, but change their values in other modes _[for example, discrete-time <<input,`inputs`>> in *Continuous-Time Mode*]_.
 
-If the capability attribute `providesDirectionalDerivative = true`, <<fmi3GetDirectionalDerivative>> computes a linear combination of the partial derivatives of *h* with respect to the selected <<input>> variables latexmath:[\color{blue}{\mathbf{v}_{known}}]:
+If the capability attribute `providesDirectionalDerivative` is `true`, <<fmi3GetDirectionalDerivative>> computes a linear combination of the partial derivatives of *h* with respect to all elements of the selected <<input>> variables latexmath:[\color{blue}{\mathbf{v}_{known}}]:
 
 [latexmath]
 ++++
-\Delta \mathbf{v}_{unknown} = \frac{\partial \mathbf{h}}{\partial \mathbf{v}_{known}} \Delta \mathbf{v}_{known}
+\Delta \mathbf{v}_{unknown} = \sum_i \frac{\partial \mathbf{h}}{\partial \mathbf{v}(i)_{known}}\Delta \mathbf{v}(i)_{known}
 ++++
 
 Accordingly, it computes the directional derivative vector latexmath:[\color{blue}{\Delta \mathbf{v}_{unknown}}] (`dvUnknown`) from the seed vector latexmath:[\color{blue}{\Delta \mathbf{v}_{known}}] (`dvKnown`)
@@ -1065,6 +1065,48 @@ _See e.g. http://www.netlib.org/toms/618._
 _After each such call, the elements of the resulting directional derivative vector are copied into their correct locations of the partial derivative matrix._
 
 _More details and implementational notes are available from <<ABL12>>.]_
+
+Directional derivatives for higher dimension variables are almost treated in the same way.
+Consider, for example, an FMU which calculates its output latexmath:[{Y}] by multiplying its 2x2 input latexmath:[{U}] with a 3x2 constant gain latexmath:[{K}], with
+
+[latexmath]
+++++
+K=
+\begin{bmatrix}
+a, b
+\\
+c, d
+\\
+e, f
+\end{bmatrix}
+++++
+The output latexmath:[{Y=K U}] is a matrix of size 3x2.
+The directional derivative of an output element latexmath:[{Y(i,j)}] with respect to the input latexmath:[{U}]) is:
+
+[latexmath]
+++++
+\Delta Y(i,j) =
+\frac{\delta Y}{\delta U(1,1)} \cdot \Delta U(1,1) +
+\frac{\delta Y}{\delta U(1,2)} \cdot \Delta U(1,2) +
+\frac{\delta Y}{\delta U(2,1)} \cdot \Delta U(2,1) +
+\frac{\delta Y}{\delta U(2,2)} \cdot \Delta U(2,2)
+++++
+
+[latexmath]
+++++
+\Delta \mathbf{Y} =
+\begin{bmatrix}
+a \Delta U(1,1)+b \Delta U(2,1), a \Delta U(1,2)+ b \Delta U(2,2)
+\\
+c \Delta U(1,1)+d \Delta U(2,1), c \Delta U(1,2)+ d \Delta U(2,2)
+\\
+e \Delta U(1,1)+f \Delta U(2,1), e \Delta U(1,2)+ f \Delta U(2,2)
+\end{bmatrix}
+++++
+
+To get the directional derivative of latexmath:[{Y}] with respect to latexmath:[{U(2,1)}] the command `fmi3GetDirectionalDerivative(m, vr_Y, 1, vr_U, 1, {0.0, 0.0, 1.0, 0.0}, 4, dd, 6)` can be used where `vr_Y` and `vr_U` are references of the variable latexmath:[{Y}] and latexmath:[{U}], respectively.
+Note that in order to get the directional derivative of latexmath:[{Y}] with respect to latexmath:[{U(2,1)}], the seed value `{0, 0, 1.0, 0}` has been used.
+The retrieved directional derivative `dd` is stored in a matrix of size 3x2, so `nDvUnknown` is 6.
 
 ==== Getting Number of Event Indicators
 
