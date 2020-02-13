@@ -67,24 +67,17 @@ typedef enum {
 /* tag::InterfaceType[] */
 typedef enum {
     fmi3ModelExchange,
-    fmi3CoSimulation
+    fmi3CoSimulation,
+    fmi3HybridCoSimulation,
+    fmi3ScheduledExecutionSimulation
 } fmi3InterfaceType;
 /* end::InterfaceType[] */
-
-/* tag::CoSimulationMode[] */
-typedef enum {
-    fmi3ModeCoSimulation,
-    fmi3ModeHybridCoSimulation,
-    fmi3ModeScheduledExecutionSimulation
-} fmi3CoSimulationMode;
-/* end::CoSimulationMode[] */
 
 /* tag::CoSimulationConfiguration[] */
 typedef struct {
     fmi3Boolean intermediateVariableGetRequired;
     fmi3Boolean intermediateInternalVariableGetRequired;
     fmi3Boolean intermediateVariableSetRequired;
-    fmi3CoSimulationMode coSimulationMode;
 } fmi3CoSimulationConfiguration;
 /* end::CoSimulationConfiguration[] */
 
