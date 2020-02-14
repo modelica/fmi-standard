@@ -267,6 +267,7 @@ FMI3_Export fmi3DeSerializeFMUStateTYPE    fmi3DeSerializeFMUState;
 
 /* Getting partial derivatives */
 FMI3_Export fmi3GetDirectionalDerivativeTYPE fmi3GetDirectionalDerivative;
+FMI3_Export fmi3GetAdjointDerivativeTYPE     fmi3GetAdjointDerivative;
 
 /* Entering and exiting the Configuration or Reconfiguration Mode */
 FMI3_Export fmi3EnterConfigurationModeTYPE fmi3EnterConfigurationMode;
