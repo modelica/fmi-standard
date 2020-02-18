@@ -488,15 +488,15 @@ typedef fmi3Status fmi3GetIntervalFractionTYPE(fmi3Instance instance,
 typedef fmi3Status fmi3SetIntervalDecimalTYPE(fmi3Instance instance,
                                               const fmi3ValueReference valueReferences[],
                                               size_t nValueReferences,
-                                              fmi3Float64 interval[]);
+                                              const fmi3Float64 interval[]);
 /* end::SetIntervalDecimal[] */
 
 /* tag::SetIntervalFraction[] */
 typedef fmi3Status fmi3SetIntervalFractionTYPE(fmi3Instance instance,
                                                const fmi3ValueReference valueReferences[],
                                                size_t nValueReferences,
-                                               fmi3UInt64 intervalCounter[],
-                                               fmi3UInt64 resolution[]);
+                                               const fmi3UInt64 intervalCounter[],
+                                               const fmi3UInt64 resolution[]);
 /* end::SetIntervalFraction[] */
 
 /* tag::NewDiscreteStates[] */
