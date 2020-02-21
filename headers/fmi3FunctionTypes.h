@@ -450,13 +450,13 @@ typedef fmi3Status fmi3GetAdjointDerivativeTYPE(fmi3Instance instance,
                                                 size_t nUnknowns,
                                                 const fmi3ValueReference knowns[],
                                                 size_t nKnowns,
-                                                const fmi3Float64 deltaUnknowns[],
-                                                size_t nDeltaOfUnknowns,
-                                                fmi3Float64 deltaKnowns[],
-                                                size_t nDeltaKnowns);
-/* end::GetAdjointDerivative[] */  
-  
-  
+                                                const fmi3Float64 seed[],
+                                                size_t nSeed,
+                                                fmi3Float64 sensitivity[],
+                                                size_t nSensitivity);
+/* end::GetAdjointDerivative[] */
+
+
 
 /* Entering and exiting the Configuration or Reconfiguration Mode */
 /* tag::EnterConfigurationMode[] */
