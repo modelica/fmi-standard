@@ -934,30 +934,58 @@ These functions are only supported by the FMU, if the optional capability flags 
 It is optionally possible to provide evaluation of partial derivatives for an FMU.
 For Model Exchange, this means computing the partial derivatives at a particular time instant.
 For Co-Simulation, this means to compute the partial derivatives at a particular communication point.
-There are two access functions provided: one to compute the directional derivatives, and another to calculate the adjoint derivatives.
+
+There are two access functions:
+
+- <<fmi3GetDirectionalDerivative>> to compute the directional derivatives latexmath:[\mathbf{v}_{sens} = \mathbf{J} \cdot \mathbf{v}_{seed}], and
+
+- <<fmi3GetAdjointDerivative>> to calculate the adjoint derivatives latexmath:[\mathbf{v}_{sens}^T = \mathbf{v}_{seed}^T \cdot \mathbf{J}]
+
+with the Jacobian
+
+[latexmath]
+++++
+\mathbf{J}
+=
+\begin{bmatrix}
+\frac{\partial u_1}{\partial k_1} & \cdots & \frac{\partial u_1}{\partial k_n} \\
+\vdots & \ddots & \vdots \\
+\frac{\partial u_m}{\partial k_1} & \cdots & \frac{\partial u_m}{\partial k_n}
+\end{bmatrix}
+++++
+
+where latexmath:[\mathbf{u}] are the latexmath:[m] unknowns and latexmath:[\mathbf{k}] are the latexmath:[n] knowns.
+
 Both functions can also be used to construct the partial derivative matrices.
+The functions may only be called if their availability is indicated by the attributes `providesDirectionalDerivative` and `providesAdjointDerivative` respectively.
 
-===== Directional derivatives
-
-[[fmi3GetDirectionalDerivative,`fmi3GetDirectionalDerivative()`]]
+[[fmi3GetDirectionalDerivative,`fmi3GetDirectionalDerivative`]]
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=GetDirectionalDerivative]
 ----
 
-This function computes the directional derivatives of an FMU.
+[[fmi3GetAdjointDerivative,`fmi3GetAdjointDerivative`]]
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=GetAdjointDerivative]
+----
 
-- Argument `vrUnknown` contains the <<valueReference>>pass:[s] of the unknown variables.
-The number of <<valueReference>>pass:[s] is given by the argument `nUnknown`.
+Both functions have the same parameters:
 
-- Argument `vrKnown` contains the <<valueReference>>pass:[s] of the known variables.
-The number of <<valueReference>>pass:[s] is given by the argument `nKnown`.
+- `unknowns`: value references to the unknowns
+- `nUnknowns`: length of `unknowns`
+- `knowns`:value references of the knowns
+- `nKnowns`: length of `knowns`
+- `seed`: seed values
+- `nSeed`: length of `seed`
+- `sensitivity`: the sensitivities
+- `nSensitivity`: length of `sensitivity`
 
-- Arguments `dvKnown` and `dvUnknown` contain the serialized values of the referenced variables (serialization of values as defined in <<get-and-set-variable-values>>).
+Note that array variables will be serialized, so `nSeed` is only equal to `nUnknowns`, if all value references of `unknowns` point to scalar variables.
+Likewise `nSensitivity` is only equal to `nKnowns` if all value references of `knowns` point to scalar variables.
 
-- Argument `nDvKnown` provides the number of values in `dvKnown` which is only equal to `nKnown` if all <<valueReference>>pass:[s] of `vrKnown` point to variables.
-
-- Argument `nDvUnknown` provides the number of values in `dvUnknown` which is only equal to `nUnknown` if all <<valueReference>>pass:[s] of `vrUnknown` point to variables.
+===== Directional derivatives
 
 An FMU has different states and in every state an FMU might be described by different equations and different unknowns.
 The precise definitions are given in the mathematical descriptions of Model Exchange (<<math-model-exchange>>) and Co-Simulation (<<math-co-simulation>>).
@@ -1127,48 +1155,6 @@ _If one would like to construct the full Jacobian matrix, one can use either <<f
 _However in the applications motivating the adjoint derivatives, one does not need the full Jacobian matrix latexmath:[\mathbf{J}], but vector  latexmath:[\mathbf{v}^T] multiplied from the left to the Jacobian, i.e. latexmath:[\mathbf{v}^T\mathbf{J}]._
 _For computing the full Jacobian matrix the column-wise construct is generally more efficient.]_
 
-Using the same notation as for the directional derivatives for the different states in which the FMU can be, the adjoint derivative is
-
-[latexmath]
-++++
-\mathbf{v}_{sens}^T = \mathbf{v}_{seed}^T \cdot \mathbf{J}
-++++
-
-with the Jacobian
-
-[latexmath]
-++++
-\mathbf{J}
-=
-\begin{bmatrix}
-\frac{\partial u_1}{\partial k_1} & \cdots & \frac{\partial u_1}{\partial k_n} \\
-\vdots & \ddots & \vdots \\
-\frac{\partial u_m}{\partial k_1} & \cdots & \frac{\partial u_m}{\partial k_n}
-\end{bmatrix}
-++++
-
-where latexmath:[\mathbf{u}] are the latexmath:[m] unknowns and latexmath:[\mathbf{k}] are the latexmath:[n] knowns.
-
-[[fmi3GetAdjointDerivative,`fmi3GetAdjointDerivative()`]]
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=GetAdjointDerivative]
-----
-
-Parameters:
-
-- `unknowns`: value references to the unknowns
-- `nUnknowns`: length of `unknowns`
-- `knowns`:value references of the knowns
-- `nKnowns`: length of `knowns`
-- `seed`: seed values
-- `nSeed`: length of `seed`
-- `sensitivity`: the sensitivities
-- `nSensitivity`: length of `sensitivity`
-
-Note that array variables will be serialized, so `nSeed` is only equal to `nUnknowns`, if all value references of `unknowns` point to scalar variables.
-Likewise `nSensitivity` is only equal to `nKnowns` if all value references of `knowns` point to scalar variables.
-
 _Example:_ +
 _Assume an FMU has the output equations_
 
@@ -1188,7 +1174,7 @@ h_2(u_1, u_2)
 ++++
 
 _and latexmath:[\left( w_1  w_2 \right) \cdot \mathbf{ \frac{\partial h}{\partial u} }] for some vector latexmath:[\left( w_1  w_2 \right)^T] is needed._
-_Then one can get this with one function call of <<fmi3GetAdjointDerivative>> (with arguements latexmath:[v_{unknown} = \left \{ y_1, y_2 \right \},  v_{known} = \left \{ u_1, u_2 \right \}, \Delta v_{unknown} = \left( w_1 w_2 \right)^T] ), while with <<fmi3GetDirectionalDerivative>> at least two calls would be necessary to first construct the Jacobian column-wise and then multiplying from the right with latexmath:[\left( w_1  w_2 \right)^T] ]_
+_Then one can get this with one function call of <<fmi3GetAdjointDerivative>> (with arguments_ latexmath:[v_{unknown} = \left \{ y_1, y_2 \right \},  v_{known} = \left \{ u_1, u_2 \right \}, \Delta v_{unknown} = \left( w_1 w_2 \right)^T] _), while with <<fmi3GetDirectionalDerivative>> at least two calls would be necessary to first construct the Jacobian column-wise and then multiplying from the right with_ latexmath:[\left( w_1  w_2 \right)^T] _]_
 
 ==== Getting Number of Event Indicators
 
