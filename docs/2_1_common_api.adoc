@@ -78,7 +78,7 @@ To support the first variant macros are provided in `fmi3Functions.h` to build t
 
 _[These macros can be defined differently in a target specific variant of `fmi3Functions.h` to adjust them to the requirements of the supported compilers and platforms of the importing tool.]_
 
-An FMU C-file must include at the beginning a `define` of `FMI3_FUNCTION_PREFIX` as the `modelIdentifier` attribute defined in `<fmiModelDescription><ModelExchange>` or `<fmiModelDescription><CoSimulation>`together with `pass:[_]` at the end (see sections <<ModelExchange>> and <<schema-co-simulation>>).
+An FMU C-file must include at the beginning a `define` of `FMI3_FUNCTION_PREFIX` with the same value as the value of the `modelIdentifier` attribute defined in `<fmiModelDescription><ModelExchange>` or `<fmiModelDescription><CoSimulation>` together with `pass:[_]` at the end (see sections <<ModelExchange>> and <<schema-co-simulation>>).
 
 This `define` must be directly followed with an `#include "fmi3Functions.h"` statement.
 
@@ -89,7 +89,7 @@ Typically, FMU functions are used as follows:
 // FMU is shipped with C source code, or with static link library
 #define FMI3_FUNCTION_PREFIX MyModel_
 #include "fmi3Functions.h"
-< usage of the FMU functions e.g. fmi3SetTime >
+< usage of the FMU functions e.g. MyModel_fmi3SetTime >
 
 // FMU is shipped with DLL/SharedObject
 #include "fmi3FunctionTypes.h"
@@ -159,11 +159,12 @@ include::../headers/fmi3PlatformTypes.h[tags=ValueReference]
 ----
 
 This is a handle to a (base type) variable value of the model.
-Handle and base type (such as `fmi3Float64`) uniquely identify the value of a variable.
-Variables of the same base type that have the same handle, always have identical values, but other parts of the variable definition might be different _[for example, min/max attributes]_.
+A handle uniquely identifies the value of a variable.
+Variables that have the same handle, always have identical values, but other parts of the variable definition might be different _[for example, min/max attributes]_.
 
-All structured entities, such as records or arrays, are flattened into a set of scalar values of type `fmi3Float64`, `fmi3Int32` etc.
-An `fmi3ValueReference` references one such entity, record or array.
+Structured entities, such as records, must be flattened into a set of values (scalars or arrays) of type `fmi3Float64`, `fmi3Int32` etc.
+Arrays may be flattened into a set of scalars or represented directly as array values.
+An `fmi3ValueReference` references one such value (scalar or array).
 The coding of `fmi3ValueReference` is a "secret" of the environment that generated the FMU.
 The interface to the equations only provides access to variables via this handle.
 Extracting concrete information about a variable is specific to the used environment that reads the Model Description File in which the value handles are defined.
@@ -174,7 +175,7 @@ If a function in the following sections is called with a wrong `fmi3ValueReferen
 include::../headers/fmi3PlatformTypes.h[tags=VariableTypes]
 ----
 
-These are the basic data types used in the interfaces of the C functions.
+These data types are the base types used in the interfaces of the C functions.
 More data types might be included in future versions of the interface.
 In order to keep flexibility, especially for embedded systems or for high performance computers, the exact data types or the word length of a number are not standardized.
 Instead, the precise definition (in other words, the header file `fmi3PlatformTypes.h`) is provided by the environment where the FMU shall be used.
@@ -361,6 +362,8 @@ Variables can be referenced in a message with `pass:[#]<ValueReference>pass:[#]`
 If the character `pass:[#]` shall be included in the message, it has to be prefixed with `pass:[#]`, so `pass:[#]` is an escape character.
 +
 _[Example: The message `\#1365# must be larger than zero (used in IO channel ##4)` might be changed by the <<logMessage>> function to `body.m must be larger than zero (used in IO channel #4)` if `body.m` is the name of the variable with value reference 1365.]_
++
+In case `pass:[#]<ValueReference>pass:[#]` points to an alias set of variables, the environment is free to pick any, or all, of the variable names in the alias set to replace the <<valueReference>>.
 
 [[allocateMemory,`allocateMemory`]]
 Function `allocateMemory`::
@@ -568,7 +571,7 @@ Set <<parameter,`parameters`>>, <<input,`inputs`>>, and <<start>> values, and re
 
 - Argument `sizes` is a vector with the actual sizes of the values of binary variables.
 
-- Argument `nValues` provides the number of values in the `values` vector which is only equal to `nValueReferences` if all <<valueReference>>pass:[s] point to scalar variables.
+- Argument `nValues` provides the number of values in the `values` vector (and `sizes` vector, where applicable) which is only equal to `nValueReferences` if all <<valueReference>>pass:[s] point to scalar variables.
 
 - All strings passed as arguments to `fmi3SetString`, as well as all binary values passed as arguments to `fmi3SetBinary`, must be copied inside these functions, because there is no guarantee of the lifetime of strings or binary values, when these functions return.
 
@@ -1221,7 +1224,7 @@ include::../headers/fmi3FunctionTypes.h[tags=GetNumberOfVariableDependencies]
 
 This function returns the number of <<dependencies>> for a given variable.
 
-- Argument `vr` specifies the <<valueReference>> of the variable for which the number of <<dependencies>> should be returned.
+- Argument `valueReference` specifies the <<valueReference>> of the variable for which the number of <<dependencies>> should be returned.
 - Argument `nDependencies` points to the `size_t` variable that will receive the number of <<dependencies>>.
 
 The actual <<dependencies>> (of type `fmi3DependencyKind`) can be retrieved by calling the function `fmi3GetVariableDependencies`:
@@ -1235,25 +1238,25 @@ include::../headers/fmi3FunctionTypes.h[tags=GetVariableDependencies]
 
 This function returns the dependency information for a single variable.
 
-- Argument `vrDependent` specifies the <<valueReference>> of the variable for which the dependencies should be returned.
+- Argument `dependent` specifies the <<valueReference>> of the variable for which the dependencies should be returned.
 
 - Argument `nDependencies` specifies the number of dependencies that the calling environment allocated space for in the result buffers, and should correspond to the returned by calling <<fmi3GetNumberOfVariableDependencies>>.
 
-- Argument `elementIndexDependent` must point to a buffer of `size_t` values of size `nDependencies` allocated by the calling environment.
+- Argument `elementIndicesOfDependent` must point to a buffer of `size_t` values of size `nDependencies` allocated by the calling environment.
 It is filled in by this function with the element index of the dependent variable that dependency information is provided for.
 The element indices start with 1. Using the element index 0 means all elements of the variable.
 (Note: If an array has more than one dimension the indices are serialized in the same order as defined for values).
 
-- Argument `vrIndependent` must point to a buffer of `fmi3ValueReference` values of size `nDependencies` allocated by the calling environment.
+- Argument `independents` must point to a buffer of `fmi3ValueReference` values of size `nDependencies` allocated by the calling environment.
 It is filled in by this function with the value reference of the <<independent>> variable that this dependency entry is dependent upon.
 
-- Argument `elementIndexIndependent` must point to a buffer of `size_t` values of size `nDependencies` allocated by the calling environment.
+- Argument `elementIndicesIndependents` must point to a buffer of `size_t` values of size `nDependencies` allocated by the calling environment.
 It is filled in by this function with the element index of the <<independent>> variable that this dependency entry is dependent upon.
 The element indices start with 1.
 Using the element index 0 means all elements of the variable.
 (Note: If an array has more than one dimension the indices are serialized in the same order as defined for values).
 
-- Argument `dependencyType` must point to a buffer of `fmi3DependencyKind` values of size `nDependencies` allocated by the calling environment.
+- Argument `dependencyKinds` must point to a buffer of `fmi3DependencyKind` values of size `nDependencies` allocated by the calling environment.
 It is filled in by this function with the enumeration value describing the dependency of this dependency entry.
 
 If this function is called before the <<fmi3ExitInitializationMode>> call, it returns the initial dependencies.
