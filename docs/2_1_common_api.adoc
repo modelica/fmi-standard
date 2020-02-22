@@ -935,7 +935,44 @@ It is optionally possible to provide evaluation of partial derivatives for an FM
 For Model Exchange, this means computing the partial derivatives at a particular time instant.
 For Co-Simulation, this means to compute the partial derivatives at a particular communication point.
 
-There are two access functions:
+The partial derivatives refer are defined as partial derivatives of certain variables of the FMU w.r.t. to other variables:
+
+An FMU has different states and in every state an FMU might be described by different equations and different unknowns.
+The precise definitions are given in the mathematical descriptions of Model Exchange (<<math-model-exchange>>) and Co-Simulation (<<math-co-simulation>>).
+In every state, the general form of the FMU equations are:
+
+[latexmath]
+++++
+\mathbf{v}_{unknown} = \mathbf{h}(\mathbf{v}_{known}, \mathbf{v}_{rest}),
+++++
+
+where
+
+* latexmath:[\color{blue}{\mathbf{v}_{unknown}}] is the vector of unknown Real variables computed in the actual state:
+
+** *Initialization Mode*: The exposed unknowns listed under `<ModelStructure><InitialUnknowns>` that have type Real.
+
+** *Continuous-Time Mode* (Model Exchange): The continuous-time outputs and state derivatives (= the variables listed under `<ModelStructure><Outputs>` with type Real and <<variability>> = <<continuous>> and the variables listed as state derivatives under `<ModelStructure><Derivatives>`).
+
+** *Event Mode* (Model Exchange): The same variables as in the *Continuous-Time Mode* and additionally variables under `<ModelStructure><Outputs>` with type Real and <<variability>> = <<discrete>>.
+
+** *Step Mode* (Co-Simulation): The variables listed under `<ModelStructure><Outputs>` with type Real and <<variability>> = <<continuous>> or <<discrete>>.
+If `<ModelStructure><Derivatives>` is present, also the variables listed here as state derivatives.
+
+* latexmath:[\color{blue}{\mathbf{v}_{known}}] is the vector of Real <<input>> variables of function *h* that changes its value in the actual state.
+Details are described in the description of element <<dependencies>> in <<ModelStructure>>.
+_[For example continuous-time <<input,`inputs`>> in *Continuous-Time Mode*._
+_If a variable with <<causality>> = <<independent>> is explicitly defined under `ModelVariables`, a directional derivative with respect to this variable can be computed._
+_If such a variable is not defined, the directional derivative with respect to the <<independent>> variable cannot be calculated]._
+
+* latexmath:[\color{blue}{\mathbf{v}_{rest}}] is the set of <<input>> variables of function *h* that either changes its value in the actual state but are non-Real variables, or do not change their values in this state, but change their values in other states _[for example, discrete-time <<input,`inputs`>> in *Continuous-Time Mode*]_.
+
+_[The variable relationships are different in different states._
+_For example, during *Continuous-Time Mode*, a continuous-time output y does not depend on discrete-time <<input,`inputs`>> (because they are held constant between events)._
+_However, at *Event Mode*, y depends on discrete-time <<input,`inputs`>>._
+_The function may compute the directional derivatives by numerical differentiation taking into account the sparseness of the equation system, or (preferred) by analytic derivatives.]_
+
+There are two access functions for partial derivatives:
 
 - <<fmi3GetDirectionalDerivative>> to compute the directional derivatives latexmath:[\mathbf{v}_{sens} = \mathbf{J} \cdot \mathbf{v}_{seed}], and
 
@@ -987,42 +1024,7 @@ Likewise `nSensitivity` is only equal to `nKnowns` if all value references of `k
 
 ===== Directional derivatives
 
-An FMU has different states and in every state an FMU might be described by different equations and different unknowns.
-The precise definitions are given in the mathematical descriptions of Model Exchange (<<math-model-exchange>>) and Co-Simulation (<<math-co-simulation>>).
-In every state, the general form of the FMU equations are:
-
-[latexmath]
-++++
-\mathbf{v}_{unknown} = \mathbf{h}(\mathbf{v}_{known}, \mathbf{v}_{rest}),
-++++
-
-where
-
-* latexmath:[\color{blue}{\mathbf{v}_{unknown}}] is the vector of unknown Real variables computed in the actual state:
-
-** *Initialization Mode*: The exposed unknowns listed under `<ModelStructure><InitialUnknowns>` that have type Real.
-
-** *Continuous-Time Mode* (Model Exchange): The continuous-time outputs and state derivatives (= the variables listed under `<ModelStructure><Outputs>` with type Real and <<variability>> = <<continuous>> and the variables listed as state derivatives under `<ModelStructure><Derivatives>`).
-
-** *Event Mode* (Model Exchange): The same variables as in the *Continuous-Time Mode* and additionally variables under `<ModelStructure><Outputs>` with type Real and <<variability>> = <<discrete>>.
-
-** *Step Mode* (Co-Simulation): The variables listed under `<ModelStructure><Outputs>` with type Real and <<variability>> = <<continuous>> or <<discrete>>.
-If `<ModelStructure><Derivatives>` is present, also the variables listed here as state derivatives.
-
-* latexmath:[\color{blue}{\mathbf{v}_{known}}] is the vector of Real <<input>> variables of function *h* that changes its value in the actual state.
-Details are described in the description of element <<dependencies>> in <<ModelStructure>>.
-_[For example continuous-time <<input,`inputs`>> in *Continuous-Time Mode*._
-_If a variable with <<causality>> = <<independent>> is explicitly defined under `ModelVariables`, a directional derivative with respect to this variable can be computed._
-_If such a variable is not defined, the directional derivative with respect to the <<independent>> variable cannot be calculated]._
-
-* latexmath:[\color{blue}{\mathbf{v}_{rest}}] is the set of <<input>> variables of function *h* that either changes its value in the actual state but are non-Real variables, or do not change their values in this state, but change their values in other states _[for example, discrete-time <<input,`inputs`>> in *Continuous-Time Mode*]_.
-
-_[The variable relationships are different in different states._
-_For example, during *Continuous-Time Mode*, a continuous-time output y does not depend on discrete-time <<input,`inputs`>> (because they are held constant between events)._
-_However, at *Event Mode*, y depends on discrete-time <<input,`inputs`>>._
-_The function may compute the directional derivatives by numerical differentiation taking into account the sparseness of the equation system, or (preferred) by analytic derivatives._
-
-_Example:_ +
+_[ Example:_ +
 _Assume an FMU has the output equations_
 
 [latexmath]
