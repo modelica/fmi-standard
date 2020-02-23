@@ -97,16 +97,16 @@ fmi3SetTimeTYPE *myname_setTime = < load symbol "fmi3SetTime" from DLL/SharedObj
 < usage of the FMU function pointers, e.g. myname_setTime >
 ----
 
-A function that is defined as `fmi3GetReal` is changed by the macros to a function name as follows:
+A function that is defined as `fmi3GetInt8` is changed by the macros to a function name as follows:
 
 - If the FMU is shipped with C source code or with static link library: +
-The constructed function name is `MyModel_fmi3GetReal`.
+The constructed function name is `MyModel_fmi3GetInt8`.
 In other words the function name is prefixed with the model name and an `pass:[_]`.
 A simulation environment can therefore construct the relevant function names by generating code for the actual function call.
 In case of a static link library, the name of the library is `MyModel.lib` on Windows and `libMyModel.a` on Linux; in other words the `modelIdentifier` attribute is used to create the library name.
 
 - If the FMU is shipped with DLL/SharedObject: +
-The constructed function name is `fmi3GetReal`, in other words, it is not changed.
+The constructed function name is `fmi3GetInt8`, in other words, it is not changed.
 _[This can be realized in the case of a source code FMU with a target-specific version of `fmi3Functions.h` that does not use FMI3_FUNCTION_PREFIX to construct the function names.]_
 A simulation environment will then dynamically load this library and will explicitly import the function symbols by providing the FMI function names as strings.
 The name of the library is `MyModel.dll` on Windows or `MyModel.so` on Linux; in other words the `modelIdentifier` attribute is used as library name.
@@ -168,7 +168,7 @@ An `fmi3ValueReference` references one such value (scalar or array).
 The coding of `fmi3ValueReference` is a "secret" of the environment that generated the FMU.
 The interface to the equations only provides access to variables via this handle.
 Extracting concrete information about a variable is specific to the used environment that reads the Model Description File in which the value handles are defined.
-If a function in the following sections is called with a wrong `fmi3ValueReference` value _[for example, setting a constant with a `fmi3SetReal` function call]_, then the function has to return with an error ( `fmi3Status = fmi3Error`, see <<status-returned-by-functions>>).
+If a function in the following sections is called with a wrong `fmi3ValueReference` value _[for example, setting a constant with a `fmi3SetInt8` function call]_, then the function has to return with an error ( `fmi3Status = fmi3Error`, see <<status-returned-by-functions>>).
 
 [source, C]
 ----
@@ -216,7 +216,7 @@ _[Functions `fmi3SetXXX` are usually not performing calculations but just store 
 _The actual calculation is performed by `fmi3GetXXX` functions._
 _Still `fmi3SetXXX` functions could check whether the input arguments are in their validity range._
 _If not, these functions could return with `fmi3Discard`.]_
-(Model Exchange: `fmi3SetReal`, `fmi3SetInteger`, `fmi3SetBoolean`, `fmi3SetString`, <<fmi3SetContinuousStates>>, `fmi3GetReal`, <<fmi3GetDerivatives>>, <<fmi3GetContinuousStates>>, <<fmi3GetEventIndicators>>; Co-Simulation: `fmi3SetReal`, `fmi3SetInteger`, `fmi3SetBoolean`, `fmi3SetString`, <<fmi3DoStep>>, `fmi3GetXXXStatus`):
+(Model Exchange: `fmi3Set{VariableType}`, <<fmi3SetContinuousStates>>, `fmi3Get{VariableType}`, <<fmi3GetDerivatives>>, <<fmi3GetContinuousStates>>, <<fmi3GetEventIndicators>>; Co-Simulation: `fmi3Set{VariableType}`, <<fmi3DoStep>>):
 +
 For Model Exchange: It is recommended to perform a smaller step size and evaluate the model equations again, for example because an iterative solver in the model did not converge or because a function is outside of its domain _[for example, `sqrt(<negative number>)`]_.
 If this is not possible, the simulation has to be terminated.
@@ -971,24 +971,24 @@ In every mode, the general form of the FMU equations are:
 
 where
 
-* latexmath:[\color{blue}{\mathbf{v}_{unknown}}] is the vector of unknown Real variables computed in the actual mode:
+* latexmath:[\color{blue}{\mathbf{v}_{unknown}}] is the vector of unknown variables computed in the actual mode:
 
-** *Initialization Mode*: The exposed unknowns listed under `<ModelStructure><InitialUnknowns>` that have type Real.
+** *Initialization Mode*: The exposed unknowns listed under `<ModelStructure><InitialUnknowns>` that have a float type.
 
-** *Continuous-Time Mode* (Model Exchange): The continuous-time outputs and state derivatives (= the variables listed under `<ModelStructure><Outputs>` with type Real and <<variability>> = <<continuous>> and the variables listed as state derivatives under `<ModelStructure><Derivatives>`).
+** *Continuous-Time Mode* (Model Exchange): The continuous-time outputs and state derivatives (= the variables listed under `<ModelStructure><Outputs>` with a float type and <<variability>> = <<continuous>> and the variables listed as state derivatives under `<ModelStructure><Derivatives>`).
 
-** *Event Mode* (Model Exchange): The same variables as in the *Continuous-Time Mode* and additionally variables under `<ModelStructure><Outputs>` with type Real and <<variability>> = <<discrete>>.
+** *Event Mode* (Model Exchange): The same variables as in the *Continuous-Time Mode* and additionally variables under `<ModelStructure><Outputs>` with a float type and <<variability>> = <<discrete>>.
 
-** *Step Mode* (Co-Simulation): The variables listed under `<ModelStructure><Outputs>` with type Real and <<variability>> = <<continuous>> or <<discrete>>.
+** *Step Mode* (Co-Simulation): The variables listed under `<ModelStructure><Outputs>` with a float type and <<variability>> = <<continuous>> or <<discrete>>.
 If `<ModelStructure><Derivatives>` is present, also the variables listed here as state derivatives.
 
-* latexmath:[\color{blue}{\mathbf{v}_{known}}] is the vector of Real <<input>> variables of function *h* that changes its value in the actual mode.
+* latexmath:[\color{blue}{\mathbf{v}_{known}}] is the vector of <<input>> variables of function *h* that changes its value in the actual mode.
 Details are described in the description of element <<dependencies>> in <<ModelStructure>>.
 _[For example continuous-time <<input,`inputs`>> in *Continuous-Time Mode*._
 _If a variable with <<causality>> = <<independent>> is explicitly defined under `ModelVariables`, a directional derivative with respect to this variable can be computed._
 _If such a variable is not defined, the directional derivative with respect to the <<independent>> variable cannot be calculated]._
 
-* latexmath:[\color{blue}{\mathbf{v}_{rest}}] is the set of <<input>> variables of function *h* that either changes its value in the actual mode but are non-Real variables, or do not change their values in this mode, but change their values in other modes _[for example, discrete-time <<input,`inputs`>> in *Continuous-Time Mode*]_.
+* latexmath:[\color{blue}{\mathbf{v}_{rest}}] is the set of <<input>> variables of function *h* that either changes its value in the actual mode but are non-float variables, or do not change their values in this mode, but change their values in other modes _[for example, discrete-time <<input,`inputs`>> in *Continuous-Time Mode*]_.
 
 If the capability attribute `providesDirectionalDerivative` is `true`, <<fmi3GetDirectionalDerivative>> computes a linear combination of the partial derivatives of *h* with respect to all elements of the selected <<input>> variables latexmath:[\color{blue}{\mathbf{v}_{known}}]:
 

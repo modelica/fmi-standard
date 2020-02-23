@@ -8,7 +8,7 @@ This section contains the interface description to access the input/output data 
 
 <<input,`Input`>> and <<output>> variables and other variables are accessed via the `fmi3Get{VariableTypes}` and `fmi3Set{VariableTypes}` functions, defined in <<get-and-set-variable-values>>.
 
-In order to enable the slave to interpolate the <<continuous>> real <<input,`inputs`>> between communication steps, the <<derivative,`derivatives`>> of the <<input,`inputs`>> with respect to time can be provided.
+In order to enable the slave to interpolate the <<continuous>> float <<input,`inputs`>> between communication steps, the <<derivative,`derivatives`>> of the <<input,`inputs`>> with respect to time can be provided.
 Also, higher <<derivative,`derivatives`>> can be set to allow higher order interpolation.
 Whether the slave is able to handle the <<derivative,`derivatives`>> of <<input,`inputs`>> is given by the unsigned integer capability flag `MaxInputDerivativeOrder`. It delivers the maximum order of the input <<derivative>>.
 
@@ -18,17 +18,17 @@ Whether the slave is able to handle the <<derivative,`derivatives`>> of <<input,
 include::../headers/fmi3FunctionTypes.h[tags=SetInputDerivatives]
 ----
 
-Sets the n-th time <<derivative>> of real <<input>> variables.
+Sets the n-th time <<derivative>> of float <<input>> variables.
 Argument `vr` is a vector of value references that define the variables whose <<derivative,`derivatives`>> shall be set.
 The array `order` contains the orders of the respective <<derivative>> (1 means the first <<derivative>>, 0 is not allowed).
 Argument `value` is a vector with the values of the <<derivative,`derivatives`>>.
 `nValueReferences` is the dimension of the vectors. +
-Differents input variables may have different interpolation order. +
-Restrictions on using the function are the same as for the `fmi3SetReal` function.
+Different input variables may have different interpolation order. +
+Restrictions on using the function are the same as for the `fmi3Set{VariableType}` function.
 
 <<input,`Inputs`>> and their <<derivative,`derivatives`>> are set with respect to the beginning of a communication time step.
 
-To allow interpolation/approximation of the real output variables between communication steps (if they are used as inputs for other slaves), the <<derivative,`derivatives`>> of the <<output,`outputs`>> with respect to time can be read.
+To allow interpolation/approximation of the float output variables between communication steps (if they are used as inputs for other slaves), the <<derivative,`derivatives`>> of the <<output,`outputs`>> with respect to time can be read.
 Whether the slave is able to provide the <<derivative,`derivatives`>> of <<output,`output`>> is given by the unsigned integer capability flag `MaxOutputDerivativeOrder`.
 It delivers the maximum order of the <<output>> <<derivative>>.
 If the actual order is lower (because the order of integration algorithm is low), the retrieved value is 0.
@@ -47,7 +47,7 @@ Retrieves the n-th <<derivative>> of <<output>> values.
 Argument `vr` is a vector of `nValueReferences` value references that define the variables whose <<derivative,`derivatives`>> shall be retrieved.
 The array `order` contains the order of the respective <<derivative>> (1 means the first <<derivative>>, 0 is not allowed).
 Argument `value` is a vector with the actual values of the <<derivative,`derivatives`>>. +
-Restrictions on using the function are the same as for the `fmi3GetReal` function.
+Restrictions on using the function are the same as for the `fmi3Get{VariableType}` function.
 
 The returned <<output,`outputs`>> correspond to the current slave time.
 E.g. after a successful call to <<fmi3DoStep>> the returned values are related to the end of the communication time step.
@@ -366,7 +366,7 @@ retrieved values are useable for debugging only ]_
 ===== Code Example for fmi3CoSimulation
 
 In the following example, the usage of the FMI functions is sketched in order to clarify the typical calling sequence of the functions in a simulation environment.
-We consider two slaves, where both have one <<continuous>> real <<input>> and one <<continuous>> real <<output>> which are connected in the following way:
+We consider two slaves, where both have one <<continuous>> float <<input>> and one <<continuous>> float <<output>> which are connected in the following way:
 
 .Connection graph of the slaves.
 image::images/co-simulation-connection-of-slaves.svg[width=30%, align="center"]
@@ -871,7 +871,7 @@ In case of `fmi3Discard` or `fmi3Error` the master must wait until all other tas
 +
 It is recommended to call `fmi3Set{VariableType}` and `fmi3Get{VariableType}` in the same task as <<fmi3ActivateModelPartition>> for setting and retrieving variable values associated to a <<clock>> activation.
 
-<<get-and-set-variable-values,fmi3Set{VariableType}>>, `fmi3SetRealInputDerivatives`::
+<<get-and-set-variable-values,fmi3Set{VariableType}>>, `fmi3SetInputDerivatives`::
 Is called before the start of the computation of a model partition (i.e. before call of <<fmi3ActivateModelPartition>>) and only for global variables and variables associated to the <<inputClock>> assigned to the model partition.
 +
 The restrictions related to variable <<causality>> and <<variability>> defined for *Step Mode* in `fmi3CoSimulation` apply.
@@ -880,7 +880,7 @@ If the function returns with `fmi3OK` or `fmi3Warning` the FMU stays in this sta
 In case the function returns `fmi3Fatal` the master can prematurely end all tasks related to the computation of model partitions of this FMU.
 In case the function returns `fmi3Discard` or `fmi3Error` the master must wait until all other tasks related to the computation of the model partitions of this FMU have ended, but new tasks must not be started (e.g. related to <<outputClock>> ticks) and all other function calls for this FMU must also return `fmi3Discard` or `fmi3Error` until the state *Terminated* is reached.
 
-<<get-and-set-variable-values,fmi3Get{VariableType}>>, `fmi3GetRealOutputDerivatives`, <<fmi3GetDirectionalDerivative>>`::
+<<get-and-set-variable-values,fmi3Get{VariableType}>>, `fmi3GetOutputDerivatives`, <<fmi3GetDirectionalDerivative>>`::
 Is called after the end of the computation of a model partition (i.e. after return of <<fmi3ActivateModelPartition>>) and only for global variables and variables associated to the <<inputClock>> assigned to the model partition.
 +
 The restrictions related to variable <<causality>> and <<variability>> defined for *Step Mode* in `fmi3CoSimulation` apply.
@@ -971,7 +971,7 @@ Allowed Function Calls::
 - `fmi3Set{VariableTypes}`: Only for variables with <<causality>> = <<structuralParameter>> and <<variability>> = <<tunable>>.
 
 Forbidden Function Calls::
-Additionally to the generally forbidden functions in Scheduled Execution Simulation listed above the following functions must not be called in this state: <<fmi3EnterConfigurationMode>>, <<fmi3Instantiate>>, <<fmi3SetupExperiment>>, <<fmi3EnterInitializationMode>>, <<fmi3ExitInitializationMode>>, <<fmi3GetDoStepDiscardedStatus>>, <<fmi3ActivateModelPartition>>,`fmi3SetRealInputDerivatives`, <<fmi3GetDirectionalDerivative>>, `fmi3GetRealOutputDerivatives`, `fmi3Get{VariableTypes}`, <<fmi3DoEarlyReturn>>
+Additionally to the generally forbidden functions in Scheduled Execution Simulation listed above the following functions must not be called in this state: <<fmi3EnterConfigurationMode>>, <<fmi3Instantiate>>, <<fmi3SetupExperiment>>, <<fmi3EnterInitializationMode>>, <<fmi3ExitInitializationMode>>, <<fmi3GetDoStepDiscardedStatus>>, <<fmi3ActivateModelPartition>>,`fmi3SetInputDerivatives`, <<fmi3GetDirectionalDerivative>>, `fmi3GetOutputDerivatives`, `fmi3Get{VariableTypes}`, <<fmi3DoEarlyReturn>>
 
 // TODO: add non-normative table of states and function calls
 
