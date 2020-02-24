@@ -634,7 +634,7 @@ fmi3Status fmi3GetIntervalDecimal(fmi3Instance instance,
 
 fmi3Status fmi3SetIntervalDecimal(fmi3Instance instance,
                                       const fmi3ValueReference valueReferences[], size_t nValueReferences,
-                                  fmi3Float64 interval[]) {
+                                  const fmi3Float64 interval[]) {
     NOT_IMPLEMENTED
 }
 
@@ -646,7 +646,7 @@ fmi3Status fmi3GetIntervalFraction(fmi3Instance instance,
 
 fmi3Status fmi3SetIntervalFraction(fmi3Instance instance,
                                    const fmi3ValueReference valueReferences[], size_t nValueReferences,
-                                   fmi3UInt64 intervalCounter[], fmi3UInt64 resolution[]) {
+                                   const fmi3UInt64 intervalCounter[], const fmi3UInt64 resolution[]) {
     NOT_IMPLEMENTED
 }
 
