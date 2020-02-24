@@ -376,7 +376,7 @@ It consists of zero or more `Unit` definitions.
 _[If no units are defined, element `<UnitDefinitions>` must not be present._
 _If 1 or more units are defined, this element must be present.]_
 A `Unit` is defined by its `name` attribute such as `N.m` or `N*m` or `Nm`, which must be unique with respect to all other defined elements of the `UnitDefinitions` list.
-If a variable is associated with a `Unit`, then the value of the variable has to be provided with the `fmi3SetXXX` functions or else is returned by the `fmi3GetXXX` functions with respect to this `Unit`.
+If a variable is associated with a `Unit`, then the value of the variable has to be provided with the `fmi3Set{VariableType}` functions or else is returned by the `fmi3Get{VariableType}` functions with respect to this `Unit`.
 _[The purpose of the name is to uniquely identify a unit and, for example, use it to display the unit in menus or in plots._
 _Since there is no standard to represent units in strings, and there are different ways how this is performed in different tools, no specific string representation of the unit is required.]_
 
@@ -492,7 +492,7 @@ _The `BaseUnit` definitions can be utilized for different purposes (the followin
 
 Signal connection check::
 +
-_When two signals v1 and v2 are connected together, and on at least one of the signals no `BaseUnit` element is defined, then the connection equation "v2 = v1" holds (if v1 is an <<output>> of an FMU and v2 is an <<input>> of another FMU, with `fmi3GetXXX` the value of v1 is inquired and used as value for v2 by calling `fmi3SetXXX`)._
+_When two signals v1 and v2 are connected together, and on at least one of the signals no `BaseUnit` element is defined, then the connection equation "v2 = v1" holds (if v1 is an <<output>> of an FMU and v2 is an <<input>> of another FMU, with `fmi3Get{VariableType}` the value of v1 is inquired and used as value for v2 by calling `fmi3Set{VariableType}`)._
 +
 _When two signals v1 and v2 are connected together, and for both of them `BaseUnit` elements are defined, then they must have identical exponents of their `BaseUnit`._
 _If `factor` and `offset` are also identical, again the connection equation `v2 = v1` holds._
@@ -1262,7 +1262,7 @@ _For example, when importing an FMU in a Modelica environment, a <<calculatedPar
 [[variability,`variability`]]
 Enumeration that defines the time dependency of the variable, in other words, it defines the time instants when a variable can change its value.
 _[The purpose of this attribute is to define when a result value needs to be inquired and to be stored._
-_For example, <<discrete>> variables change their values only at event instants (Model Exchange) or at a communication point (Co-Simulation) and it is therefore only necessary to inquire them with `fmi3GetXXX` and store them at event times.]_
+_For example, <<discrete>> variables change their values only at event instants (Model Exchange) or at a communication point (Co-Simulation) and it is therefore only necessary to inquire them with `fmi3Get{VariableType}` and store them at event times.]_
 Allowed values of this enumeration:
 
 [[constant,`constant`]]
@@ -1323,7 +1323,7 @@ The master can nevertheless choose different <<start>> values if it is not possi
 
 If <<causality>> = <<output>> the <<initial>> attribute value is set to <<calculated>> and no <<start>> value is provided.
 
-If `fmi3SetXXX` is not called on a variable with <<causality>> = <<input>>, then the FMU must use the <<start>> value as value of this <<input>>.
+If `fmi3Set{VariableType}` is not called on a variable with <<causality>> = <<input>>, then the FMU must use the <<start>> value as value of this <<input>>.
 
 |`canHandleMultipleSetPerTimeInstant`
 |
@@ -1331,8 +1331,8 @@ If `fmi3SetXXX` is not called on a variable with <<causality>> = <<input>>, then
 Only for Model Exchange (if only Co-Simulation FMU, this attribute must not be present.
 If both Model Exchange and Co-Simulation FMU, this attribute is ignored for Co-Simulation): +
 Only for variables with <<variability>> = <<input>> : +
-If present with value equals `false`, then only one `fmi3SetXXX` call is allowed at one super dense time instant (model evaluation) on this variable.
-That is, this <<input>> is not allowed to appear in a (real) algebraic loop requiring multiple calls of `fmi3SetXXX` on this variable _[for example, due to a Newton iteration]_. +
+If present with value equals `false`, then only one `fmi3Set{VariableType}` call is allowed at one super dense time instant (model evaluation) on this variable.
+That is, this <<input>> is not allowed to appear in a (real) algebraic loop requiring multiple calls of `fmi3Set{VariableType}` on this variable _[for example, due to a Newton iteration]_. +
 _[This flag must be set by FMUs where (internal) discrete-time <<state,`states`>> are directly updated when assigned (xd := f(xd) instead of xd = f(previous(xd)), and at least one <<output>> depends on this <<input>> and on discrete <<state,`states`>>._ +
 _It is strongly recommended that such an FMU checks the fulfillment of the requirement by itself during run-time, because an environment might not be able to check it; usually, there is a generic mechanism to import an FMU in an environment, but the mechanism to connect FMUs together is unrelated to the import mechanism._
 _For example, there is no mechanism in the Modelica language to formulate connection restrictions for C functions (the FMU) called in a Modelica model.]_
@@ -1388,13 +1388,13 @@ _[Note that this prevents any changes to the input before <<fmi3EnterInitializat
 
 - if <<causality>> = <<input>> _[in order to provide new values for <<input,`inputs`>>]_,
 
-*fmi3SetXXX* can be called on any variable for *Model Exchange at an event instant* (after calling <<fmi3EnterEventMode>> and before <<fmi3EnterContinuousTimeMode>> is called), and *for Co-Simulation at every communication point*,
+*fmi3Set{VariableType}* can be called on any variable for *Model Exchange at an event instant* (after calling <<fmi3EnterEventMode>> and before <<fmi3EnterContinuousTimeMode>> is called), and *for Co-Simulation at every communication point*,
 
 - if <<causality>> = <<parameter>> and <<variability>> = <<tunable>> _[in order to change the value of the <<tunable>> <<parameter>> at an event instant or at a communication point]_, or
 
 - if <<causality>> = <<input>> _[in order to provide new values for <<input,`inputs`>>]_
 
-*fmi3SetXXX* can be called on any variable for *Model Exchange in Continuous-Time Mode*
+*fmi3Set{VariableType}* can be called on any variable for *Model Exchange in Continuous-Time Mode*
 
 - if <<causality>> = <<input>> and <<variability>> = <<continuous>> +
 _[in order to provide new values for <<input,`inputs`>> during continuous integration]_
@@ -1533,7 +1533,7 @@ with
 
 _[Note: (1) If <<causality>> = <<independent>>, it is neither allowed to define a value for <<initial>> nor a value for start._
 _(2) If <<causality>> = <<input>>, it is not allowed to define a value for <<initial>> and a value for <<start>> must be defined._
-_(3) If \(C) and <<initial>> = <<exact>>, then the variable is explicitly defined by its <<start>> value in *Initialization Mode* (so directly after calling <<fmi3ExitInitializationMode>>, the value of the variable is either the <<start>> value stored in a variable element `<XXX start=YYY/>` or the value provided by `fmi3SetXXX`, if this function was called on this variable).]_
+_(3) If \(C) and <<initial>> = <<exact>>, then the variable is explicitly defined by its <<start>> value in *Initialization Mode* (so directly after calling <<fmi3ExitInitializationMode>>, the value of the variable is either the <<start>> value stored in a variable element `<XXX start=YYY/>` or the value provided by `fmi3Set{VariableType}`, if this function was called on this variable).]_
 
 The following combinations of <<variability>>/<<causality>> settings are allowed:
 
@@ -1758,7 +1758,7 @@ _Basically this means that a new simulation run is started from the previous FMU
 _With this interpretation, changing <<parameter,`parameters`>> online is "clean", as long as these changes appear at an event instant._
 
 _FMI for Co-Simulation:_
-_Changing of <<tunable>> <<parameter,`parameters`>> is allowed before an <<fmi3DoStep>> call (so, whenever an <<input>> can be set with `fmi3SetXXX`) and before <<fmi3ExitInitializationMode>> is called (that is before and during *Initialization Mode*)._
+_Changing of <<tunable>> <<parameter,`parameters`>> is allowed before an <<fmi3DoStep>> call (so, whenever an <<input>> can be set with `fmi3Set{VariableType}`) and before <<fmi3ExitInitializationMode>> is called (that is before and during *Initialization Mode*)._
 _The FMU internally carries out event handling if necessary.]_
 
 ===== Aliasing of Variables [[aliasing-of-variables]]
@@ -1769,7 +1769,7 @@ The main purpose of alias variables is to enhance efficiency.
 If two variables `a` and `b` are alias variables, then this is only allowed if the behavior of the FMU would be exactly the same if `a` and `b` were not treated as alias variables (that is, had different <<valueReference>>pass:[s]).
 This requirement leads naturally to the following restrictions:
 
-. Variables `a` and `b` that can both be set with `fmi3SetXXX`, or variable `a` that can be set with `fmi3SetXXX` and variable `b` that is defined with <<causality>> = <<independent>>, cannot be alias variables _[since these variables are <<independent>> variables and alias means that there is a constraint equation between variables (= the values are the same), these variables are no longer <<independent>>._ +
+. Variables `a` and `b` that can both be set with `fmi3Set{VariableType}`, or variable `a` that can be set with `fmi3Set{VariableType}` and variable `b` that is defined with <<causality>> = <<independent>>, cannot be alias variables _[since these variables are <<independent>> variables and alias means that there is a constraint equation between variables (= the values are the same), these variables are no longer <<independent>>._ +
 _For example, if variables `a` and `b` have <<causality>> = <<parameter>>, then the value references of `a` and `b` must be different._
 _However, if variable a has <<causality>> = <<parameter>> and `b` has <<causality>> = <<calculatedParameter>> and `b := a`, then `a` and `b` can have the same value reference.]_
 
@@ -1825,12 +1825,12 @@ For `Enumeration` it is required, because the Enumeration items are defined in `
 [[start,`start`]]
 Initial or guess value of variable.
 *This value is also stored in the C functions*.
-_[Therefore, calling_ `fmi3SetXXX` _to set <<start>> values is only necessary, if a different value as stored in the XML file is desired.]_
+_[Therefore, calling_ `fmi3Set{VariableType}` _to set <<start>> values is only necessary, if a different value as stored in the XML file is desired.]_
 _WARNING: It is not recommended to change the start values in the `modelDescription.xml` file of an FMU, as this would break the consistency with the hard-coded start values in the C-Code._
-_This could lead to unpredictable behavior of the FMU in different importing tools, as it is not mandatory to call `fmi3SetXXX` to set start values during initialization. Instead it is recommended to use the SSP Standard (https://ssp-standard.org/) to handle modified parameters of FMUs or different parameter sets._
+_This could lead to unpredictable behavior of the FMU in different importing tools, as it is not mandatory to call `fmi3Set{VariableType}` to set start values during initialization. Instead it is recommended to use the SSP Standard (https://ssp-standard.org/) to handle modified parameters of FMUs or different parameter sets._
 
 The interpretation of <<start>> is defined by variable attribute <<initial>>.
-A different <<start>> value can be provided with an `fmi3SetXXX` function before <<fmi3ExitInitializationMode>> is called (but not for variables with <<variability>> = <<constant>>).
+A different <<start>> value can be provided with an `fmi3Set{VariableType}` function before <<fmi3ExitInitializationMode>> is called (but not for variables with <<variability>> = <<constant>>).
 
 _[The standard approach is to set the <<start>> value before <<fmi3EnterInitializationMode>>._
 _However, if the initialization shall be modified in the calling environment (for example, changing from initialization of states to steady-state initialization), it is also possible to use the <<start>> value as iteration variable of an algebraic loop: using an additional condition in the environment, such as_ latexmath:[\color{blue}{\dot{x} = 0}] _, the actual <<start>> value is determined.]_
@@ -1971,7 +1971,7 @@ The functional dependency is defined as:
 
 [blue]#latexmath:[\color{blue}{\dot{\mathbf{v}}_{initialUnknowns} := \mathbf{f}_{init}(\mathbf{u}_c, \mathbf{u}_d, t_0, \mathbf{v}_{initial=exact})}]#
 
-Since, <<output,`outputs`>>, continuous-time <<state,`states`>> and state derivatives are either present as `Knowns` (if <<initial>> = <<exact>>) or as <<Unknown,`Unknowns`>> (if <<initial>> = <<approx>> or <<calculated>>), they can be inquired with `fmi3GetXXX` in *Initialization Mode*.
+Since, <<output,`outputs`>>, continuous-time <<state,`states`>> and state derivatives are either present as `Knowns` (if <<initial>> = <<exact>>) or as <<Unknown,`Unknowns`>> (if <<initial>> = <<approx>> or <<calculated>>), they can be inquired with `fmi3Get{VariableType}` in *Initialization Mode*.
 
 _[Example: Assume an FMU is defined in the following way:_
 
@@ -1999,7 +1999,7 @@ where
 - latexmath:[\color{blue}{\mathbf{v}_{freeze}}] is the set of input arguments of function `h` that do not change their values in this mode, but change their values in other modes _[for example, <<fixed>> <<parameter,`parameters`>> in *Continuous-Time Mode*]_.
 
 Attribute <<dependencies>> of <<Unknown>> defines the dependency of latexmath:[\color{blue}{v_{unknown}}] with respect to latexmath:[\color{blue}{\mathbf{v}_{known}}]. +
-_[If, for example, a continuous-time <<output>>_ latexmath:[\color{blue}{y_{2}}] _is a function of the continuous-time <<input,`inputs`>>_ latexmath:[\color{blue}{u_{3}}] _and_ latexmath:[\color{blue}{u_{5}}], _and these <<input,`inputs`>> have changed, then_ `fmi3SetXXX` _on_ latexmath:[\color{blue}{u_{3}}] _and_ latexmath:[\color{blue}{u_{5}}] _must always be called before calling_ `fmi3GetXXX` _on_ latexmath:[\color{blue}{y_{2}}] _.]_
+_[If, for example, a continuous-time <<output>>_ latexmath:[\color{blue}{y_{2}}] _is a function of the continuous-time <<input,`inputs`>>_ latexmath:[\color{blue}{u_{3}}] _and_ latexmath:[\color{blue}{u_{5}}], _and these <<input,`inputs`>> have changed, then_ `fmi3Set{VariableType}` _on_ latexmath:[\color{blue}{u_{3}}] _and_ latexmath:[\color{blue}{u_{5}}] _must always be called before calling_ `fmi3Get{VariableType}` _on_ latexmath:[\color{blue}{y_{2}}] _.]_
 
 |`DiscreteStates`
 |Ordered list of all exposed discrete <<state,`states`>>, in other words a list of variable indices.
