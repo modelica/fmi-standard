@@ -32,7 +32,7 @@ _[The notation latexmath:[^{\bullet}t] is from <<BCP10,BCP10>>, adapted from non
 ^|latexmath:[t^{+}]
 |latexmath:[{{(t}_{R},t_{I})}^{+} \Leftrightarrow (\lim_{\epsilon \rightarrow 0}{\left(t_{R} + \varepsilon \right),t_{Imax})}]
 |right limit at latexmath:[t].
-latexmath:[t_{Imax}] is the largest occurring Integer index of super dense time
+latexmath:[t_{Imax}] is the largest occurring integer index of super dense time
 
 ^|latexmath:[^-t]
 |latexmath:[^{-}{{(t}_{R},t_{I})} \Leftrightarrow (\lim_{\epsilon \rightarrow 0}{\left( t_{R} - \varepsilon \right),0)}]
@@ -65,7 +65,7 @@ Events can be known before hand (= time event), or are defined implicitly (= sta
 Between events, variables are either <<continuous>> or do not change their value.
 A variable is called discrete-time, if it changes its value only at an event instant.
 Otherwise the variable is called continuous-time.
-Only real variables can be continuous-time.
+Only floating point variables can be continuous-time.
 The following variable indices are used to describe the timing behavior of the corresponding variable (for example, latexmath:[v_d] is a discrete-time variable).
 
 [cols="1,10"]
@@ -84,7 +84,7 @@ is a continuous function of time inside each interval latexmath:[t_i^+ < \ ^-t_{
 | A *Clock* variable latexmath:[c(t)], is active only at particular time instants.
 
 |r
-|A *Clocked* variable latexmath:[r(t)], is a variable of type Real, Integer, Boolean, String or Enumeration associated to a <<clock>> latexmath:[c(t)] and therefore active only at particular time instants.
+|A *Clocked* variable latexmath:[r(t)], is a variable of a numeric type, String or Enumeration associated to a <<clock>> latexmath:[c(t)] and therefore active only at particular time instants.
 
 |====
 // TODO: which variables can be actually be associated with a clock?
@@ -111,7 +111,7 @@ More precisely: An event latexmath:[t = t_i] occurs at the smallest time instant
 Such an event is called state event.
 _[This definition is slightly different from the standard definition of state events: "_ latexmath:[z_j(t) \cdot z_j(t_{i-1}) \leq 0] _"._
 _This often used definition has the severe drawback that_ latexmath:[z_j(t_{i-1}) \neq 0] _is required in order to be well-defined and this condition cannot be guaranteed.]._
-All event indicators are piecewise continuous and are collected together in one vector of real numbers latexmath:[\mathbf{z(t)}]. +
+All event indicators are piecewise continuous and are collected together in one vector of floating point numbers latexmath:[\mathbf{z(t)}]. +
 
 .An event occurs when the event indicator changes its domain from latexmath:[z>0] to latexmath:[z\leq 0] or vice versa.
 [#figure-events]
@@ -163,10 +163,10 @@ Whether the <<output>> is a discrete-time or continuous-time variable is defined
 Variables of this type are defined with attribute <<causality>> = <<local>>, see <<definition-of-model-variables>>.
 
 ^|latexmath:[\mathbf{z}(t)]
-|A vector of real continuous-time variables utilized to define state events, see below.
+|A vector of floating point continuous-time variables utilized to define state events, see below.
 
 ^|latexmath:[\mathbf{x}_c(t)]
-|A vector of real continuous-time variables representing the continuous-time <<state,`states`>>.
+|A vector of floating point continuous-time variables representing the continuous-time <<state,`states`>>.
 For notational convenience, a continuous-time <<state>> is conceptually treated as a different type of variable as an <<output>> or a <<local>> variable for the mathematical description below.
 In reality, a continuous-time <<state>> is however part of the <<output,`outputs`>> latexmath:[\mathbf{y}] or the <<local>> variables latexmath:[\mathbf{w}] of an FMU.
 
@@ -199,7 +199,7 @@ The phases can be categorized according to the following modes:
 This mode is used to compute at the start time stem[t_0] initial values for continuous-time <<state,`states`>>, latexmath:[\mathbf{x}_c(t_0)], and for the <<previous>> (internal) discrete-time <<state,`states`>>, latexmath:[\mathbf{x}_d(t_0)], by utilizing extra equations not present in the other modes (for example, equations to define the <<start>> value for a <<state>> or for the derivative of a <<state>>).
 
 ===== Continuous-Time Mode
-This mode is used to compute the values of all (real) continuous-time variables between events by numerically solving ordinary differential and algebraic equations.
+This mode is used to compute the values of all floating point continuous-time variables between events by numerically solving ordinary differential and algebraic equations.
 All discrete-time variables are fixed during this phase and the corresponding discrete-time equations are not evaluated.
 
 ===== Event Mode
@@ -208,7 +208,7 @@ This is performed by solving algebraic equations consisting of all continuous-ti
 In FMI 2.0 there is no mechanism that the FMU can provide the information whether a discrete-time variable is active or is not active (is not computed) at an event instant.
 Therefore, the environment has to assume that at an event instant always all discrete-time variables are computed, although internally in the FMU only a subset might be newly computed.
 
-When connecting FMUs together, loop structures can occur that lead to particular difficulties because linear or non-linear algebraic systems of equations in Real variables but also in Boolean or Integer variables might be present.
+When connecting FMUs together, loop structures can occur that lead to particular difficulties because linear or non-linear algebraic systems of equations in floating point variables but also in Boolean or Integer variables might be present.
 In order to solve such systems of equations over FMUs efficiently, the dependency information is needed stating, for example, which <<output,`outputs`>> depend directly on <<input,`inputs`>>.
 This data is optionally provided in the XML file under element `<ModelStructure>`.
 If this data is not provided, the worst case must be assumed (for example, all output variables depend algebraically on all <<input>> variables).
@@ -219,10 +219,10 @@ _[Example: In <<figure-connected-fmus>> two different types of connected FMUs ar
 [#figure-connected-fmus]
 image::images/ArtificialAlgebraicLoop.svg[width=80%, align="center"]
 
-_In the upper diagram, FMU1 and FMU2 are connected in such a way that by an appropriate sequence of `fmi3SetXXX` and `fmi3GetXXX` calls, the FMU variables can be computed._
+_In the upper diagram, FMU1 and FMU2 are connected in such a way that by an appropriate sequence of `fmi3Set{VariableType}` and `fmi3Get{VariableType}` calls, the FMU variables can be computed._
 _In the lower diagram, FMU3 and FMU4 are connected in such a way that a real algebraic loop is present._
 _This loop might be solved iteratively with a Newton method._
-_In every iteration the iteration variable latexmath:[u_4] is provided by the solver, and via the shown sequence of `fmi3SetXXX` and `fmi3GetXXX` calls, the residue is computed and is provided back to the solver._
+_In every iteration the iteration variable latexmath:[u_4] is provided by the solver, and via the shown sequence of `fmi3Set{VariableType}` and `fmi3Get{VariableType}` calls, the residue is computed and is provided back to the solver._
 _Based on the residue a new value of latexmath:[u_4] is provided._
 _The iteration is terminated when the residue is close to zero._
 _These types of artifical or real algebraic loops can occur in all the different modes, such as *Initialization Mode*, *Event Mode*, and *Continuous-Time Mode*._
@@ -232,13 +232,10 @@ In <<table-math-model-exchange>> the equations are defined that can be evaluated
 The following color coding is used in the table:
 
 * [silver]#*grey*#: If a variable in an argument list is marked in [silver]#grey#, then this variable is not changing in this mode and just the last calculated value from the previous mode is internally used.
-For an input argument, it is not allowed to call `fmi3SetXXX`.
-For an output argument, calling `fmi3GetXXX` on such a variable returns always the same value in this mode.
+For an input argument, it is not allowed to call `fmi3Set{VariableType}`.
+For an output argument, calling `fmi3Get{VariableType}` on such a variable returns always the same value in this mode.
 * [lime]#*green*#: Functions marked in [lime]#green# are special functions to enter or leave a mode.
 * [blue]#*blue*#: Equations and functions marked in [blue]#blue# define the actual computations to be performed in the respective mode.
-
-Function `fmi3SetXXX` is an abbreviation for functions `fmi3SetReal`, `fmi3SetBoolean`, `fmi3SetInteger` and `fmi3SetString` respectively.
-Function `fmi3GetXXX` is an abbreviation for functions `fmi3GetReal`, `fmi3GetBoolean`, `fmi3GetInteger` and `fmi3GetString` respectively.
 
 _[In the following table the setting of the super dense time, (latexmath:[t_R], latexmath:[t_I]), is precisely described._
 _Tools will usually not have such a representation of time._
@@ -251,15 +248,15 @@ _However, super-dense time defines precisely when a new "model evaluation" start
 |*Equations*| *FMI functions*
 2+| *_Equations before Initialization Mode_*
 |Set <<independent>> variable time latexmath:[T_{R0}] and define latexmath:[t_0 := (t_{R0},0)]|<<fmi3SetupExperiment>>
-|Set variables latexmath:[\mathbf{v}_{initial=exact}] and latexmath:[\mathbf{v}_{initial=approx}]  that have a <<start>> value (<<initial>> = <<exact>> or <<approx>>) |`fmi3SetXXX`
+|Set variables latexmath:[\mathbf{v}_{initial=exact}] and latexmath:[\mathbf{v}_{initial=approx}]  that have a <<start>> value (<<initial>> = <<exact>> or <<approx>>) |`fmi3Set{VariableType}`
 2+|*_Equations during Initialization Mode_*
 |[lime]#Enter *Initialization Mode* at latexmath:[t=t_0] (activate initialization,
 discrete-time and continuous-time equations)#| `[lime]#fmi3EnterInitializationMode#`
 |Set variables latexmath:[\mathbf{v}_{initial=exact}] that have a <<start>> value with
 <<initial>> = <<exact>> (<<independent>> <<parameter,`parameters`>> latexmath:[\mathbf{p}] and
-continuous-time <<state,`states`>> with <<start>> values latexmath:[\mathbf{x}_{c,initial=exact}] are included here) | `fmi3SetXXX`
-|Set continuous-time and discrete-time <<input,`inputs`>>  latexmath:[\mathbf{u}(\color{grey}t_{\color{grey} 0})]| `fmi3SetXXX`
-|[blue]#latexmath:[\mathbf{v}_{initialUnknowns}:=f_{init}(\mathbf{u_c}, \mathbf{u_d}, \color{grey}t_{\color{grey} 0}, \mathbf{v}_{initial=exact}])# | `[blue]#fmi3GetXXX#`, `[blue]#fmi3GetContinuousStates#`
+continuous-time <<state,`states`>> with <<start>> values latexmath:[\mathbf{x}_{c,initial=exact}] are included here) | `fmi3Set{VariableType}`
+|Set continuous-time and discrete-time <<input,`inputs`>>  latexmath:[\mathbf{u}(\color{grey}t_{\color{grey} 0})]| `fmi3Set{VariableType}`
+|[blue]#latexmath:[\mathbf{v}_{initialUnknowns}:=f_{init}(\mathbf{u_c}, \mathbf{u_d}, \color{grey}t_{\color{grey} 0}, \mathbf{v}_{initial=exact}])# | `[blue]#fmi3Get{VariableType}#`, `[blue]#fmi3GetContinuousStates#`
 |[lime]#Exit *Initialization Mode* (de-activate initialization equations)#| `[lime]#fmi3ExitInitializationMode#`
 2+|*_Equations during Event Mode_*
 |[lime]#Enter *Event Mode* at latexmath:[t = t_{i}] with latexmath:[{t_{i}\ : = (t}_{R},t_{I} + 1)] *if*  externalEvent *or* nextMode latexmath:[\equiv] EventMode *or* latexmath:[t_i=(T_{next}(t_{i-1}), 0)] *or*  latexmath:[\min_{t>t_{i-1}} t:\left\lbrack z_{j}\left( t \right) > 0\  \neq \ z_{j}\left( t_{i - 1} \right) > 0 \right\rbrack] +
@@ -268,16 +265,16 @@ continuous-time <<state,`states`>> with <<start>> values latexmath:[\mathbf{x}_{
 [lime]#if FMU has no continuous-time equations)#
 |Set <<independent>> <<tunable>> <<parameter,`parameters`>> latexmath:[\mathbf{p}_{tune}] +
 (and do not set other <<parameter,`parameters`>> latexmath:[\mathbf{p}_{other}])
-|`fmi3SetXXX`
+|`fmi3Set{VariableType}`
 
 |Set continuous-time and discrete-time <<input,`inputs`>> latexmath:[\mathbf{u}(t_i)]
-|`fmi3SetXXX`
+|`fmi3Set{VariableType}`
 
-|Set continuous-time <<state,`states`>> latexmath:[\mathbf{x}_c(t_i)]|`fmi3SetXXX`,
+|Set continuous-time <<state,`states`>> latexmath:[\mathbf{x}_c(t_i)]|`fmi3Set{VariableType}`,
 <<fmi3SetContinuousStates>>
 
 |[blue]#latexmath:[(\mathbf{y}_{c+d}, \mathbf{\dot{x}}_c, \mathbf{w}_{c+d}, \mathbf{z}, \mathbf{x}_{c, reinit})=\mathbf{f}_{sim}(\mathbf{x_c}, \mathbf{u_{c+d}}, \color{grey}t_{\color{grey} i}, \mathbf{p}_{tune}, \color{grey}{\mathbf{p}_{other})}]#  +
-latexmath:[\mathbf{f}_{sim}]is also a function of the internal variables latexmath:[{}^\bullet\mathbf{x}_d] | `[blue]#fmi3GetXXX#`,
+latexmath:[\mathbf{f}_{sim}]is also a function of the internal variables latexmath:[{}^\bullet\mathbf{x}_d] | `[blue]#fmi3Get{VariableType}#`,
 `[blue]#fmi3GetContinuousStates#`,
 `[blue]#fmi3GetDerivatives#`
 `[blue]#fmi3GetEventIndicators#`
@@ -303,15 +300,15 @@ latexmath:[\qquad \qquad T_{next}=T_{next}(\mathbf{x}_c,{}^\bullet\mathbf{x}_d, 
 |Set <<independent>> variable time latexmath:[t(>t_{enter  mode}): t:=(t_R, 0)]|<<fmi3SetTime>>
 
 |Set continuous-time <<input,`inputs`>> latexmath:[\mathbf{u}_{c}(t)]
-|`fmi3SetXXX`
+|`fmi3Set{VariableType}`
 
-|Set continuous-time <<state,`states`>> latexmath:[\mathbf{x}_{c}(t)] |`fmi3SetXXX`,
+|Set continuous-time <<state,`states`>> latexmath:[\mathbf{x}_{c}(t)] |`fmi3Set{VariableType}`,
 <<fmi3SetContinuousStates>>
 
 a|[blue]#latexmath:[(\mathbf{y}_{c}\mathbf{,} \color{grey}{\mathbf{y}_{d}}\mathbf{,\ }{\dot{\mathbf{x}}}_{c}\mathbf{,}_{}\mathbf{w}_{c}\mathbf{,}\color{grey}{\mathbf{w}_{d}}\mathbf{,z,}\color{grey}{\mathbf{x}_{c,reinit}}):=\mathbf{f}_{sim}(\mathbf{x}_{c},\ \mathbf{u}_{c}\mathbf{,} \color{grey}{\mathbf{\ u}_{d}}, t,\color{grey}{\mathbf{p}_{tune},\mathbf{p}_{other}})]# +
 [blue]#latexmath:[\qquad \mathbf{f}_{sim}] is also a function of the internal variables# [silver]#latexmath:[{}^\bullet\mathbf{x}_{d},\mathbf{r}].#
  a|
-`[blue]#fmi3GetXXX,#`
+`[blue]#fmi3Get{VariableType},#`
 `[blue]#fmi3GetDerivatives,#`
 `[blue]#fmi3GetEventIndicators#`
 
@@ -321,18 +318,18 @@ a|[blue]#latexmath:[(\mathbf{y}_{c}\mathbf{,} \color{grey}{\mathbf{y}_{d}}\mathb
 2+|*Data types*
 
 2+|latexmath:[t \in \mathbb{R}, \mathbf{p} \in \mathbb{P}^{np},  \mathbf{u}(t) \in \mathbb{P}^{nu},\mathbf{y}(t) \in \mathbb{P}^{ny}, \mathbf{x}_c(t) \in \mathbb{R}^{nxc}, \mathbf{x}_d(t) \in \mathbb{P}^{nxd}, \mathbf{w}(t) \in \mathbb{P}^{nw}, \mathbf{z}(t) \in \mathbb{R}^{nz}] +
-latexmath:[\qquad \mathbb{R}]: Real variable, latexmath:[\mathbb{P}]: real *or* boolean *or* integer *or* enumeration *or* string variable +
+latexmath:[\qquad \mathbb{R}]: floating point variable, latexmath:[\mathbb{P}]: floating point *or* boolean *or* integer *or* enumeration *or* string variable +
 latexmath:[\mathbf{f}_{init}, \mathbf{f}_{sim} \in C^0] (=continuous functions with respect to all input arguments inside the respective mode).
 |====
 
 _[Remark 1 - Calling Sequences:_
 
 _In the table above, for notational convenience in every mode one function call is defined to compute all output arguments from all inputs arguments._
-_In reality, every scalar output argument is computed by one `fmi3GetXXX` function call._
+_In reality, every scalar output argument is computed by one `fmi3Get{VariableType}` function call._
 _Additionally, the output argument need not be a function of all input arguments, but of only a subset from it, as defined in the XML file under `<ModelStructure>`._
-_This is essential when FMUs are connected in a loop, as shown in <<figure-connected-fmus>>. For example, since_ latexmath:[y_{2a}] _depends only on_ latexmath:[u_{1a}] _, but not on_ latexmath:[u_{1b}]_, it is possible to call_ `fmi3SetXXX` _to set_ latexmath:[u_{1a}] _, and then inquire_ latexmath:[y_{2a}] _with_ `fmi3GetXXX` _without setting_ latexmath:[u_{1b}] _beforehand._
+_This is essential when FMUs are connected in a loop, as shown in <<figure-connected-fmus>>. For example, since_ latexmath:[y_{2a}] _depends only on_ latexmath:[u_{1a}] _, but not on_ latexmath:[u_{1b}]_, it is possible to call_ `fmi3Set{VariableType}` _to set_ latexmath:[u_{1a}] _, and then inquire_ latexmath:[y_{2a}] _with_ `fmi3Get{VariableType}` _without setting_ latexmath:[u_{1b}] _beforehand._
 
-_It is non-trivial to provide code for `fmi3SetXXX`, `fmi3GetXXX`, if the environment can call_ `fmi3SetXXX` _on the <<input,`inputs`>> in quite different orders._
+_It is non-trivial to provide code for `fmi3Set{VariableType}`, `fmi3Get{VariableType}`, if the environment can call_ `fmi3Set{VariableType}` _on the <<input,`inputs`>> in quite different orders._
 _A simple remedy is to provide the dependency information, not according to the real functional dependency, but according to the sorted equations in the generated code._
 _Example:_
 
@@ -355,7 +352,7 @@ y1 := w1
 -----
 
 _With this ordering, the dependency should be defined as `y2 = f(u2), y1 = f(u1,u2)`._
-_When `y2` is called first with `fmi3GetXXX`, then only `u2` must be set first (since `y2 = f(u2)`), and the first two equations are evaluated._
+_When `y2` is called first with `fmi3Get{VariableType}`, then only `u2` must be set first (since `y2 = f(u2)`), and the first two equations are evaluated._
 _If later `y1` is inquired as well, then the first two equations are not evaluated again and only the last two equations are evaluated._
 _On the other hand, if `y1` is inquired first, then `u1` and `u2` must be set first (since `y1 = f(u1,u2)`) and then all equations are computed._
 _When `y2` is inquired afterwards, the cached value is returned._
@@ -369,7 +366,7 @@ y1 := w1
 y2 := w2
 ----
 
-_then the dependency should be defined as `y2 = f(u1,u2)`, `y1 = f(u1,u2)`, because `u1` and `u2` must be first set, before `y2` can be inquired with `fmi3GetXXX` when executing this code._
+_then the dependency should be defined as `y2 = f(u1,u2)`, `y1 = f(u1,u2)`, because `u1` and `u2` must be first set, before `y2` can be inquired with `fmi3Get{VariableType}` when executing this code._
 
 _Remark 2 - Mathematical Model of Discrete-Time FMUs:_
 
@@ -380,7 +377,7 @@ image::images/remark_2_source.png[width=70%]
 
 _At an event instant, the discrete system is described by algebraic equations as function of the <<previous>> (internal) discrete-time <<state,`states`>>_ latexmath:[_{}^{\bullet}\mathbf{x}_{d}] _and the discrete-time <<input,`inputs`>>_ latexmath:[\mathbf{u}_{d}].
 _If FMUs are connected in a loop, these algebraic equations are called iteratively, until the solution is found._
-_If the actual discrete-time <<state,`states`>>_ latexmath:[\mathbf{x}_{d}] _and the <<previous>> discrete-time <<state,`states`>>_ latexmath:[_{}^{\bullet}\mathbf{x}_{d}] _are not identical, the discrete-time <<state,`states`>> are updated, the Integer part of the time is incremented and a new event iteration is performed._
+_If the actual discrete-time <<state,`states`>>_ latexmath:[\mathbf{x}_{d}] _and the <<previous>> discrete-time <<state,`states`>>_ latexmath:[_{}^{\bullet}\mathbf{x}_{d}] _are not identical, the discrete-time <<state,`states`>> are updated, the integer part of the time is incremented and a new event iteration is performed._
 _Other discrete-time models must be mapped to this description form._
 _Examples:_
 
@@ -464,7 +461,7 @@ Once finalized, <<fmi3NewDiscreteStates>> must be called, and depending on the v
 After switching to *Continuous-Time Mode*, the integration is started.
 Basically, in this phase the <<derivative,`derivatives`>> of the continuous <<state,`states`>> are computed.
 If FMUs and/or submodels are connected together, then the <<input,`inputs`>> of these models are the <<output,`outputs`>> of other models, and therefore, the corresponding FMU outputs must be computed.
-Whenever result values shall be stored, usually at output points defined before the start of the simulation, the `fmi3GetXXX` function with respect to the desired variables must be called. +
+Whenever result values shall be stored, usually at output points defined before the start of the simulation, the `fmi3Get{VariableType}` function with respect to the desired variables must be called. +
 Continuous integration is stopped at an event instant.
 An event instant is determined by a time, state or step event, or by an external event triggered by the environment.
 In order to determine a state event, the event indicators *z* have to be inquired at every completed integrator step.
@@ -476,7 +473,7 @@ Depending on the discrete-time model, a new event iteration might be needed (for
 and transitions are still able to fire, but new <<input,`inputs`>> shall be taken into account). +
 The function calls in the table above describe precisely which input arguments are needed to compute the desired output argument(s).
 There is no 1:1 mapping of these mathematical functions to C functions.
-Instead, all input arguments are set with `fmi3SetXXX` C function calls, and then the result argument(s) can be determined with the C functions defined in the right column of the above table.
+Instead, all input arguments are set with `fmi3Set{VariableType}` C function calls, and then the result argument(s) can be determined with the C functions defined in the right column of the above table.
 This technique is discussed in detail in <<providing-independent-variables-and-re-initialization>>.
 _[In short: For efficiency reasons, all equations from the table above will usually be available in one (internal) C function._
 _With the C functions described in the next sections, input arguments are copied into the internal model data structure only when their value has changed in the environment._
