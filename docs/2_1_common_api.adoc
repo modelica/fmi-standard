@@ -27,10 +27,6 @@ In all header files the convention is used that all C function and type definiti
 contains the type definitions of the <<input>> and output arguments of the functions as well as some C preprocessor macro defintions for constants.
 This header file must
 be used both by the FMU and by the target simulator.
-If the target simulator has different definitions in
-the header file (for example, `typedef float fmi3Float64` instead of `typedef double fmi3Float64`),
-then the [underline]#FMU# needs to be [underline]#re-compiled# with the header file used by the [underline]#target simulator#.
-// TODO: include example from header
 _[Example of a definition in this header file:_
 +
 [source, C]
@@ -97,16 +93,16 @@ fmi3SetTimeTYPE *myname_setTime = < load symbol "fmi3SetTime" from DLL/SharedObj
 < usage of the FMU function pointers, e.g. myname_setTime >
 ----
 
-A function that is defined as `fmi3GetReal` is changed by the macros to a function name as follows:
+A function that is defined as `fmi3GetFloat64` is changed by the macros to a function name as follows:
 
 - If the FMU is shipped with C source code or with static link library: +
-The constructed function name is `MyModel_fmi3GetReal`.
+The constructed function name is `MyModel_fmi3GetFloat64`.
 In other words the function name is prefixed with the model name and an `pass:[_]`.
 A simulation environment can therefore construct the relevant function names by generating code for the actual function call.
 In case of a static link library, the name of the library is `MyModel.lib` on Windows and `libMyModel.a` on Linux; in other words the `modelIdentifier` attribute is used to create the library name.
 
 - If the FMU is shipped with DLL/SharedObject: +
-The constructed function name is `fmi3GetReal`, in other words, it is not changed.
+The constructed function name is `fmi3GetFloat64`, in other words, it is not changed.
 _[This can be realized in the case of a source code FMU with a target-specific version of `fmi3Functions.h` that does not use FMI3_FUNCTION_PREFIX to construct the function names.]_
 A simulation environment will then dynamically load this library and will explicitly import the function symbols by providing the FMI function names as strings.
 The name of the library is `MyModel.dll` on Windows or `MyModel.so` on Linux; in other words the `modelIdentifier` attribute is used as library name.
@@ -168,7 +164,7 @@ An `fmi3ValueReference` references one such value (scalar or array).
 The coding of `fmi3ValueReference` is a "secret" of the environment that generated the FMU.
 The interface to the equations only provides access to variables via this handle.
 Extracting concrete information about a variable is specific to the used environment that reads the Model Description File in which the value handles are defined.
-If a function in the following sections is called with a wrong `fmi3ValueReference` value _[for example, setting a constant with a `fmi3SetReal` function call]_, then the function has to return with an error ( `fmi3Status = fmi3Error`, see <<status-returned-by-functions>>).
+If a function in the following sections is called with a wrong `fmi3ValueReference` value _[for example, setting a constant with a call to `fmi3SetFloat64`]_, then the function has to return with an error ( `fmi3Status = fmi3Error`, see <<status-returned-by-functions>>).
 
 [source, C]
 ----
@@ -216,7 +212,7 @@ _[Functions `fmi3Set{VariableType}` are usually not performing calculations but 
 _The actual calculation is performed by `fmi3Get{VariableType}` functions._
 _Still `fmi3Set{VariableType}` functions could check whether the input arguments are in their validity range._
 _If not, these functions could return with `fmi3Discard`.]_
-(Model Exchange: `fmi3SetReal`, `fmi3SetInteger`, `fmi3SetBoolean`, `fmi3SetString`, <<fmi3SetContinuousStates>>, `fmi3GetReal`, <<fmi3GetDerivatives>>, <<fmi3GetContinuousStates>>, <<fmi3GetEventIndicators>>; Co-Simulation: `fmi3SetReal`, `fmi3SetInteger`, `fmi3SetBoolean`, `fmi3SetString`, <<fmi3DoStep>>):
+(Model Exchange: `fmi3Set{VariableType}`, <<fmi3SetContinuousStates>>, `fmi3Get{VariableType}`, <<fmi3GetDerivatives>>, <<fmi3GetContinuousStates>>, <<fmi3GetEventIndicators>>; Co-Simulation: `fmi3Set{VariableType}`, <<fmi3DoStep>>):
 +
 For Model Exchange: It is recommended to perform a smaller step size and evaluate the model equations again, for example because an iterative solver in the model did not converge or because a function is outside of its domain _[for example, `sqrt(<negative number>)`]_.
 If this is not possible, the simulation has to be terminated.
@@ -949,24 +945,25 @@ In every state, the general form of the FMU equations are:
 
 where
 
-* latexmath:[\mathbf{v}_{unknonwn}] is the vector of unknown Real variables computed in the actual state:
+* latexmath:[\mathbf{v}_{unknonwn}] is the vector of unknown floating point variables computed in the actual state:
 
-** *Initialization Mode*: The exposed unknowns listed under `<ModelStructure><InitialUnknowns>` that have type Real.
+** *Initialization Mode*: The exposed unknowns listed under `<ModelStructure><InitialUnknowns>` that have a floating point type.
 
-** *Continuous-Time Mode* (Model Exchange): The continuous-time outputs and state derivatives (= the variables listed under `<ModelStructure><Outputs>` with type Real and <<variability>> = <<continuous>> and the variables listed as state derivatives under `<ModelStructure><Derivatives>`).
+** *Continuous-Time Mode* (Model Exchange): The continuous-time outputs and state derivatives (= the variables listed under `<ModelStructure><Outputs>` with a floating point type and <<variability>> = <<continuous>> and the variables listed as state derivatives under `<ModelStructure><Derivatives>`).
 
-** *Event Mode* (Model Exchange): The same variables as in the *Continuous-Time Mode* and additionally variables under `<ModelStructure><Outputs>` with type Real and <<variability>> = <<discrete>>.
+** *Event Mode* (Model Exchange): The same variables as in the *Continuous-Time Mode* and additionally variables under `<ModelStructure><Outputs>` with a floating point type and <<variability>> = <<discrete>>.
 
-** *Step Mode* (Co-Simulation): The variables listed under `<ModelStructure><Outputs>` with type Real and <<variability>> = <<continuous>> or <<discrete>>.
+** *Step Mode* (Co-Simulation): The variables listed under `<ModelStructure><Outputs>` with a floating point type and <<variability>> = <<continuous>> or <<discrete>>.
 If `<ModelStructure><Derivatives>` is present, also the variables listed here as state derivatives.
 
-* latexmath:[\mathbf{v}_{known}] is the vector of known Real <<input>> variables of function *h* that changes its value in the actual state.
+* latexmath:[\mathbf{v}_{known}] is the vector of known floating point <<input>> variables of function *h* that changes its value in the actual state.
+
 Details are described in the description of element <<dependencies>> in <<ModelStructure>>.
 _[For example continuous-time <<input,`inputs`>> in *Continuous-Time Mode*._
 _If a variable with <<causality>> = <<independent>> is explicitly defined under `ModelVariables`, a directional derivative with respect to this variable can be computed._
 _If such a variable is not defined, the directional derivative with respect to the <<independent>> variable cannot be calculated]._
 
-* latexmath:[{\mathbf{v}_{rest}}] is the set of <<input>> variables of function *h* that either changes its value in the actual state but are non-Real variables, or do not change their values in this state, but change their values in other states _[for example, discrete-time <<input,`inputs`>> in *Continuous-Time Mode*]_.
+* latexmath:[{\mathbf{v}_{rest}}] is the set of <<input>> variables of function *h* that either changes its value in the actual state but are non-floating point variables, or do not change their values in this state, but change their values in other states _[for example, discrete-time <<input,`inputs`>> in *Continuous-Time Mode*]_.
 
 _[The variable relationships are different in different states._
 _For example, during *Continuous-Time Mode*, a continuous-time output y does not depend on discrete-time <<input,`inputs`>> (because they are held constant between events)._
