@@ -43,11 +43,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 extern "C" {
 #endif
 
-/* make sure all compiler use the same alignment policies for structures */
-#if defined _MSC_VER || defined __GNUC__
-#pragma pack(push,8)
-#endif
-
 /* Include stddef.h, in order that size_t etc. is defined */
 #include <stddef.h>
 
@@ -104,11 +99,6 @@ typedef fmi3Status (*fmi3CallbackIntermediateUpdate) (
 typedef void       (*fmi3CallbackLockPreemption)   ();
 typedef void       (*fmi3CallbackUnlockPreemption) ();
 /* end::PreemptionLock[] */
-
-/* reset alignment policy to the one set before reading this file */
-#if defined _MSC_VER || defined __GNUC__
-#pragma pack(pop)
-#endif
 
 /* Define fmi3 function pointer types to simplify dynamic loading */
 
