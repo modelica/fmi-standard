@@ -196,32 +196,25 @@ The Co-Simulation master signals to the FMU which features shall be used for the
 include::../headers/fmi3FunctionTypes.h[tag=Instantiate]
 ----
 
-Additionally the Co-Simulation master provides the required Co-Simulation features via the argument `fmuCoSimulationConfiguration`:
-
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tag=CoSimulationConfiguration]
-----
-
-The master can only select a certain Co-Simulation interface for an FMU if the following attributes are set in the  `modelDescription.xml`.
+The master can only select a certain Co-Simulation interface for an FMU if the following attributes are set in the `modelDescription.xml`.
 
 [cols="1,2",options="header"]
 |===
 |Co-Simulation interface
 |Required attributes
 
-|`fmi3CoSimulation`
+|Basic Co-Simulation
 |`canNotUseBasicCoSimulation = false`
 
-|`fmi3HybridCoSimulation`
+|Hybrid Co-Simulation
 |`providesHybridCoSimulation = true`, `canReturnEarlyAfterIntermediateUpdate = true`
 
-|`fmi3ScheduledCoSimulation`
+|fmi3ScheduledCoSimulation
 |`providesScheduledCoSimulation = true`
 |===
 
-Generally it is assumed, that a Co-Simulation FMU always supports the interface `fmi3CoSimulation`.
-If that is not possible for an FMU (e.g. if the FMU cannot provide an emulation of <<inputClock>> tick occurrences), it has to include the capability flag `canNotUseBasicCoSimulation = true` in the `modelDescription.xml`.
+Generally it is assumed, that a Hybrid or Scheduled Co-Simulation FMU also supports Basic Co-Simulation.
+If that is not possible for an FMU _[(e.g. if the FMU cannot provide an emulation of <<inputClock>> tick occurrences)]_, it has to include the capability flag `canNotUseBasicCoSimulation = true` in the `modelDescription.xml`.
 
 If the FMU does not support the Co-Simulation interface selected in <<fmi3Instantiate>> it has to return `NULL`.
 
@@ -245,22 +238,22 @@ _Therefore it is recommended that the FMU provides logging information to the us
 
 ===== Intermediate Variable Access [[api-intermediate-variable-access]]
 
-If the Co-Simulation master signals the support for intermediate variable access and an FMU has at least one variable with <<intermediateAccess>> = `true`, the FMU can invoke the <<fmi3CallbackIntermediateUpdate>> callback function to sent the <<fmi3IntermediateUpdateInfo>> back to the Co-Simulation master.
+If the Co-Simulation master signals the support for intermediate variable access and an FMU has at least one variable with <<intermediateAccess>> = `true`, the FMU can use the callback function <<fmi3CallbackIntermediateUpdate>> to communicate information back to the Co-Simulation master.
 
 [source, C]
 ----
-include::../headers/fmi3FunctionTypes.h[tag=IntermediateUpdateInfo]
+include::../headers/fmi3FunctionTypes.h[tag=CallbackIntermediateUpdate]
 ----
 
-The following flags in the `fmi3IntermediateInfo` struct are used for intermediate variable access:
+The following output arguments in <<fmi3CallbackIntermediateUpdate>> are used for intermediate variable access:
 
-* `intermediateTime` is the simulation time at which the <<fmi3CallbackIntermediateUpdate>> callback-function got called by the FMU.
+* `intermediateUpdateTime` is the simulation time at which the <<fmi3CallbackIntermediateUpdate>> callback function is called by the FMU.
 
-* If `intermediateVariableSetAllowed` is `fmi3True`, the Co-Simulation master may provide intermediate <<input>> variables by calling `fmi3Set{VariableType}` functions for variables with <<intermediateAccess>> = `true`.
+* If `intermediateVariableSetAllowed = fmi3True`, the Co-Simulation master may provide intermediate <<input>> variables by calling `fmi3Set{VariableType}` for variables with <<intermediateAccess>> = `true`.
 
-* If `intermediateVariableGetAllowed` is `fmi3True`, the Co-Simulation master may collect intermediate output variables by calling `fmi3Get{VariableType}` functions for variables with <<intermediateAccess>> = `true`.
+* If `intermediateVariableGetAllowed = fmi3True`, the Co-Simulation master may collect intermediate output variables by calling `fmi3Get{VariableType}` for variables with <<intermediateAccess>> = `true`.
 
-* If `intermediateStepFinished` is `fmi3False`, the Co-Simulation master shall only use intermediate output variables to compute intermediate <<input>> variables at the current state.
+* If `intermediateStepFinished = fmi3False`, the Co-Simulation master shall only use intermediate output variables to compute intermediate <<input>> variables at the current state.
 
 Hence, it is important to distinguish intermediate output from successful internal integration steps from intermediate outputs valid only for temporary solver states.
 The <<figure-intermediate-variable-access>> shows an overview of the solver states and the intended use of intermediate variable access.
