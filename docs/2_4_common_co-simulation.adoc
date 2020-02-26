@@ -122,21 +122,19 @@ When an internal event occurs inside the FMU at a time instant, it informs the m
 Note that an event signal is not seen in the narrow sense of solver induced discontinuity events but in the general sense of a simulation event that has to be handled by the Co-Simulation master (e.g. state changes that require extended handling).
 On a multi-node architecture, in particular, significant co-simulation speed-up may be obtained if the Co-Simulation master can avoid waiting until the end of the slowest <<fmi3DoStep>> when many FMUs are integrating in parallel and an event occurred.
 To exploit such efficiency gains also the Co-Simulation master can command the FMU to return early from the current communication step.
-This is even helpful if the FMU or the Co-Simulation master do not support the advanced handling of events based on the <<api-hybrid-co-simulation, Hybrid Co-Simulation>> functionalities.
-In this way multiple event types and also <<outputClock>> ticks or interrupts can be supported based on the early return functionality and additional functionalities provided by <<api-hybrid-co-simulation,Hybrid Co-Simulation>>.
+This is even helpful if the FMU or the Co-Simulation master do not support the advanced handling of events based on the <<hybrid-co-simulation-api, Hybrid Co-Simulation>> functionalities.
+In this way multiple event types and also <<outputClock>> ticks or interrupts can be supported based on the early return functionality and additional functionalities provided by <<hybrid-co-simulation-api,Hybrid Co-Simulation>>.
 
-[[clocked-co-simulation]]
-Clocked Co-Simulation::
-The <<api-hybrid-co-simulation,Hybrid Co-Simulation>> interface provides functionalities to control and observe the ticking of <<clock,clocks>>.
+Hybrid Co-Simulation::
+The <<hybrid-co-simulation-api,Hybrid Co-Simulation>> interface provides functionalities to control and observe the ticking of <<clock,clocks>>.
 For FMI for Co-Simulation, the ticking of a clock is interpreted as an activity of the associated model partition.
 During simulation, the Co-Simulation master updates and manages values of inputs and outputs of FMUs and further models at communication points for each model partition.
 The ratio between communication points created for a model partition and time can be seen as a model rate.
 In that sense multiple model partitions of a model define multiple model rates in a model.
 
-[[scheduled-co-simulation]]
 Scheduled Co-Simulation::
-The <<api-hybrid-co-simulation,Hybrid Co-Simulation>> interface provides an indirect control over the computation of model partitions.
-With <<api-scheduled-co-simulation,Scheduled Co-Simulation>> a simulation master can directly control the time of computation (i.e. scheduling) for such model partitions.
+The <<hybrid-co-simulation-api,Hybrid Co-Simulation>> interface provides an indirect control over the computation of model partitions.
+With <<scheduled-co-simulation-api,Scheduled Co-Simulation>> a simulation master can directly control the time of computation (i.e. scheduling) for such model partitions.
 +
 The Scheduled Co-Simulation interface addresses simulation use cases that require:
 +
@@ -234,9 +232,47 @@ _A common application of this multiple mode support is the reuse of FMUs for rea
 +
 The described multi mode support is based on wrapping functionality into the <<fmi3DoStep>> function by emulating missing features of the Co-Simulation interface, the FMU has been originally exported for.
 +
-An FMU that supports <<api-scheduled-co-simulation,Scheduled Co-Simulation>> will in most cases also support <<api-hybrid-co-simulation,Hybrid Co-Simulation>>.
+An FMU that supports <<scheduled-co-simulation-api,Scheduled Co-Simulation>> will in most cases also support <<hybrid-co-simulation-api,Hybrid Co-Simulation>>.
 +
 _[Wrapping towards other Co-Simulation interfaces can influence the simulation results._
 _Depending on the model especially wrapping towards the (basic) Co-Simulation interface may result in divergent simulation results._
 _Especially aperiodic <<inputClock,`input clocks`>> can not always be sufficiently emulated in modes that do not directly support <<clock,`clocks`>>._
 _Therefore it is recommended that the FMU provides logging information to the user about the influence of the current mode on simulation results, if non-optimal modes are used by the simulation environment.]_
+
+==== Common Co-Simulation Application Programming Interface 
+
+==== Intermediate Variable Access [[api-intermediate-variable-access]]
+
+If the Co-Simulation master signals the support for intermediate variable access and an FMU has at least one variable with <<intermediateAccess>> = `true`, the FMU can invoke the <<fmi3CallbackIntermediateUpdate>> callback function to sent the <<fmi3IntermediateUpdateInfo>> back to the Co-Simulation master.
+
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tag=IntermediateUpdateInfo]
+----
+
+The following flags in the `fmi3IntermediateInfo` struct are used for intermediate variable access:
+
+* `intermediateTime` is the simulation time at which the <<fmi3CallbackIntermediateUpdate>> callback-function got called by the FMU.
+
+* If `intermediateVariableSetAllowed` is `fmi3True`, the Co-Simulation master may provide intermediate <<input>> variables by calling `fmi3Set{VariableType}` functions for variables with <<intermediateAccess>> = `true`.
+
+* If `intermediateVariableGetAllowed` is `fmi3True`, the Co-Simulation master may collect intermediate output variables by calling `fmi3Get{VariableType}` functions for variables with <<intermediateAccess>> = `true`.
+
+* If `intermediateStepFinished` is `fmi3False`, the Co-Simulation master shall only use intermediate output variables to compute intermediate <<input>> variables at the current state.
+
+Hence, it is important to distinguish intermediate output from successful internal integration steps from intermediate outputs valid only for temporary solver states.
+The <<figure-intermediate-variable-access>> shows an overview of the solver states and the intended use of intermediate variable access.
+It is not necessary that temporary solver states occur before a finished step.
+For example, variable step-size solvers may try longer steps first and then reduce step size before the step is finished.
+
+.Overview of solver states and intermediate variable access during a communication step
+[#figure-intermediate-variable-access]
+image::images/intermediatevariableaccess.svg[width=400%, align="center"]
+
+===== Pseudo-code Example for Intermediate Variable Access
+
+In the following example, the usage of the intermediate variable access is illustrated in order to clarify the typical calling sequence of the functions:
+[source, c]
+----
+include::examples/pseudo_code_co_simulation_intermediate_variable_access.txt[]
+----
