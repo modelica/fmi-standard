@@ -64,23 +64,6 @@ typedef enum {
 } fmi3Status;
 /* end::Status[] */
 
-/* tag::InterfaceType[] */
-typedef enum {
-    fmi3ModelExchange,
-    fmi3CoSimulation,
-    fmi3HybridCoSimulation,
-    fmi3ScheduledCoSimulation
-} fmi3InterfaceType;
-/* end::InterfaceType[] */
-
-/* tag::CoSimulationConfiguration[] */
-typedef struct {
-    fmi3Boolean intermediateVariableGetRequired;
-    fmi3Boolean intermediateInternalVariableGetRequired;
-    fmi3Boolean intermediateVariableSetRequired;
-} fmi3CoSimulationConfiguration;
-/* end::CoSimulationConfiguration[] */
-
 /* tag::DependencyKind[] */
 typedef enum {
     /* fmi3Independent = 0, not needed but reserved for future use */
@@ -127,16 +110,6 @@ typedef void       (*fmi3CallbackLockPreemption)   ();
 typedef void       (*fmi3CallbackUnlockPreemption) ();
 /* end::PreemptionLock[] */
 
-typedef struct {
-    fmi3InstanceEnvironment         instanceEnvironment;
-    fmi3CallbackLogMessage          logMessage;
-    fmi3CallbackAllocateMemory      allocateMemory;
-    fmi3CallbackFreeMemory          freeMemory;
-    fmi3CallbackIntermediateUpdate  intermediateUpdate;
-    fmi3CallbackLockPreemption      lockPreemption;
-    fmi3CallbackUnlockPreemption    unlockPreemption;
-} fmi3CallbackFunctions;
-
 /* tag::EventInfo[] */
 typedef struct {
     fmi3Float64 nextEventTime;  /* next event if nextEventTimeDefined=fmi3True */
@@ -173,14 +146,63 @@ typedef fmi3Status  fmi3SetDebugLoggingTYPE(fmi3Instance instance,
 
 /* Creation and destruction of FMU instances and setting debug status */
 /* tag::Instantiate[] */
-typedef fmi3Instance fmi3InstantiateTYPE(fmi3String        instanceName,
-                                         fmi3InterfaceType fmuType,
-                                         fmi3String        fmuInstantiationToken,
-                                         fmi3String        fmuResourceLocation,
-                                         const fmi3CallbackFunctions* functions,
-                                         fmi3Boolean       visible,
-                                         fmi3Boolean       loggingOn,
-                                         const fmi3CoSimulationConfiguration* fmuCoSimulationConfiguration);
+typedef fmi3Instance fmi3InstantiateModelExchangeTYPE(
+    fmi3String                 instanceName,
+    fmi3String                 instantiationToken,
+    fmi3String                 resourceLocation,
+    fmi3Boolean                visible,
+    fmi3Boolean                loggingOn,
+    fmi3InstanceEnvironment    instanceEnvironment,
+    fmi3CallbackLogMessage     logMessage,
+    fmi3CallbackAllocateMemory allocateMemory,
+    fmi3CallbackFreeMemory     freeMemory);
+
+typedef fmi3Instance fmi3InstantiateCoSimulationTYPE(
+    fmi3String                     instanceName,
+    fmi3String                     instantiationToken,
+    fmi3String                     resourceLocation,
+    fmi3Boolean                    visible,
+    fmi3Boolean                    loggingOn,
+    fmi3Boolean                    intermediateVariableGetRequired,
+    fmi3Boolean                    intermediateInternalVariableGetRequired,
+    fmi3Boolean                    intermediateVariableSetRequired,
+    fmi3InstanceEnvironment        instanceEnvironment,
+    fmi3CallbackLogMessage         logMessage,
+    fmi3CallbackAllocateMemory     allocateMemory,
+    fmi3CallbackFreeMemory         freeMemory,
+    fmi3CallbackIntermediateUpdate intermediateUpdate);
+
+typedef fmi3Instance fmi3InstantiateHybridCoSimulationTYPE(
+    fmi3String                     instanceName,
+    fmi3String                     instantiationToken,
+    fmi3String                     resourceLocation,
+    fmi3Boolean                    visible,
+    fmi3Boolean                    loggingOn,
+    fmi3Boolean                    intermediateVariableGetRequired,
+    fmi3Boolean                    intermediateInternalVariableGetRequired,
+    fmi3Boolean                    intermediateVariableSetRequired,
+    fmi3InstanceEnvironment        instanceEnvironment,
+    fmi3CallbackLogMessage         logMessage,
+    fmi3CallbackAllocateMemory     allocateMemory,
+    fmi3CallbackFreeMemory         freeMemory,
+    fmi3CallbackIntermediateUpdate intermediateUpdate);
+
+typedef fmi3Instance fmi3InstantiateScheduledCoSimulationTYPE(
+    fmi3String                     instanceName,
+    fmi3String                     instantiationToken,
+    fmi3String                     resourceLocation,
+    fmi3Boolean                    visible,
+    fmi3Boolean                    loggingOn,
+    fmi3Boolean                    intermediateVariableGetRequired,
+    fmi3Boolean                    intermediateInternalVariableGetRequired,
+    fmi3Boolean                    intermediateVariableSetRequired,
+    fmi3InstanceEnvironment        instanceEnvironment,
+    fmi3CallbackLogMessage         logMessage,
+    fmi3CallbackAllocateMemory     allocateMemory,
+    fmi3CallbackFreeMemory         freeMemory,
+    fmi3CallbackIntermediateUpdate intermediateUpdate,
+    fmi3CallbackLockPreemption     lockPreemption,
+    fmi3CallbackUnlockPreemption   unlockPreemption);
 /* end::Instantiate[] */
 
 /* tag::FreeInstance[] */
