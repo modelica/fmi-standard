@@ -1,1 +1,72 @@
 === Common Concepts for Co-simulation Interfaces [[common-concepts-cosim]]
+
+//TODO: This should not overlap with the other cosim types.
+
+Co-simulation exploits the modular structure of coupled problems in all stages of the simulation process beginning with the separate model setup and preprocessing for the individual subsystems in different simulation tools (which can be powerful simulators as well as simple C programs).
+During time integration, the simulation is again performed independently for all subsystems restricting the data exchange between subsystems to discrete communication points latexmath:[tc_i].
+For simulator coupling, also the visualization and post-processing of simulation data is done individually for each subsystem in its own native simulation tool.
+In different contexts, the communication points latexmath:[tc_i], the communication steps latexmath:[tc_i \rightarrow tc_{i+1}] and the communication step sizes latexmath:[hc_i := tc_{i+1} - tc_i] are also known as sampling points (synchronization points), macro steps and sampling rates, respectively.
+The term "communication point" in FMI for Co-Simulation refers to the communication between subsystems in a co-simulation environment and should not be mixed with the output points for saving simulation results to file.
+
+FMI for Co-Simulation provides an interface standard for the solution of time-dependent coupled systems consisting of subsystems that are continuous in time (model components that are described by instationary differential equations) or time-discrete (model components that are described by difference equations such as discrete controllers).
+In a block representation of the coupled system, the subsystems are represented by blocks with (internal) <<state>> variables latexmath:[x(t)] that are connected to other subsystems (blocks) of the coupled problem by _subsystem <<input,`inputs`>>_ latexmath:[u(t)] and _subsystem <<output,`outputs`>>_ latexmath:[y(t)].
+In this framework, the physical connections between subsystems are represented by mathematical coupling conditions between the inputs latexmath:[u(t)] and the <<output,`outputs`>> latexmath:[y(t)] of all subsystems, <<KS00>>.
+
+.Data flow at communication points.
+image::images/co-simulation-data-flow.svg[width=80%, align="center"]
+
+For Co-Simulation two basic groups of functions have to be implemented:
+
+. functions for the data exchange between subsystems
+
+. functions for algorithmic issues to synchronize the simulation of all subsystems and to proceed in communication steps latexmath:[tc_i \rightarrow tc_{i+1}] from initial time latexmath:[tc_0 := t_{start}] to end time latexmath:[tc_N := t_{stop}]
+
+// TODO: Add "A Co-sim interface..."
+In FMI for Co-Simulation, both functions are implemented in one software component, the Co-Simulation master.
+The data exchange between the subsystems (slaves) is handled via the master only.
+There is no direct communication between the slaves.
+The master functionality can be implemented by a special software tool (a separate simulation backplane) or by one of the involved simulation tools.
+In its most general form, the coupled system may be simulated in nested co-simulation environments and FMI for Co-Simulation applies to each level of the hierarchy.
+
+// TODO: Add "A Co-sim interface..."
+FMI for Co-Simulation defines interface routines for the communication between the master and all slaves (subsystems) in a co-simulation environment.
+The most common master algorithm stops at each communication point latexmath:[tc_i] the simulation (time integration) of all slaves, collects the outputs latexmath:[y(tc_i)] from all subsystems, evaluates the subsystem inputs latexmath:[u(tc_i)], distributes these subsystem inputs to the slaves and continues the (co-)simulation with the next communication step latexmath:[tc_i \rightarrow tc_{i+1} = tc_i + hc] with fixed communication step size latexmath:[hc].
+In each slave, an appropriate solver is used to integrate one of the subsystems for a given communication step latexmath:[tc_i \rightarrow tc_{i+1}].
+The most simple Co-Simulation algorithms approximate the (unknown) subsystem inputs latexmath:[u(t), (t > tc_i))] by frozen data latexmath:[u(tc_i)] for latexmath:[tc_i \leq t < tc_{i+1}].
+FMI for Co-Simulation supports this classical brute force approach as well as more sophisticated master algorithms.
+FMI for Co-Simulation is designed to support a very general class of master algorithms but it does not define the master algorithm itself.
+
+
+The ability of slaves to support more sophisticated master algorithms is characterized by a set of capability flags inside the XML description of the slave (see <<basic-co-simulation>>).
+Typical examples are:
+
+- the ability to handle variable communication step sizes latexmath:[hc_i],
+
+- the ability to repeat a rejected communication step latexmath:[tc_i \rightarrow tc_{i+1}] with reduced communication step size,
+
+- the ability to provide <<derivative,`derivatives`>> w.r.t. time of <<output,`outputs`>> to allow interpolation (<<transfer-of-input-output-and-parameters>>),
+
+- or the ability to provide Jacobians.
+
+FMI for Co-Simulation is restricted to slaves with the following properties:
+
+. All calculated values are time-dependent functions within an a priori defined time interval latexmath:[t_{start} \leq t \leq t_{stop}] (provided `stopTimeDefined = fmi3True` when calling <<fmi3SetupExperiment>>).
+
+. All calculations (simulations) are carried out with increasing time in general.
+The current time latexmath:[t] is running step by step from latexmath:[t_{start}] to latexmath:[t_{stop}].
+The algorithm of the slave may have the property to be able to repeat the simulation of parts of latexmath:[[t_{start}, t_{stop}]] or the whole time interval latexmath:[[t_{start}, t_{stop}]].
+
+. The slave can be given a time value latexmath:[tc_i, t_{start} \leq tc_i \leq t_{stop}].
+
+. The slave is able to interrupt the simulation when latexmath:[tc_i] is reached.
+
+. During the interrupted simulation the slave (and its individual solver) can receive values for <<input,`inputs`>> latexmath:[u(tc_i)] and send values of outputs latexmath:[y(tc_i)].
+
+. Whenever the simulation in a slave is interrupted, a new time value latexmath:[tc_{i+1}, tc_i \leq tc_{i+1} \leq t_{stop}], can be given to simulate the time subinterval latexmath:[tc_i < t \leq tc_{i+1}]
+
+. The subinterval length latexmath:[hc_i] is the communication step size of the latexmath:[i^{th}] communication step, latexmath:[hc_i = tc_{i+1} - tc_i].
+
+The communication step size has to be greater than zero.
+
+FMI for Co-Simulation allows a Co-Simulation flow which starts with instantiation and initialization (all slaves are prepared for computation, the communication links are established), followed by simulation (the slaves are forced to simulate a communication step), and finishes with shutdown.
+The details of the flow are given in the state machine of the calling sequences from master to slave (see <<state-machine-co-simulation>>).
