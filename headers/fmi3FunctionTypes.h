@@ -105,17 +105,6 @@ typedef void       (*fmi3CallbackLockPreemption)   ();
 typedef void       (*fmi3CallbackUnlockPreemption) ();
 /* end::PreemptionLock[] */
 
-/* tag::EventInfo[] */
-typedef struct {
-    fmi3Float64 nextEventTime;  /* next event if nextEventTimeDefined=fmi3True */
-    fmi3Boolean newDiscreteStatesNeeded;
-    fmi3Boolean terminateSimulation;
-    fmi3Boolean nominalsOfContinuousStatesChanged;
-    fmi3Boolean valuesOfContinuousStatesChanged;
-    fmi3Boolean nextEventTimeDefined;
-} fmi3EventInfo;
-/* end::EventInfo[] */
-
 /* reset alignment policy to the one set before reading this file */
 #if defined _MSC_VER || defined __GNUC__
 #pragma pack(pop)
@@ -532,7 +521,12 @@ typedef fmi3Status fmi3SetIntervalFractionTYPE(fmi3Instance instance,
 
 /* tag::NewDiscreteStates[] */
 typedef fmi3Status fmi3NewDiscreteStatesTYPE(fmi3Instance instance,
-                                             fmi3EventInfo* eventInfo);
+                                             fmi3Float64 nextEventTime,
+                                             fmi3Boolean newDiscreteStatesNeeded,
+                                             fmi3Boolean terminateSimulation,
+                                             fmi3Boolean nominalsOfContinuousStatesChanged,
+                                             fmi3Boolean valuesOfContinuousStatesChanged,
+                                             fmi3Boolean nextEventTimeDefined);
 /* end::NewDiscreteStates[] */
 
 /***************************************************
