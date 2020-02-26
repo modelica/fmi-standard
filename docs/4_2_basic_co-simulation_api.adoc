@@ -76,12 +76,8 @@ _rgument `noSetFMUStatePriorToCurrentPoint` is `fmi3True` if `fmi3SetFMUState` w
 
 The function returns: +
 `fmi3OK` - if the communication step was computed successfully until its end. +
-`fmi3Discard` - if the slave computed successfully only a subinterval of the communication step.
-The master can call <<fmi3GetDoStepDiscardedStatus>> to get further information.
-If possible, the master should retry the simulation with a shorter communication step size.
-_[Redoing a step is only possible if the FMU state has been recorded at the beginning of the current (discarded) step with <<fmi3GetFMUState>>._
-_Redoing a step is performed by calling `fmi3SetFMUState` and afterwards calling <<fmi3DoStep>> with the new communicationStepSize._
-_Note that it is not possible to change `currentCommunicationPoint` in such a call.]_ +
+`fmi3Discard` - if the slave computed successfully only a subinterval of the communication step. The FMU enters the `Step Discarded` state, see <<state-step-discarded-co-simulation>> for more information.
+ +
 `fmi3Error` - the communication step could not be carried out at all.
 The master can try to repeat the step with other input values and/or a different communication step size in the same way as described in the `fmi3Discard` case above. +
 `fmi3Fatal` - if an error occurred which corrupted the FMU irreparably.
@@ -257,11 +253,15 @@ Forbidden Function Calls::
 
 The FMU changes into this state if it is not able to compute a communication step completely by returning `fmi3Discard` from <<fmi3DoStep>>.
 This might have been caused by numerical problems or intended stop of the simulation run.
-In case of numerical problems the master may try to achieve a correct solution for example by repeating the last step with a different communication step size or by continuing from the `lastSuccessfulTime`.
+The master can call <<fmi3GetDoStepDiscardedStatus>> to get further information.
+In case of numerical problems the master may try to achieve a correct solution for example by repeating the last step with a different communication step size. _[Redoing a step is only possible if the FMU state has been recorded at the beginning of the current (discarded) step with <<fmi3GetFMUState>>._
+_Redoing a step is performed by calling `fmi3SetFMUState` and afterwards calling <<fmi3DoStep>> with the new communicationStepSize._
+_Note that it is not possible to change `currentCommunicationPoint` in such a call.]_
+The master can also continue from the `lastSuccessfulTime`.
 It does not enter into this state if the FMU returns early from a communication step caused by <<fmi3DoEarlyReturn>>.
 
 Allowed Function Calls::
-<<fmi3Terminate>>, `fmi3Get{VariableType}`, <<fmi3GetDirectionalDerivative>>, <<fmi3GetOutputDerivatives>>
+<<fmi3Terminate>>, `fmi3Get{VariableType}`, <<fmi3GetDirectionalDerivative>>, <<fmi3GetOutputDerivatives>>, <<fmi3SetFMUState>>
 
 <<fmi3GetDoStepDiscardedStatus>>::
 The master calls this functions to retrieve information about the reason for discarding the last communication step.
@@ -269,7 +269,7 @@ The master calls this functions to retrieve information about the reason for dis
 <<fmi3EnterStepMode>>::
 The <<fmi3EnterStepMode>> function pushes the FMU from *Step Discarded* to *Step Mode*.
 _[In *Step Mode*, the master may change again FMU <<input,`inputs`>> and <<parameter,`parameters`>>, or push the FMU into other states]_
-In this case, a new step may be started from `lastSuccessfulTime` which can be retrieved by the <<fmi3GetDoStepDiscardedStatus>> function in state *Step Discarded*.
+In this case, a new step may be started from `lastSuccessfulTime` which can be retrieved by the <<fmi3GetDoStepDiscardedStatus>> function in state *Step Discarded*
 
 Forbidden Function Calls::
 <<fmi3EnterConfigurationMode>>, <<fmi3ExitConfigurationMode>>, <<fmi3Instantiate>>, <<fmi3SetupExperiment>>, <<fmi3EnterInitializationMode>>, <<fmi3ExitInitializationMode>>, <<fmi3DoStep>>, `fmi3Set{VariableType}`, <<fmi3DoEarlyReturn>>, <<fmi3SetInputDerivatives>>
