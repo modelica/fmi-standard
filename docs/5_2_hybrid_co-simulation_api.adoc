@@ -29,7 +29,7 @@ Default value of variables is `fmi3False`.
 
 * when `eventOccurred` is `fmi3True`, the master must call <<fmi3DoEarlyReturn>> to do an early return and handle the event via entering *Event Mode*.
 In this case, `earlyReturnTime` argument of <<fmi3DoEarlyReturn>> is ignored.
-In *Event Mode* the master shall call the <<fmi3NewDiscreteStates>> function for gathering <<fmi3EventInfo>> related information about the event occurred at `intermediateUpdateTime`.
+In *Event Mode* the master shall call the <<fmi3NewDiscreteStates>> function for gathering related information about the event that occurred at `intermediateUpdateTime`.
 
 * when `clocksTicked`  is `fmi3True`, it means that <<fmi3GetClock>> function should be called for gathering all <<clock>> related information about ticking <<outputClock,`output clocks`>> at `intermediateUpdateTime`.
 If this flag is `fmi3True` the master must call <<fmi3DoEarlyReturn>> to do an early return and handle the <<clock>> event in *Event Mode*.
@@ -47,7 +47,7 @@ If `canReturnEarly` is `fmi3False` the FMU will not do the early return, regardl
 Note that only the first discontinuity event at a Newtonian time instant shall be signaled that way.
 But in *Event Mode*, there may be an event iteration at a Newtonian time instant and have super dense time instants.
 
-Based on the information delivered in <<fmi3IntermediateUpdateInfo>>, additional information about the discontinuity at that time instant can be obtained from the <<fmi3EventInfo>> structure after calling  <<fmi3NewDiscreteStates>>  and/or <<fmi3GetClock>>.
+Based on the information delivered in <<fmi3IntermediateUpdateInfo>>, additional information about the discontinuity at that time instant can be obtained by calling <<fmi3NewDiscreteStates>> and <<fmi3GetClock>>.
 
 The FMU must not call the <<fmi3CallbackIntermediateUpdate>> callback function with a `intermediateUpdateInfo.intermediateUpdateTime` value that is smaller than the `intermediateUpdateInfo.intermediateUpdateTime` value given in a previous call of <<fmi3CallbackIntermediateUpdate>> with `intermediateUpdateInfo.intermediateStepFinished` is `fmi3True`.
 
@@ -70,25 +70,25 @@ The Co-Simulation master signals to the FMU that it supports and has recognized 
 The FMU stops computation at the first encountered internal event (if any) and the event time is provided through `intermediateUpdateInfo.intermediateUpdateTime`.
 If <<fmi3DoStep>> returns with `earlyReturn = fmi3True` and an event has happened, i.e. `intermediateUpdateInfo.eventOccurred` is `fmi3True`, then an event handling has to be done by the Co-Simulation master.
 In order to start event handling the Co-Simulation master has to call <<fmi3EnterEventMode>> for that FMU to push the FMU into *Event Mode*.
-In this mode the Co-Simulation master is supposed to catch all events through the <<fmi3NewDiscreteStates>> function and the <<fmi3EventInfo>> structure.
+In this mode the Co-Simulation master is supposed to catch all events through the <<fmi3NewDiscreteStates>> function.
 
 If the early-return request of the Co-Simulation master is ignored by the FMU, then <<fmi3DoStep>> returns with `earlyReturn = fmi3False`.
 The master can start a resynchronization of FMUs at an event time, if the `currentCommunicationPoint` has passed the event time, the master can roll-back the FMU and repeat the step with a suitable `communicationStepSize` (if the FMU supports the roll-back).
 
-In *Event Mode* and only after <<fmi3DoStep>> returns with `earlyReturn = fmi3True` a <<fmi3NewDiscreteStates>> call returns <<fmi3EventInfo>> structure as a return argument.
-Not all elements of <<fmi3EventInfo>> are relevant and only the following elements may be considered:
+In *Event Mode* and only after <<fmi3DoStep>> returned with `earlyReturn = fmi3True` the function <<fmi3NewDiscreteStates>> may be called.
+Only the following output arguments may be considered:
 
-- when `newDiscreteStatesNeeded = true` it means that the master should stay in *Event Mode* and another call to <<fmi3NewDiscreteStates>> is required.
+- When `newDiscreteStatesNeeded = true`, the master should stay in *Event Mode* and another call to <<fmi3NewDiscreteStates>> is required.
 
-- when `nextEventTimeDefined = true` it means that an event time is available and the value is given by the `nextEventTime` value.
+- When `nextEventTimeDefined = fmi3True`, an event time is available and the value is given by `nextEventTime`.
 This is the case when the model can report in advance the accurate time of the next predictable time event.
 
-- when `terminateSimulation = true` it means that the model wants to stop integration and the Co-Simulation master should call <<fmi3Terminate>>.
+- When `terminateSimulation = fmi3True`, the model requested to stop integration and the Co-Simulation master should call <<fmi3Terminate>>.
 
-In *Event Mode* it is allowed to `fmi3Get{VariableType}` variable values of the FMU after the call of <<fmi3NewDiscreteStates>> and it is allowed to `fmi3Set{VariableType}` variable values before calling <<fmi3NewDiscreteStates>>.
-The FMU leaves *Event Mode* when the master calls <<fmi3EnterStepMode>> for that FMU.
+In *Event Mode* it is allowed to call `fmi3Get{VariableType}` after <<fmi3NewDiscreteStates>> has been called and it is allowed to call `fmi3Set{VariableType}` before calling <<fmi3NewDiscreteStates>>.
+The FMU leaves *Event Mode* when the master calls <<fmi3EnterStepMode>>.
 
-It is not allowed to call <<fmi3EnterEventMode>> or <<fmi3EnterStepMode>> for an FMU with interface `fmi3CoSimulation` or `fmi3ScheduledCoSimulation`.
+It is not allowed to call <<fmi3EnterEventMode>> or <<fmi3EnterStepMode>> for an FMU with interface type Basic Co-Simulation and Scheduled Co-Simulation.
 
 ==== Co-Simulation with Clock Support in fmi3HybridCoSimulation [[api-clocked-co-simulation]]
 
@@ -140,7 +140,7 @@ Function calls of this call order can be omitted.
 
 The handling of return values of function calls is identical to `fmi3CoSimulation`.
 
-If `eventInfo.terminateSimulation` becomes `fmi3True` after calling <<fmi3NewDiscreteStates>> then the co-simulation should be terminated by calling <<fmi3Terminate>>.
+If `terminateSimulation` becomes `fmi3True` after calling <<fmi3NewDiscreteStates>> then the co-simulation should be terminated by calling <<fmi3Terminate>>.
 Once handling of the <<clock>> events finished, the master calls <<fmi3EnterStepMode>> for that FMU to push it into *Step Mode*.
 Note that it is not allowed to call <<fmi3EnterEventMode>> or <<fmi3EnterStepMode>> in `fmi3CoSimulation` or `fmi3ScheduledCoSimulation`.
 
@@ -191,7 +191,7 @@ In order to handle discrete events and <<clock>> ticks, the FMU is pushed into t
 
 Allowed Function Calls::
 <<fmi3Terminate>>::
-Upon return of <<fmi3NewDiscreteStates>>, if `fmi3EventInfo->terminateSimulation = fmi3True`, the master should finish the Co-Simulation by calling `fmi3Terminate` on all FMUs.
+Upon return of <<fmi3NewDiscreteStates>>, if `terminateSimulation = fmi3True`, the master should finish the Co-Simulation by calling `fmi3Terminate` on all FMU instances.
 
 <<fmi3EnterConfigurationMode>>::
 With this function call the *Reconfiguration Mode* is entered.
@@ -199,12 +199,10 @@ This function must not be called if the FMU contains no <<tunable>> <<structural
 
 <<fmi3NewDiscreteStates>>::
 In order to handle discrete events <<fmi3NewDiscreteStates>> is called.
-This function returns the `fmi3EventInfo* eventInfo` structure.
-When `eventInfo.newDiscreteStatesNeeded = true`, the FMU should stay in *Event Mode* and another call to <<fmi3NewDiscreteStates>> is required.
+When the output argument `newDiscreteStatesNeeded = fmi3True`, the FMU should stay in *Event Mode* and another call to <<fmi3NewDiscreteStates>> is required.
 
 <<fmi3EnterStepMode>>::
-Once all events are handled and <<fmi3NewDiscreteStates>> returns with `eventInfo.newDiscreteStatesNeeded = false`, the FMU should return back to the *Step Mode*, unless the FMU requests to terminate the Co-Simulation by setting  `fmi3EventInfo->terminateSimulation` to `true`.
-In order to push the FMU into the *Step Mode*, the <<fmi3EnterStepMode>> function is used.
+Once all events are handled and `newDiscreteStatesNeeded = fmi3False`, the FMU should be pushed to *Step Mode* by calling <<fmi3EnterStepMode>>, unless it requests to terminate the Co-Simulation by setting  `terminateSimulation` to `fmi3True`.
 In this case, a new step can be started from the current communication point time.
 
 <<fmi3GetClock>>::
