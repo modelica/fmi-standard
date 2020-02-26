@@ -75,18 +75,6 @@ typedef enum {
 } fmi3DependencyKind;
 /* end::DependencyKind[] */
 
-/* tag::IntermediateUpdateInfo[] */
-typedef struct{
-    fmi3Float64 intermediateUpdateTime;
-    fmi3Boolean eventOccurred;
-    fmi3Boolean clocksTicked;
-    fmi3Boolean intermediateVariableSetAllowed;
-    fmi3Boolean intermediateVariableGetAllowed;
-    fmi3Boolean intermediateStepFinished;
-    fmi3Boolean canReturnEarly;
-} fmi3IntermediateUpdateInfo;
-/* end::IntermediateUpdateInfo[] */
-
 /* tag::CallbackFunctions[] */
 typedef void  (*fmi3CallbackLogMessage)     (fmi3InstanceEnvironment instanceEnvironment,
                                              fmi3String instanceName,
@@ -101,8 +89,15 @@ typedef void  (*fmi3CallbackFreeMemory)     (fmi3InstanceEnvironment instanceEnv
 /* end::CallbackFunctions[] */
 
 /* tag::CallbackIntermediateUpdate[] */
-typedef fmi3Status (*fmi3CallbackIntermediateUpdate) (fmi3InstanceEnvironment instanceEnvironment,
-                                                      fmi3IntermediateUpdateInfo* intermediateUpdateInfo);
+typedef fmi3Status (*fmi3CallbackIntermediateUpdate) (
+  fmi3InstanceEnvironment instanceEnvironment,
+  fmi3Float64 intermediateUpdateTime,
+  fmi3Boolean eventOccurred,
+  fmi3Boolean clocksTicked,
+  fmi3Boolean intermediateVariableSetAllowed,
+  fmi3Boolean intermediateVariableGetAllowed,
+  fmi3Boolean intermediateStepFinished,
+  fmi3Boolean *canReturnEarly);
 /* end::CallbackIntermediateUpdate[] */
 
 /* tag::PreemptionLock[] */
