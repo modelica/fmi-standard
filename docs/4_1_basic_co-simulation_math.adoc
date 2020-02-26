@@ -1,12 +1,10 @@
 === Mathematical Description
 
-==== Co-Simulation [[math-co-simulation]]
-
-===== Basics of Co-Simulation [[basics-co-simulation]]
+==== Basic Co-Simulation [[math-basic-co-simulation]]
 
 // TODO: Move stuff here from the common concepts section.
 
-===== Mathematical Model Co-Simulation
+===== Mathematical Model of Basic Co-Simulation
 
 This section contains a formal mathematical model of a Co-Simulation FMU.
 
@@ -80,8 +78,8 @@ Formally, a discrete <<state>> is part of the <<output,`outputs`>> latexmath:[\m
 
 When the transient simulation of the coupled system through Co-Simulation is completed, the sequence of evaluations is the following (here latexmath:[\mathbf{x} = {\lbrack \mathbf{x}_c; \mathbf{x}_d \rbrack}^T] is the combined vector of continuous-time and discrete-time <<state,states>>, and latexmath:[\mathbf{y} = {\lbrack \mathbf{y}_c; \mathbf{y}_d \rbrack}^T]) is the combined vector of continuous-time and discrete-time <<output,`outputs`>>):
 
-.Sequence of Co-Simulation evaluations
-[[equation-co-simulation-evaluations,Sequence of Co-Simulation evaluations]]
+.Sequence of Basic Co-Simulation evaluations
+[[equation-basic-co-simulation-evaluations,Sequence of Basic Co-Simulation evaluations]]
 [latexmath]
 ++++
 \mathrm{\text{for}}\ i = 0, \cdots, n-1
@@ -133,7 +131,7 @@ O(hc_i^{2}).
 
 _]_
 
-Definition <<equation-co-simulation-evaluations>> is consistent with the definition of co-simulation by <<KS00>>.
+Definition <<equation-basic-co-simulation-evaluations>> is consistent with the definition of co-simulation by <<KS00>>.
 
 * At the communication points, the master provides generalized inputs to the slave, which can be:
 
@@ -164,7 +162,7 @@ If the slave is connected in loops with other models, no iterations over the FMU
 
 _[Note that for a Co-Simulation FMU, no super dense time description is used at communication points.]_
 
-The equations are defined in <<table-math-co-simulation>> can be evaluated in the respective mode.
+The equations are defined in <<table-math-basic-co-simulation>> can be evaluated in the respective mode.
 The following color coding is used in the table:
 
 [cols="1,8"]
@@ -176,8 +174,8 @@ For an output argument, calling `fmi3Get{VariableType}` on such a variable retur
 |[blue]#*blue*# |Equations and functions marked in [blue]#blue# define the actual computations to be performed in the respective mode.
 |====
 
-.Mathematical description of an FMU for Co-Simulation.
-[#table-math-co-simulation]
+.Mathematical description of an FMU for Basic Co-Simulation.
+[#table-math-basic-co-simulation]
 [cols="2,1",options="header",]
 |====
 |*Equations* |*FMI functions*
@@ -270,65 +268,3 @@ Each ongoing FMU stops its integration either exactly at the broken time given b
 Afterwards, a new step integration done on the FMU returns and signals the premature stop (early-return) to the master.
 
 Due to the early-return mechanism, the overall execution time of the simulation is reduced.
-
-==== Co-Simulation with Clock Support [[math-clocked-co-simulation]]
-
-The notion of <<clock>> in FMI for Model Exchange has been extended to the FMI for Co-Simulation.
-
-Both <<outputClock,`output clocks`>> and <<inputClock,`input clocks`>> are supported in Co-Simulation with <<clock,`clocks`>>.
-In order to handle <<inputClock,`input`>> and <<outputClock,`output clocks`>> in Co-Simulation, a new *Event Mode* has been introduced.
-
-The concept and the way <<inputClock,`input`>> and <<outputClock,`output clocks`>> are handled are very similar in Model Exchange and Co-simulation.
-In order to handle <<inputClock,`input clocks`>>, the Co-Simulation master schedules <<inputClock,`input clocks`>> and adjusts the communication steps in such a way that <<inputClock>> ticks become communication points.
-At these communication points, the FMU is pushed to the *Event Mode* and <<inputClock,`input clocks`>> are handled.
-
-<<outputClock,`Output clocks`>>, on the other hand, are detected by the FMU.
-The FMU detects an <<outputClock>> and informs the master by invoking a callback in which the event time and the event type is communicated to the master.
-Then FMU stops the current Co-Simulation step and returns back from <<fmi3DoStep>>.
-Then the FMU is pushed to the *Event Mode* and the event is handled.
-Note that, since output events time instants are not known in advance, at output event time instants, new communication steps are created.
-
-
-==== Scheduled Co-Simulation interface [[math-scheduled-co-simulation]]
-
-The Scheduled Co-Simulation interface has a different timing concept compared to both Co-Simulation interfaces.
-This is required to cover <<clock>> ticks for aperiodic <<inputClock,`input clocks`>> which may tick at time instances that are not predictable in advance for the simulation master.
-Typically, hardware I/O or virtual ECU software events belong to this category.
-
-A Co-Simulation master's call for computing a model partition will compute the results of the model partition defined by an <<inputClock>> for the current <<clock>> tick time latexmath:[t_i].
-
-The result values will be computed for the current <<clock>> tick time (activation time) latexmath:[t_i] from the assigned <<inputClock>> (which is known to the Co-Simulation master).
-Refer to the <<clock>> time progress definition (<<clock-types-for-evaluation-of-clocked-model-partitions>>) for periodic <<clock,`clocks`>>.
-
-If required, the FMU can internally derive the <<clock>> interval latexmath:[\Delta T_i] based on the last <<clock>> tick time latexmath:[t_{i-1}] i.e. last activation time for this model partition.
-
-A model partition can only be activated once per activation time point latexmath:[t_i].
-
-Model partitions that are associated to <<outputClock,`output clocks`>> will accordingly provide the result values of the model partition's variables for the current <<outputClock>> tick time latexmath:[t_i] of the active <<outputClock>>.
-The activation of such a <<outputClock>> is not directly controlled by the Co-Simulation master but internally by the FMU.
-
-==== Intermediate Variable Access Support [[math-intermediate-variable-access]]
-
-Intermediate variable access has three main uses:
-
-. *An FMU is able to produce valid output variables at intermediate points between two consecutive communication points.*
-This is typically the result of an internal solver taking multiple integration steps between two consecutive communication points.
-The FMU exposes intermediate output variables for the master whenever they are available.
-These can be used for e.g. extrapolation, interpolation, filtering or asynchronous co-simulation.
-
-. *Intermediate <<input>> variables for an FMU is available in the Co-Simulation master.*
-The FMU requests updated intermediate <<input>> variables every time they are required by the internal solver.
-This can be either at temporary solver states or after successful integration steps.
-
-. *Intermediate <<input>> variables for the FMU can be computed by the Co-Simulation master.*
-The computation requires intermediate output variables from the FMU.
-Whenever the internal solver in the FMU needs updated intermediate <<input>> variables, it provides the intermediate output variables for and requests the intermediate <<input>> variables from the master.
-
-Combinations of the above methods are also allowed.
-
-Access to intermediate variables enables several features such as:
-
-* Advanced interpolation/extrapolation techniques
-* Asynchronous communication
-* Anti-alias filtering
-* Smoothing of inputs
