@@ -4,9 +4,9 @@ This section contains the interface description for supporting the Scheduled Co-
 
 The direct scheduling of model partitions based on <<clock>> ticks requires an additional handling mode for FMUs.
 The FMU signals its support for direct model partition scheduling in the `modelDescription.xml` via the flag `providesScheduledCoSimulation = true`.
-The Co-Simulation master signals to the FMU that it supports and has recognized the <<clock>> and model partition scheduling capabilities of the FMU via setting the Co-Simulation interface in `fmi3CoSimulationMode` to `fmi3ScheduledCoSimulation` in the struct `fmi3CoSimulationConfiguration` function <<fmi3Instantiate>>.
+The Co-Simulation master signals to the FMU that it supports and has recognized the <<clock>> and model partition scheduling capabilities of the FMU by instantiating it as Scheduled Co-Simulation.
 
-If the flag `providesScheduledCoSimulation = false`, it is not allowed to set the Co-Simulation interface to `fmi3ScheduledCoSimulation`.
+If the flag `providesScheduledCoSimulation = false`, it is not allowed to use the Scheduled Co-Simulation interface.
 
 If no <<inputClock,`input clocks`>> are defined by the FMU it is not allowed to set `providesScheduledCoSimulation` to `true` in the `modelDescription.xml`.
 
@@ -14,7 +14,7 @@ Error, reset or terminate information is a global state of the FMU.
 If e.g. an function returns `fmi3Discard` or `fmi3Error` this is also assumed for all active or preempted model partitions.
 In case of `fmi3Discard` or `fmi3Error` no repetition of the step is possible, the only possible way to go forward is to enter the *Terminated* state and to end or to reset the simulation or - if supported - to set the FMU back to a former state.
 
-==== Transfer of Input / Output Values and Parameters in fmi3ScheduledCoSimulation
+==== Transfer of Input / Output Values and Parameters in Scheduled Co-Simulation
 
 The simulation master sets and gets variable values as defined in section <<get-and-set-variable-values>>.
 
@@ -26,12 +26,12 @@ _[The value of global variables can be influenced by more than one model partiti
 
 The computational effort has to be predictable, thus all computationally expensive operations needed to calculate a model partition have to be contained within the <<fmi3ActivateModelPartition>> function.
 The simulation master can assume that `fmi3Get{VariableType} and fmi3Set{VariableType}` operations are not computationally expensive.
-In `fmi3ScheduledCoSimulation` the handling of <<fmi3CallbackIntermediateUpdate>> callbacks is the same as in section <<hybrid-co-simulation>>.
+In Scheduled Co-Simulation the handling of <<fmi3CallbackIntermediateUpdate>> callbacks is the same as in section <<hybrid-co-simulation>>.
 The only difference is that an early return has no meaning in this mode and  no additional event handling based on <<fmi3NewDiscreteStates>> is conducted.
 All internal events that shall be handled by the Co-Simulation master are signaled via <<fmi3CallbackIntermediateUpdate>>.
 _[In this mode it is recommended to restrict such updates by the FMU to <<outputClock>> ticks for reducing the computational load in real-time simulations.]_
 
-==== Computation in fmi3ScheduledCoSimulation
+==== Computation in Scheduled Co-Simulation
 
 If this mode is set, the master has to directly control the time of computation of model partitions associated to <<inputClock,`input clocks`>>.
 The activation states of <<outputClock,`output clocks`>> are transported via <<fmi3CallbackIntermediateUpdate>> and <<fmi3GetClock>>.
@@ -71,7 +71,7 @@ If required, the FMU can internally derive the <<clock>> interval latexmath:[\De
 
 It is not allowed to call <<fmi3ActivateModelPartition>> for a <<clockReference>> (i.e. <<valueReference>> of <<clock>> variable) more than once for the same activationTime latexmath:[t_i].
 
-==== State Machine for fmi3ScheduledCoSimulation
+==== State Machine for Scheduled Co-Simulation
 
 This section summarizes the available states and the allowed function calls in the respective states.
 All states must not be entered or exited concurrently for model partitions of an FMU but only for the whole FMU instance.
@@ -82,9 +82,9 @@ image::images/state-machine-scheduled-co-simulation.svg[width=80%, align="center
 
 In Scheduled Co-Simulation the following functions must not be called: <<fmi3DoStep>>, <<fmi3NewDiscreteStates>>, <<fmi3SetClock>>, <<fmi3SetIntervalDecimal>>, <<fmi3SetIntervalFraction>>, <<fmi3DoEarlyReturn>>, <<fmi3EnterEventMode>>, <<fmi3EnterStepMode>> including all functions that are specific to the Model Exchange interface.
 
-The states *Configuration Mode*, *Instantiated*, *Initialization Mode*, and *Terminated* are handled in the same way as in `fmi3CoSimulation`, with the exception that the generally not allowed functions of `fmi3ScheduledCoSimulation` must not be called.
+The states *Configuration Mode*, *Instantiated*, *Initialization Mode*, and *Terminated* are handled in the same way as in Co-Simulation, with the exception that the generally not allowed functions of Scheduled Co-Simulation must not be called.
 
-===== State: Slave Setable FMU State
+===== State: Slave Settable FMU State
 
 In all states of this super state it is allowed to call <<fmi3GetFMUState>>, `fmi3SetFMUState`, `fmi3FreeFMUState`, <<fmi3SerializedFMUStateSize>>, <<fmi3SerializeFMUState>>, <<fmi3DeSerializeFMUState>>, <<fmi3Reset>>, <<fmi3GetVersion>>, `fmi3SetDebugLogging` and <<fmi3FreeInstance>>.
 
@@ -203,7 +203,7 @@ The master can call `fmi3Set{VariableType}` and `fmi3Get{VariableType}` during t
 Also intermediate variable access is allowed as defined in <<state-intermediate-update-mode-co-simulation>>
 
 _[Based on the FMI standard it cannot be determined which part of the code of an FMU has called the callback function <<fmi3CallbackIntermediateUpdate>>._
-_This is especially the case for `fmi3ScheduledCoSimulation` in which multiple model partitions can be active at the same time._
+_This is especially the case for Scheduled Co-Simulation where multiple model partitions can be active at the same time._
 _This causes no issues since all function call prerequisites are connected to the activation state of <<clock,`clocks`>>, `modelDescription.xml` information and additionally available information from <<fmi3CallbackIntermediateUpdate>>]_
 
 ===== State: Reconfiguration Mode
@@ -331,7 +331,7 @@ A lock can be created and released to prevent preemption of that task (i.e. mode
 include::../headers/fmi3FunctionTypes.h[tag=PreemptionLock]
 ----
 
-Even if the Co-Simulation master does not support preemption and the mode `fmi3ScheduledCoSimulation`, at least an empty implementation of these callback functions is required.
+Even if the Co-Simulation master does not support preemption and Scheduled Co-Simulation, at least an empty implementation of these callback functions is required.
 
 Example for the use of `fmi3CallbackLockPreemption` and `fmi3CallbackUnlockPreemption` callback functions in the FMU code:
 
@@ -367,7 +367,7 @@ void Task2(void) //high priority
 ----
 
 
-==== Pseudo-code Example for fmi3ScheduledCoSimulation
+==== Pseudo-code Example for Scheduled Co-Simulation
 
 In the following example, the usage of the FMI functions is sketched in order to clarify the typical calling sequence of the functions in a simulation environment.
 The example is given in a mix of pseudo-code and C, in order to keep it small and understandable.
