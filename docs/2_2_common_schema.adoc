@@ -161,7 +161,7 @@ _[This information can be, for example, used to compute efficiently a sparse Jac
 
 At least one element of `ModelExchange` or `CoSimulation` must be present to identify the type of the FMU.
 If both elements are defined, different types of models are included in the FMU.
-The details of these elements are defined in <<ModelExchange>> and <<basic-co-simulation>>.
+The details of these elements are defined in <<ModelExchange>> and <<fmi-for-basic-co-simulation>>.
 
 The XML attributes of `fmiModelDescription` are:
 
@@ -1140,11 +1140,11 @@ Variable elements can uniformly represent variables of primitive (atomic) types,
 Variable elements representing array variables must contain at least one `Dimension` element.
 Each `Dimension` element specifies the size of one dimension of the array:
 
-- If the <<start>> attribute of the `Dimension` element is present, it defines a constant unsigned 32-bit integer size for this dimension.
+- If the <<start>> attribute of the `Dimension` element is present, it defines a constant unsigned 64-bit integer size for this dimension.
 The <<variability>> of the dimension size is <<constant>> in this case.
 
 - If the <<valueReference>> attribute of the `Dimension` element is present, it defines the size of this dimension to be the value of the variable with the value reference given by the <<valueReference>> attribute.
-The referenced variable must be a variable of `UInt32` type, and must either be a constant (i.e. with <<variability>> = <<constant>>) or a <<structuralParameter,`structural parameter`>>(i.e. with <<causality>> = <<structuralParameter>>).
+The referenced variable must be a variable of type `UInt64`, and must either be a constant (i.e. with <<variability>> = <<constant>>) or a <<structuralParameter,`structural parameter`>>(i.e. with <<causality>> = <<structuralParameter>>).
 The <<variability>> of the dimension size is in this case the <<variability>> of the referenced variable.
 
 These two options are mutually exclusive, i.e. for each `Dimension` element either a <<start>> attribute or an <<valueReference>> attribute can be supplied, but not both.
@@ -1153,6 +1153,10 @@ However different dimension sizes can be specified using different mechanisms an
 All initial dimension sizes (i.e. prior to any configuration or reconfiguration) must be positive integers (i.e. not zero), so that no dimension is initially vanished.
 Changes to dimension sizes are constrained by the `min`/`max` attributes of the referenced <<structuralParameter,`structural parameters`>>, which can be any non-negative integer, including zero.
 Specifying a minimum size of zero on a <<structuralParameter,`structural parameter`>>allows any related dimension sizes to be changed to zero in *Configuration Mode* or *Reconfiguration Mode*, thus causing the respective array size to go to zero, which leaves the respective array variable without any active elements.
+
+The actual dimension sizes of arrays are also constrained by the FMU platform, due to memory and addressing constraints:
+Since the API functions to access variables and their values are constrained to `size_t` individual elements, platforms with addresses of less than 64-bit width will not be able to access elements beyond their addressing limits, neither will they be able to allocate enough memory or address space to represent such arrays.
+For these reasons implementations must take platform-specific constraints into account when changing dimension sizes, and must be prepared to handle the inability of the FMU to adjust to the desired sizes during *Configuration Mode* or *Reconfiguration Mode*.
 
 Changing any dimension of a variable in *Configuration Mode* or *Reconfiguration Mode* invalidates the variable's current value (including its <<start>> value).
 It should be noted that changing a <<structuralParameter,`structural parameter`>> might affect dimension sizes of several variables.
@@ -1332,7 +1336,7 @@ If `fmi3Set{VariableType}` is not called on a variable with <<causality>> = <<in
 Only for Model Exchange (if only Co-Simulation FMU, this attribute must not be present.
 If both Model Exchange and Co-Simulation FMU, this attribute is ignored for Co-Simulation): +
 Only for variables with <<variability>> = <<input>> : +
-If present with value equals `false`, then only one `fmi3Set{VariableType}` call is allowed at one super dense time instant (model evaluation) on this variable.
+If present with value equals `false`, then only one `fmi3Set{VariableType}` call is allowed at one super-dense time instant (model evaluation) on this variable.
 That is, this <<input>> is not allowed to appear in a (real) algebraic loop requiring multiple calls of `fmi3Set{VariableType}` on this variable _[for example, due to a Newton iteration]_. +
 _[This flag must be set by FMUs where (internal) discrete-time <<state,`states`>> are directly updated when assigned (xd := f(xd) instead of xd = f(previous(xd)), and at least one <<output>> depends on this <<input>> and on discrete <<state,`states`>>._ +
 _It is strongly recommended that such an FMU checks the fulfillment of the requirement by itself during run-time, because an environment might not be able to check it; usually, there is a generic mechanism to import an FMU in an environment, but the mechanism to connect FMUs together is unrelated to the import mechanism._
@@ -1896,7 +1900,7 @@ A Model Exchange FMU must expose all <<derivative,`derivatives`>> of its continu
 A Co- Simulation FMU does not need to expose these state derivatives.
 _[If a Co-Simulation FMU exposes its state derivatives, they are usually not utilized for the co-simulation, but, for example, to linearize the FMU at a communication point.]_
 
-The optional part defines in which way <<derivative,`derivatives`>> and <<output,`outputs`>> depend on <<input,`inputs`>>, and continuous-time <<state,`states`>> at the current super dense time instant (Model Exchange) or at the current communication point (Co-Simulation).
+The optional part defines in which way <<derivative,`derivatives`>> and <<output,`outputs`>> depend on <<input,`inputs`>>, and continuous-time <<state,`states`>> at the current super-dense time instant (Model Exchange) or at the current communication point (Co-Simulation).
 _[The listed <<dependencies>> declare the dependencies between whole (multi-dimensional-)variables and not individual elements of the variables.]_
 _[A simulation environment can utilize this information to improve the efficiency, for example, when connecting FMUs together, or when computing the partial derivative of the <<derivative,`derivatives`>> with respect to the <<state,`states`>> in the simulation engine.]_
 
@@ -1929,7 +1933,7 @@ _[Note that all <<output>> variables are listed here, especially <<discrete>> an
 _The ordering of the variables in this list is defined by the exporting tool._
 _Usually, it is best to order according to the declaration order in the source model, since then the `Outputs` list does not change if the declaration order of <<output,`outputs`>> in the source model is not changed._
 _This is for example, important for linearization, in order that the interpretation of the output vector does not change for a re-exported FMU.]_
-Attribute <<dependencies>> defines the dependencies of the <<output,`outputs`>> from the knowns at the current super dense time instant in Event and in *Continuous-Time Mode* (Model Exchange) and at the current communication point (Co-Simulation).
+Attribute <<dependencies>> defines the dependencies of the <<output,`outputs`>> from the knowns at the current super-dense time instant in Event and in *Continuous-Time Mode* (Model Exchange) and at the current communication point (Co-Simulation).
 The functional dependency is defined as (dependencies of variables that are fixed in Event and *Continuous-Time Mode* and at communication points are not shown): +
 [blue]#latexmath:[\color{blue}{(\mathbf{y}_c, \mathbf{y}_d) := \mathbf{f}_{output}(\mathbf{x}_c, \mathbf{u}_c, \mathbf{u}_d, t, \mathbf{p}_{tune})}]#
 
@@ -1950,7 +1954,7 @@ _[This is the default._
 _If an FMU supports both Model Exchange and Co-Simulation, then the `Derivatives` element might be present, since it is needed for Model Exchange._
 _If the above flag is set to `false` for the Co-Simulation case, then the `Derivatives` element is ignored for Co-Simulation._
 _If "inline integration" is used for a Co-Simulation slave, then the model still has continuous-time <<state,`states`>> and just a special solver is used (internally the implementation results in a discrete-time system, but from the outside, it is still a continuous-time system).]_ +
-Attribute <<dependencies>> defines the dependencies of the state derivatives from the knowns at the current super dense time instant in Event and in *Continuous-Time Mode* (Model Exchange) and at the current communication point (Co-Simulation).
+Attribute <<dependencies>> defines the dependencies of the state derivatives from the knowns at the current super-dense time instant in Event and in *Continuous-Time Mode* (Model Exchange) and at the current communication point (Co-Simulation).
 The functional dependency is defined as (dependencies of variables that are fixed in Event and *Continuous-Time Mode* and at communication points are not shown): +
 [blue]#latexmath:[\color{blue}{\dot{\mathbf{x}_c} := \mathbf{f}_{der}(\mathbf{x}_c, \mathbf{u}_c, \mathbf{u}_d, t, \mathbf{p}_{tune})}]#
 
