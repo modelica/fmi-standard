@@ -84,7 +84,6 @@ ModelInstance *createModelInstance(
 
 	comp->time = 0; // overwrite in fmi*SetupExperiment, fmi*SetTime
 	strcpy((char *)comp->instanceName, (char *)instanceName);
-	comp->type = interfaceType;
 
 	comp->state = modelInstantiated;
 	comp->isNewEventIteration = false;

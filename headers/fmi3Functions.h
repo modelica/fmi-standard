@@ -105,8 +105,11 @@ Common Functions
 #define fmi3SetDebugLogging          fmi3FullName(fmi3SetDebugLogging)
 
 /* Creation and destruction of FMU instances */
-#define fmi3Instantiate              fmi3FullName(fmi3Instantiate)
-#define fmi3FreeInstance             fmi3FullName(fmi3FreeInstance)
+#define fmi3InstantiateModelExchange         fmi3FullName(fmi3InstantiateModelExchange)
+#define fmi3InstantiateBasicCoSimulation     fmi3FullName(fmi3InstantiateBasicCoSimulation)
+#define fmi3InstantiateHybridCoSimulation    fmi3FullName(fmi3InstantiateHybridCoSimulation)
+#define fmi3InstantiateScheduledCoSimulation fmi3FullName(fmi3InstantiateScheduledCoSimulation)
+#define fmi3FreeInstance                     fmi3FullName(fmi3FreeInstance)
 
 /* Enter and exit initialization mode, terminate and reset */
 #define fmi3SetupExperiment          fmi3FullName(fmi3SetupExperiment)
@@ -214,8 +217,10 @@ FMI3_Export fmi3GetVersionTYPE      fmi3GetVersion;
 FMI3_Export fmi3SetDebugLoggingTYPE fmi3SetDebugLogging;
 
 /* Creation and destruction of FMU instances */
-FMI3_Export fmi3InstantiateTYPE  fmi3Instantiate;
-FMI3_Export fmi3FreeInstanceTYPE fmi3FreeInstance;
+FMI3_Export fmi3InstantiateModelExchangeTYPE  fmi3InstantiateModelExchange;
+FMI3_Export fmi3InstantiateBasicCoSimulationTYPE  fmi3InstantiateBasicCoSimulation;
+FMI3_Export fmi3InstantiateHybridCoSimulationTYPE  fmi3InstantiateHybridCoSimulation;
+FMI3_Export fmi3InstantiateScheduledCoSimulationTYPE  fmi3InstantiateScheduledCoSimulation;
 
 /* Enter and exit initialization mode, terminate and reset */
 FMI3_Export fmi3SetupExperimentTYPE         fmi3SetupExperiment;
@@ -223,6 +228,7 @@ FMI3_Export fmi3EnterInitializationModeTYPE fmi3EnterInitializationMode;
 FMI3_Export fmi3ExitInitializationModeTYPE  fmi3ExitInitializationMode;
 FMI3_Export fmi3EnterEventModeTYPE          fmi3EnterEventMode;
 FMI3_Export fmi3TerminateTYPE               fmi3Terminate;
+FMI3_Export fmi3FreeInstanceTYPE            fmi3FreeInstance;
 FMI3_Export fmi3ResetTYPE                   fmi3Reset;
 
 /* Getting and setting variables values */

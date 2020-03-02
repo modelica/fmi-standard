@@ -131,7 +131,7 @@ typedef fmi3Instance fmi3InstantiateModelExchangeTYPE(
     fmi3CallbackAllocateMemory allocateMemory,
     fmi3CallbackFreeMemory     freeMemory);
 
-typedef fmi3Instance fmi3InstantiateCoSimulationTYPE(
+typedef fmi3Instance fmi3InstantiateBasicCoSimulationTYPE(
     fmi3String                     instanceName,
     fmi3String                     instantiationToken,
     fmi3String                     resourceLocation,

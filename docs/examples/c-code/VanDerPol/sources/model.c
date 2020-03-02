@@ -46,7 +46,7 @@ Status setFloat64(ModelInstance* comp, ValueReference vr, const double *value, s
 			return OK;
         case vr_mu:
 #if FMI_VERSION > 1
-			if (comp->type == ModelExchange &&
+			if (comp->type == fmi3ModelExchange &&
 				comp->state != modelInstantiated &&
 				comp->state != modelInitializationMode &&
 				comp->state != modelEventMode) {
