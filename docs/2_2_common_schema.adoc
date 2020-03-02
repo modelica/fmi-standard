@@ -642,7 +642,7 @@ _where `tolerance` is, for example, the relative tolerance defined in `<DefaultE
 |`unbounded`
 |If `true`, indicates that during time integration, the variable gets a value much larger than its nominal value `nominal`.
 _[Typical examples are the monotonically increasing rotation angles of crank shafts and the longitudinal position of a vehicle along the track in long distance simulations._
-_This information can, for example, be used to increase numerical stability and accuracy by setting the corresponding bound for the relative error to zero (relative tolerance = 0.0), if the corresponding variable or an alias of it is a continuous <<state>> variable.]_
+_This information can, for example, be used to increase numerical stability and accuracy by setting the corresponding bound for the relative error to zero (relative tolerance = 0.0), if the corresponding variable or an is a continuous <<state>> variable.]_
 
 |Item
 |Items of an enumeration has a sequence of `name` and `value` pairs.
@@ -906,7 +906,7 @@ The normalized string `variableName` is used to identify the terminal member var
 _[The `name` attribute of the model variable is equal to the `variableName` of the `TerminalMemberVariable`._
 _An importing tool may use the `variableName` attribute to identify a specific alias to get additional information, such as minimum, maximum, and nominal values.]_
 
-One variable can be part of several terminals, which is considered aliasing according to the rules of <<aliasing-of-variables>>.
+One variable can be part of several terminals.
 
 _[Tools which apply sequence based matching should also provide unique member names, so that all importing tools which use name based matching use the same member names._
 
@@ -1177,7 +1177,7 @@ Every variable is uniquely identified within an FMU instance by this name.
 [[valueReference,`valueReference`]]
 A handle of the variable to efficiently identify the variable value in the model interface and for references within the `modelDescription.xml`.
 This handle is a secret of the tool that generated the C functions.
-It is required to be unique for an FMU with exception of variables that have identical values (such variables are also called alias variables). `Clock` type variables do not have alias variables and are therefore unique.
+It is required to be unique for an FMU.
 This attribute is `required`.
 
 |`description`
@@ -1761,38 +1761,6 @@ _With this interpretation, changing <<parameter,`parameters`>> online is "clean"
 _FMI for Co-Simulation:_
 _Changing of <<tunable>> <<parameter,`parameters`>> is allowed before an <<fmi3DoStep>> call (so, whenever an <<input>> can be set with `fmi3Set{VariableType}`) and before <<fmi3ExitInitializationMode>> is called (that is before and during *Initialization Mode*)._
 _The FMU internally carries out event handling if necessary.]_
-
-===== Aliasing of Variables [[aliasing-of-variables]]
-
-Variables with the same <<valueReference>> are called "alias variables".
-The variables that share the same <<valueReference>> are called "alias set".
-The main purpose of alias variables is to enhance efficiency.
-If two variables `a` and `b` are alias variables, then this is only allowed if the behavior of the FMU would be exactly the same if `a` and `b` were not treated as alias variables (that is, had different <<valueReference>>pass:[s]).
-This requirement leads naturally to the following restrictions:
-
-. Variables `a` and `b` that can both be set with `fmi3Set{VariableType}`, or variable `a` that can be set with `fmi3Set{VariableType}` and variable `b` that is defined with <<causality>> = <<independent>>, cannot be alias variables _[since these variables are <<independent>> variables and alias means that there is a constraint equation between variables (= the values are the same), these variables are no longer <<independent>>._ +
-_For example, if variables `a` and `b` have <<causality>> = <<parameter>>, then the value references of `a` and `b` must be different._
-_However, if variable a has <<causality>> = <<parameter>> and `b` has <<causality>> = <<calculatedParameter>> and `b := a`, then `a` and `b` can have the same value reference.]_
-
-. At most one variable of the same alias set of variables with <<variability>> latexmath:[\neq] <<constant>> can have a <<start>> attribute _[since <<start>> variables are independent initial values.]_
-
-. A variable with <<variability>> = <<constant>> can only be aliased to another variable with <<variability>> = <<constant>>.
-It is then required that the <<start>> values of all aliased (constant) variables are identical.
-
-. All variables of the same alias set must all have either no `<Unit>` element defined, or all of them must have the same `<Unit name>` and the same `<Unit><BaseUnit>` definitions.
-
-. All variables of the same alias set must have the same dimensions.
-
-The aliasing of variables only means that the `value` of the variables is always identical.
-However, aliased variables may have different attributes, such as `min/max/nominal` values or description texts.
-_[For example, if `v1`, `v2` are two alias variables with `v1 = v2` and `v1.max = 10` and `v2.max = 5`, then the FMU will trigger an error if either `v1` or `v2` becomes larger than 5.]_
-
-_[The dependency definition in `fmiModelDescription.ModelStructure` is completely unrelated to the alias definition._
-_In particular, the "direct dependency" definition can be a superset of the "real" direct dependency definition, even if the alias information shows that this is too conservative._
-_For example, if it is stated that the <<output>> `y1` depends on <<input>> `u1` and the <<output>> `y2` depends on <<input>> `u2`, and `y1` is an alias to `y2`, then this definition is fine, although it can be deduced that in reality neither `y1` nor `y2` depend on any <<input>>.]._
-
-_[In case of different variability among the set of alias variables, and if that set of aliases does not contain an input or parameter, the variability should be the highest of the variables in the set, e.g. continuous > discrete > tunable > fixed._
-_If the set includes a parameter or input the aliases will have the stated variability of that parameter or input.]_
 
 Type specific properties are defined in the required choice element, where exactly one of the numeric types or an Enumeration must be present in the XML file:
 
