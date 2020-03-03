@@ -93,7 +93,7 @@ This document defines the Functional Mock-up Interface (FMI),
 version 3.0 to (a) exchange dynamic models between tools and (b) define tool
 coupling for dynamic system simulation environments.
 
-_FMI for Co-Simulation (<<fmi-for-co-simulation>>)_
+_FMI for Co-Simulation (CS) (<<fmi-for-basic-co-simulation>>)_
 
 The intention is to provide an interface standard for coupling
 of simulation models or tools in a co-simulation environment.
@@ -105,27 +105,34 @@ synchronization between subsystems (FMUs).
 
 Note that the master algorithm itself is not part of the FMI standard.
 
-_FMI for Hybrid Co-Simulation_
+_FMI for Hybrid Co-Simulation (HCS)_
 
 The Hybrid Co-Simulation interface adds a number of features primarily to allow for more sophisticated master algorithms that aim at more efficient and robust simulations.
 Such additional features are raising events between communication time points using synchronous and asynchronous clocks or sharing values between communication points to allow for improved interpolation of data.
+The master algorithm is responsible for:
+* advancing the overall simulation time, and
+* triggering execution of synchronous and asynchronous external events for a set of FMUs, and
+* handling events (e.g. clock ticks) signaled by the FMUs.
 
 For both Co-Simulation and Hybrid Co-Simulation the master algorithm is shielded from how the subsystem FMU advances time internally.
 For example, FMUs containing ODEs and exposing either of the Co-Simulation interfaces require to include an ODE solver inside the FMU to internally advance time between the communication points.
 Or, for controller code packaged as FMU, an internal scheduling algorithm will trigger tasks at the correct time and order while advancing time to the next communication point or event.
 
-_FMI for Model Exchange (<<fmi-for-model-exchange>>)_
+_FMI for Model Exchange (ME) (<<fmi-for-model-exchange>>)_
 
 The Model Exchange interface exposes an ODE to an external solver of an importing tool's master algorithm.
 Models are described by differential, algebraic and discrete equations with time-, state- and step-events.
-That master algorithm, usually an ODE or DAE solver, like DASSL, is responsible to advance time, set states and handle events etc.
+That master algorithm, usually a DAE solver, is responsible to advance time, set states and handle events etc.
 
-_FMI for Scheduled Execution Simulation_
+_FMI for Scheduled Co-Simulation (SCS)_
 
-The Scheduled Execution Simulation interface exposes individual parts or tasks of a control algorithm to be called from an external scheduler of an importing tool's master algorithm.
-That master algorithm scheduler is responsible to advance time and trigger execution of synchronous and asynchronous controller tasks.
+The Scheduled Co-Simulation interface exposes individual parts of a model or tasks of a control algorithm to be called from an external scheduler of an importing tool's master algorithm.
+The master algorithm is responsible for:
+* advancing the overall simulation time, and
+* triggering execution of synchronous and asynchronous external events for all exposed model parts of a set of FMUs (e.g. tasks of a controller model), and
+* handling events (e.g. clock ticks) signaled by the FMUs.
 
-In many ways, the Scheduled Execution Simulation interface is the equivalent of the Model Exchange interface: the first externalizes a scheduling algorithm usually found in a controller algorithm and the second interface externalizes the ODE/DAE solver.
+In many ways, the Scheduled Co-Simulation interface is the equivalent of the Model Exchange interface: the first externalizes a scheduling algorithm usually found in a controller algorithm and the second interface externalizes the ODE solver.
 
 image::images/fmi-types-overview.svg[width=50%, align="center"]
 
@@ -147,7 +154,7 @@ Binary forms for different platforms can be included in the same FMU ZIP file.
 
 . The model equations or the co-simuation tool can be either provided directly in the FMU,
 or the FMU contains only a generic communication module that communicates with an external tool that evaluates or simulates the model.
-In the XML file, information about the capabilities of the FMU are present, for example to characterize the ability of a Co-Simulation slave to support advanced master algorithms such as the usage of variable communication step sizes, higher order signal extrapolation, or others.
+In the XML file, also information about the capabilities of the FMU are present, for example to characterize the ability of a Co-Simulation slave to support advanced master algorithms such as the usage of variable communication step sizes, higher order signal extrapolation, or others.
 
 . Further data can be included in the FMU ZIP file, especially a model icon (bitmap file), documentation files, maps and tables needed by the FMU, and/or all object libraries or dynamic link libraries that are utilized.
 
@@ -181,6 +188,8 @@ In order to access an array element the C convention is used.
 For example, the first element of input argument `x` for function `setContinuousStates` is `x[0]`.
 
 * The key words *MUST*, *MUST NOT*, *REQUIRED*, *SHALL*, *SHALL NOT*, *SHOULD*, *SHOULD NOT*, *RECOMMENDED*, *NOT RECOMMENDED*, *MAY*, and *OPTIONAL* in this document are to be interpreted as described in https://tools.ietf.org/html/rfc2119[RFC 2119].
+
+* `{VariableType}` is used as a placeholder for all variable type names without the `fmi3` prefix (e.g. `fmi3Get{VariableType}` stands for `fmi3GetUInt8` etc.).
 
 **FMI 2.0 Implementation Help**
 

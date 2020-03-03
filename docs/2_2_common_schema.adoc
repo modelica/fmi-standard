@@ -154,14 +154,14 @@ These definitions are used in the XML element `ModelVariables`.
 |`ModelStructure`
 |Defines the structure of the model.
 Especially, the ordered lists of <<output,`outputs`>>, continuous-time <<state,`states`>> and initial unknowns (the unknowns during *Initialization Mode*) are defined here.
-For more details on ModelStructure, see section <<ModelStructure>>.
+For more details on ModelStructure, see <<ModelStructure>>.
 Furthermore, the dependency of the unkowns from the knowns can be optionally defined.
 _[This information can be, for example, used to compute efficiently a sparse Jacobian for simulation, or to utilize the <<input>> / <<output>> dependency in order to detect that in some cases there are actually no algebraic loops when connecting FMUs together]_.
 |====
 
 At least one element of `ModelExchange` or `CoSimulation` must be present to identify the type of the FMU.
 If both elements are defined, different types of models are included in the FMU.
-The details of these elements are defined in <<ModelExchange>> and <<fmi-for-co-simulation>>.
+The details of these elements are defined in <<ModelExchange>> and <<fmi-for-basic-co-simulation>>.
 
 The XML attributes of `fmiModelDescription` are:
 
@@ -376,7 +376,7 @@ It consists of zero or more `Unit` definitions.
 _[If no units are defined, element `<UnitDefinitions>` must not be present._
 _If 1 or more units are defined, this element must be present.]_
 A `Unit` is defined by its `name` attribute such as `N.m` or `N*m` or `Nm`, which must be unique with respect to all other defined elements of the `UnitDefinitions` list.
-If a variable is associated with a `Unit`, then the value of the variable has to be provided with the `fmi3SetXXX` functions or else is returned by the `fmi3GetXXX` functions with respect to this `Unit`.
+If a variable is associated with a `Unit`, then the value of the variable has to be provided with the `fmi3Set{VariableType}` functions or else is returned by the `fmi3Get{VariableType}` functions with respect to this `Unit`.
 _[The purpose of the name is to uniquely identify a unit and, for example, use it to display the unit in menus or in plots._
 _Since there is no standard to represent units in strings, and there are different ways how this is performed in different tools, no specific string representation of the unit is required.]_
 
@@ -492,7 +492,7 @@ _The `BaseUnit` definitions can be utilized for different purposes (the followin
 
 Signal connection check::
 +
-_When two signals v1 and v2 are connected together, and on at least one of the signals no `BaseUnit` element is defined, then the connection equation "v2 = v1" holds (if v1 is an <<output>> of an FMU and v2 is an <<input>> of another FMU, with `fmi3GetXXX` the value of v1 is inquired and used as value for v2 by calling `fmi3SetXXX`)._
+_When two signals v1 and v2 are connected together, and on at least one of the signals no `BaseUnit` element is defined, then the connection equation "v2 = v1" holds (if v1 is an <<output>> of an FMU and v2 is an <<input>> of another FMU, with `fmi3Get{VariableType}` the value of v1 is inquired and used as value for v2 by calling `fmi3Set{VariableType}`)._
 +
 _When two signals v1 and v2 are connected together, and for both of them `BaseUnit` elements are defined, then they must have identical exponents of their `BaseUnit`._
 _If `factor` and `offset` are also identical, again the connection equation `v2 = v1` holds._
@@ -581,14 +581,12 @@ This element consists of a set of `SimpleType` definitions according to schema `
 One `SimpleType` has a type `name` and `description` as attributes.
 Attribute `name` must be unique with respect to all other elements of the `TypeDefinitions` list.
 Furthermore, `name` of a `SimpleType` must be different to all `name` attributes of variables _[if the same names would be used, then this would nearly always give problems when importing the FMU in an environment such as Modelica, where a type name cannot be used as instance name]_.
-Additionally, one of the elements `Real`, `Integer`, `Boolean`, `String`, `Binary`, `Enumeration` or `Clock` must be present.
+Additionally, one variable type element must be present.
 They have the following definitions:
 
 image::images/Real_schema.png[width=50%, align="center"]
 
 image::images/Integer_schema.png[width=50%, align="center"]
-
-_[The attributes of `Real` and `Integer` are collected in the attribute groups `fmi3RealAttributes` and `fmi3IntegerAttributes` in file `fmi3AttributeGroups.xsd`, since these attributes are reused in the variable element definitions below.]_
 
 image::images/Enumeration_schema.png[width=80%, align="center"]
 
@@ -613,7 +611,7 @@ _[Giving an empty string as a `unit` attribute specifies a valid unit that needs
 |`displayUnit`
 |Default display unit. The conversion to the `unit` is defined with the element `<fmiModelDescription><UnitDefinitions>`.
 If the corresponding `displayUnit` is not defined under `<UnitDefinitions> <Unit> <DisplayUnit>`, then `displayUnit` is ignored.
-It is an error if `displayUnit` is defined in element `Real`, but `unit` is not, or unit is not defined under `<UnitDefinitions><Unit>`.
+It is an error if `displayUnit` is defined as variable type element, but `unit` is not, or unit is not defined under `<UnitDefinitions><Unit>`.
 
 |`mimeType`
 |Indicates the type of data passed as a binary.
@@ -625,12 +623,12 @@ Implementations can use this information to provide guidance to the user about v
 _[For example, 10 degree Celsius = 10 Kelvin if `relativeQuantity = true` and not 283.15 Kelvin.]_
 
 |`min`
-|Minimum value of variable (variable value &#8805; `min`).
+|Minimum value of variable (variable value latexmath:[\geq] `min`).
 If not defined, the minimum is the largest negative number that can be represented on the machine.
 The `min` definition is information from the FMU to the environment defining the region in which the FMU is designed to operate, see also comment after this table.
 
 |`max`
-|Maximum value of variable (variable value &#8804; `max`).
+|Maximum value of variable (variable value latexmath:[\leq] `max`).
 If not defined, the maximum is the largest positive number that can be represented on the machine.
 The `max` definition is information from the FMU to the environment defining the region in which the FMU is designed to operate, see also comment after this table.
 
@@ -652,13 +650,13 @@ The values can be any integer number but must be unique within the same enumerat
 An `Enumeration` element must have at least one Item.
 |====
 
-_[Attributes `min` and `max` can be set for variables of type Real, Integer or Enumeration._
-_The question is how `fmi3SetReal`, `fmi3SetInteger`, `fmi3GetReal`, `fmi3GetInteger` shall utilize this definition._
+_[Attributes `min` and `max` can be set for variables of numeric type or Enumeration._
+_The question is how `fmi3Set{VariableType}`, `fmi3Get{VariableType}` shall utilize this definition._
 _There are several conflicting requirements:_ +
-_Avoiding forbidden regions (for example, if `u` is an <<input>> and "sqrt(u)" is computed in the FMU, min=0 on `u` shall guarantee that only values of `u` in the allowed regions are provided)._
+_Avoiding forbidden regions (for example, if `u` is an <<input>> and "sqrt(u)" is computed in the FMU, `min = 0` on `u` shall guarantee that only values of `u` in the allowed regions are provided)._
 _Numerical algorithms (ODE-solver, optimizers. nonlinear solvers) do not guarantee constraints._
 _If a variable is outside of the bounds, the solver tries to bring it back into the bounds._
-_As a consequence, calling `fmi3GetReal` during an iteration of such a solver might return values that are not in the defined min/max region._
+_As a consequence, calling `fmi3Get{VariableType}` during an iteration of such a solver might return values that are not in the defined min/max region._
 _After the iteration is finalized, it is only guaranteed that a value is within its bounds up to a certain numerical precision._ +
 _In debug mode checks on min/max should be performed._
 _For maximum performance on a real-time system the checks might not be performed._ +
@@ -669,14 +667,14 @@ _For example, dividing by an <<input>> (so the <<input>> should not be in a smal
 
 _If the FMU is generated so that min/max shall be checked whenever meaningful (for example, for debug purposes), then the following strategy should be used:_
 
-_If `fmi3SetReal` or `fmi3SetInteger` is called violating the min/max attribute settings of the corresponding variable, the following actions are performed:_
+_If `fmi3Set{VariableType}` is called violating the min/max attribute settings of the corresponding variable, the following actions are performed:_
 
 - _On a <<fixed>> or <<tunable>> <<parameter>> `fmi3Status = fmi3Discard` is returned._
 - _On an <<input>>, the FMU decides what to return (If no computation is possible, it could return `fmi3Status = fmi3Discard`, in other situations it may return `fmi3Warning` or `fmi3Error`, or `fmi3OK`, if it is uncritical)._
 
-_If an FMU defines min/max values for Integer and Enumerations (<<local>> and <<output>> variables), then the expected behavior of the FMU is that `fmi3GetInteger` returns values in the defined range._
+_If an FMU defines min/max values for integer types and Enumerations (<<local>> and <<output>> variables), then the expected behavior of the FMU is that `fmi3Get{VariableType}` functions return values in the defined range._
 
-_If an FMU defines min/max values for Reals, then the expected behavior of the FMU is that `fmi3GetReal` returns values at the solution (accepted steps of the integrators) in the defined range with a certain uncertainty related to the tolerances of the numerical algorithms.]_
+_If an FMU defines min/max values for numeric types, then the expected behavior of the FMU is that `fmi3Get{VariableType}` returns values at the solution (accepted steps of the integrators) in the defined range with a certain uncertainty related to the tolerances of the numerical algorithms.]_
 
 *Clock Type Definition* [[clock-type-definition]]
 
@@ -690,21 +688,18 @@ The variable sub type `fmi3Clock` provides additional attributes for defining <<
 
 |`clockType`
 |The type of <<clock,`clocks`>> is defined based on the mandatory attribute `clockType`.
-If the properties of a <<clock>> adhere to synchronous clock theory it is defined with clockType = `STClock`.
+If the properties of a <<clock>> adhere to synchronous clock theory it is defined with `clockType = synchronousTime`.
 As an additional option for FMI for Co-Simulation discrete parts (that do not necessarily apply to synchronous clock theory) or continuous parts of the FMU can be associated to model partitions via <<clock,`clocks`>> whose ticks define the sampling points (i.e. communication points) for the variables of these model partitions.
-Clocks that are defined for such cases have the clockType attribute value `CPClock` and have to be ignored for FMI for Model Exchange.
+Clocks that are defined for such cases have `clockType = communicationPoint` and have to be ignored for Model Exchange.
 It is not allowed to include <<clock,`clocks`>> of different `clockType` in one FMU.
 `clockType` is a required attribute.
 
 |`priority`
 |The <<clock,`clocks`>> are ordered descending based on their priorities.
-The priority of a <<clock>> has to be defined via the integer attribute `priority` - smaller values have a higher priority.
+The priority of a <<clock>> has to be defined via the unsigned integer attribute `priority` - smaller values have a higher priority.
 It is possible to define multiple <<clock,`clocks`>> with the same priority.
 No ordering is defined for <<clock,`clocks`>> of the same priority.
 If a computational order information is needed, different priorities have to be defined.
-//TODO: Are 100 different priority levels enough?
-The minimum value is 0 (max priority).
-The maximum value is 99 (min priority).
 
 _[For periodic <<clock,`clocks`>> it is recommended to derive the priorities based on a rate monotonic scheduling scheme (smallest period leads to highest priority (smallest priority value)).]_
 
@@ -724,7 +719,7 @@ If the optional attribute `strict` is set to `false` another interval or offset 
 It is not allowed to set `strict` to `true` if `periodic = false`.
 
 |`intervalCounter`, `shiftCounter`, `resolution`
-|The interval of <<output>> or <<input>> periodic <<clock,`clocks`>> is defined with unsignedLong valued `intervalCounter` and `resolution`
+|The interval of <<output>> or <<input>> periodic <<clock,`clocks`>> is a rational number defined with unsignedLong valued `intervalCounter` and `resolution`
 
 `interval = intervalCounter / resolution`.
 
@@ -930,7 +925,7 @@ _Example 4 (prefix but not a member): <ModelVariable name> is `portA.u`, there i
 _The suggested variable naming scheme for the non-structured naming convention is: <ModelVariable name> = <memberName>_
 
 _Matching is not restricted by <<variability>>, <<causality>> or variable type._
-_Example: A <<fixed>> variable may be connected to a <<tunable>> variable, a variable of type Real may be connected to a variable of type Integer._
+_Example: A <<fixed>> variable may be connected to a <<tunable>> variable, a variable of type `fmi3Float64` may be connected to a variable of type `fmi3Int32`._
 _However, it is recommended that the variable types and variabilities are equal._
 
 _The `matchingRule` refers to the `TerminalMemberVariables` on the same level only. Nested terminals can have different `matchingRules`._
@@ -1059,7 +1054,7 @@ image::images/fmiModelDescription_GraphicalRepresentation_CoordinateSystem_Schem
 
 The `CoordinateSystem` element and its defined extent is used as reference for other graphical items. It also provides a scaling factor to millimeter.
 
-The coordinate system is defined by the coordinates of two points, the left lower (`x1`, `y1`) corner and the right upper (`x2`, `y2`) corner, where the coordinates of the first point shall be less than the coordinates of the second point _[a first quadrant coordinate system]_.
+The coordinate system is defined by the coordinates of two points, the lower left (`x1`, `y1`) corner and the upper right (`x2`, `y2`) corner, where the coordinates of the first point shall be less than the coordinates of the second point _[a first quadrant coordinate system]_.
 The x-axis directed to the right, the y-axis is directed upwards.
 
 _[The exporting tool should define how the coordinate system unit relates to mm display or print out size._
@@ -1086,13 +1081,16 @@ The `iconSource_PNG` attribute is mandatory to simplify the import in other tool
 Optionally an SVG file can be provided.
 This enables high quality rendering and printing in importing tools.
 
+The point (`x1`, `y1`) maps to the left lower corner of the PNG image or SVG viewport.
+The point (`x2`, `y2`) maps to the right upper corner of the PNG image or SVG viewport.
+
 ===== Terminals
 
 image::images/fmiModelDescription_GraphicalRepresentation_Terminal_Schema.png[width=50%, pdfwidth=50%, align="center"]
 
 For `fmi3Terminals` (terminals which are listed in the `Terminals` element) the name of the terminal in the `GraphicalRepresentation` is equal to the name of the terminal in the `Terminals` element (e.g. `port_a`).
-Only `Terminal` elements which are direct childs of the `Terminals` element can have a graphical representation.
-_[If the graphical representation is used for a single <<input>> or <<output>> (e.g. a Real <<input>> `u`), then a `Terminal` has to be added to the `Terminals` element which has one `TerminalMemberVariable`._
+Only `Terminal` elements which are direct children of the `Terminals` element can have a graphical representation.
+_[If the graphical representation is used for a single <<input>> or <<output>> (e.g. a `fmi3Float64` <<input>> `u`), then a `Terminal` has to be added to the `Terminals` element which has one `TerminalMemberVariable`._
 _The name of the `Terminal` and the name of the `TerminalMemberVariable` should be equal to the name of the <<input>> / <<output>>.]_
 
 The `iconSource_PNG` is mandatory for a terminal, optionally an SVG file can be provided.
@@ -1138,16 +1136,16 @@ It provides the static information of all exposed variables and is defined as:
 image::images/ModelVariables_schema.png[width=100%, align="center"]
 
 The `ModelVariables` element consists of an ordered set of variable elements (see figure above).
-Variable elements can uniformly represent variables of primitive (atomic) types, like single real or integer variables, or as well as arrays of an arbitrary (but fixed) number of dimensions. The schema definition is present in a separate file `fmi3Variable.xsd`.
+Variable elements can uniformly represent variables of primitive (atomic) types, like single floating point or integer variables, or as well as arrays of an arbitrary (but fixed) number of dimensions. The schema definition is present in a separate file `fmi3Variable.xsd`.
 
-Variable elements representing array variables must contain a `Dimensions` element specifying the array dimensions.
-The `Dimensions` element contains a sequence of `Dimension` elements, each specifying the size of one dimension of the array:
+Variable elements representing array variables must contain at least one `Dimension` element.
+Each `Dimension` element specifies the size of one dimension of the array:
 
-- If the <<start>> attribute of the `Dimension` element is present, it defines a constant unsigned 32-bit integer size for this dimension.
+- If the <<start>> attribute of the `Dimension` element is present, it defines a constant unsigned 64-bit integer size for this dimension.
 The <<variability>> of the dimension size is <<constant>> in this case.
 
 - If the <<valueReference>> attribute of the `Dimension` element is present, it defines the size of this dimension to be the value of the variable with the value reference given by the <<valueReference>> attribute.
-The referenced variable must be a variable of `UInt32` type, and must either be a constant (i.e. with <<variability>> = <<constant>>) or a <<structuralParameter,`structural parameter`>>(i.e. with <<causality>> = <<structuralParameter>>).
+The referenced variable must be a variable of type `UInt64`, and must either be a constant (i.e. with <<variability>> = <<constant>>) or a <<structuralParameter,`structural parameter`>>(i.e. with <<causality>> = <<structuralParameter>>).
 The <<variability>> of the dimension size is in this case the <<variability>> of the referenced variable.
 
 These two options are mutually exclusive, i.e. for each `Dimension` element either a <<start>> attribute or an <<valueReference>> attribute can be supplied, but not both.
@@ -1157,8 +1155,12 @@ All initial dimension sizes (i.e. prior to any configuration or reconfiguration)
 Changes to dimension sizes are constrained by the `min`/`max` attributes of the referenced <<structuralParameter,`structural parameters`>>, which can be any non-negative integer, including zero.
 Specifying a minimum size of zero on a <<structuralParameter,`structural parameter`>>allows any related dimension sizes to be changed to zero in *Configuration Mode* or *Reconfiguration Mode*, thus causing the respective array size to go to zero, which leaves the respective array variable without any active elements.
 
+The actual dimension sizes of arrays are also constrained by the FMU platform, due to memory and addressing constraints:
+Since the API functions to access variables and their values are constrained to `size_t` individual elements, platforms with addresses of less than 64-bit width will not be able to access elements beyond their addressing limits, neither will they be able to allocate enough memory or address space to represent such arrays.
+For these reasons implementations must take platform-specific constraints into account when changing dimension sizes, and must be prepared to handle the inability of the FMU to adjust to the desired sizes during *Configuration Mode* or *Reconfiguration Mode*.
+
 Changing any dimension of a variable in *Configuration Mode* or *Reconfiguration Mode* invalidates the variable's current value (including its <<start>> value).
-It should be noted that changing a <<structuralParameter,`structural parameter`>>might might affect dimension sizes of several variables.
+It should be noted that changing a <<structuralParameter,`structural parameter`>> might affect dimension sizes of several variables.
 
 It is not possible to use a variable of type `Clock` in arrays, since array elements do not have individual <<valueReference>> and the access to <<clock,`clocks`>> requires a unique <<valueReference>> information.
 
@@ -1220,10 +1222,10 @@ All variables are a function of this <<independent>> variable.
 <<variability>> must be <<continuous>>.
 At most one variable of an FMU can be defined as <<independent>>.
 If no variable is defined as <<independent>>, it is implicitly present with name = `time` and `unit = s`.
-If one variable is defined as <<independent>>, it must be defined as `Real` without a <<start>> attribute.
-It is not allowed to call function `fmi3SetReal` on an <<independent>> variable.
+If one variable is defined as <<independent>>, it must be defined with a floating point type without a <<start>> attribute.
+It is not allowed to call function `fmi3Set{VariableType}` on an <<independent>> variable.
 Instead, its value is initialized with <<fmi3SetupExperiment>> and after initialization set by <<fmi3SetTime>> for Model Exchange and by arguments `currentCommunicationPoint` and `communicationStepSize` of <<fmi3DoStep>> for Co-Simulation.
-_[The actual value can be inquired with `fmi3GetReal`.]_
+_[The actual value can be inquired with `fmi3Get{VariableType}`.]_
 
 [[structuralParameter,`structuralParameter`]]
 - <<structuralParameter>>: <<independent>> parameter (a data value that is constant during the simulation and is provided by the environment and cannot be used in connections). <<variability>> must be <<fixed>> or <<tunable>>. <<initial>> must be <<exact>> or not present (meaning <<exact>>).
@@ -1266,7 +1268,7 @@ _For example, when importing an FMU in a Modelica environment, a <<calculatedPar
 [[variability,`variability`]]
 Enumeration that defines the time dependency of the variable, in other words, it defines the time instants when a variable can change its value.
 _[The purpose of this attribute is to define when a result value needs to be inquired and to be stored._
-_For example, <<discrete>> variables change their values only at event instants (Model Exchange) or at a communication point (Co-Simulation) and it is therefore only necessary to inquire them with `fmi3GetXXX` and store them at event times.]_
+_For example, <<discrete>> variables change their values only at event instants (Model Exchange) or at a communication point (Co-Simulation) and it is therefore only necessary to inquire them with `fmi3Get{VariableType}` and store them at event times.]_
 Allowed values of this enumeration:
 
 [[constant,`constant`]]
@@ -1285,12 +1287,12 @@ Model Exchange: The value of the variable is constant between external and inter
 Co-Simulation: By convention, the variable is from a real sampled data system and its value is only changed at communication points (also inside the slave).
 
 [[continuous,`continuous`]]
-- `continuous`: Only a variable of `type = Real` can be <<continuous>>. +
+- `continuous`: Only a variable of `type = fmi3GetFloat32` or `type = fmi3GetFloat64` can be <<continuous>>. +
 Model Exchange: No restrictions on value changes. +
 Co-Simulation: By convention, the variable is from a differential
 
 [[clock,`clock`]]
-- `clock`: Only a variable of type `Clock` can have this variablity.
+- `clock`: Only a variable of type `Clock` can have this variability.
 
 The default is <<continuous>> for variables of type `Float32` and `Float64`, and <<discrete>> for all other types.
 
@@ -1303,7 +1305,7 @@ Enumeration that defines how the variable is initialized.
 It is not allowed to provide a value for <<initial>> if <<causality>> = <<input>> or <<independent>>:
 
 [[exact,`exact`]]
-- = `exact`: The variable is initialized with the <<start>> value (provided under `Real`, `Integer`, `Boolean`, `String` or `Enumeration`).
+- = `exact`: The variable is initialized with the <<start>> value (provided under the variable type element).
 
 [[approx,`approx`]]
 - = `approx`: The variable is an iteration variable of an algebraic loop and the iteration at initialization starts with the <<start>> value.
@@ -1327,7 +1329,7 @@ The master can nevertheless choose different <<start>> values if it is not possi
 
 If <<causality>> = <<output>> the <<initial>> attribute value is set to <<calculated>> and no <<start>> value is provided.
 
-If `fmi3SetXXX` is not called on a variable with <<causality>> = <<input>>, then the FMU must use the <<start>> value as value of this <<input>>.
+If `fmi3Set{VariableType}` is not called on a variable with <<causality>> = <<input>>, then the FMU must use the <<start>> value as value of this <<input>>.
 
 |`canHandleMultipleSetPerTimeInstant`
 |
@@ -1335,8 +1337,8 @@ If `fmi3SetXXX` is not called on a variable with <<causality>> = <<input>>, then
 Only for Model Exchange (if only Co-Simulation FMU, this attribute must not be present.
 If both Model Exchange and Co-Simulation FMU, this attribute is ignored for Co-Simulation): +
 Only for variables with <<variability>> = <<input>> : +
-If present with value equals `false`, then only one `fmi3SetXXX` call is allowed at one super dense time instant (model evaluation) on this variable.
-That is, this <<input>> is not allowed to appear in a (real) algebraic loop requiring multiple calls of `fmi3SetXXX` on this variable _[for example, due to a Newton iteration]_. +
+If present with value equals `false`, then only one `fmi3Set{VariableType}` call is allowed at one super-dense time instant (model evaluation) on this variable.
+That is, this <<input>> is not allowed to appear in a (real) algebraic loop requiring multiple calls of `fmi3Set{VariableType}` on this variable _[for example, due to a Newton iteration]_. +
 _[This flag must be set by FMUs where (internal) discrete-time <<state,`states`>> are directly updated when assigned (xd := f(xd) instead of xd = f(previous(xd)), and at least one <<output>> depends on this <<input>> and on discrete <<state,`states`>>._ +
 _It is strongly recommended that such an FMU checks the fulfillment of the requirement by itself during run-time, because an environment might not be able to check it; usually, there is a generic mechanism to import an FMU in an environment, but the mechanism to connect FMUs together is unrelated to the import mechanism._
 _For example, there is no mechanism in the Modelica language to formulate connection restrictions for C functions (the FMU) called in a Modelica model.]_
@@ -1352,12 +1354,12 @@ The <<clockReference>> holds only <<valueReference>> information for variables w
 Clock (`clockType = STClock`): If present, the variable is a clocked variable associated uniquely with the <<clock>> referenced by <<valueReference>> and defined in element ModelVariables.
 It is not possible to associate more than one <<clock>> to a variable.
 
-Communication Point Clock (`clockType = CPClock`): If present, the variable is associated with the <<clock>> referenced by <<valueReference>> and defined in element `ModelVariables`.
+Communication Point Clock (`clockType = communicationPoint`): If present, the variable is associated with the <<clock>> referenced by <<valueReference>> and defined in element `ModelVariables`.
 It is possible to associate multiple <<clock,`clocks`>> to a variable.
 Variables that are assigned to a Communication Point Clock are not necessarily `clocked` in the sense of synchronous time clock theory. Such variables can also be continuous-time or discrete-time variables.
 
-If <<outputClock,`output clocks`>> and <<inputClock,`input clocks`>> of `clockType = CPClock` are defined in the `modelDescription.xml` it is possible to define a tick relationship from a <<outputClock>> to an aperiodic <<inputClock>> based on <<clockReference>> (<<clock-relationships-for-communication-point-clocks>>).
-This is done for aperiodic <<inputClock,`input clocks`>> that have the clockType = `CPClock` via providing a list of <<valueReference>> of <<outputClock,`output clocks`>> of the same FMU.
+If <<outputClock,`output clocks`>> and <<inputClock,`input clocks`>> of `clockType = communicationPoint` are defined in the `modelDescription.xml` it is possible to define a tick relationship from a <<outputClock>> to an aperiodic <<inputClock>> based on <<clockReference>> (<<clock-relationships-for-communication-point-clocks>>).
+This is done for aperiodic <<inputClock,`input clocks`>> that have the `clockType = communicationPoint` via providing a list of <<valueReference>> of <<outputClock,`output clocks`>> of the same FMU.
 If a <<outputClock>> of this <<valueReference>> list ticks the master has to create a tick for the associated aperiodic <<inputClock>> at the same time instant.
 It is not allowed to combine <<outputClock,`output clocks`>> with periodic or strict periodic <<inputClock,`input clocks`>> based on <<clockReference>>.
 
@@ -1381,24 +1383,24 @@ This attribute is only used for Co-Simulation. The default value of this attribu
 // TODO: default false is not defined in the xsd (yet?)
 |====
 
-*fmi3SetXXX* can be called on any variable with <<variability>> &#8800; <<constant>> *before initialization* (before calling <<fmi3EnterInitializationMode>>)
+*fmi3Set{VariableType}* can be called on any variable with <<variability>> latexmath:[\neq] <<constant>> *before initialization* (before calling <<fmi3EnterInitializationMode>>)
 
 - if <<initial>> = <<exact>> or <<approx>> _[in order to set the corresponding <<start>> value.]_
 _[Note that this prevents any changes to the input before <<fmi3EnterInitializationMode>> is called.]_
 
-*fmi3SetXXX* can be called on any variable with <<variability>> &#8800; <<constant>> *during initialization* (after calling <<fmi3EnterInitializationMode>> and before <<fmi3ExitInitializationMode>> is called)
+*fmi3Set{VariableType}* can be called on any variable with <<variability>> latexmath:[\neq] <<constant>> *during initialization* (after calling <<fmi3EnterInitializationMode>> and before <<fmi3ExitInitializationMode>> is called)
 
 - if <<initial>> = <<exact>> _[in order to set the corresponding <<start>> value]_, or
 
 - if <<causality>> = <<input>> _[in order to provide new values for <<input,`inputs`>>]_,
 
-*fmi3SetXXX* can be called on any variable for *Model Exchange at an event instant* (after calling <<fmi3EnterEventMode>> and before <<fmi3EnterContinuousTimeMode>> is called), and *for Co-Simulation at every communication point*,
+*fmi3Set{VariableType}* can be called on any variable for *Model Exchange at an event instant* (after calling <<fmi3EnterEventMode>> and before <<fmi3EnterContinuousTimeMode>> is called), and *for Co-Simulation at every communication point*,
 
 - if <<causality>> = <<parameter>> and <<variability>> = <<tunable>> _[in order to change the value of the <<tunable>> <<parameter>> at an event instant or at a communication point]_, or
 
 - if <<causality>> = <<input>> _[in order to provide new values for <<input,`inputs`>>]_
 
-*fmi3SetXXX* can be called on any variable for *Model Exchange in Continuous-Time Mode*
+*fmi3Set{VariableType}* can be called on any variable for *Model Exchange in Continuous-Time Mode*
 
 - if <<causality>> = <<input>> and <<variability>> = <<continuous>> +
 _[in order to provide new values for <<input,`inputs`>> during continuous integration]_
@@ -1537,7 +1539,7 @@ with
 
 _[Note: (1) If <<causality>> = <<independent>>, it is neither allowed to define a value for <<initial>> nor a value for start._
 _(2) If <<causality>> = <<input>>, it is not allowed to define a value for <<initial>> and a value for <<start>> must be defined._
-_(3) If \(C) and <<initial>> = <<exact>>, then the variable is explicitly defined by its <<start>> value in *Initialization Mode* (so directly after calling <<fmi3ExitInitializationMode>>, the value of the variable is either the <<start>> value stored in a variable element `<XXX start=YYY/>` or the value provided by `fmi3SetXXX`, if this function was called on this variable).]_
+_(3) If \(C) and <<initial>> = <<exact>>, then the variable is explicitly defined by its <<start>> value in *Initialization Mode* (so directly after calling <<fmi3ExitInitializationMode>>, the value of the variable is either the <<start>> value stored in a variable element `<XXX start=YYY/>` or the value provided by `fmi3Set{VariableType}`, if this function was called on this variable).]_
 
 The following combinations of <<variability>>/<<causality>> settings are allowed:
 
@@ -1762,30 +1764,33 @@ _Basically this means that a new simulation run is started from the previous FMU
 _With this interpretation, changing <<parameter,`parameters`>> online is "clean", as long as these changes appear at an event instant._
 
 _FMI for Co-Simulation:_
-_Changing of <<tunable>> <<parameter,`parameters`>> is allowed before an <<fmi3DoStep>> call (so, whenever an <<input>> can be set with `fmi3SetXXX`) and before <<fmi3ExitInitializationMode>> is called (that is before and during *Initialization Mode*)._
+_Changing of <<tunable>> <<parameter,`parameters`>> is allowed before an <<fmi3DoStep>> call (so, whenever an <<input>> can be set with `fmi3Set{VariableType}`) and before <<fmi3ExitInitializationMode>> is called (that is before and during *Initialization Mode*)._
 _The FMU internally carries out event handling if necessary.]_
 
 ===== Aliasing of Variables [[aliasing-of-variables]]
 
-Variables of the same base type (like `fmi3Float64`) that have identical <<valueReference>> definitions are called alias variables.
+Variables with the same <<valueReference>> are called "alias variables".
+The variables that share the same <<valueReference>> are called "alias set".
 The main purpose of alias variables is to enhance efficiency.
 If two variables `a` and `b` are alias variables, then this is only allowed if the behavior of the FMU would be exactly the same if `a` and `b` were not treated as alias variables (that is, had different <<valueReference>>pass:[s]).
 This requirement leads naturally to the following restrictions:
 
-. Variables `a` and `b` that can both be set with `fmi3SetXXX`, or variable `a` that can be set with `fmi3SetXXX` and variable `b` that is defined with <<causality>> = <<independent>>, cannot be alias variables _[since these variables are <<independent>> variables and alias means that there is a constraint equation between variables (= the values are the same), these variables are no longer <<independent>>._ +
+. Variables `a` and `b` that can both be set with `fmi3Set{VariableType}`, or variable `a` that can be set with `fmi3Set{VariableType}` and variable `b` that is defined with <<causality>> = <<independent>>, cannot be alias variables _[since these variables are <<independent>> variables and alias means that there is a constraint equation between variables (= the values are the same), these variables are no longer <<independent>>._ +
 _For example, if variables `a` and `b` have <<causality>> = <<parameter>>, then the value references of `a` and `b` must be different._
 _However, if variable a has <<causality>> = <<parameter>> and `b` has <<causality>> = <<calculatedParameter>> and `b := a`, then `a` and `b` can have the same value reference.]_
 
-. At most one variable of the same alias set of variables with <<variability>> = <<constant>> can have a <<start>> attribute _[since <<start>> variables are independent initial values.]_
+. At most one variable of the same alias set of variables with <<variability>> latexmath:[\neq] <<constant>> can have a <<start>> attribute _[since <<start>> variables are independent initial values.]_
 
 . A variable with <<variability>> = <<constant>> can only be aliased to another variable with <<variability>> = <<constant>>.
 It is then required that the <<start>> values of all aliased (constant) variables are identical.
 
 . All variables of the same alias set must all have either no `<Unit>` element defined, or all of them must have the same `<Unit name>` and the same `<Unit><BaseUnit>` definitions.
 
+. All variables of the same alias set must have the same dimensions.
+
 The aliasing of variables only means that the `value` of the variables is always identical.
 However, aliased variables may have different attributes, such as `min/max/nominal` values or description texts.
-_[For example, if v1, v2 are two alias variables with `v1=v2` and `v1.max=10` and `v2.max=5`, then the FMU will trigger an error if either `v1` or `v2` becomes larger than 5.]_
+_[For example, if `v1`, `v2` are two alias variables with `v1 = v2` and `v1.max = 10` and `v2.max = 5`, then the FMU will trigger an error if either `v1` or `v2` becomes larger than 5.]_
 
 _[The dependency definition in `fmiModelDescription.ModelStructure` is completely unrelated to the alias definition._
 _In particular, the "direct dependency" definition can be a superset of the "real" direct dependency definition, even if the alias information shows that this is too conservative._
@@ -1794,7 +1799,7 @@ _For example, if it is stated that the <<output>> `y1` depends on <<input>> `u1`
 _[In case of different variability among the set of alias variables, and if that set of aliases does not contain an input or parameter, the variability should be the highest of the variables in the set, e.g. continuous > discrete > tunable > fixed._
 _If the set includes a parameter or input the aliases will have the stated variability of that parameter or input.]_
 
-Type specific properties are defined in the required choice element, where exactly one of `Real`, `Integer`, `Boolean`, `String`, `Enumeration` must be present in the XML file:
+Type specific properties are defined in the required choice element, where exactly one of the numeric types or an Enumeration must be present in the XML file:
 
 image::images/Real_Schema_large.png[width=50%, align="center"]
 
@@ -1816,8 +1821,8 @@ The attributes are defined in <<definition-of-types>> (`TypeDefinitions`), excep
 |`declaredType`
 |If present, name of type defined with `TypeDefinitions / SimpleType`.
 The value defined in the corresponding `TypeDefinition` (see <<definition-of-types>>) is used as default.
-_[For example, if `min` is present both in `Real` (of `TypeDefinition`) and in `Real`, then the `min` of variables is actually used.]_
-For `Real`, `Integer`, `Boolean`, `String`, this attribute is optional.
+_[For example, if `min` is present both in variable type element of `TypeDefinition` and in the concrete variable type element of the variable, then the `min` of the variable is actually used.]_
+For numeric types and `String`, this attribute is optional.
 For `Enumeration` it is required, because the Enumeration items are defined in `TypeDefinitions / SimpleType`.
 
 
@@ -1826,12 +1831,12 @@ For `Enumeration` it is required, because the Enumeration items are defined in `
 [[start,`start`]]
 Initial or guess value of variable.
 *This value is also stored in the C functions*.
-_[Therefore, calling_ `fmi3SetXXX` _to set <<start>> values is only necessary, if a different value as stored in the XML file is desired.]_
+_[Therefore, calling_ `fmi3Set{VariableType}` _to set <<start>> values is only necessary, if a different value as stored in the XML file is desired.]_
 _WARNING: It is not recommended to change the start values in the `modelDescription.xml` file of an FMU, as this would break the consistency with the hard-coded start values in the C-Code._
-_This could lead to unpredictable behavior of the FMU in different importing tools, as it is not mandatory to call `fmi3SetXXX` to set start values during initialization. Instead it is recommended to use the SSP Standard (https://ssp-standard.org/) to handle modified parameters of FMUs or different parameter sets._
+_This could lead to unpredictable behavior of the FMU in different importing tools, as it is not mandatory to call `fmi3Set{VariableType}` to set start values during initialization. Instead it is recommended to use the SSP Standard (https://ssp-standard.org/) to handle modified parameters of FMUs or different parameter sets._
 
 The interpretation of <<start>> is defined by variable attribute <<initial>>.
-A different <<start>> value can be provided with an `fmi3SetXXX` function before <<fmi3ExitInitializationMode>> is called (but not for variables with <<variability>> = <<constant>>).
+A different <<start>> value can be provided with an `fmi3Set{VariableType}` function before <<fmi3ExitInitializationMode>> is called (but not for variables with <<variability>> = <<constant>>).
 
 _[The standard approach is to set the <<start>> value before <<fmi3EnterInitializationMode>>._
 _However, if the initialization shall be modified in the calling environment (for example, changing from initialization of states to steady-state initialization), it is also possible to use the <<start>> value as iteration variable of an algebraic loop: using an additional condition in the environment, such as_ latexmath:[\color{blue}{\dot{x} = 0}] _, the actual <<start>> value is determined.]_
@@ -1870,7 +1875,7 @@ If `false`, <<state>> will not be reinitialized at an event by the FMU.
 |`min / max`
 |The optional attributes `min` and `max` in element `Enumeration` restrict the allowed values of the enumeration.
 The `min/max` definitions are information from the FMU to the environment defining the region in which the FMU is designed to operate, see also comment in <<definition-of-types>>.
-_[If, for example, an `Enumeration` is defined with `name1 = -4`, `name2 = 1`, `name3 = 5`, `name4 = 11` and min=-2, max = 5, then only `name2` and `name3` are allowed.]_
+_[If, for example, an `Enumeration` is defined with `name1 = -4`, `name2 = 1`, `name3 = 5`, `name4 = 11` and `min = -2`, `max = 5`, then only `name2` and `name3` are allowed.]_
 |====
 
 With element `Annotations` additional, tool specific data can be defined:
@@ -1896,7 +1901,7 @@ A Model Exchange FMU must expose all <<derivative,`derivatives`>> of its continu
 A Co- Simulation FMU does not need to expose these state derivatives.
 _[If a Co-Simulation FMU exposes its state derivatives, they are usually not utilized for the co-simulation, but, for example, to linearize the FMU at a communication point.]_
 
-The optional part defines in which way <<derivative,`derivatives`>> and <<output,`outputs`>> depend on <<input,`inputs`>>, and continuous-time <<state,`states`>> at the current super dense time instant (Model Exchange) or at the current communication point (Co-Simulation).
+The optional part defines in which way <<derivative,`derivatives`>> and <<output,`outputs`>> depend on <<input,`inputs`>>, and continuous-time <<state,`states`>> at the current super-dense time instant (Model Exchange) or at the current communication point (Co-Simulation).
 _[The listed <<dependencies>> declare the dependencies between whole (multi-dimensional-)variables and not individual elements of the variables.]_
 _[A simulation environment can utilize this information to improve the efficiency, for example, when connecting FMUs together, or when computing the partial derivative of the <<derivative,`derivatives`>> with respect to the <<state,`states`>> in the simulation engine.]_
 
@@ -1929,13 +1934,13 @@ _[Note that all <<output>> variables are listed here, especially <<discrete>> an
 _The ordering of the variables in this list is defined by the exporting tool._
 _Usually, it is best to order according to the declaration order in the source model, since then the `Outputs` list does not change if the declaration order of <<output,`outputs`>> in the source model is not changed._
 _This is for example, important for linearization, in order that the interpretation of the output vector does not change for a re-exported FMU.]_
-Attribute <<dependencies>> defines the dependencies of the <<output,`outputs`>> from the knowns at the current super dense time instant in Event and in *Continuous-Time Mode* (Model Exchange) and at the current communication point (Co-Simulation).
+Attribute <<dependencies>> defines the dependencies of the <<output,`outputs`>> from the knowns at the current super-dense time instant in Event and in *Continuous-Time Mode* (Model Exchange) and at the current communication point (Co-Simulation).
 The functional dependency is defined as (dependencies of variables that are fixed in Event and *Continuous-Time Mode* and at communication points are not shown): +
 [blue]#latexmath:[\color{blue}{(\mathbf{y}_c, \mathbf{y}_d) := \mathbf{f}_{output}(\mathbf{x}_c, \mathbf{u}_c, \mathbf{u}_d, t, \mathbf{p}_{tune})}]#
 
 |`Derivatives`
 |Ordered list of all state derivatives, in other words, a list of value references where every corresponding variable must be a state derivative.
-_[Note that only <<continuous>> Real variables are listed here._
+_[Note that only <<continuous>> floating point variables are listed here._
 _If a <<state>> or a <<derivative>> of a <<state>> shall not be exposed from the FMU, or if states are not statically associated with a variable (due to dynamic state selection), then dummy variables have to be introduced, for example, `x[4]`, or `xDynamicStateSet2[5]`._
 _The ordering of the variables in this list is defined by the exporting tool._
 _Usually, it is best to order according to the declaration order of the <<state,`states`>> in the source model, since then the <Derivatives> list does not change if the declaration order of states in the source model is not changed._
@@ -1950,7 +1955,7 @@ _[This is the default._
 _If an FMU supports both Model Exchange and Co-Simulation, then the `Derivatives` element might be present, since it is needed for Model Exchange._
 _If the above flag is set to `false` for the Co-Simulation case, then the `Derivatives` element is ignored for Co-Simulation._
 _If "inline integration" is used for a Co-Simulation slave, then the model still has continuous-time <<state,`states`>> and just a special solver is used (internally the implementation results in a discrete-time system, but from the outside, it is still a continuous-time system).]_ +
-Attribute <<dependencies>> defines the dependencies of the state derivatives from the knowns at the current super dense time instant in Event and in *Continuous-Time Mode* (Model Exchange) and at the current communication point (Co-Simulation).
+Attribute <<dependencies>> defines the dependencies of the state derivatives from the knowns at the current super-dense time instant in Event and in *Continuous-Time Mode* (Model Exchange) and at the current communication point (Co-Simulation).
 The functional dependency is defined as (dependencies of variables that are fixed in Event and *Continuous-Time Mode* and at communication points are not shown): +
 [blue]#latexmath:[\color{blue}{\dot{\mathbf{x}_c} := \mathbf{f}_{der}(\mathbf{x}_c, \mathbf{u}_c, \mathbf{u}_d, t, \mathbf{p}_{tune})}]#
 
@@ -1972,7 +1977,7 @@ The functional dependency is defined as:
 
 [blue]#latexmath:[\color{blue}{\dot{\mathbf{v}}_{initialUnknowns} := \mathbf{f}_{init}(\mathbf{u}_c, \mathbf{u}_d, t_0, \mathbf{v}_{initial=exact})}]#
 
-Since, <<output,`outputs`>>, continuous-time <<state,`states`>> and state derivatives are either present as `Knowns` (if <<initial>> = <<exact>>) or as <<Unknown,`Unknowns`>> (if <<initial>> = <<approx>> or <<calculated>>), they can be inquired with `fmi3GetXXX` in *Initialization Mode*.
+Since, <<output,`outputs`>>, continuous-time <<state,`states`>> and state derivatives are either present as `Knowns` (if <<initial>> = <<exact>>) or as <<Unknown,`Unknowns`>> (if <<initial>> = <<approx>> or <<calculated>>), they can be inquired with `fmi3Get{VariableType}` in *Initialization Mode*.
 
 _[Example: Assume an FMU is defined in the following way:_
 
@@ -2000,7 +2005,7 @@ where
 - latexmath:[\color{blue}{\mathbf{v}_{freeze}}] is the set of input arguments of function `h` that do not change their values in this mode, but change their values in other modes _[for example, <<fixed>> <<parameter,`parameters`>> in *Continuous-Time Mode*]_.
 
 Attribute <<dependencies>> of <<Unknown>> defines the dependency of latexmath:[\color{blue}{v_{unknown}}] with respect to latexmath:[\color{blue}{\mathbf{v}_{known}}]. +
-_[If, for example, a continuous-time <<output>>_ latexmath:[\color{blue}{y_{2}}] _is a function of the continuous-time <<input,`inputs`>>_ latexmath:[\color{blue}{u_{3}}] _and_ latexmath:[\color{blue}{u_{5}}], _and these <<input,`inputs`>> have changed, then_ `fmi3SetXXX` _on_ latexmath:[\color{blue}{u_{3}}] _and_ latexmath:[\color{blue}{u_{5}}] _must always be called before calling_ `fmi3GetXXX` _on_ latexmath:[\color{blue}{y_{2}}] _.]_
+_[If, for example, a continuous-time <<output>>_ latexmath:[\color{blue}{y_{2}}] _is a function of the continuous-time <<input,`inputs`>>_ latexmath:[\color{blue}{u_{3}}] _and_ latexmath:[\color{blue}{u_{5}}], _and these <<input,`inputs`>> have changed, then_ `fmi3Set{VariableType}` _on_ latexmath:[\color{blue}{u_{3}}] _and_ latexmath:[\color{blue}{u_{5}}] _must always be called before calling_ `fmi3Get{VariableType}` _on_ latexmath:[\color{blue}{y_{2}}] _.]_
 
 |`DiscreteStates`
 |Ordered list of all exposed discrete <<state,`states`>>, in other words a list of variable indices.
@@ -2013,7 +2018,7 @@ Every corresponding variable may have attribute <<previous>> defined. Discrete <
 // (3) discrete states are exposed without <<previous>> values.
 // It could be a combination of all three in one FMU. Discussion and conclusion:
 // Introduce a flag `hasInternalState`, see also #148.]
-//  [Need to clarify causality of discrete states (<<local>>, <<output>>?) and if `fmi3SetReal` is allowed for continuous states, see #243.]
+//  [Need to clarify causality of discrete states (<<local>>, <<output>>?) and if `fmi3Set{VariableType}` is allowed for continuous states, see #243.]
 // Attribute <<dependencies>> defines the dependencies of the discrete states from the known <<input,`inputs`>>, continuous-time states and previous discrete-time states.
 |====
 
@@ -2048,8 +2053,7 @@ If an <<independent>> variable is not explicitly defined under variables, it is 
 
 - inputs (variables with <<causality>> = <<input>>)
 
-- variables with <<initial>> = <<exact>> +
-_[for example, <<independent>> <<parameter,`parameters`>> or initial <<state,`states`>>.]_
+- variables with <<initial>> = <<exact>> _[for example, <<independent>> <<parameter,`parameters`>> or initial <<state,`states`>>]_
 
 - <<independent>> variable (usually time; <<causality>> = <<independent>>).
 If an <<independent>> variable is not explicitly defined under variables, it is assumed that the <<Unknown>> depends explicitly on the <<independent>> variable.
@@ -2070,11 +2074,11 @@ If <<dependenciesKind>> is present, <<dependencies>> must be present and must ha
 
 `= dependent`: no particular structure, latexmath:[\color{blue}{{h(..,\ v}_{known,i}}],..)
 
-Only for Real unknowns latexmath:[\color{blue}{v_{\text{unknown}}}]:
+Only for floating point type unknowns latexmath:[\color{blue}{v_{\text{unknown}}}]:
 
 `=` <<constant>>: constant factor, latexmath:[\color{blue}{c \cdot v_{known,i}}] where latexmath:[\color{blue}{c}] is an expression that is evaluated before <<fmi3EnterInitializationMode>> is called.
 
-Only for Real unknowns latexmath:[\color{blue}{v_{\text{unknown}}}] in Event and *Continuous-Time Mode* (Model Exchange) and at communication points (Co-Simulation), and not for <<InitialUnknowns>> for *Initialization Mode*:
+Only for floating point type unknowns latexmath:[\color{blue}{v_{\text{unknown}}}] in Event and *Continuous-Time Mode* (Model Exchange) and at communication points (Co-Simulation), and not for <<InitialUnknowns>> for *Initialization Mode*:
 
 `=` <<fixed>>: fixed factor, latexmath:[\color{blue}{p \cdot v_{known,i}}] where latexmath:[\color{blue}{p}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called.
 
@@ -2114,7 +2118,7 @@ y &= g_1(x_2, x_3)
 \end{align*},
 ++++
 
-_where_ latexmath:[\color{blue}{u_{1}}] _is a continuous-time <<input>> (<<variability>> = <<continuous>>),_ latexmath:[\color{blue}{u_{2}}] _is any type of <<input>>,_ latexmath:[\color{blue}{u_{3}}] _is a Real discrete-time <<input>> (<<variability>> = "discrete"`), and_ latexmath:[\color{blue}{p}] _is a <<fixed>> <<parameter>> (<<variability>> = <<fixed>>)._
+_where_ latexmath:[\color{blue}{u_{1}}] _is a continuous-time <<input>> (<<variability>> = <<continuous>>),_ latexmath:[\color{blue}{u_{2}}] _is any type of <<input>>,_ latexmath:[\color{blue}{u_{3}}] _is a floating point discrete-time <<input>> (<<variability>> = "discrete"`), and_ latexmath:[\color{blue}{p}] _is a <<fixed>> <<parameter>> (<<variability>> = <<fixed>>)._
 _The initialization is defined by:_
 
 [latexmath]
@@ -2183,11 +2187,14 @@ _[Note that_ latexmath:[\color{blue}{y = c}] _where_ latexmath:[\color{blue}{c}]
 _Therefore <<dependenciesKind>> = <<dependenciesKind,`dependent`>> because it is not a linear relationship on_ latexmath:[\color{blue}{u}]. _]_
 
 _Example 4:_
+
 [latexmath]
 ++++
 \frac{dx}{dt}=u, y=x
 ++++
-where `u` is continuous-time input value reference "1", `y` is a continuous-time output with value reference "2" and `dxdt` is a continuous-time derivative with value reference="4". The definition of the model structure is then:
+
+where `u` is continuous-time input value reference `1`, `y` is a continuous-time output with value reference `2` and `dxdt` is a continuous-time derivative with value reference `4`.
+The definition of the model structure is then:
 
 [source, xml]
 ----
@@ -2238,6 +2245,7 @@ line feed (#xA) nor tab (#x9)
 Structured names are hierarchical using "." as a separator between hierarchies.
 A name consists of "pass:[_]", letters and digits or may consist of any characters enclosed in single apostrophes.
 A name may identify an array element on every hierarchical level using "[...]" to identify the respective array index.
+If an array is a leaf node of the variable hierarchy then the array can also be represented as a single variable of type array.
 A <<derivative>> of a variable is defined with `der(name)` for the first time derivative and `der(name,N)` for the N-th derivative.
 Examples:
 
@@ -2292,7 +2300,7 @@ vehicle.engine.inputSpeed
 vehicle.engine.temperature
 ----
 
-All array elements are given in a consecutive sequence of variables.
+All flattened array elements are given in a consecutive sequence of variables.
 Elements of multi-dimensional arrays are ordered according to "row major" order that is elements of the last index are given in sequence.
 
 _[For example, the vector `centerOfMass` in body `arm1` is mapped to the following variables:_

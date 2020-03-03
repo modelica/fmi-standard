@@ -69,7 +69,7 @@ typedef enum {
     fmi3ModelExchange,
     fmi3CoSimulation,
     fmi3HybridCoSimulation,
-    fmi3ScheduledExecutionSimulation
+    fmi3ScheduledCoSimulation
 } fmi3InterfaceType;
 /* end::InterfaceType[] */
 
@@ -438,11 +438,25 @@ typedef fmi3Status fmi3GetDirectionalDerivativeTYPE(fmi3Instance instance,
                                                     size_t nUnknowns,
                                                     const fmi3ValueReference knowns[],
                                                     size_t nKnowns,
-                                                    const fmi3Float64 deltaKnowns[],
-                                                    size_t nDeltaKnowns,
-                                                    fmi3Float64 deltaUnknowns[],
-                                                    size_t nDeltaOfUnknowns);
+                                                    const fmi3Float64 seed[],
+                                                    size_t nSeed,
+                                                    fmi3Float64 sensitivity[],
+                                                    size_t nSensitivity);
 /* end::GetDirectionalDerivative[] */
+
+/* tag::GetAdjointDerivative[] */
+typedef fmi3Status fmi3GetAdjointDerivativeTYPE(fmi3Instance instance,
+                                                const fmi3ValueReference unknowns[],
+                                                size_t nUnknowns,
+                                                const fmi3ValueReference knowns[],
+                                                size_t nKnowns,
+                                                const fmi3Float64 seed[],
+                                                size_t nSeed,
+                                                fmi3Float64 sensitivity[],
+                                                size_t nSensitivity);
+/* end::GetAdjointDerivative[] */
+
+
 
 /* Entering and exiting the Configuration or Reconfiguration Mode */
 /* tag::EnterConfigurationMode[] */
@@ -466,7 +480,7 @@ typedef fmi3Status fmi3SetClockTYPE(fmi3Instance instance,
                                     const fmi3ValueReference valueReferences[],
                                     size_t nValueReferences,
                                     const fmi3Clock values[],
-                                    const fmi3Boolean *subactive);
+                                    const fmi3Boolean subactive[]);
 /* end::SetClock[] */
 
 /* tag::GetIntervalDecimal[] */
@@ -488,15 +502,15 @@ typedef fmi3Status fmi3GetIntervalFractionTYPE(fmi3Instance instance,
 typedef fmi3Status fmi3SetIntervalDecimalTYPE(fmi3Instance instance,
                                               const fmi3ValueReference valueReferences[],
                                               size_t nValueReferences,
-                                              fmi3Float64 interval[]);
+                                              const fmi3Float64 interval[]);
 /* end::SetIntervalDecimal[] */
 
 /* tag::SetIntervalFraction[] */
 typedef fmi3Status fmi3SetIntervalFractionTYPE(fmi3Instance instance,
                                                const fmi3ValueReference valueReferences[],
                                                size_t nValueReferences,
-                                               fmi3UInt64 intervalCounter[],
-                                               fmi3UInt64 resolution[]);
+                                               const fmi3UInt64 intervalCounter[],
+                                               const fmi3UInt64 resolution[]);
 /* end::SetIntervalFraction[] */
 
 /* tag::NewDiscreteStates[] */
