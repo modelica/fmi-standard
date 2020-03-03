@@ -217,10 +217,11 @@ FMI3_Export fmi3GetVersionTYPE      fmi3GetVersion;
 FMI3_Export fmi3SetDebugLoggingTYPE fmi3SetDebugLogging;
 
 /* Creation and destruction of FMU instances */
-FMI3_Export fmi3InstantiateModelExchangeTYPE  fmi3InstantiateModelExchange;
-FMI3_Export fmi3InstantiateBasicCoSimulationTYPE  fmi3InstantiateBasicCoSimulation;
-FMI3_Export fmi3InstantiateHybridCoSimulationTYPE  fmi3InstantiateHybridCoSimulation;
-FMI3_Export fmi3InstantiateScheduledCoSimulationTYPE  fmi3InstantiateScheduledCoSimulation;
+FMI3_Export fmi3InstantiateModelExchangeTYPE         fmi3InstantiateModelExchange;
+FMI3_Export fmi3InstantiateBasicCoSimulationTYPE     fmi3InstantiateBasicCoSimulation;
+FMI3_Export fmi3InstantiateHybridCoSimulationTYPE    fmi3InstantiateHybridCoSimulation;
+FMI3_Export fmi3InstantiateScheduledCoSimulationTYPE fmi3InstantiateScheduledCoSimulation;
+FMI3_Export fmi3FreeInstanceTYPE                     fmi3FreeInstance;
 
 /* Enter and exit initialization mode, terminate and reset */
 FMI3_Export fmi3SetupExperimentTYPE         fmi3SetupExperiment;
@@ -228,7 +229,6 @@ FMI3_Export fmi3EnterInitializationModeTYPE fmi3EnterInitializationMode;
 FMI3_Export fmi3ExitInitializationModeTYPE  fmi3ExitInitializationMode;
 FMI3_Export fmi3EnterEventModeTYPE          fmi3EnterEventMode;
 FMI3_Export fmi3TerminateTYPE               fmi3Terminate;
-FMI3_Export fmi3FreeInstanceTYPE            fmi3FreeInstance;
 FMI3_Export fmi3ResetTYPE                   fmi3Reset;
 
 /* Getting and setting variables values */
