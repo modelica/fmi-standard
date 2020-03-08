@@ -43,11 +43,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 extern "C" {
 #endif
 
-/* make sure all compiler use the same alignment policies for structures */
-#if defined _MSC_VER || defined __GNUC__
-#pragma pack(push,8)
-#endif
-
 /* Include stddef.h, in order that size_t etc. is defined */
 #include <stddef.h>
 
@@ -64,23 +59,6 @@ typedef enum {
 } fmi3Status;
 /* end::Status[] */
 
-/* tag::InterfaceType[] */
-typedef enum {
-    fmi3ModelExchange,
-    fmi3CoSimulation,
-    fmi3HybridCoSimulation,
-    fmi3ScheduledCoSimulation
-} fmi3InterfaceType;
-/* end::InterfaceType[] */
-
-/* tag::CoSimulationConfiguration[] */
-typedef struct {
-    fmi3Boolean intermediateVariableGetRequired;
-    fmi3Boolean intermediateInternalVariableGetRequired;
-    fmi3Boolean intermediateVariableSetRequired;
-} fmi3CoSimulationConfiguration;
-/* end::CoSimulationConfiguration[] */
-
 /* tag::DependencyKind[] */
 typedef enum {
     /* fmi3Independent = 0, not needed but reserved for future use */
@@ -91,18 +69,6 @@ typedef enum {
     fmi3Dependent = 5
 } fmi3DependencyKind;
 /* end::DependencyKind[] */
-
-/* tag::IntermediateUpdateInfo[] */
-typedef struct{
-    fmi3Float64 intermediateUpdateTime;
-    fmi3Boolean eventOccurred;
-    fmi3Boolean clocksTicked;
-    fmi3Boolean intermediateVariableSetAllowed;
-    fmi3Boolean intermediateVariableGetAllowed;
-    fmi3Boolean intermediateStepFinished;
-    fmi3Boolean canReturnEarly;
-} fmi3IntermediateUpdateInfo;
-/* end::IntermediateUpdateInfo[] */
 
 /* tag::CallbackFunctions[] */
 typedef void  (*fmi3CallbackLogMessage)     (fmi3InstanceEnvironment instanceEnvironment,
@@ -118,40 +84,21 @@ typedef void  (*fmi3CallbackFreeMemory)     (fmi3InstanceEnvironment instanceEnv
 /* end::CallbackFunctions[] */
 
 /* tag::CallbackIntermediateUpdate[] */
-typedef fmi3Status (*fmi3CallbackIntermediateUpdate) (fmi3InstanceEnvironment instanceEnvironment,
-                                                      fmi3IntermediateUpdateInfo* intermediateUpdateInfo);
+typedef fmi3Status (*fmi3CallbackIntermediateUpdate) (
+  fmi3InstanceEnvironment instanceEnvironment,
+  fmi3Float64 intermediateUpdateTime,
+  fmi3Boolean eventOccurred,
+  fmi3Boolean clocksTicked,
+  fmi3Boolean intermediateVariableSetAllowed,
+  fmi3Boolean intermediateVariableGetAllowed,
+  fmi3Boolean intermediateStepFinished,
+  fmi3Boolean canReturnEarly);
 /* end::CallbackIntermediateUpdate[] */
 
 /* tag::PreemptionLock[] */
 typedef void       (*fmi3CallbackLockPreemption)   ();
 typedef void       (*fmi3CallbackUnlockPreemption) ();
 /* end::PreemptionLock[] */
-
-typedef struct {
-    fmi3InstanceEnvironment         instanceEnvironment;
-    fmi3CallbackLogMessage          logMessage;
-    fmi3CallbackAllocateMemory      allocateMemory;
-    fmi3CallbackFreeMemory          freeMemory;
-    fmi3CallbackIntermediateUpdate  intermediateUpdate;
-    fmi3CallbackLockPreemption      lockPreemption;
-    fmi3CallbackUnlockPreemption    unlockPreemption;
-} fmi3CallbackFunctions;
-
-/* tag::EventInfo[] */
-typedef struct {
-    fmi3Float64 nextEventTime;  /* next event if nextEventTimeDefined=fmi3True */
-    fmi3Boolean newDiscreteStatesNeeded;
-    fmi3Boolean terminateSimulation;
-    fmi3Boolean nominalsOfContinuousStatesChanged;
-    fmi3Boolean valuesOfContinuousStatesChanged;
-    fmi3Boolean nextEventTimeDefined;
-} fmi3EventInfo;
-/* end::EventInfo[] */
-
-/* reset alignment policy to the one set before reading this file */
-#if defined _MSC_VER || defined __GNUC__
-#pragma pack(pop)
-#endif
 
 /* Define fmi3 function pointer types to simplify dynamic loading */
 
@@ -173,14 +120,63 @@ typedef fmi3Status  fmi3SetDebugLoggingTYPE(fmi3Instance instance,
 
 /* Creation and destruction of FMU instances and setting debug status */
 /* tag::Instantiate[] */
-typedef fmi3Instance fmi3InstantiateTYPE(fmi3String        instanceName,
-                                         fmi3InterfaceType fmuType,
-                                         fmi3String        fmuInstantiationToken,
-                                         fmi3String        fmuResourceLocation,
-                                         const fmi3CallbackFunctions* functions,
-                                         fmi3Boolean       visible,
-                                         fmi3Boolean       loggingOn,
-                                         const fmi3CoSimulationConfiguration* fmuCoSimulationConfiguration);
+typedef fmi3Instance fmi3InstantiateModelExchangeTYPE(
+    fmi3String                 instanceName,
+    fmi3String                 instantiationToken,
+    fmi3String                 resourceLocation,
+    fmi3Boolean                visible,
+    fmi3Boolean                loggingOn,
+    fmi3InstanceEnvironment    instanceEnvironment,
+    fmi3CallbackLogMessage     logMessage,
+    fmi3CallbackAllocateMemory allocateMemory,
+    fmi3CallbackFreeMemory     freeMemory);
+
+typedef fmi3Instance fmi3InstantiateBasicCoSimulationTYPE(
+    fmi3String                     instanceName,
+    fmi3String                     instantiationToken,
+    fmi3String                     resourceLocation,
+    fmi3Boolean                    visible,
+    fmi3Boolean                    loggingOn,
+    fmi3Boolean                    intermediateVariableGetRequired,
+    fmi3Boolean                    intermediateInternalVariableGetRequired,
+    fmi3Boolean                    intermediateVariableSetRequired,
+    fmi3InstanceEnvironment        instanceEnvironment,
+    fmi3CallbackLogMessage         logMessage,
+    fmi3CallbackAllocateMemory     allocateMemory,
+    fmi3CallbackFreeMemory         freeMemory,
+    fmi3CallbackIntermediateUpdate intermediateUpdate);
+
+typedef fmi3Instance fmi3InstantiateHybridCoSimulationTYPE(
+    fmi3String                     instanceName,
+    fmi3String                     instantiationToken,
+    fmi3String                     resourceLocation,
+    fmi3Boolean                    visible,
+    fmi3Boolean                    loggingOn,
+    fmi3Boolean                    intermediateVariableGetRequired,
+    fmi3Boolean                    intermediateInternalVariableGetRequired,
+    fmi3Boolean                    intermediateVariableSetRequired,
+    fmi3InstanceEnvironment        instanceEnvironment,
+    fmi3CallbackLogMessage         logMessage,
+    fmi3CallbackAllocateMemory     allocateMemory,
+    fmi3CallbackFreeMemory         freeMemory,
+    fmi3CallbackIntermediateUpdate intermediateUpdate);
+
+typedef fmi3Instance fmi3InstantiateScheduledCoSimulationTYPE(
+    fmi3String                     instanceName,
+    fmi3String                     instantiationToken,
+    fmi3String                     resourceLocation,
+    fmi3Boolean                    visible,
+    fmi3Boolean                    loggingOn,
+    fmi3Boolean                    intermediateVariableGetRequired,
+    fmi3Boolean                    intermediateInternalVariableGetRequired,
+    fmi3Boolean                    intermediateVariableSetRequired,
+    fmi3InstanceEnvironment        instanceEnvironment,
+    fmi3CallbackLogMessage         logMessage,
+    fmi3CallbackAllocateMemory     allocateMemory,
+    fmi3CallbackFreeMemory         freeMemory,
+    fmi3CallbackIntermediateUpdate intermediateUpdate,
+    fmi3CallbackLockPreemption     lockPreemption,
+    fmi3CallbackUnlockPreemption   unlockPreemption);
 /* end::Instantiate[] */
 
 /* tag::FreeInstance[] */
@@ -515,7 +511,12 @@ typedef fmi3Status fmi3SetIntervalFractionTYPE(fmi3Instance instance,
 
 /* tag::NewDiscreteStates[] */
 typedef fmi3Status fmi3NewDiscreteStatesTYPE(fmi3Instance instance,
-                                             fmi3EventInfo* eventInfo);
+                                             fmi3Boolean *newDiscreteStatesNeeded,
+                                             fmi3Boolean *terminateSimulation,
+                                             fmi3Boolean *nominalsOfContinuousStatesChanged,
+                                             fmi3Boolean *valuesOfContinuousStatesChanged,
+                                             fmi3Boolean *nextEventTimeDefined,
+                                             fmi3Float64 *nextEventTime);
 /* end::NewDiscreteStates[] */
 
 /***************************************************

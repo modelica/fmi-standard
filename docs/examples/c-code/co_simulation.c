@@ -35,7 +35,6 @@ int main(int argc, char* argv[]) {
     
     const char *guid = "{8c4e810f-3da3-4a00-8276-176fa3c9f000}";
     
-    fmi3CallbackFunctions callbacks = { NULL };
     fmi3Instance s1, s2;
 
     printf("Running CoSimulation example... ");
@@ -44,14 +43,11 @@ int main(int argc, char* argv[]) {
 ////////////////////////////
 // Initialization sub-phase
 
-// set callback functions
-callbacks.logMessage     = cb_logMessage;
-callbacks.allocateMemory = cb_allocateMemory;
-callbacks.freeMemory     = cb_freeMemory;
-
 // instantiate both slaves
-s1 = s1_fmi3Instantiate("slave1", fmi3CoSimulation, guid, NULL, &callbacks, fmi3False, fmi3False, NULL);
-s2 = s2_fmi3Instantiate("slave2", fmi3CoSimulation, guid, NULL, &callbacks, fmi3False, fmi3False, NULL);
+s1 = s1_fmi3InstantiateBasicCoSimulation("slave1", guid, NULL, fmi3False, fmi3False, fmi3False, fmi3False, fmi3False,
+                        NULL, cb_logMessage, cb_allocateMemory, cb_freeMemory, NULL);
+s2 = s2_fmi3InstantiateBasicCoSimulation("slave2", guid, NULL, fmi3False, fmi3False, fmi3False, fmi3False, fmi3False,
+                        NULL, cb_logMessage, cb_allocateMemory, cb_freeMemory, NULL);
 
 if (s1 == NULL || s2 == NULL)
     return EXIT_FAILURE;

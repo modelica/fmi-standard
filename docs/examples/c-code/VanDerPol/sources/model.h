@@ -48,8 +48,10 @@ typedef enum {
 #endif
 
 typedef enum {
-    ModelExchange,
-    CoSimulation
+    fmi3ModelExchange,
+    fmi3BasicCoSimulation,
+    fmi3HybridCoSimulation,
+    fmi3ScheduledCoSimulation
 } InterfaceType;
 
 typedef enum {
@@ -78,10 +80,10 @@ typedef struct {
     InterfaceType type;
     const char *resourceLocation;
 
-	// callback functions
-	loggerType logger;
-	allocateMemoryType allocateMemory;
-	freeMemoryType freeMemory;
+    // callback functions
+    loggerType logger;
+    allocateMemoryType allocateMemory;
+    freeMemoryType freeMemory;
 
     bool logEvents;
     bool logErrors;
@@ -102,22 +104,22 @@ typedef struct {
     
     ModelData *modelData;
 
-	// event indicators
-	double *z;
-	double *prez;
+    // event indicators
+    double *z;
+    double *prez;
     
 } ModelInstance;
 
 ModelInstance *createModelInstance(
-	loggerType logger,
-	allocateMemoryType allocateMemory,
-	freeMemoryType freeMemory,
-	void *componentEnvironment,
-	const char *instanceName,
-	const char *GUID,
-	const char *resourceLocation,
-	bool loggingOn,
-	InterfaceType interfaceType);
+    loggerType logger,
+    allocateMemoryType allocateMemory,
+    freeMemoryType freeMemory,
+    void *componentEnvironment,
+    const char *instanceName,
+    const char *GUID,
+    const char *resourceLocation,
+    bool loggingOn,
+    InterfaceType interfaceType);
 void freeModelInstance(ModelInstance *comp);
 
 void setStartValues(ModelInstance *comp);

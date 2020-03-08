@@ -131,7 +131,7 @@ static fmi3Status unsupportedFunction(fmi3Instance instance, const char *fName, 
     ModelInstance *comp = (ModelInstance *)instance;
     if (invalidState(comp, fName, statesExpected))
         return fmi3Error;
-	logError(comp, "%s: Function not implemented.", fName);
+    logError(comp, "%s: Function not implemented.", fName);
     return fmi3Error;
 }
 
@@ -153,26 +153,57 @@ fmi3Status fmi3SetDebugLogging(fmi3Instance instance, fmi3Boolean loggingOn, siz
     return setDebugLogging(comp, loggingOn, nCategories, categories);
 }
 
-fmi3Instance fmi3Instantiate(fmi3String        instanceName,
-                             fmi3InterfaceType fmuType,
-                             fmi3String        fmuInstantiationToken,
-                             fmi3String        fmuResourceLocation,
-                             const fmi3CallbackFunctions* functions,
-                             fmi3Boolean       visible,
-                             fmi3Boolean       loggingOn,
-                             const fmi3CoSimulationConfiguration* fmuCoSimulationConfiguration) {
+fmi3Instance fmi3InstantiateBasicCoSimulation(
+                             fmi3String                     instanceName,
+                             fmi3String                     instantiationToken,
+                             fmi3String                     resourceLocation,
+                             fmi3Boolean                    visible,
+                             fmi3Boolean                    loggingOn,
+                             fmi3Boolean                    intermediateVariableGetRequired,
+                             fmi3Boolean                    intermediateInternalVariableGetRequired,
+                             fmi3Boolean                    intermediateVariableSetRequired,
+                             fmi3InstanceEnvironment        instanceEnvironment,
+                             fmi3CallbackLogMessage         logMessage,
+                             fmi3CallbackAllocateMemory     allocateMemory,
+                             fmi3CallbackFreeMemory         freeMemory,
+                             fmi3CallbackIntermediateUpdate intermediateUpdate)
+{
 
-	return createModelInstance(
-		(loggerType)functions->logMessage,
-		(allocateMemoryType)functions->allocateMemory,
-		(freeMemoryType)functions->freeMemory,
-		functions->instanceEnvironment,
-		instanceName,
-		fmuInstantiationToken,
-		fmuResourceLocation,
-		loggingOn,
-		fmuType
-	);
+    return createModelInstance(
+        (loggerType)logMessage,
+        (allocateMemoryType)allocateMemory,
+        (freeMemoryType)freeMemory,
+        instanceEnvironment,
+        instanceName,
+        instantiationToken,
+        resourceLocation,
+        loggingOn,
+        fmi3BasicCoSimulation
+    );
+}
+
+fmi3Instance fmi3InstantiateModelExchange (
+                              fmi3String                 instanceName,
+                              fmi3String                 instantiationToken,
+                              fmi3String                 resourceLocation,
+                              fmi3Boolean                visible,
+                              fmi3Boolean                loggingOn,
+                              fmi3InstanceEnvironment    instanceEnvironment,
+                              fmi3CallbackLogMessage     logMessage,
+                              fmi3CallbackAllocateMemory allocateMemory,
+                              fmi3CallbackFreeMemory     freeMemory)
+{
+    return createModelInstance(
+        (loggerType)logMessage,
+        (allocateMemoryType)allocateMemory,
+        (freeMemoryType)freeMemory,
+        instanceEnvironment,
+        instanceName,
+        instantiationToken,
+        resourceLocation,
+        loggingOn,
+        fmi3ModelExchange
+    );
 }
 
 void fmi3FreeInstance(fmi3Instance instance) {
@@ -650,7 +681,13 @@ fmi3Status fmi3SetIntervalFraction(fmi3Instance instance,
     NOT_IMPLEMENTED
 }
 
-fmi3Status fmi3NewDiscreteStates(fmi3Instance instance, fmi3EventInfo *eventInfo) {
+fmi3Status fmi3NewDiscreteStates(fmi3Instance instance,
+                                 fmi3Boolean *newDiscreteStatesNeeded,
+                                 fmi3Boolean *terminateSimulation,
+                                 fmi3Boolean *nominalsOfContinuousStatesChanged,
+                                 fmi3Boolean *valuesOfContinuousStatesChanged,
+                                 fmi3Boolean *nextEventTimeDefined,
+                                 fmi3Float64 *nextEventTime) {
 
     ModelInstance *comp = (ModelInstance *)instance;
 
@@ -667,12 +704,12 @@ fmi3Status fmi3NewDiscreteStates(fmi3Instance instance, fmi3EventInfo *eventInfo
     comp->isNewEventIteration = false;
     
     // copy internal eventInfo of component to output eventInfo
-    eventInfo->newDiscreteStatesNeeded           = comp->newDiscreteStatesNeeded;
-    eventInfo->terminateSimulation               = comp->terminateSimulation;
-    eventInfo->nominalsOfContinuousStatesChanged = comp->nominalsOfContinuousStatesChanged;
-    eventInfo->valuesOfContinuousStatesChanged   = comp->valuesOfContinuousStatesChanged;
-    eventInfo->nextEventTimeDefined              = comp->nextEventTimeDefined;
-    eventInfo->nextEventTime                     = comp->nextEventTime;
+    *newDiscreteStatesNeeded           = comp->newDiscreteStatesNeeded;
+    *terminateSimulation               = comp->terminateSimulation;
+    *nominalsOfContinuousStatesChanged = comp->nominalsOfContinuousStatesChanged;
+    *valuesOfContinuousStatesChanged   = comp->valuesOfContinuousStatesChanged;
+    *nextEventTimeDefined              = comp->nextEventTimeDefined;
+    *nextEventTime                     = comp->nextEventTime;
     
     return fmi3OK;
 }
@@ -842,7 +879,7 @@ fmi3Status fmi3DoStep(fmi3Instance instance,
     ModelInstance *comp = (ModelInstance *)instance;
 
     if (communicationStepSize <= 0) {
-		logError(comp, "fmi3DoStep: communication step size must be > 0 but was %g.", communicationStepSize);
+        logError(comp, "fmi3DoStep: communication step size must be > 0 but was %g.", communicationStepSize);
         comp->state = modelError;
         return fmi3Error;
     }
