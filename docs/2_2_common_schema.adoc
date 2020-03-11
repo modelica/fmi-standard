@@ -153,10 +153,12 @@ These definitions are used in the XML element `ModelVariables`.
 
 |`ModelStructure`
 |Defines the structure of the model.
-Especially, the ordered lists of <<output,`outputs`>>, continuous-time <<state,`states`>> and initial unknowns (the unknowns during *Initialization Mode*) are defined here.
+Especially, the ordered lists of <<output,`outputs`>>, continuous-time <<state,`states`>>, initial unknowns (the unknowns during *Initialization Mode*) and the event indicators are defined here.
 For more details on ModelStructure, see <<ModelStructure>>.
-Furthermore, the dependency of the unkowns from the knowns can be optionally defined.
+Furthermore, the dependency of the unknowns from the knowns can be optionally defined for <<output,`outputs`>>, continuous-time <<state,`states`>> and initial unknowns.
 _[This information can be, for example, used to compute efficiently a sparse Jacobian for simulation, or to utilize the <<input>> / <<output>> dependency in order to detect that in some cases there are actually no algebraic loops when connecting FMUs together]_.
+Dependencies for event indicators are not provided.
+_[The calculation of derivatives of event indicators is not provided.]_.
 |====
 
 At least one element of `ModelExchange` or `CoSimulation` must be present to identify the type of the FMU.
@@ -218,8 +220,6 @@ For the details, see <<variableNamingConvention>>. Currently standardized are:
 
 - `structured`: Hierarchical names with `.` as hierarchy separator, and with array elements and derivative characterization.
 
-|`numberOfEventIndicators`
-|The (fixed) number of event indicators for an FMU based on FMI for Model Exchange. For Co-Simulation, this value is ignored.
 |====
 
 ==== Definition of Source Code (BuildConfiguration)
@@ -1223,7 +1223,7 @@ It is not allowed to define <<initial>>.
 The algebraic relationship to the <<input,`inputs`>> is defined via the <<dependencies>> attribute of `<fmiModelDescription><ModelStructure><Outputs><Unknown>`.
 
 [[local,`local`]]
-- `local`: Local variable that is calculated from other variables or is a continuous-time <<state>> (see <<ModelStructure>>).
+- `local`: Local variable that is calculated from other variables or is a continuous-time <<state>> or an event indicator (see <<ModelStructure>>).
 It is not allowed to use the variable value in another model or slave.
 
 [[independent,`independent`]]
@@ -1267,7 +1267,7 @@ Variability must be <<clock>>.
 Only a variable of type `Clock` can have this <<causality>>.
 
 The default of <<causality>> is <<local>>. +
-A continuous-time <<state>> must have <<causality>> = <<local>> or <<output>>, see also <<ModelStructure>>.
+A continuous-time <<state>> or a event indicator must have <<causality>> = <<local>> or <<output>>, see also <<ModelStructure>>.
 
 _[<<causality>> = <<calculatedParameter>> and <<causality>> = <<local>> with <<variability>> = <<fixed>> or <<tunable>> are similar._
 _The difference is that a <<calculatedParameter>> can be used in another model or slave, whereas a <<local>> variable cannot._
@@ -1874,13 +1874,13 @@ _The Co-Simulation FMU has either an integrator included that solves the model e
 _In both cases the model has the same continuous-time <<state,`states`>>._
 _In the second case the internal implementation is a discrete-time system, but from the outside this is still a continuous-time model that is solved with an integration method.]_
 
-The required part defines an ordering of the <<output,`outputs`>> and of the (exposed) <<derivative,`derivatives`>>, and defines the unknowns that are available during Initialization _[Therefore, when linearizing an FMU, every tool will use the same ordering for the <<output,`outputs`>>, <<state,`states`>>, and <<derivative,`derivatives`>> for the linearized model.
+The required part defines an ordering of the <<output,`outputs`>>, the (exposed) <<derivative,`derivatives`>>, the event indicators and defines the unknowns that are available during Initialization _[Therefore, when linearizing an FMU, every tool will use the same ordering for the <<output,`outputs`>>, <<state,`states`>>, and <<derivative,`derivatives`>> for the linearized model.
 The ordering of the <<input,`inputs`>> should be performed in this case according to the ordering in `ModelVariables`.]_
-A Model Exchange FMU must expose all <<derivative,`derivatives`>> of its continuous-time <<state,`states`>> in element `Derivatives`.
-A Co- Simulation FMU does not need to expose these state derivatives.
+A Model Exchange FMU must expose all <<derivative,`derivatives`>> of its continuous-time <<state,`states`>> in element `Derivatives` and must expose all event indicators in elements `EventIndicator`.
+A Co- Simulation FMU does not need to expose these state derivatives and event indicators.
 _[If a Co-Simulation FMU exposes its state derivatives, they are usually not utilized for the co-simulation, but, for example, to linearize the FMU at a communication point.]_
 
-The optional part defines in which way <<derivative,`derivatives`>> and <<output,`outputs`>> depend on <<input,`inputs`>>, and continuous-time <<state,`states`>> at the current super-dense time instant (Model Exchange) or at the current communication point (Co-Simulation).
+The optional part defines in which way <<derivative,`derivatives`>>, <<output,`outputs`>> and unitial unknowns depend on <<input,`inputs`>>, and continuous-time <<state,`states`>> at the current super-dense time instant (Model Exchange) or at the current communication point (Co-Simulation).
 _[The listed <<dependencies>> declare the dependencies between whole (multi-dimensional-)variables and not individual elements of the variables.]_
 _[A simulation environment can utilize this information to improve the efficiency, for example, when connecting FMUs together, or when computing the partial derivative of the <<derivative,`derivatives`>> with respect to the <<state,`states`>> in the simulation engine.]_
 
@@ -1965,6 +1965,17 @@ latexmath:[\color{blue}{(\mathbf{y}_{c+d}, \dot{\mathbf{x}}_c) := \mathbf{f}_{si
 
 _Therefore, the initial state latexmath:[\color{blue}{\mathbf{x}_c(t_0)}] has <<initial>> = <<exact>> and the initial state derivative latexmath:[\color{blue}{\dot{\mathbf{x}}_c(t_0)}] has <<initial>> = <<calculated>>._
 _The environment can still initialize this FMU in steady-state, by using latexmath:[\color{blue}{\mathbf{x}_c(t_0)}] as iteration variables and adding the equations latexmath:[\color{blue}{\mathbf{x}_c(t_0) = \mathbf{0}}] in the environment.]_
+
+|`EventIndicator`
+|
+[[EventIndicator,`EventIndicator`]]
+|Ordered list of all event indicators, in other words, a list of value references where every corresponding variable must be a event indicator.
+_[Note that only <<continuous>> floating point variables are listed here._
+_If an event indicator shall not be exposed from the FMU, or if event indicators are not statically associated with a variable (due to dynamic event indicator selection), then dummy variables have to be introduced, for example, `eventIndocator[4]`._
+_The ordering of the variables in this list is defined by the exporting tool.]_
+
+For Co-Simulation, elements `EventIndicator` are ignored.
+_[If an FMU supports both Model Exchange and Co-Simulation, then the `EventIndicator` elements might be present, since it is needed for Model Exchange.]_
 
 |`Unknown`
 |
