@@ -1,46 +1,12 @@
 version: 2
 jobs:
   build_examples:
-    docker:
-      - image: debian:stretch
+    machine: true
     steps:
       - checkout
       - run:
-          name: Install sudo
-          command: apt-get update && apt-get install -y sudo && rm -rf /var/lib/apt/lists/*
-      - run:
-          name: Install GCC
-          command: apt-get update && apt-get install -y gcc g++
-      - run:
-          name: Install CMake
-          command: apt-get update && sudo apt-get install -y cmake
-      - run:
-          name: Install lxml
-          command: apt-get install -y python3-lxml
-      - run:
-          name: Validate XML
-          command: python3 .circleci/validate_xml.py
-      - run:
-          name: Lint AsciiDoc files
-          command: python3 .circleci/lint_docs.py
-          # this script prints non-ascii characters to the console
-          environment:
-            PYTHONIOENCODING: UTF-8
-      - run:
-          name: Compile headers
-          command: gcc ~/project/headers/fmi3Functions.h
-      - run:
-          name: Run CMake generator
-          command: cmake docs/examples/c-code -Bbuild
-      - run:
           name: Build examples
-          command: cmake --build build
-      - run:
-          name: Run examples
-          command: |
-            ./build/jacobian
-            ./build/co_simulation
-            ./build/model_exchange
+          command: ~/project/buildexamples.sh
   build_spec:
     machine: true
     steps:
@@ -50,13 +16,12 @@ jobs:
             - "33:26:15:d0:f2:e8:4f:d7:26:8b:b1:9b:a2:1c:ca:f2"
       - checkout
       - run:
-          name: Generate HTML
-          command: docker run -v ~/project/:/documents/ --name asciidoc-to-html asciidoctor/docker-asciidoctor asciidoctor --base-dir /documents/ --backend html5 --failure-level WARN --verbose docs/index.adoc
-      - run:
-          name: Validate HTML
+          name: Generate and validate HTML
           command: |
             if [ $CIRCLE_BRANCH = "master" ]; then
-              docker run -v ~/project/docs/:/documents/ 18fgsa/html-proofer /documents --only-4xx
+              ~/project/builddoc.sh checkLinks
+            else
+              ~/project/builddoc.sh
             fi
           no_output_timeout: 60m
       - run:
