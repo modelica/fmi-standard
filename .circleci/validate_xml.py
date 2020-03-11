@@ -7,6 +7,7 @@ schema = etree.XMLSchema(file='schema/fmi3ModelDescription.xsd')
 parser = etree.XMLParser(schema=schema)
 
 xml_files = [
+    'alias_example.xml',
     'build_configuration.xml',
     'co_simulation.xml',
     'model_structure_example1.xml',
