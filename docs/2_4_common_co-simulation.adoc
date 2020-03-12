@@ -1,21 +1,21 @@
-=== Common Concepts for Co-Simulation Interfaces [[common-concepts-cosim]]
+=== Common Concepts for Co-Simulation [[common-concepts-cosim]]
 
 //TODO: This should not overlap with the other cosim types.
 
-Co-Simulation exploits the modular structure of coupled problems in all stages of the simulation process beginning with the separate model setup and preprocessing for the individual subsystems in different simulation tools (which can be powerful simulators as well as simple C programs).
+Co-simulation exploits the modular structure of coupled problems in all stages of the simulation process beginning with the separate model setup and preprocessing for the individual subsystems in different simulation tools (which can be powerful simulators as well as simple C programs).
 During time integration, the simulation is again performed independently for all subsystems restricting the data exchange between subsystems to discrete communication points latexmath:[tc_i].
 For simulator coupling, also the visualization and post-processing of simulation data is done individually for each subsystem in its own native simulation tool.
 In different contexts, the communication points latexmath:[tc_i], the communication steps latexmath:[tc_i \rightarrow tc_{i+1}] and the communication step sizes latexmath:[hc_i := tc_{i+1} - tc_i] are also known as sampling points (synchronization points), macro steps and sampling rates, respectively.
-The term "communication point" in FMI for Co-Simulation refers to the communication between subsystems in a co-simulation environment and should not be mixed with the output points for saving simulation results to file.
+The term "communication point" in FMI for Co-Simulation refer to the communication between subsystems in a co-simulation environment and should not be mixed with the output points for saving simulation results to file.
 
-FMI for Co-Simulation provides an interface standard for the solution of time-dependent coupled systems consisting of subsystems that are continuous in time (model components that are described by instationary differential equations) or time-discrete (model components that are described by difference equations such as discrete controllers).
+FMI for Co-Simulation provides 3 interface standards for the solution of time-dependent coupled systems consisting of subsystems that are continuous in time (model components that are described by non-stationary differential equations) or time-discrete (model components that are described by difference equations such as discrete controllers).
 In a block representation of the coupled system, the subsystems are represented by blocks with (internal) <<state>> variables latexmath:[x(t)] that are connected to other subsystems (blocks) of the coupled problem by _subsystem <<input,`inputs`>>_ latexmath:[u(t)] and _subsystem <<output,`outputs`>>_ latexmath:[y(t)].
 In this framework, the physical connections between subsystems are represented by mathematical coupling conditions between the inputs latexmath:[u(t)] and the <<output,`outputs`>> latexmath:[y(t)] of all subsystems, <<KS00>>.
 
 .Data flow at communication points.
 image::images/co-simulation-data-flow.svg[width=80%, align="center"]
 
-For Co-Simulation two basic groups of functions have to be implemented:
+For co-simulation, two basic groups of functions have to be implemented:
 
 . functions for the data exchange between subsystems
 
@@ -32,7 +32,7 @@ In its most general form, the coupled system may be simulated in nested co-simul
 FMI for Co-Simulation defines interface routines for the communication between the master and all slaves (subsystems) in a co-simulation environment.
 The most common master algorithm stops at each communication point latexmath:[tc_i] the simulation (time integration) of all slaves, collects the outputs latexmath:[y(tc_i)] from all subsystems, evaluates the subsystem inputs latexmath:[u(tc_i)], distributes these subsystem inputs to the slaves and continues the (co-)simulation with the next communication step latexmath:[tc_i \rightarrow tc_{i+1} = tc_i + hc] with fixed communication step size latexmath:[hc].
 In each slave, an appropriate solver is used to integrate one of the subsystems for a given communication step latexmath:[tc_i \rightarrow tc_{i+1}].
-The most simple Co-Simulation algorithms approximate the (unknown) subsystem inputs latexmath:[u(t), (t > tc_i))] by frozen data latexmath:[u(tc_i)] for latexmath:[tc_i \leq t < tc_{i+1}].
+The most simple co-simulation algorithms approximate the (unknown) subsystem inputs latexmath:[u(t), (t > tc_i))] by frozen data latexmath:[u(tc_i)] for latexmath:[tc_i \leq t < tc_{i+1}].
 FMI for Co-Simulation supports this classical brute force approach as well as more sophisticated master algorithms.
 FMI for Co-Simulation is designed to support a very general class of master algorithms but it does not define the master algorithm itself.
 
@@ -109,8 +109,8 @@ In FMI version 3.0 the following new features have been added:
 Please refer to the different sections for a more detailed explanation of the motivation and use of the new features.
 
 Basic Co-Simulation::
-Basic Co-Simulation is a rather general approach to the simulation of coupled technical systems and coupled physical phenomena in engineering with focus on instationary (time-dependent) problems.
-The basic Co-Simulation interface is similar to the feature set of FMI 2.0 for Co-Simulation.
+Basic Co-Simulation is a rather general approach to the simulation of coupled technical systems and coupled physical phenomena in engineering with focus on non-stationary (time-dependent) problems.
+The Basic Co-Simulation interface is similar to the feature set of FMI 2.0 for Co-Simulation.
 The asynchronous mode for FMUs has been removed since this mode was not supported by tools and it can be suitably replaced by Co-Simulation master implementations that control the asynchronous computation of FMUs via separate tasks/threads created for each FMU.
 
 [[co-simulation-with-early-return]]
@@ -127,7 +127,7 @@ In this way multiple event types and also <<outputClock>> ticks or interrupts ca
 
 Hybrid Co-Simulation::
 The <<hybrid-co-simulation-api,Hybrid Co-Simulation>> interface provides functionalities to control and observe the ticking of <<clock,clocks>>.
-For FMI for Co-Simulation, the ticking of a clock is interpreted as an activity of the associated model partition.
+For FMI for Hybrid Co-Simulation, the ticking of a clock is interpreted as an activity of the associated model partition.
 During simulation, the Co-Simulation master updates and manages values of inputs and outputs of FMUs and further models at communication points for each model partition.
 The ratio between communication points created for a model partition and time can be seen as a model rate.
 In that sense multiple model partitions of a model define multiple model rates in a model.
@@ -155,8 +155,8 @@ _It is a tool vendor specific solution that has ties to the used OS and the co-s
 
 [[intermediate-variable-access]]
 Intermediate Variable Access::
-An FMU shall be able to inform a Co-Simulation master that is able to provide intermediate output variables and/or receive intermediate input variables at any time, i.e. not only at the end of a current <<fmi3DoStep>> function call.
-It shall be possible for the FMU to inform the master whether the internal solver is in a temporary state or if it has just completed an internal integration step.
+An FMU can inform a Co-Simulation master that is able to provide intermediate output variables and/or receive intermediate input variables at any time, i.e. not only at the end of a current <<fmi3DoStep>> function call.
+It is possible for the FMU to inform the master whether the internal solver is in a temporary state or if it has just completed an internal integration step.
 If the internal solver is in a temporary state, intermediate output variables shall only be used for directly computing intermediate input variables.
 If the internal integration step is completed, the master can forward intermediate outputs to interconnected simulation units.
 
@@ -186,7 +186,7 @@ The master has to implement the communication layer.
 Additional parameters for establishing the network communication (for example, identification of the remote computer, port numbers, user account) are to be set via the GUI of the master.
 These data are not transferred via the FMI API.
 
-For all Co-Simulation interfaces intermediate variable access can be activated, if the FMU and the master supports this.
+For all Co-Simulation interface types intermediate variable access can be activated, if the FMU and the master supports this.
 More information can be found in <<intermediate-variable-access>>.
 
 The Co-Simulation master signals to the FMU which features shall be used for the current instance of the FMU in <<fmi3Instantiate>>:
@@ -228,7 +228,7 @@ The described multi mode support is based on wrapping functionality into the <<f
 An FMU that supports <<scheduled-co-simulation-api,Scheduled Co-Simulation>> will in most cases also support <<hybrid-co-simulation-api,Hybrid Co-Simulation>>.
 +
 _[Wrapping towards other Co-Simulation interfaces can influence the simulation results._
-_Depending on the model especially wrapping towards the (basic) Co-Simulation interface may result in divergent simulation results._
+_Depending on the model especially wrapping towards the (Basic) Co-Simulation interface may result in divergent simulation results._
 _Especially aperiodic <<inputClock,`input clocks`>> can not always be sufficiently emulated in modes that do not directly support <<clock,`clocks`>>._
 _Therefore it is recommended that the FMU provides logging information to the user about the influence of the current mode on simulation results, if non-optimal modes are used by the simulation environment.]_
 
