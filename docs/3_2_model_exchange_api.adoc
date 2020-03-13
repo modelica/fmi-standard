@@ -165,14 +165,19 @@ include::../headers/fmi3FunctionTypes.h[tags=GetEventIndicators]
 ----
 
 Compute state derivatives and event indicators at the current time instant and for the current <<state,`states`>>.
+Note that `fmi3Status = fmi3Discard` is possible for both functions.
+
 The <<derivative,`derivatives`>> are returned as a vector with `nx` elements.
+The ordering of the elements of the `derivatives` vector is identical to the ordering of the state vector (for example, `derivatives[2]` is the <<derivative>> of `x[2]`).
+The order of the states and derivatives is also the same as the ordered list of elements `<ModelStructure><Derivative>`.
+_[Array variables are serialized in "row major" order, as usual.]_
+
+The event indicators are returned as a vector with `ni` elements.
+The order of event indicators in `eventIndicators` vector is the same as the ordered list of `EventIndicator` elements in `ModelStructure`.
+_[Array variables are serialized in "row major" order, as usual.]_
 A state event is triggered when the domain of an event indicator changes from latexmath:[z_j > 0] to latexmath:[z_j \leq 0] or vice versa.
 The FMU must guarantee that at an event restart latexmath:[z_j \neq 0], for example, by shifting latexmath:[z_j] with a small value.
 Furthermore, latexmath:[z_j] should be scaled in the FMU with its nominal value (so all elements of the returned vector `eventIndicators` should be in the order of "one").
-The event indicators are returned as a vector with `ni` elements. +
-The ordering of the elements of the derivatives vector is identical to the ordering of the state vector (for example, `derivatives[2]` is the <<derivative>> of `x[2]`).
-Event indicators are not necessarily related to variables on the Model Description File. +
-Note that `fmi3Status = fmi3Discard` is possible for both functions.
 
 [[fmi3GetContinuousStates,`fmi3GetContinuousStates`]]
 [source, C]
@@ -224,7 +229,7 @@ This state is entered from state *Instantiated* by calling <<fmi3EnterConfigurat
 
 Initialization Mode::
 In this state, equations are active to determine all continuous-time states, as well as all <<output,`outputs`>> (and optionally other variables exposed by the exporting tool).
-The variables that can be retrieved by `fmi3Get{VariableType}` calls are (1) defined in the XML file under `<ModelStructure><InitialUnknowns>` and (2) variables with <<causality>> = <<output>>.
+The variables that can be retrieved by `fmi3Get{VariableType}` calls are (1) defined in the XML file as elements `<ModelStructure><InitialUnknown>` and (2) variables with <<causality>> = <<output>>.
 Variables with <<initial>> = <<exact>> and <<variability>> latexmath:[\neq] <<constant>>, as well as variables with <<causality>> = <<input>> can be set.
 
 Continuous-Time Mode::
@@ -296,7 +301,7 @@ The allowed function calls in the respective states are summarized in the follow
 |<<fmi3NewDiscreteStates>>             {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |x |  |  |
 |<<fmi3EnterContinuousTimeMode>>       {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |x |  |  |
 |<<fmi3CompletedIntegratorStep>>       {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |  |x |  |
-|<<fmi3SetTime>>                       {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |8 |x |  |
+|<<fmi3SetTime>>                       {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |  |x |  |
 |<<fmi3SetContinuousStates>>           {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |  |x |  |
 |<<fmi3GetEventIndicators>>            {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |x |x |x |x |7
 |<<fmi3GetContinuousStates>>           {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |x |x |x |x |7
@@ -308,14 +313,13 @@ The allowed function calls in the respective states are summarized in the follow
 *number* means: call is allowed if the indicated condition holds: +
 *1* for a variable with <<variability>> latexmath:[\neq] <<constant>> that has <<initial>> =
 <<exact>> or <<approx>> +
-*2* for a variable with <<causality>> = <<output>>, or continuous-time states or state derivatives +
+*2* for a variable with <<causality>> = <<output>>, or continuous-time states, state derivatives or event indicators,
 *3* for a variable with <<variability>> latexmath:[\neq] <<constant>> that has <<initial>> = <<exact>>,
 or <<causality>> = <<input>>  +
 *4* for a variable with <<causality>> = <<input>>,
 or (<<causality>> = <<parameter>> and <<variability>> = <<tunable>>) +
 *5* for a variable with <<causality>> = <<input>> and <<variability>> = <<continuous>> +
 *7* always, but retrieved values are usable for debugging only
-*8* only for a pure discrete-time FMU. This exits the current event mode and sets the time for the next event instant. `fmi3NewDiscreteStates` must have been called with `newDiscreteStatesNeeded = fmi3False` at least once before this can be done.
 
 ==== Code Example
 
