@@ -61,5 +61,6 @@ Export-Schema Boolean 1 -schema fmi3Variable.xsd -outName "Variable_Boolean_sche
 Export-Schema Binary 1 -schema fmi3Variable.xsd -outName "Variable_Binary_schema.png"
 Export-Schema Enumeration 1 -schema fmi3Variable.xsd -outName "Variable_Enumeration_schema.png"
 Export-Schema Annotations 2
-Export-Schema ModelStructure 2  
+Export-Schema ModelStructure 2
 Export-Schema ModelExchange 2
+Export-Schema BasicCoSimulation 2
