@@ -1,4 +1,5 @@
 $genDir = ".\docs\images\gen"
+$generator = ".\bin\xsdiagram\XSDDiagramConsole.exe"
 
 function Clear-Gen() {
 	# Get-ChildItem $genDir\*
@@ -26,7 +27,6 @@ function Export-Schema() {
 	Write-Output "Generating schema for $element..."
 	$out = "$genDir\$outName"
 	Check-Existing $out
-	$generator = "C:\srcctrl\xsddiagram\XSDDiagramConsole\bin\Debug\XSDDiagramConsole.exe"
 	& $generator -o $out -r $element -e $expand -d -c -z 300 -a -no-gui -y .\schema\$schema
 	if ($preview) {
 		Start-Process $out
