@@ -11,8 +11,6 @@ function Deprecate-Image() {
 }
 
 $images = @(
-	"fmiModelDescription_schema_2.png",
-	"BaseUnit_schema.png",
 	"DisplayUnit_schema.png",
 	"Real_schema.png",
 	"Integer_schema.png",
