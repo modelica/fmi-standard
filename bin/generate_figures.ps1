@@ -62,3 +62,4 @@ Export-Schema Binary 1 -schema fmi3Variable.xsd -outName "Variable_Binary_schema
 Export-Schema Enumeration 1 -schema fmi3Variable.xsd -outName "Variable_Enumeration_schema.png"
 Export-Schema Annotations 2
 Export-Schema ModelStructure 2  
+Export-Schema ModelExchange 2
