@@ -1,9 +1,21 @@
-$genDir = ".\docs\images\gen"
-$generator = ".\bin\xsdiagram\XSDDiagramConsole.exe"
+$pngOutDir = Resolve-Path (Join-Path $PSScriptRoot "..\docs\images\gen")
+$generatorDir = Join-Path $PSScriptRoot "xsddiagram"
+$generator = Join-Path $generatorDir "XSDDiagramConsole.exe"
 
 function Clear-Gen() {
-	# Get-ChildItem $genDir\*
-	Remove-Item $genDir\*
+	# Get-ChildItem $pngOutDir\*
+	Remove-Item $pngOutDir\*
+}
+
+function Get-XSDDiagram() {
+	if (-Not (Test-Path $generator))
+	{
+		$uri = "https://github.com/clagms/xsddiagram/releases/download/XSDDiagram_1.2_FMI/XSDDiagram_1.2_FMI.zip"
+		$zipFile = "XSDDiagram-Binary.zip"
+		Invoke-WebRequest -Uri $uri -OutFile $zipFile
+		Expand-Archive -Path $zipFile -DestinationPath $generatorDir -Force
+		Remove-Item -Path $zipFile
+	}
 }
 
 function Check-Existing() {
@@ -18,37 +30,38 @@ function Check-Existing() {
 
 function Export-Schema() {
 	Param(
-		$element, 
+		$element,
 		$expand,
 		$schema = "fmi3ModelDescription.xsd",
 		$outName = $element + "_schema.png",
 		[switch] $preview = $false
 	)
 	Write-Output "Generating schema for $element..."
-	$out = "$genDir\$outName"
+	$out = Join-Path $pngOutDir $outName
 	Check-Existing $out
-	& $generator -o $out -r $element -e $expand -d -c -z 300 -a -no-gui -y .\schema\$schema
+	& $generator -o $out -r $element -e $expand -d -c -z 300 -a -no-gui -y (Resolve-Path (Join-Path $PSScriptRoot "..\schema\$schema"))
 	if ($preview) {
 		Start-Process $out
 	}
 }
 
 Clear-Gen
+Get-XSDDiagram
 
-Export-Schema fmiModelDescription 1 
+Export-Schema fmiModelDescription 1
 Export-Schema UnitDefinitions 3
 Export-Schema BaseUnit 2
 Export-Schema DisplayUnit 2
-Export-Schema TypeDefinitions 2  
-Export-Schema Float64 3 -schema fmi3Type.xsd 
+Export-Schema TypeDefinitions 2
+Export-Schema Float64 3 -schema fmi3Type.xsd
 Export-Schema Int32 3 -schema fmi3Type.xsd
 Export-Schema Boolean 3 -schema fmi3Type.xsd
 Export-Schema Binary 3 -schema fmi3Type.xsd
 Export-Schema Enumeration 3 -schema fmi3Type.xsd
 Export-Schema Clock 3 -schema fmi3Type.xsd
-Export-Schema LogCategories 3  
+Export-Schema LogCategories 3
 Export-Schema DefaultExperiment 1
-Export-Schema Terminals 2  
+Export-Schema Terminals 2
 Export-Schema TerminalMemberVariable 1
 Export-Schema TerminalStreamMemberVariable 1
 Export-Schema GraphicalRepresentation 2
