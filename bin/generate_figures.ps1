@@ -1,4 +1,4 @@
-$pngOutDir = Resolve-Path (Join-Path $PSScriptRoot "..\docs\images\gen")
+$pngOutDir = Resolve-Path (Join-Path $PSScriptRoot "..\docs\images\schema")
 $generatorDir = Join-Path $PSScriptRoot "xsddiagram"
 $generator = Join-Path $generatorDir "XSDDiagramConsole.exe"
 
@@ -33,7 +33,7 @@ function Export-Schema() {
 		$element,
 		$expand,
 		$schema = "fmi3ModelDescription.xsd",
-		$outName = $element + "_schema.png",
+		$outName = $element + ".png",
 		[switch] $preview = $false
 	)
 	Write-Output "Generating schema for $element..."
@@ -68,11 +68,11 @@ Export-Schema GraphicalRepresentation 2
 Export-Schema VendorAnnotations 2
 Export-Schema ModelVariables 2
 Export-Schema fmi3VariableBase 1
-Export-Schema Float64 1 -schema fmi3Variable.xsd -outName "Variable_Float64_schema.png"
-Export-Schema Int32 1 -schema fmi3Variable.xsd -outName "Variable_Int32_schema.png"
-Export-Schema Boolean 1 -schema fmi3Variable.xsd -outName "Variable_Boolean_schema.png"
-Export-Schema Binary 1 -schema fmi3Variable.xsd -outName "Variable_Binary_schema.png"
-Export-Schema Enumeration 1 -schema fmi3Variable.xsd -outName "Variable_Enumeration_schema.png"
+Export-Schema Float64 1 -schema fmi3Variable.xsd -outName "Variable_Float64.png"
+Export-Schema Int32 1 -schema fmi3Variable.xsd -outName "Variable_Int32.png"
+Export-Schema Boolean 1 -schema fmi3Variable.xsd -outName "Variable_Boolean.png"
+Export-Schema Binary 1 -schema fmi3Variable.xsd -outName "Variable_Binary.png"
+Export-Schema Enumeration 1 -schema fmi3Variable.xsd -outName "Variable_Enumeration.png"
 Export-Schema Annotations 2
 Export-Schema ModelStructure 2
 Export-Schema ModelExchange 2
