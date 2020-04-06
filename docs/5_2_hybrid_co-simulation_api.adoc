@@ -1,13 +1,13 @@
 === Application Programming Interface [[hybrid-co-simulation-api]]
 
-If the Boolean capability flag `providesHybridCoSimulation` and `canReturnEarlyAfterIntermediateUpdate = true` the Co-Simulation master can use the interface `fmi3HybridCoSimulation`.
+If the Boolean capability flag `providesHybridCoSimulation` and `canReturnEarlyAfterIntermediateUpdate = true` the Co-Simulation master can use the interface type Hybrid Co-Simulation.
 
 ==== Communication of event time and input/output values
 
 The <<fmi3CallbackIntermediateUpdate>> callback described in section <<earlyreturn-co-simulation>> is also used in order to communicate the <<input>> and <<output>> and, in particular, the event and <<clock>> time from the FMU to the Co-Simulation master.
 The <<fmi3CallbackIntermediateUpdate>> callback allows internal events (e.g. associated to <<outputClock>> ticks) to be signaled from an FMU to the Co-Simulation master.
-If `fmu3Type` is set to `fmi3HybridCoSimulation`, the <<fmi3CallbackIntermediateUpdate>> callback must be defined in <<fmi3CallbackFunctions>> in <<fmi3Instantiate>>.
-In other cases a NULL pointer can be assigned to the <<fmi3CallbackIntermediateUpdate>> callback, such as if the `fmu3Type` is set to  `fmi3ModelExchange`.
+If the interface type is Hybrid Co-Simulation, the <<fmi3CallbackIntermediateUpdate>> callback must be defined in the instantiate function.
+In other cases a NULL pointer can be assigned to the <<fmi3CallbackIntermediateUpdate>> callback, for instance when the interface type is Model Exchange.
 
 The output arguments of <<fmi3CallbackIntermediateUpdate>> are used to signal <<outputClock>> ticks and internal events to the master.
 
@@ -49,7 +49,7 @@ Based on the information provided by <<fmi3CallbackIntermediateUpdate>>, additio
 
 The FMU must not call the callback function <<fmi3CallbackIntermediateUpdate>> with an `intermediateUpdateTime` that is smaller than the `intermediateUpdateTime` given in a previous call of <<fmi3CallbackIntermediateUpdate>> with `intermediateStepFinished = fmi3True`.
 
-==== Handling a Successful Early-Return by the Co-Simulation Master in fmi3HybridCoSimulation
+==== Handling a Successful Early-Return by the Co-Simulation Master in Hybrid Co-Simulation
 
 If the FMU is successful in conducting an early return, the return value of the `earlyReturn` argument in <<fmi3DoStep>> is `fmi3True`, otherwise `fmi3False`.
 If the FMU returns from <<fmi3DoStep>> with the `earlyReturn = fmi3True` the Co-Simulation master has to call <<fmi3EnterEventMode>> for that FMU.
@@ -63,7 +63,7 @@ The Co-Simulation master can also call <<fmi3EnterEventMode>> at communication i
 
 If an FMU provides the early-return capability that includes the handling of events in *Event Mode*, the FMU signals this via `canReturnEarlyAfterIntermediateUpdate` and `providesHybridCoSimulation = true` in the modelDescription.
 The master should indicate to the FMU that this early-return feature is also supported by the master.
-The Co-Simulation master signals to the FMU that it supports and has recognized the early return Co-Simulation capabilities of the FMU by setting the Co-Simulation interface to `fmi3HybridCoSimulation` in the <<fmi3Instantiate>> function.
+The Co-Simulation master signals to the FMU that it supports and has recognized the early return Co-Simulation capabilities of the FMU by calling the Co-Simulation interface type instantiate function `fmi3InstantiateHybridCoSimulation`.
 
 The FMU stops computation at the first encountered internal event (if any) and the event time is provided through `intermediateUpdateTime`.
 If <<fmi3DoStep>> returns with `earlyReturn = fmi3True` and an event has happened, i.e. `eventOccurred = fmi3True`, then an event handling has to be done by the Co-Simulation master.
@@ -88,17 +88,17 @@ The FMU leaves *Event Mode* when the master calls <<fmi3EnterStepMode>>.
 
 It is not allowed to call <<fmi3EnterEventMode>> or <<fmi3EnterStepMode>> for an FMU with interface type Basic Co-Simulation and Scheduled Co-Simulation.
 
-==== Co-Simulation with Clock Support in fmi3HybridCoSimulation [[api-clocked-co-simulation]]
+==== Co-Simulation with Clock Support in Hybrid Co-Simulation [[api-clocked-co-simulation]]
 
 In this section, signaling and retrieving <<clock>> ticks as well as the interface for supporting <<clock,`clocks`>> in FMI for Co-Simulation will be discussed.
 If an FMU for Co-Simulation declares <<clock,`clocks`>> and clocked variables in the `modelDescription.xml` file, it supports <<clock,`clocks`>>.
-The Co-Simulation master should indicate the FMU that the master has recognized the <<clock>> capabilities of the FMU and supports the <<clock>> handling by setting the Co-Simulation interface to `fmi3HybridCoSimulation` in <<fmi3Instantiate>>.
-Note, even if no <<clock>> is defined by an FMU in `modelDescription.xml`, the master is allowed to set the interface to `fmi3HybridCoSimulation` to be able to do early return with event handling in *Event Mode*.
+The Co-Simulation master should indicate the FMU that the master has recognized the <<clock>> capabilities of the FMU and supports the <<clock>> handling by calling the Hybrid Co-Simulation interface instantiation function `fmi3InstantiateHybridCoSimulation`.
+Note, even if no <<clock>> is defined by an FMU in `modelDescription.xml`, the master can instantiate a Hybrid Co-Simulation FMU to be able to use early return with event handling in *Event Mode*.
 
-If an FMU provides <<clock,`clocks`>>, but the Co-Simulation master does not support or does not want to support early-return or <<clock,`clocks`>>, by setting the interface to `fmi3CoSimulation`, the activation of model partitions inside of the FMU has to be handled internally within <<fmi3DoStep>>.
+If an FMU provides <<clock,`clocks`>>, but the Co-Simulation master does not support or does not want to support early-return or <<clock,`clocks`>>, by setting the interface to Hybrid Co-Simulation, the activation of model partitions inside of the FMU has to be handled internally within <<fmi3DoStep>>.
 
 _[Remark: Wrapping towards other Co-Simulation interfaces can influence the simulation results._
-_Depending on the model especially wrapping towards `fmi3CoSimulation` may result in divergent simulation results._
+_Depending on the model especially wrapping towards Hybrid Co-Simulation may result in divergent simulation results._
 _Especially aperiodic <<inputClock,`input clocks`>> can not always be sufficiently emulated in modes that do not directly support <<clock,`clocks`>>._
 _Therefore it is recommended that the FMU provides logging information to the user about the influence of the current mode on simulation results, if non-optimal modes are used by the simulation environment.]_
 
@@ -108,7 +108,7 @@ _Therefore it is recommended that the FMU provides logging information to the us
 include::../headers/fmi3FunctionTypes.h[tag=EnterStepMode]
 ----
 
-===== Transfer of Input / Output Values and Parameters in fmi3HybridCoSimulation [[transfer-of-input-output-and-parameters-clocked-co-simulation]]
+===== Transfer of Input / Output Values and Parameters in Hybrid Co-Simulation [[transfer-of-input-output-and-parameters-clocked-co-simulation]]
 
 If the Co-Simulation master supports <<clock,`clocks`>>, all <<inputClock,`input clocks`>> of the model should be handled and <<inputClock>> events should be scheduled by the master.
 If an <<outputClock>> ticks, the FMU calls <<fmi3CallbackIntermediateUpdate>> with `clocksTicked = fmi3True`.
@@ -124,7 +124,7 @@ Note that <<fmi3DoStep>> may not reach the next input event instant because an e
 
 The simulation master sets and gets <<clock>> variable values similar to the FMI for Model Exchange, as defined in <<fmi-api-setting-getting-clock-activation-state>>.
 
-===== Computation in fmi3HybridCoSimulation [[computation-clocked-co-simulation]]
+===== Computation in Hybrid Co-Simulation [[computation-clocked-co-simulation]]
 
 Similar to FMI for Model Exchange, in order to activate <<inputClock,`input clocks`>> of an FMU, it is required to push the FMU into *Event Mode* by calling <<fmi3EnterEventMode>>.
 If <<fmi3DoStep>> returns with `earlyReturn = fmi3True` and `eventOccurred = fmi3True` or `clocksTicked = fmi3True`, the FMU must be pushed into the *Event Mode* by calling <<fmi3EnterEventMode>>.
@@ -135,7 +135,7 @@ If the <<fmi3DoStep>> return value is `fmi3OK` and `earlyReturn = fmi3False`, th
 Similar to the Model Exchange case, the allowed call order is <<fmi3GetClock>>, <<fmi3GetIntervalDecimal>>, <<fmi3GetIntervalFraction>>, `fmi3Get{VariableType}`, `fmi3Set{VariableType}`.
 Function calls of this call order can be omitted.
 
-The handling of return values of function calls is identical to `fmi3CoSimulation`.
+The handling of return values of function calls is identical to Basic Co-Simulation.
 
 If `terminateSimulation` becomes `fmi3True` after calling <<fmi3NewDiscreteStates>> then the co-simulation should be terminated by calling <<fmi3Terminate>>.
 Once handling of the <<clock>> events finished, the master calls <<fmi3EnterStepMode>> for that FMU to push it into *Step Mode*.
@@ -144,7 +144,7 @@ Note that it is not allowed to call <<fmi3EnterEventMode>> or <<fmi3EnterStepMod
 _[Usually the Co-Simulation master should be able to derive (but is not forced to do so) the correct communication point times for <<inputClock,`input clocks`>> in advance and thus it should be able to set the proper `communicationStepSize` for <<fmi3DoStep>>._
 _This might not be possible if an aperiodic <<inputClock>> of an FMU depends on the ticking of an aperiodic <<outputClock>> of another FMU or other aperiodic tick sources.]_
 
-==== State Machine of Calling Sequence from Master to Slave in fmi3HybridCoSimulation [[state-machine-calling-sequence-clocked-co-simulation]]
+==== State Machine of Calling Sequence from Master to Slave in Hybrid Co-Simulation [[state-machine-calling-sequence-clocked-co-simulation]]
 
 The following state machine defines the supported calling sequences.
 
@@ -152,7 +152,7 @@ The following state machine defines the supported calling sequences.
 image::images/state-machine-hybrid-co-simulation.svg[width=80%, align="center"]
 [#figure-hybrid-co-simulation-state-machine]
 
-In this Co-Simulation interface the following functions must not be called: <<fmi3ActivateModelPartition>> including all functions that are specific to fmuType `fmi3ModelExchange`.
+In this Co-Simulation interface the following functions must not be called: <<fmi3ActivateModelPartition>> including all functions that are specific to Model Exchange.
 
 Unlike the state machine in section <<state-machine-co-simulation>> the entry state after *Initialization Mode* is the *Event Mode* in order to allow the FMU to handle the very first discrete event.
 Each state of the state machine corresponds to a certain phase of a simulation as follows:
@@ -302,7 +302,7 @@ _[The allowed function calls in the respective states are summarized in the foll
 
 _]_
 
-==== Code Example for fmi3HybridCoSimulation [[code-example-clocked-co-simulation]]
+==== Code Example for Hybrid Co-Simulation [[code-example-clocked-co-simulation]]
 
 In the following example, the usage of the FMI functions is sketched in order to clarify the typical calling sequence of the functions in a simulation environment.
 We consider ...

@@ -96,7 +96,7 @@ int main(int argc, char* argv[]) {
 
 
   // Instantiate slave
-  s = fmi3Instantiate("Slave", fmi3CoSimulation, s_GUID, NULL, &callbacks, fmi3False, fmi3True, &coSimulationConfiguration); // [TODO]: fmuResourceLocation --> NULL?
+  s = fmi3Instantiate("Slave", fmi3CoSimulation, s_GUID, NULL, &callbacks, fmi3False, fmi3True, &coSimulationConfiguration); // [TODO]: resourceLocation --> NULL?
 
   if (s == NULL) return EXIT_FAILURE; // error
 

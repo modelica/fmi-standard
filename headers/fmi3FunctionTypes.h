@@ -70,35 +70,41 @@ typedef enum {
 } fmi3DependencyKind;
 /* end::DependencyKind[] */
 
-/* tag::CallbackFunctions[] */
+/* tag::CallbackLogMessage[] */
 typedef void  (*fmi3CallbackLogMessage)     (fmi3InstanceEnvironment instanceEnvironment,
                                              fmi3String instanceName,
                                              fmi3Status status,
                                              fmi3String category,
                                              fmi3String message);
+/* end::CallbackLogMessage[] */
+
+/* tag::CallbackAllocateMemory[] */
 typedef void* (*fmi3CallbackAllocateMemory) (fmi3InstanceEnvironment instanceEnvironment,
                                              size_t nobj,
                                              size_t size);
+/* end::CallbackAllocateMemory[] */
+
+/* tag::CallbackFreeMemory[] */
 typedef void  (*fmi3CallbackFreeMemory)     (fmi3InstanceEnvironment instanceEnvironment,
                                              void* obj);
-/* end::CallbackFunctions[] */
+/* end::CallbackFreeMemory[] */
 
 /* tag::CallbackIntermediateUpdate[] */
 typedef fmi3Status (*fmi3CallbackIntermediateUpdate) (
-  fmi3InstanceEnvironment instanceEnvironment,
-  fmi3Float64 intermediateUpdateTime,
-  fmi3Boolean eventOccurred,
-  fmi3Boolean clocksTicked,
-  fmi3Boolean intermediateVariableSetAllowed,
-  fmi3Boolean intermediateVariableGetAllowed,
-  fmi3Boolean intermediateStepFinished,
-  fmi3Boolean canReturnEarly);
+                   fmi3InstanceEnvironment instanceEnvironment,
+                   fmi3Float64 intermediateUpdateTime,
+                   fmi3Boolean eventOccurred,
+                   fmi3Boolean clocksTicked,
+                   fmi3Boolean intermediateVariableSetAllowed,
+                   fmi3Boolean intermediateVariableGetAllowed,
+                   fmi3Boolean intermediateStepFinished,
+                   fmi3Boolean canReturnEarly);
 /* end::CallbackIntermediateUpdate[] */
 
-/* tag::PreemptionLock[] */
+/* tag::CallbackPreemptionLock[] */
 typedef void       (*fmi3CallbackLockPreemption)   ();
 typedef void       (*fmi3CallbackUnlockPreemption) ();
-/* end::PreemptionLock[] */
+/* end::CallbackPreemptionLock[] */
 
 /* Define fmi3 function pointer types to simplify dynamic loading */
 
