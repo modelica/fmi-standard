@@ -32,7 +32,12 @@ include::../headers/fmi3FunctionTypes.h[tags=SetContinuousStates]
 ----
 
 Set a new (continuous) state vector and re-initialize caching of variables that depend on the <<state,`states`>>.
-Argument `nx` is the length of vector `x` and is provided for checking purposes (variables that depend solely on<<constant,`constants`>>, <<parameter,`parameters`>>, time, and <<input,`inputs`>> do not need to be newly computed in the sequel, but the previously computed values can be reused).
+
+* Argument `nx` is the length of 
+
+* argument `x[]`
+
+and is provided for checking purposes (variables that depend solely on<<constant,`constants`>>, <<parameter,`parameters`>>, time, and <<input,`inputs`>> do not need to be newly computed in the sequel, but the previously computed values can be reused).
 Note that the continuous <<state,`states`>> might also be changed in *Event Mode*.
 Note that `fmi3Status = fmi3Discard` is possible.
 
@@ -45,7 +50,7 @@ Set new values for (<<independent>>) <<parameter,`parameters`>>, <<start>> value
 The details of these functions are defined in <<get-and-set-variable-values>>.
 
 _[The functions above have the slight drawback that values must always be copied._
-_For example, a call to_ <<fmi3SetContinuousStates>> _will provide the actual states in a vector, and this function has to copy the values in to the internal model data structure "_ `c` _" so that subsequent evaluation calls can utilize these values._
+_For example, a call to_ <<fmi3SetContinuousStates>> _will provide the actual states in a vector, and this function has to copy the values in to the internal model data structure so that subsequent evaluation calls can utilize these values._
 _If this turns out to be an efficiency issue, a future release of FMI might provide additional functions to provide the address of a memory area where the variable values are present.]_
 
 ==== Evaluation of Model Equations [[evaluation-of-model-equations]]
@@ -62,20 +67,21 @@ include::../headers/fmi3FunctionTypes.h[tags=EnterEventMode]
 The model enters *Event Mode* from the *Continuous-Time Mode* and discrete-time equations may become active (and relations are not "frozen").
 
 The followings arguments can be set to `fmi3True` to inform the FMU why *Event Mode* was entered.
+
 _[These arguments are not mutually exclusive and may all be `fmi3False` if the caller cannot provide this information.]_
 
-`inputEvent`:: An input event occurred.
+* Argument `inputEvent` signals with `fmi3True` that an input event occurred.
 
-`stepEvent`:: A step event occurred.
+* Argument `stepEvent` signals with `fmi3True` that a step event occurred.
 
-`rootsFound`:: Array of length `nEventIndicators`. For `i = 1, ..., nEventIndicators, rootsFound[i-1]` latexmath:[\neq] `0` if the event indicator latexmath:[z_i] has a root, and `rootsFound[i-1] == 0` if not.
+* Argument `rootsFound[]` is an array of length `nEventIndicators`. For `i = 1, ..., nEventIndicators, rootsFound[i-1]` latexmath:[\neq] `0` if the event indicator latexmath:[z_i] has a root, and `rootsFound[i-1] == 0` if not.
 For the components latexmath:[z_i] for which a root was found, the sign of `rootsFound[i-1]` indicates the direction of the zero-crossing.
 A value of `+1` indicates that latexmath:[z_i] is increasing, while a value of `-1` indicates a decreasing latexmath:[z_i].
 If `nEventIndicators == 0` the value of `rootsFound` is not defined.
 
-`nEventIndicators`:: The number of event indicators or `0` if the caller cannot provide this information.
+* Argument `nEventIndicators` contains the number of event indicators (length of `rootsFound[]`) or `0` if the caller cannot provide this information.
 
-`timeEvent`:: A time event occurred.
+* Argument `timeEvent` signals with `fmi3True` that a time event occurred.
 
 [[fmi3NewDiscreteStates,`fmi3NewDiscreteStates`]]
 [source, C]
@@ -85,24 +91,27 @@ include::../headers/fmi3FunctionTypes.h[tags=NewDiscreteStates]
 
 The FMU is in *Event Mode* and the super dense time is incremented by this call. +
 If the super dense time before a call to <<fmi3NewDiscreteStates>> was latexmath:[(t_R,t_I)], then the time instant after the call is latexmath:[(t_R,t_I)]. +
-If output argument `newDiscreteStatesNeeded = fmi3True`, the FMU should stay in *Event Mode*, and the FMU requires to set new inputs to the FMU (`fmi3Set{VariableType}` on <<input,`inputs`>>) to compute and get the <<output,`outputs`>> (`fmi3Get{VariableType}` on <<output,`outputs`>>) and to call <<fmi3NewDiscreteStates>> again.
 
+* If output argument `newDiscreteStatesNeeded = fmi3True`, the FMU should stay in *Event Mode*, and the FMU requires to set new inputs to the FMU (`fmi3Set{VariableType}` on <<input,`inputs`>>) to compute and get the <<output,`outputs`>> (`fmi3Get{VariableType}` on <<output,`outputs`>>) and to call <<fmi3NewDiscreteStates>> again.
 Depending on the connection with other FMUs, the environment shall
+** call <<fmi3Terminate>>, if `terminateSimulation = fmi3True` is returned by at least one FMU,
+** call <<fmi3EnterContinuousTimeMode>> if all FMUs return `newDiscreteStatesNeeded = fmi3False`, and
+** stay in *Event Mode* otherwise.
+When the FMU is terminated, it is assumed that an appropriate message is printed by the logMessage function (see <<creation-destruction-and-logging>>) to explain the reason for the termination.
 
-- call <<fmi3Terminate>>, if `terminateSimulation = fmi3True` is returned by at least one FMU,
+* If output argument `terminateSimulation = fmi3True`, the FMU can signal it needs to terminate the simulation by calling <<fmi3Terminate>>.
 
-- call <<fmi3EnterContinuousTimeMode>> if all FMUs return `newDiscreteStatesNeeded = fmi3False`, and
+* If argument `nominalsOfContinuousStatesChanged = fmi3True`, then the nominal values of the <<state,`states`>> have changed due to the function call and can be inquired with <<fmi3GetNominalsOfContinuousStates>>.
 
-- stay in *Event Mode* otherwise.
-
-When the FMU is terminated, it is assumed that an appropriate message is printed by the logMessage function (see <<creation-destruction-and-logging>>) to explain the reason for the termination. +
-If `nominalsOfContinuousStatesChanged = fmi3True`, then the nominal values of the <<state,`states`>> have changed due to the function call and can be inquired with <<fmi3GetNominalsOfContinuousStates>>. +
-If `valuesOfContinuousStatesChanged = fmi3True`, then at least one element of the continuous state vector has changed its value due to the function call.
+* If argument `valuesOfContinuousStatesChanged = fmi3True`, then at least one element of the continuous state vector has changed its value due to the function call.
 [[state,`state`]]
 The new values of the <<state,`states`>> can be inquired with <<fmi3GetContinuousStates>> or individually for each state for which `reinit = true` by calling `fmi3GetFloat*`.
 If no element of the continuous state vector has changed its value, `valuesOfContinuousStatesChanged` must return `fmi3False`.
-_[If `fmi3True` would be returned in this case, an infinite event loop may occur.]_ +
-If `nextEventTimeDefined = fmi3True`, then the simulation shall integrate at most until `time = nextEventTime`, and shall call <<fmi3EnterEventMode>> at this time instant.
+_[If `fmi3True` would be returned in this case, an infinite event loop may occur.]_
+
+* If argument `nextEventTimeDefined = fmi3True`, then the simulation shall integrate at most until `time` reaches value of 
+
+* argument `nextEventTime`, and shall call <<fmi3EnterEventMode>> at this time instant.
 If integration is stopped before `nextEventTime`, for example, due to a state event, the definition of `nextEventTime` becomes obsolete.
 
 [[fmi3EnterContinuousTimeMode,`fmi3EnterContinuousTimeMode`]]
