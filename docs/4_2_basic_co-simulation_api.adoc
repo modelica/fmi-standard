@@ -16,39 +16,44 @@ Whether the slave is able to handle the <<derivative,`derivatives`>> of <<input,
 include::../headers/fmi3FunctionTypes.h[tags=SetInputDerivatives]
 ----
 
-Sets the n-th time <<derivative>> of floating point <<input>> variables.
-Argument `vr` is a vector of value references that define the variables whose <<derivative,`derivatives`>> shall be set.
-The array `order` contains the orders of the respective <<derivative>> (1 means the first <<derivative>>, 0 is not allowed).
-Argument `value` is a vector with the values of the <<derivative,`derivatives`>>.
-`nValueReferences` is the dimension of the vectors. +
-Different input variables may have different interpolation order. +
-Restrictions on using the function are the same as for the `fmi3Set{VariableType}` function.
-
-<<input,`Inputs`>> and their <<derivative,`derivatives`>> are set with respect to the beginning of a communication time step.
-
-To allow interpolation/approximation of the floating point output variables between communication steps (if they are used as inputs for other slaves), the <<derivative,`derivatives`>> of the <<output,`outputs`>> with respect to time can be read.
-Whether the slave is able to provide the <<derivative,`derivatives`>> of <<output,`output`>> is given by the unsigned integer capability flag `maxOutputDerivativeOrder`.
-It delivers the maximum order of the <<output>> <<derivative>>.
-If the actual order is lower (because the order of integration algorithm is low), the retrieved value is 0.
-
-_[Example: If the internal polynomial is of order 1 and the master inquires the second <<derivative>> of an <<output>>, the slave will return zero.]_
-
-The <<derivative,`derivatives`>> can be retrieved by:
-
 [[fmi3GetOutputDerivatives,`fmi3GetOutputDerivatives`]]
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=GetOutputDerivatives]
 ----
 
-Retrieves the n-th <<derivative>> of <<output>> values.
-Argument `vr` is a vector of `nValueReferences` value references that define the variables whose <<derivative,`derivatives`>> shall be retrieved.
-The array `order` contains the order of the respective <<derivative>> (1 means the first <<derivative>>, 0 is not allowed).
-Argument `value` is a vector with the actual values of the <<derivative,`derivatives`>>. +
-Restrictions on using the function are the same as for the `fmi3Get{VariableType}` function.
+Both functions have the same arguments:
 
+--
+* Argument `valueReferences[]` is a vector of value references that define the variables whose <<derivative,`derivatives`>> shall be set or get.
+
+* Argument `nValueReferences` is the dimension of the arguments `valueReferences[]` and `orders[]`.
+
+* Argument `orders[]` contains the orders of the respective <<derivative>> (1 means the first <<derivative>>, 0 is not allowed).
+
+* Argument `values[]` is a vector with the values of the <<derivative,`derivatives`>>.
+
+* Argument `nValues` is the size of the argument `values[]`.
+--
+
+<<fmi3SetInputDerivatives>>::
+Sets the n-th time <<derivative>> of <<input>> variables.
+Restrictions on using the function are the same as for the `fmi3Set{VariableType}` function.
+Different input variables may have different interpolation order.
+<<input,`Inputs`>> and their <<derivative,`derivatives`>> are set with respect to the beginning of a communication time step.
+
+<<fmi3GetOutputDerivatives>>::
+Retrieves the n-th <<derivative>> of <<output>> values.
+Restrictions on using the function are the same as for the `fmi3Get{VariableType}` function.
 The returned <<output,`outputs`>> correspond to the current slave time.
 E.g. after a successful call to <<fmi3DoStep>> the returned values are related to the end of the communication time step.
+
+To allow interpolation/approximation of the floating point output variables between communication steps (if they are used as inputs for other slaves), the <<derivative,`derivatives`>> of the <<output,`outputs`>> with respect to time can be read.
+Whether the slave is able to provide the <<derivative,`derivatives`>> of <<output,`output`>> is given by the unsigned integer capability flag `maxOutputDerivativeOrder`.
+It delivers the maximum order of the <<output>> <<derivative, `derivatives`>>.
+If the actual order is lower (because the order of integration algorithm is low), the retrieved value is 0.
+
+_[Example: If the internal polynomial is of order 1 and the master inquires the second <<derivative>> of an <<output>>, the slave will return zero.]_
 
 ==== Computation in Co-Simulation interface types
 
@@ -60,31 +65,46 @@ The computation of time steps is controlled by the following function.
 include::../headers/fmi3FunctionTypes.h[tags=DoStep]
 ----
 
-The computation of a time step is started. +
-Argument `currentCommunicationPoint` is the current communication point of the master (latexmath:[tc_i]) and argument `communicationStepSize` is the communication step size (latexmath:[hc_i]).
-The latter must be latexmath:[> 0.0].
-The slave must integrate until time instant latexmath:[tc_{i+1} = tc_i + hc_i].
-_[The calling environment defines the communication points and <<fmi3DoStep>> must synchronize to these points by always integrating exactly to latexmath:[tc_i + hc_i]._
+The computation of a time step is started.
 
+* Argument `currentCommunicationPoint` is the current communication point of the master (latexmath:[tc_i]) and
+
+* argument `communicationStepSize` is the communication step size (latexmath:[hc_i]). `comunicationStepSize` must be latexmath:[> 0.0].
+
+* Argument `noSetFMUStatePriorToCurrentPoint` is `fmi3True` if `fmi3SetFMUState` will no longer be called for time instants prior to `currentCommunicationPoint` in this simulation run. _[The slave can use this flag to flush a result buffer]_
+
+* Argument `earlyReturn` signals to the Co-Simulation master if the FMU returns early from the `doStep` call (`earlyReturn = fmi3True`) or if the `doStep` was completed successfully (`earlyReturn = fmi3False`).
+
+The slave must integrate until time instant latexmath:[tc_{i+1} = tc_i + hc_i].
+
+_[The calling environment defines the communication points and <<fmi3DoStep>> must synchronize to these points by always integrating exactly to latexmath:[tc_i + hc_i]._
 _It is up to <<fmi3DoStep>> how to achieve this.]_
+
 At the first call to <<fmi3DoStep>> after <<fmi3ExitInitializationMode>> was called `currentCommunicationPoint` must be equal to `startTime` as set with <<fmi3SetupExperiment>>.
+
 _[Formally, argument `currentCommunicationPoint` is not needed._
 _It is present in order to handle a mismatch between the master and the FMU state of the slave: The `currentCommunicationPoint` and the FMU state of the slaves defined by former_ <<fmi3DoStep>> _or_ `fmi3SetFMUState` _calls have to be consistent with respect to each other._
 _For example, if the slave does not use the update formula for the <<independent>> variable as required above,_ latexmath:[tc_{i+1} = tc_i + hc_i] _(using argument_ latexmath:[tc_i] = `currentCommunicationPoint` _of_ <<fmi3DoStep>>) _but uses internally an own update formula, such as_ latexmath:[tc_{s,i+1} = tc_{s,i} + hc_{s,i}] _then the slave could use as time increment_ latexmath:[\text{hc}_{s,i} := (tc_i - tc_{s,i}) + hc_i] _(instead of_ latexmath:[\text{hc}_{s,i} := hc_i] _) to avoid a mismatch between the master time_ latexmath:[tc_{i+1}] _and the slave internal time_ latexmath:[tc_{s,i+1}] _for large i.]_
 
-_rgument `noSetFMUStatePriorToCurrentPoint` is `fmi3True` if `fmi3SetFMUState` will no longer be called for time instants prior to `currentCommunicationPoint` in this simulation run _[the slave can use this flag to flush a result buffer]_.
 
-The function returns: +
-`fmi3OK` - if the communication step was computed successfully until its end. +
-`fmi3Discard` - if the slave computed successfully only a subinterval of the communication step. The FMU enters the `Step Discarded` state, see <<state-step-discarded-co-simulation>> for more information.
- +
-`fmi3Error` - the communication step could not be carried out at all.
-The master can try to repeat the step with other input values and/or a different communication step size in the same way as described in the `fmi3Discard` case above. +
-`fmi3Fatal` - if an error occurred which corrupted the FMU irreparably.
-_[The master should stop the simulation run immediately.]_
+The function returns:
+
+`fmi3OK`::
+if the communication step was computed successfully until its end.
+
+`fmi3Discard`::
+if the slave computed successfully only a subinterval of the communication step. The FMU enters the `Step Discarded` state, see <<state-step-discarded-co-simulation>> for more information.
+
+`fmi3Error`::
+the communication step could not be carried out at all.
+The master can try to repeat the step with other input values and/or a different communication step size in the same way as described in the `fmi3Discard` case above.
+
+`fmi3Fatal`::
+if an error occurred which corrupted the FMU irreparably.
 See <<status-returned-by-functions>> for details.
+_[The master should stop the simulation run immediately.]_
 
-It depends on the capabilities of the slave which parameter constellations and calling sequences are allowed (see <<fmi-for-basic-co-simulation>>)
+It depends on the capabilities of the slave which parameter constellations and calling sequences are allowed (see <<fmi-for-basic-co-simulation>>).
 
 ==== Retrieving Status Information from the Slave in Co-Simulation Interface Types [[retrieving-status-from-slave]]
 
@@ -96,8 +116,9 @@ Status information is retrieved from the slave by the following function:
 include::../headers/fmi3FunctionTypes.h[tags=GetDoStepDiscardedStatus]
 ----
 
-`terminate = true` if the slave wants to terminate the simulation.
-`lastSuccessfulTime` is the time instant at which the slave stopped the <<fmi3DoStep>> call.
+* If argument `terminate = true`, the slave wants to terminate the simulation.
+
+* Argument `lastSuccessfulTime` is the time instant at which the slave stopped the <<fmi3DoStep>> call.
 
 ==== State Machine of Calling Sequence from Master to Slave in Co-Simulation Interface Types [[state-machine-co-simulation]]
 
@@ -173,7 +194,7 @@ With this function call the *Reconfiguration Mode* is entered.
 This function must not be called if the FMU contains no <<tunable>> <<structuralParameter,`structural parameters`>> (i.e. with <<causality>>= <<structuralParameter>> and <<variability>> = <<tunable>>).
 
 <<fmi3DoStep>>::
-Within fmi3DoStep() the FMU may call <<fmi3CallbackIntermediateUpdate>>
+Within `fmi3DoStep` the FMU may call <<fmi3CallbackIntermediateUpdate>>
 * If the function returns with `fmi3OK` or `fmi3Warning` the FMU stays in this state.
 * If the function returns with `fmi3Discard` the FMU enters state *Step Discarded*.
 
@@ -249,7 +270,7 @@ Allowed Function Calls::
 Only for variables with <<causality>> = <<structuralParameter>> and <<variability>> = <<tunable>>.
 
 Forbidden Function Calls::
- <<fmi3EnterConfigurationMode>>, <<fmi3Instantiate>>, <<fmi3SetupExperiment>>, <<fmi3EnterInitializationMode>>, <<fmi3ExitInitializationMode>>, <<fmi3GetDoStepDiscardedStatus>>, <<fmi3DoStep>>, <<fmi3EnterStepMode>>, <<fmi3SetInputDerivatives>>, <<fmi3GetDirectionalDerivative>>, <<fmi3GetOutputDerivatives>>, `fmi3Get{VariableType}`
+<<fmi3EnterConfigurationMode>>, <<fmi3Instantiate>>, <<fmi3SetupExperiment>>, <<fmi3EnterInitializationMode>>, <<fmi3ExitInitializationMode>>, <<fmi3GetDoStepDiscardedStatus>>, <<fmi3DoStep>>, <<fmi3EnterStepMode>>, <<fmi3SetInputDerivatives>>, <<fmi3GetDirectionalDerivative>>, <<fmi3GetOutputDerivatives>>, `fmi3Get{VariableType}`
 
 ===== State: Step Discarded [[state-step-discarded-co-simulation]]
 
