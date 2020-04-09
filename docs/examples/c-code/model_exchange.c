@@ -125,7 +125,7 @@ while (!terminateSimulation) {
             fmi3Boolean _nominalsOfContinuousStatesChanged;
             fmi3Boolean _valuesOfContinuousStatesChanged;
 
-            // set inputs at super dense time point
+            // set inputs at super-dense time point
             // M_fmi3SetFloat*/Int*/UInt*/Boolean/String/Binary(m, ...)
 
             // update discrete states
@@ -137,7 +137,7 @@ while (!terminateSimulation) {
                                     &nextEventTimeDefined,
                                     &nextEventTime);
 
-            // getOutput at super dense time point
+            // getOutput at super-dense time point
             // M_fmi3GetFloat*/Int*/UInt*/Boolean/String/Binary(m, ...)
             valuesOfContinuousStatesChanged |= _valuesOfContinuousStatesChanged;
             nominalsOfContinuousStatesChanged |= _nominalsOfContinuousStatesChanged;
