@@ -646,38 +646,53 @@ fmi3Status fmi3ExitConfigurationMode(fmi3Instance instance) {
 }
 
 fmi3Status fmi3SetClock(fmi3Instance instance,
-                        const fmi3ValueReference valueReferences[], size_t nValueReferences,
-                        const fmi3Boolean value[], const fmi3Boolean *subactive) {
+                        const fmi3ValueReference valueReferences[],
+                        size_t nValueReferences,
+                        const fmi3Clock values[],
+                        const fmi3Boolean subactive[],
+                        size_t nValues) {
     NOT_IMPLEMENTED
 }
 
 fmi3Status fmi3GetClock(fmi3Instance instance,
-                            const fmi3ValueReference valueReferences[], size_t nValueReferences,
-                        fmi3Boolean value[]) {
+                        const fmi3ValueReference valueReferences[],
+                        size_t nValueReferences,
+                        fmi3Clock values[],
+                        size_t nValues) {
     NOT_IMPLEMENTED
 }
 
 fmi3Status fmi3GetIntervalDecimal(fmi3Instance instance,
-                                      const fmi3ValueReference valueReferences[], size_t nValueReferences,
-                                  fmi3Float64 interval[]) {
+                                  const fmi3ValueReference valueReferences[],
+                                  size_t nValueReferences,
+                                  fmi3Float64 interval[],
+                                  size_t nValues) {
     NOT_IMPLEMENTED
 }
 
 fmi3Status fmi3SetIntervalDecimal(fmi3Instance instance,
-                                      const fmi3ValueReference valueReferences[], size_t nValueReferences,
-                                  const fmi3Float64 interval[]) {
+                                  const fmi3ValueReference valueReferences[],
+                                  size_t nValueReferences,
+                                  const fmi3Float64 interval[],
+                                  size_t nValues) {
     NOT_IMPLEMENTED
 }
 
 fmi3Status fmi3GetIntervalFraction(fmi3Instance instance,
-                                       const fmi3ValueReference valueReferences[], size_t nValueReferences,
-                                   fmi3UInt64 intervalCounter[], fmi3UInt64 resolution[]) {
+                                   const fmi3ValueReference valueReferences[],
+                                   size_t nValueReferences,
+                                   fmi3UInt64 intervalCounter[],
+                                   fmi3UInt64 resolution[],
+                                   size_t nValues) {
     NOT_IMPLEMENTED
 }
 
 fmi3Status fmi3SetIntervalFraction(fmi3Instance instance,
-                                   const fmi3ValueReference valueReferences[], size_t nValueReferences,
-                                   const fmi3UInt64 intervalCounter[], const fmi3UInt64 resolution[]) {
+                                   const fmi3ValueReference valueReferences[],
+                                   size_t nValueReferences,
+                                   const fmi3UInt64 intervalCounter[],
+                                   const fmi3UInt64 resolution[],
+                                   size_t nValues) {
     NOT_IMPLEMENTED
 }
 
@@ -889,6 +904,7 @@ fmi3Status fmi3DoStep(fmi3Instance instance,
 
 fmi3Status fmi3ActivateModelPartition(fmi3Instance instance,
                                       fmi3ValueReference clockReference,
+                                      size_t clockElementIndex,
                                       fmi3Float64 activationTime) {
     NOT_IMPLEMENTED
 }
