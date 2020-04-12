@@ -3,12 +3,8 @@
 This section contains the interface description for supporting the Scheduled Co-Simulation interface from a C program.
 
 The direct scheduling of model partitions based on <<clock>> ticks requires an additional handling mode for FMUs.
-The FMU signals its support for direct model partition scheduling in the `modelDescription.xml` via the flag `providesScheduledCoSimulation = true`.
+The FMU signals its support for direct model partition scheduling in the `modelDescription.xml` via the element `<fmiModelDescription><ScheduledCoSimulation>`.
 The Co-Simulation master signals to the FMU that it supports and has recognized the <<clock>> and model partition scheduling capabilities of the FMU by instantiating it as Scheduled Co-Simulation.
-
-If the flag `providesScheduledCoSimulation = false`, it is not allowed to use the Scheduled Co-Simulation interface.
-
-If no <<inputClock,`input clocks`>> are defined by the FMU it is not allowed to set `providesScheduledCoSimulation` to `true` in the `modelDescription.xml`.
 
 Error, reset or terminate information is a global state of the FMU.
 If e.g. an function returns `fmi3Discard` or `fmi3Error` this is also assumed for all active or preempted model partitions.
@@ -119,7 +115,7 @@ It is recommended to call `fmi3Set{VariableType}` and `fmi3Get{VariableType}` in
 <<get-and-set-variable-values,fmi3Set{VariableType}>>, `fmi3SetInputDerivatives`::
 Is called before the start of the computation of a model partition (i.e. before call of <<fmi3ActivateModelPartition>>) and only for global variables and variables associated to the <<inputClock>> assigned to the model partition.
 +
-The restrictions related to variable <<causality>> and <<variability>> defined for *Step Mode* in `fmi3CoSimulation` apply.
+The restrictions related to variable <<causality>> and <<variability>> defined for *Step Mode* in Basic Co-Simulation apply.
 +
 If the function returns with `fmi3OK` or `fmi3Warning` the FMU stays in this state.
 In case the function returns `fmi3Fatal` the master can prematurely end all tasks related to the computation of model partitions of this FMU.
@@ -128,7 +124,7 @@ In case the function returns `fmi3Discard` or `fmi3Error` the master must wait u
 <<get-and-set-variable-values,fmi3Get{VariableType}>>, `fmi3GetOutputDerivatives`, <<fmi3GetDirectionalDerivative>>`::
 Is called after the end of the computation of a model partition (i.e. after return of <<fmi3ActivateModelPartition>>) and only for global variables and variables associated to the <<inputClock>> assigned to the model partition.
 +
-The restrictions related to variable <<causality>> and <<variability>> defined for *Step Mode* in `fmi3CoSimulation` apply.
+The restrictions related to variable <<causality>> and <<variability>> defined for *Step Mode* in Basic Co-Simulation apply.
 +
 If the function returns with `fmi3OK` or `fmi3Warning` the FMU stays in this state.
 In case the function returns `fmi3Fatal` the master can prematurely end all tasks related to the computation of model partitions of this FMU.
@@ -142,7 +138,9 @@ _Example:_
 
 [cols="3,4",options="header"]
 |====
-|_Correct calling sequence for a model partition of an FMU_ |_Wrong calling sequence_
+|_Correct calling sequence for a model partition of an FMU_
+|_Wrong calling sequence_
+
 |_fmi3Set{VariableType} on inputs_ +
 fmi3ActivateModelPartition +
 _fmi3Get{VariableType} on outputs_ +
@@ -177,7 +175,7 @@ These functions can not be called concurrently for model partitions of an FMU bu
 If these functions are called while a model partition of an FMU is currently active or preempted, the FMU changes its state after the computation of all model partitions of this FMU has ended.
 
 <<fmi3GetFMUState>>, <<fmi3SetFMUState>>, <<fmi3FreeFMUState>>,<<fmi3SerializedFMUStateSize>>, <<fmi3SerializeFMUState>>, <<fmi3DeSerializeFMUState>>::
-Can be called if no other task related to the computation of model partitions of this FMU is currently active or preempted and the prerequisites defined for these functions in `fmi3CoSimulation` are fulfilled.
+Can be called if no other task related to the computation of model partitions of this FMU is currently active or preempted and the prerequisites defined for these functions in Basic Co-Simulation are fulfilled.
 Thus these functions can not be called concurrently for model partitions of an FMU but only for the whole FMU instance.
 
 Forbidden Function Calls::
@@ -244,14 +242,14 @@ Additionally to the generally forbidden functions in Scheduled Co-Simulation lis
 |<<fmi3ExitInitializationMode>>   |  |  |  |  |  |  |  |  |  |
 |<<fmi3Terminate>>                |  |  |  |  |  |  |  |  |  |
 |<<fmi3Reset>>                    |  |  |  |  |  |  |  |  |  |
-|fmi3GetReal                  |  |  |  |  |  |  |  |  |  |
-|fmi3GetInteger               |  |  |  |  |  |  |  |  |  |
-|fmi3GetBoolean               |  |  |  |  |  |  |  |  |  |
-|fmi3GetString                |  |  |  |  |  |  |  |  |  |
-|fmi3SetReal                  |  |  |  |  |  |  |  |  |  |
-|fmi3SetInteger               |  |  |  |  |  |  |  |  |  |
-|fmi3SetBoolean               |  |  |  |  |  |  |  |  |  |
-|fmi3SetString                |  |  |  |  |  |  |  |  |  |
+|`fmi3GetReal`                    |  |  |  |  |  |  |  |  |  |
+|`fmi3GetInteger`                 |  |  |  |  |  |  |  |  |  |
+|`fmi3GetBoolean`                 |  |  |  |  |  |  |  |  |  |
+|`fmi3GetString`                  |  |  |  |  |  |  |  |  |  |
+|`fmi3SetInteger`                 |  |  |  |  |  |  |  |  |  |
+|`fmi3SetReal`                    |  |  |  |  |  |  |  |  |  |
+|`fmi3SetBoolean`                 |  |  |  |  |  |  |  |  |  |
+|`fmi3SetString`                  |  |  |  |  |  |  |  |  |  |
 |<<fmi3GetFMUState>>              |  |x |x |x |x |x |  |x |  |
 |<<fmi3SetFMUState>>              |  |x |x |x |x |x |  |x |  |
 |<<fmi3FreeFMUState>>             |  |x |x |x |x |x |  |x |  |
@@ -259,9 +257,9 @@ Additionally to the generally forbidden functions in Scheduled Co-Simulation lis
 |<<fmi3SerializeFMUState>>        |  |  |  |  |  |  |  |  |  |
 |<<fmi3DeSerializeFMUState>>      |  |  |  |  |  |  |  |  |  |
 |<<fmi3GetDirectionalDerivative>> |  |  |  |  |  |  |  |  |  |
-|<<fmi3SetInputDerivatives>>  {set:cellbgcolor:yellow}     |  {set:cellbgcolor!} |  |  |  |  |  |  |  |  |
-|<<fmi3GetOutputDerivatives>> {set:cellbgcolor:yellow}     |  {set:cellbgcolor!} |  |  |  |  |  |  |  |  |
-|<<fmi3GetDoStepDiscardedStatus>> {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |  |  |  |  |  |  |
+|<<fmi3SetInputDerivatives>>      {set:cellbgcolor:yellow}     |  {set:cellbgcolor!} |  |  |  |  |  |  |  |  |
+|<<fmi3GetOutputDerivatives>>     {set:cellbgcolor:yellow}     |  {set:cellbgcolor!} |  |  |  |  |  |  |  |  |
+|<<fmi3GetDoStepDiscardedStatus>> {set:cellbgcolor:yellow}     |  {set:cellbgcolor!} |  |  |  |  |  |  |  |  |
 |====
 
 *x* means: call is allowed in the corresponding state +
@@ -320,7 +318,6 @@ Mostly this is required for internal inter-model-partition communication and in 
 The exporting tool has to consider external events i.e. interrupts (if <<input>> aperiodic <<clock,`clocks`>> are defined) and the influences of computing speed, so the exact preemption occurrence points cannot be foreseen (within the given priority and period restrictions).
 
 To provide more options to secure the code against unwanted preemption new callback functions are defined that can be used to prevent preemption for certain code parts.
-If `providesScheduledCoSimulation = true` the default setting is that preemption is permitted.
 The preemption lock has to be actively locked and unlocked in the FMU's code.
 Such locks should be used with care and only for securing very short code parts that cannot be secured otherwise.
 
@@ -328,7 +325,7 @@ A lock can be created and released to prevent preemption of that task (i.e. mode
 
 [source, C]
 ----
-include::../headers/fmi3FunctionTypes.h[tag=PreemptionLock]
+include::../headers/fmi3FunctionTypes.h[tag=CallbackPreemptionLock]
 ----
 
 Even if the Co-Simulation master does not support preemption and Scheduled Co-Simulation, at least an empty implementation of these callback functions is required.
