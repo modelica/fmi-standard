@@ -479,7 +479,7 @@ This function must be called after <<fmi3Instantiate>> and before <<fmi3EnterIni
 * Parameters `toleranceDefined` and `tolerance` depend on the FMI interface type:
 
 Model Exchange::
-If `toleranceDefined = fmi3True`, then the model is called with a numerical integration scheme where the step size is controlled by using `tolerance` for error estimation (usually as relative 'tolerance').
+If `toleranceDefined = fmi3True`, then the model is called with a numerical integration scheme where the step size is controlled by using `tolerance` for error estimation (usually as relative tolerance).
 In such a case all numerical algorithms used inside the model (for example, to solve non-linear algebraic equations) should also operate with an error estimation of an appropriate smaller relative tolerance.
 
 Co-Simulation::
@@ -487,14 +487,14 @@ If `toleranceDefined = fmi3True`, then the communication step size of the FMU is
 In case the FMU utilizes a numerical integrator with variable step size and error estimation, it is suggested to use `tolerance` for the error estimation of the integrator (usually as relative tolerance). +
 An FMU for Co-Simulation might ignore this parameter.
 
-* Parameters `startTime` and `stopTime` can be used to check whether the model is valid within the given boundaries or to allocate memory which is necessary for storing results.
+* Parameters `startTime` and `stopTime` can be used to check whether the model is valid within the given boundaries, or to allocate the necessary memory for storing results.
 Parameter `startTime` is the <<fixed>> <<initial>> value of the <<independent>> variable.
 +
 _[It is defined with <<causality>> = <<independent>> in the `modelDescription.xml`._
 _If the <<independent>> variable is `time`, `startTime` is the starting time of initialization.]_
 
-* If argument `stopTimeDefined = fmi3True`, then `stopTime` is the defined final value of the <<independent>> variable.
-If the environment tries to compute past `stopTime` the FMU has to return `fmi3Status = fmi3Error`.
+* If argument `stopTimeDefined = fmi3True`, then `stopTime` is the final value of the <<independent>> variable.
+If the environment tries to compute past `stopTime`, the FMU has to return `fmi3Status = fmi3Error`.
 If `stopTimeDefined = fmi3False`, then no final value of the <<independent>> variable is defined and parameter `stopTime` is meaningless.
 +
 _[If the <<independent>> variable is `time`, `stopTime` is the stop time of the simulation.]_
@@ -559,12 +559,12 @@ Before starting a new run, <<fmi3SetupExperiment>> and <<fmi3EnterInitialization
 
 ==== Getting and Setting Variable Values [[get-and-set-variable-values]]
 
-All variables of an FMU are identified with a handle called "value reference".
+All variables of an FMU are identified with a handle called <<valueReference, value reference>>.
 The handle is defined in the `modelDescription.xml` file as attribute <<valueReference>> in variable elements.
 Each variable must have a unique <<valueReference>>.
 
-Variables can be scalar or array variables.
-When getting or setting the values of array variables, the serialization of array variable values used in C-API function calls, as well as in the XML <<start>> attributes is defined as row major - i.e. dimension order from left to right for the C-API (e.g. `array[dim1][dim2]...[dimN]`), and document order in the XML attributes.
+A variable can be a scalar or an array.
+When getting or setting the values of array variables, the serialization of array variable values used in C-API function calls, as well as in the XML <<start>> attributes, is defined as row major - i.e. dimension order from left to right for the C-API (e.g. `array[dim1][dim2]...[dimN]`), and document order in the XML attributes.
 For this serialization of array variables the sparsity pattern of the array is not taken into account.
 All elements of the array, including structural zeros, are serialized.
 
@@ -596,9 +596,8 @@ include::../headers/fmi3FunctionTypes.h[tags=Getters]
 ----
 
 Get actual values of variables by providing their variable references.
-_[These functions are especially used to get the actual values of output variables if a model is connected with other models.
-Since state derivatives are also variables, it is possible to get the value of a state derivative.
-This is useful when connecting FMUs together.
+_[These functions are used to get the values of output variables if a model is connected with other models.
+Since state derivatives are also variables, it is also possible to get the value of a state derivative.
 Furthermore, the actual value of every variable defined in the `modelDescription.xml` file can be determined at the actually defined time instant (see <<definition-of-model-variables>>).]_
 
 * Parameter `valueReferences` is a vector of `nValueReferences` value handles that define the variables that shall be inquired.
@@ -609,7 +608,7 @@ Furthermore, the actual value of every variable defined in the `modelDescription
 
 * Parameter `nValues` provides the number of values in the `values` vector (and `sizes` vector, where applicable) which is only equal to `nValueReferences` if all <<valueReference>>pass:[s] point to scalar variables.
 
-The strings returned by `fmi3GetString`, as well as the binary values returned by `fmi3GetBinary`, must be copied in the target environment because the allocated memory for these strings might be deallocated by the next call to any of the FMI functions or it might be an internal string buffer that is reused.
+The strings returned by `fmi3GetString`, as well as the binary values returned by `fmi3GetBinary`, must be copied in the target environment because the allocated memory for these strings might be deallocated or overwritten by the next call to any of the FMI functions.
 
 For Model Exchange: `fmi3Status = fmi3Discard` is possible for `fmi3GetFloat32` and `fmi3GetFloat64` only, but not for `fmi3Get*Int*`, `fmi3GetBoolean`, `fmi3GetString`, `fmi3GetBinary`, because these are discrete-time variables and their values can only change at an event instant where `fmi3Discard` does not make sense.
 
@@ -620,7 +619,7 @@ It is also possible to set the values of certain variables at particular instant
 include::../headers/fmi3FunctionTypes.h[tags=Setters]
 ----
 
-Set <<parameter,`parameters`>>, <<input,`inputs`>>, and <<start>> values, and re-initialize caching of variables that depend on these variables (see <<definition-of-model-variables>> for the exact rules on which type of variables `fmi3Set{VariableType}` can be called, as well as <<state-machine-model-exchange>> in case of Model Exchange and <<state-machine-co-simulation>> in case of Co-Simulation).
+Set <<parameter,`parameters`>>, <<input,`inputs`>>, and <<start>> values, and re-initialize caching of variables that depend on these variables (see <<definition-of-model-variables>> for the exact rules on which type of variables `fmi3Set{VariableType}` can be called, as well as <<state-machine-model-exchange>> in case of Model Exchange, and <<state-machine-co-simulation>>/<<state-machine-calling-sequence-clocked-co-simulation>>/<<state-machine-scheduled-co-simulation>> in case of each co-simulation interface type).
 
 * Parameter `valueReferences` is a vector of `nValueReferences` value handles that define the variables that shall be set.
 
