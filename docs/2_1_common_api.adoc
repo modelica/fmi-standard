@@ -652,7 +652,7 @@ After that the two clock variants are described. The section ends with a short d
 
 ====== Synchronous Clocks
 
-A set of equations that are associated to a <<clock>> and are executed when the corresponding <<clock>> is active, is called a clocked partition.
+A clocked partition is a set of equations that are associated to a <<clock>> and are executed when the corresponding <<clock>> is active.
 A clocked partition is mathematically defined as:
 
 [latexmath]
@@ -670,14 +670,14 @@ y_j=g_j(x_{j-1},u_j,t_j);
 
 [latexmath]
 ++++
-\text{mit } j=0,1,2,...;x_{-1}=x_{start}
+\text{with } j=0,1,2,...;x_{-1}=x_{start}
 ++++
 
 Variables latexmath:[x_j] are called `states of a clocked partition`, or `discrete-time states` and latexmath:[j] is the latexmath:[j+1]th tick of the associated <<clock>>.
 Variables latexmath:[u_j] are the (external or <<local>>) <<input,`inputs`>> and latexmath:[y_j] are the (external or <<local>>) <<output,`outputs`>> of a clocked partition.
-A discrete-time <<state>> can be from any type of a variable (with exception of a <<clock>>) such as of type `fmi3Float64` or `fmi3Boolean`.
+A discrete-time <<state>> variable can be from any type (e.g., `fmi3Float64` or `fmi3Boolean`, but not of <<clock>> type.
 A clocked partition is not executed during *Initialization Mode*, but it is executed the first time at its first <<clock>> tick.
-The associated <<clock>> of the model partion is synchronous to its discrete-time <<state,`states`>>.
+The associated <<clock>> of the model partition is synchronous to its discrete-time <<state,`states`>>.
 
 Discrete-time <<state,`states`>> are listed in the `<ModelStructure>`.
 They can have initial values defined by xml-attributes <<initial>> and <<start>>, or the initial values are computed internally as a function of the parameters.
@@ -693,9 +693,8 @@ _This mode can also be requested by the calling environment with <<fmi3SetClock>
 
 ====== Communication Point Clocks
 
-In addition to the above definition also a simplified <<clock>> definition used only in FMI for Basic Co-Simulation is available that can be used to define the communication points of model partitions of the model (in the following such partitions are called model partitions).
-Such <<clock,`clocks`>> are called Communication Point Clocks.
-These <<clock,`clocks`>> are not compatible to synchronous clocks theory and must not be used together with synchronous clocks in one model.
+Communication Point Clocks, introduced here, are used only in FMI for Basic Co-Simulation to define the communication points of model partitions (defined below).
+These <<clock,`clocks`>> are not compatible with synchronous clocks theory and must not be used together with synchronous clocks in one model.
 
 A model partition is mathematically defined as:
 
@@ -717,9 +716,9 @@ This section gives a definition of the two clock variants.
 
 ====== Output Clocks
 
-An <<outputClock>> is a general <<clock>> that ticks when a time-, state- or step-event occurs in the continuous-model partition of the FMU (for Communication Point Clocks these <<outputClock>> tick events can occour in all model partitions) and are identified based on their <<clockReference>> (see <<operation-on-clocks>>).
-It can be periodic or non-periodic.
-+
+An <<outputClock>> is a general <<clock>> that ticks when a time-, state- or step-event occurs in the continuous-model partition of the FMU (for Communication Point Clocks these <<outputClock>> tick events can occur in all model partitions) and are identified based on their <<clockReference>> (see <<operation-on-clocks>>).
+The events can be periodic or non-periodic.
+
 _[Example: If_ latexmath:[b = x > 0] _, and a state event is defined when b changes from `false` to `true`, and b is defined as <<outputClock>>, then this <<clock>> is active whenever x changes from negative to positive values.]_
 
 Since <<outputClock,`output clocks`>> are ticking based on model internal information it is required in case of FMI for Co-Simulation to signal the ticking of an <<outputClock>> to the simulation environment during a `fmi3DoStep` computation.
@@ -735,7 +734,7 @@ _]_
 
 ====== Input Clocks
 
-An <<inputClock>> is a periodic or non-periodic <<clock>> that is defined directly or indirectly by a <<clock>> outside of the FMU.
+An <<inputClock>> is a periodic or non-periodic <<clock>> that is defined by a <<clock>> outside of the FMU.
 Its interval is initialized by the environment.
 
 _[Inside of the FMU it is not known in advance when this <<clock>> ticks._
@@ -751,7 +750,7 @@ This section gives a definition of additional clock properties.
 ====== Periodic Clock Ticks
 
 Either <<output>> or <<input>>, a periodic <<clock>> ticks at equidistant sample time points that are known a priori (defined in `modelDescription.xml`) or are alternatively determined by the environment in case of <<inputClock,`input clocks`>>.
-Mathematically, the next <<clock>> tick at time instant ti is defined as:
+Mathematically, the next <<clock>> tick at time instant latexmath:[t_i] is defined as:
 
 [latexmath]
 ++++
@@ -766,7 +765,7 @@ where:
 [cols="1,2"]
 |===
 |latexmath:[t_0]
-|The time instant in seconds at which the <<clock>> ticks the first time (= the base <<clock>> starts at the start of the simulation tstart or when the controller is switched on plus an offset time toffset (xml-attributes `shiftCounter` and `resolution`).
+|The time instant in seconds at which the <<clock>> ticks the first time (= the base <<clock>> starts at the start of the simulation latexmath:[t_{start}] or when the controller is switched on plus an offset time latexmath:[t_{offset}] (xml-attributes `shiftCounter` and `resolution` in <<clock-type-definition>>).
 
 |latexmath:[t_{i-1}]
 |The previous time instant in seconds, where the <<clock>> ticked.
@@ -780,7 +779,7 @@ The interval latexmath:[\Delta T] and latexmath:[t_{offset}] must be defined for
 In case of periodic <<inputClock,`input clocks`>> these values are the start interval values if they are not given by the simulation master.
 _[This information can be used for emulating periodic <<inputClock,`input clocks`>> in the Co-Simulation interface types.]_.
 
-If latexmath:[\Delta T] is fixed for an FMU and cannot be changed it is a strictly periodic <<clock>>.
+A <<clock>> is strictly periodic if latexmath:[\Delta T] is fixed for an FMU and cannot be changed.
 The <<clock>> is periodic, if latexmath:[\Delta T] can be defined before calling `fmi3EnterInitializationMode` via <<fmi3SetIntervalDecimal>> or <<fmi3SetIntervalFraction>>.
 The <<clock>> is aperiodic if latexmath:[\Delta T] is not constant during a simulation run (<<fmi3SetIntervalDecimal>> or <<fmi3SetIntervalFraction>> can be called for that <<clock>> during *Event Mode*).
 
@@ -791,20 +790,20 @@ It is nevertheless possible to define multiple <<clock,`clocks`>> with the same 
 No ordering is defined for <<clock,`clocks`>> of the same priority.
 If a computational order information is needed, different priorities for <<clock,`clocks`>> have to be defined.
 The priority of a <<clock>> has to be defined in the `modelDescription.xml` via the <<clock>> variable integer attribute `priority` - smaller values have a higher priority.
-For periodic <<clock,`clocks`>> it is recommended to derive the priorities based on a rate monotonic scheduling scheme (smallest period leads to highest priority (smallest priority value)).
+
+_[For periodic <<clock,`clocks`>> it is recommended to derive the priorities based on a rate monotonic scheduling scheme (smallest period leads to highest priority, that is, has the smallest priority value.]_
 
 _[The clock priorities are local to an FMU.
 It is not possible for an FMU exporting tool to know in advance the priorities of other FMUs that will be connected to an FMU in a simulation setup.
-It is the task of the simulation master to derive a computational order for the computation of two or more distinct FMUs based on the local FMU clock priorities and input-output relationships of connected FMUs.
+It is the task of the simulation master to derive a computational order for the computation of two or more distinct FMUs based on the local FMU clock priorities and input-output relationships of connected FMUs.]_
 
-For real-time computation use cases i.e. in Scheduled Co-Simulation the priority information is used also for task preemption configurations.
-It is therefore important to restrict the number of distinct priority levels for an FMU to available priority levels on the target platform.
-A common number of different priority levels is e.g. 100 (0 to 99) as defined in Linux based operating systems.
-Nevertheless, restricting the number of used distinct priority levels as much as possible is recommended to avoid unnecessary computational overhead.]_
+_[For real-time computation use cases i.e. in Scheduled Co-Simulation the priority information is used also for task preemption configurations.
+It is therefore important to restrict the number of distinct priority levels for an FMU to available priority levels on the target platform and/or to avoid unnecessary computational overhead.
+A common number of different priority levels is, e.g., 100 (0 to 99), as defined in Linux based operating systems.]_
 
 ====== Clock Relationships for Communication Point Clocks [[clock-relationships-for-communication-point-clocks]]
 
-If <<outputClock,`output clocks`>> and <<inputClock,`input clocks`>> are defined it is possible to define a tick relationship from an <<outputClock>> to an <<inputClock>>.
+If <<outputClock,`output clocks`>> and <<inputClock,`input clocks`>> are defined, it is possible to define a tick relationship from an <<outputClock>> to an <<inputClock>>.
 This is needed to allow for an external resource management to achieve an optimal control of model partitions.
 The <<outputClock,`output clocks`>> and the associated <<inputClock,`input clocks`>> define a union of <<clock,`clocks`>>.
 In that sense, if an <<outputClock>> ticks the associated <<inputClock>> ticks at the same time instant in such a union.
@@ -836,7 +835,7 @@ image::images/example_usecase.png[]
 When connecting imported FMUs together, <<input>> and <<output>> variables can readily be connected together only when they are defined on a <<clock>> with identical properties.
 If this is not possible, an explicit cast of one <<clock>> to another <<clock>> is typically defined in the environment.
 
-The environment can evaluate required <<clock>> adaptions/casts for connections basing on the <<clockReference>> attribute of assigned variables _[i.e. the variables that are assigned to a <<clock>> based on `modelDescription.xml` information]_.
+The environment can evaluate required <<clock>> casts for connections using the information on the <<clockReference>> attribute of assigned variables _[i.e. the variables that are assigned to a <<clock>> based on `modelDescription.xml` information]_.
 
 _[Example: Elementary blocks like a PI controller will have all variables on an <<inputClock>> with identical properties._
 _Connecting such blocks together will therefore be possible without computationally expensive clock cast operations (and the environment can readily do the computation of assigned variables of the connected blocks based on the same <<clock>>).]_
@@ -879,7 +878,6 @@ If `values[i] = fmi3ClockActive` the <<clock>> is currently active, otherwise th
 
 It is allowed to call this function within the callback function `fmi3IntermediateUpdate`.
 It is required for an FMU to directly internally set back the activation <<state>> of an output <<clock,clock[i]>> to `fmi3ClockInactive`, if the function <<fmi3GetClock>> is called for a <<clock,`clock[i]`>> and the interface is Scheduled Co-Simulation.
-
 _[This is required to allow preemption.]_
 
 A <<clock>> interval is set by the environment for the current time instant by the function <<fmi3SetIntervalDecimal>> or <<fmi3SetIntervalFraction>>, and it can be inquired with the function <<fmi3GetIntervalDecimal>> or <<fmi3GetIntervalFraction>>:
@@ -911,7 +909,7 @@ include::../headers/fmi3FunctionTypes.h[tag=GetIntervalFraction]
 Both functions inquire the interval value for the provided <<clock,`clocks`>> (periodic or non-periodic).
 If the <<clock,`clocks`>> are non-periodic, the interval has to be inquired at every <<clock>> tick, to define the follow-up <<clock>> tick.
 
-The following table summarizes the use of the API functions by the environment for different kind of <<clock,`clocks`>>:
+The following table summarizes the use of the API functions by the environment for different kinds of <<clock,`clocks`>>:
 
 [cols="1,2,3"]
 |===
@@ -956,7 +954,7 @@ _For nonlinear Kalman filters (get the FMU state just before initialization; in 
 _For nonlinear model predictive control (get the FMU state just before initialization; in every sample period, set new continuous states from an observer, initialize and get the FMU state after initialization._
 _From this state, perform many simulations that are restarted after the initialization with new input signals proposed by the optimizer).]_
 
-Furthermore, the FMU state can be serialized and copied in a byte vector:
+Furthermore, the FMU state can be serialized and copied in a byte vector.
 _[This can be, for example, used to perform an expensive steady-state initialization, copy the received FMU state in a byte vector and store this vector on file._
 _Whenever needed, the byte vector can be loaded from file and deserialized, and the simulation can be restarted from this FMU state, in other words, from the steady-state initialization.]_
 
@@ -1051,7 +1049,7 @@ Each state derivative variable listed as elements `<ModelStructure><Derivative>`
 
 * latexmath:[\mathbf{v}_{known}] is the vector of known floating point <<input>> variables of function *h* that changes its value in the actual state.
 
-Details are described in the description of element <<dependencies>> in <<ModelStructure>>.
+Details are given in the description of element <<dependencies>> in <<ModelStructure>>.
 _[For example continuous-time <<input,`inputs`>> in *Continuous-Time Mode*._
 _If a variable with <<causality>> = <<independent>> is explicitly defined under `<ModelVariables>`, a directional derivative with respect to this variable can be computed._
 _If such a variable is not defined, the directional derivative with respect to the <<independent>> variable cannot be calculated]._
@@ -1110,8 +1108,8 @@ Both functions have the same parameters:
 * Parameter `sensitivity[]` contains the components of the sensitivity vector.
 * Parameter `nSensitivity` contains the length of `sensitivity[]`.
 
-_[Note that array variables will be serialized, so `nSeed` is only equal to `nKnowns` in the case of directional derivatives resp. equal to `nUnknowns` in the case of adjoint derivatives, if all value references of `knowns` resp. `unknowns` point to scalar variables._
-_Likewise `nSensitivity` is only equal to `nUnknowns` resp. `nKnowns` if all value references of `unknowns` resp. `knowns` point to scalar variables.]_
+_[Note that array variables will be serialized, so `nSeed` is only equal to `nKnowns` in the case of directional derivatives (resp., equal to `nUnknowns` in the case of adjoint derivatives), if all value references of `knowns` (resp., `unknowns`) point to scalar variables._
+_Likewise `nSensitivity` is only equal to `nUnknowns` (resp., `nKnowns`) if all value references of `unknowns` (resp., `knowns`) point to scalar variables.]_
 
 ===== Directional derivatives
 
@@ -1135,7 +1133,7 @@ g_2(x, u_1)
 
 _and this FMU is connected, so that latexmath:[{y_1, u_1, u_3}] appear in an algebraic loop._
 _Then the nonlinear solver needs a Jacobian and this Jacobian can be computed (without numerical differentiation) provided the partial derivative of latexmath:[{y_1}] with respect to latexmath:[{u_1}] and latexmath:[{u_3}] is available._
-_Depending on the environment where the FMUs are connected, these <<derivative,`derivatives`>> can be provided_
+_Depending on the environment where the FMUs are connected, these <<derivative,`derivatives`>> can be provided:_
 
 (a) _with one wrapper function around function <<fmi3GetDirectionalDerivative>> to compute the directional derivatives with respect to these two variables (in other words, latexmath:[{v_{unknown} = y_1}], latexmath:[{v_{known} = \left \{ u_1, u_3 \right \}}]), and then the environment calls this wrapper function with latexmath:[{v_{seed} = \left \{ 1, 0 \right \}}] to compute the partial derivative with respect to latexmath:[{u_1}] and latexmath:[{v_{seed} = \left \{ 0, 1 \right \}}] to compute the partial derivative with respect to latexmath:[{u_3}], or_
 
@@ -1178,7 +1176,7 @@ _See e.g. http://www.netlib.org/toms/618._
 . _For the columns determined in (2), one call to <<fmi3GetDirectionalDerivative>> is made._
 _After each such call, the elements of the resulting directional derivative vector are copied into their correct locations of the partial derivative matrix._
 
-_More details and implementational notes are available from <<ABL12>>.
+_More details and implementational notes are available from <<ABL12>>._
 
 _Example 2_
 
@@ -1231,13 +1229,13 @@ _[Adjoint derivatives are beneficial in several contexts:_
 * _in artifical intelligence (AI) frameworks the adjoint derivatives are called "vector gradient products" (VJPs)._
 _There adjoint derivatives are used in the backpropagation process to perform gradient-based optimization of parameters using reverse mode automatic differentiation (AD), see, e.g., <<BPRS15>>._
 
-* _in pararameter estimation (see <<BKF17>>)_
+* _in parameter estimation (see <<BKF17>>)_
 
 _Typically, reverse mode automatic differentiatian (AD) is more efficient for these use cases than forward mode AD, as explained in the cited references._
 
 _If one would like to construct the full Jacobian matrix, one can use either <<fmi3GetDirectionalDerivative>> (to column-wise construct it) or <<fmi3GetAdjointDerivative>> (to row-wise construct it, possibly improved with coloring methods as mentioned above)._
 _However in the applications motivating the adjoint derivatives, one does not need the full Jacobian matrix latexmath:[\mathbf{J}], but vector  latexmath:[\mathbf{v}^T] multiplied from the left to the Jacobian, i.e. latexmath:[\mathbf{v}^T\mathbf{J}]._
-_For computing the full Jacobian matrix the column-wise construct is generally more efficient.]_
+_For computing the full Jacobian matrix, the column-wise construct is generally more efficient.]_
 
 _Example:_ +
 _Assume an FMU has the output equations_
@@ -1272,7 +1270,7 @@ include::../headers/fmi3FunctionTypes.h[tags=GetNumberOfEventIndicators]
 This function returns the number of event indicators.
 The dependency of the number of event indicators on <<structuralParameter,`structural parameters`>> is implicitly given in the `modelDescription.xml` file.
 _[All event indicator variables are listed as elements `<EventIndicator>` in `<ModelStructure>`._
-_If the event indicator variable is an array variable and the `<Dimension>` element maps to a dependent variable than this dependent variable is a dependency for the number of event indicators.]_
+_If the event indicator variable is an array variable and the `<Dimension>` element maps to a dependent variable, then this dependent variable is a dependency for the number of event indicators.]_
 If all <<structuralParameter,`structural parameters`>> are unchanged then this dependency information can be used to calculate the initial number of states just using information given in the XML file without the need to call this C-API function.
 
 * Parameter `nz` points to the `size_t` variable that will receive the number of event indicators.
@@ -1290,7 +1288,7 @@ This function returns the number of <<state,`states`>>.
 The dependency of the number of states on <<structuralParameter,`structural parameters`>> is implicitly given in the `modelDescription.xml` file.
 _[All state derivative variables are listed as elements `<Derivative>` in `<ModelStructure>`._
 _Each state derivative variable maps to the corresponding state variable by the `derivative` attribute._
-_If the state variable is an array variable and the `<Dimension>` element maps to a dependent variable than this dependent variable is a dependency for the number of states.]_
+_If the state variable is an array variable and the `<Dimension>` element maps to a dependent variable, then this dependent variable is a dependency for the number of states.]_
 If all <<structuralParameter,`structural parameters`>> are unchanged then this dependency information can be used to calculate the initial number of states just using information given in the XML file without the need to call this C-API function.
 
 * Argument `nz` points to the `size_t` variable that will receive the number of <<state,`states`>>.
