@@ -19,7 +19,7 @@ For co-simulation, two basic groups of functions have to be implemented:
 
 . functions for the data exchange between subsystems
 
-. functions for algorithmic issues to synchronize the simulation of all subsystems and to proceed in communication steps latexmath:[tc_i \rightarrow tc_{i+1}] from initial time latexmath:[tc_0 := t_{start}] to end time latexmath:[tc_N := t_{stop}]
+. functions to synchronize the simulation of all subsystems and to proceed in communication steps latexmath:[tc_i \rightarrow tc_{i+1}] from initial time latexmath:[tc_0 := t_{start}] to end time latexmath:[tc_N := t_{stop}]
 
 // TODO: Add "A Co-sim interface..."
 In FMI for Co-Simulation, both functions are implemented in one software component, the Co-Simulation master.
@@ -44,7 +44,7 @@ Typical examples are:
 
 - the ability to repeat a rejected communication step latexmath:[tc_i \rightarrow tc_{i+1}] with reduced communication step size,
 
-- the ability to provide <<derivative,`derivatives`>> w.r.t. time of <<output,`outputs`>> to allow interpolation (<<transfer-of-input-output-and-parameters>>),
+- the ability to provide <<derivative,`derivatives`>> of <<output,`outputs`>> w.r.t. time, to allow interpolation (<<transfer-of-input-output-and-parameters>>),
 
 - or the ability to provide Jacobians.
 
@@ -52,7 +52,7 @@ FMI for Co-Simulation is restricted to slaves with the following properties:
 
 . All calculated values are time-dependent functions within an a priori defined time interval latexmath:[t_{start} \leq t \leq t_{stop}] (provided `stopTimeDefined = fmi3True` when calling <<fmi3SetupExperiment>>).
 
-. All calculations (simulations) are carried out with increasing time in general.
+. All simulations are carried out with increasing time in general.
 The current time latexmath:[t] is running step by step from latexmath:[t_{start}] to latexmath:[t_{stop}].
 The algorithm of the slave may have the property to be able to repeat the simulation of parts of latexmath:[[t_{start}, t_{stop}]] or the whole time interval latexmath:[[t_{start}, t_{stop}]].
 
@@ -60,7 +60,7 @@ The algorithm of the slave may have the property to be able to repeat the simula
 
 . The slave is able to interrupt the simulation when latexmath:[tc_i] is reached.
 
-. During the interrupted simulation the slave (and its individual solver) can receive values for <<input,`inputs`>> latexmath:[u(tc_i)] and send values of outputs latexmath:[y(tc_i)].
+. During the interrupted simulation, the slave (and its individual solver) can receive values for <<input,`inputs`>> latexmath:[u(tc_i)] and send values of outputs latexmath:[y(tc_i)].
 
 . Whenever the simulation in a slave is interrupted, a new time value latexmath:[tc_{i+1}, tc_i \leq tc_{i+1} \leq t_{stop}], can be given to simulate the time subinterval latexmath:[tc_i < t \leq tc_{i+1}]
 
@@ -69,7 +69,7 @@ The algorithm of the slave may have the property to be able to repeat the simula
 The communication step size has to be greater than zero.
 
 FMI for Co-Simulation allows a Co-Simulation flow which starts with instantiation and initialization (all slaves are prepared for computation, the communication links are established), followed by simulation (the slaves are forced to simulate a communication step), and finishes with shutdown.
-The details of the flow are given in the state machine of the calling sequences from master to slave (see <<state-machine-co-simulation>>).
+The details of the flow are given in the state machine of the calling sequences from master to slave, for each co-simulation interface (see <<state-machine-co-simulation>>, <<state-machine-calling-sequence-clocked-co-simulation>>, and <<state-machine-scheduled-co-simulation>>).
 
 ==== Intermediate Variable Access Support [[math-intermediate-variable-access]]
 
@@ -78,7 +78,7 @@ Intermediate variable access has three main uses:
 . *An FMU is able to produce valid output variables at intermediate points between two consecutive communication points.*
 This is typically the result of an internal solver taking multiple integration steps between two consecutive communication points.
 The FMU exposes intermediate output variables for the master whenever they are available.
-These can be used for e.g. extrapolation, interpolation, filtering or asynchronous co-simulation.
+These can be used, for e.g., for extrapolation, interpolation, filtering or asynchronous co-simulation.
 
 . *Intermediate <<input>> variables for an FMU is available in the Co-Simulation master.*
 The FMU requests updated intermediate <<input>> variables every time they are required by the internal solver.
@@ -92,10 +92,10 @@ Combinations of the above methods are also allowed.
 
 Access to intermediate variables enables several features such as:
 
-* Advanced interpolation/extrapolation techniques
-* Asynchronous communication
-* Anti-alias filtering
-* Smoothing of inputs
+* Advanced interpolation/extrapolation techniques,
+* Asynchronous communication,
+* Anti-alias filtering, and
+* Smoothing of inputs.
 
 ==== Overview of Different Co-Simulation Interfaces
 
@@ -121,7 +121,7 @@ With the early return feature, an FMU can signal <<outputClock>> events or inter
 When an internal event occurs inside the FMU at a time instant, it informs the master that a new communication point for the Co-Simulation can be created.
 Note that an event signal is not seen in the narrow sense of solver induced discontinuity events but in the general sense of a simulation event that has to be handled by the Co-Simulation master (e.g. state changes that require extended handling).
 On a multi-node architecture, in particular, significant co-simulation speed-up may be obtained if the Co-Simulation master can avoid waiting until the end of the slowest <<fmi3DoStep>> when many FMUs are integrating in parallel and an event occurred.
-To exploit such efficiency gains also the Co-Simulation master can command the FMU to return early from the current communication step.
+To exploit such efficiency gains, the Co-Simulation master can command the FMU to return early from the current communication step.
 This is even helpful if the FMU or the Co-Simulation master do not support the advanced handling of events based on the <<hybrid-co-simulation-api, Hybrid Co-Simulation>> functionalities.
 In this way multiple event types and also <<outputClock>> ticks or interrupts can be supported based on the early return functionality and additional functionalities provided by <<hybrid-co-simulation-api,Hybrid Co-Simulation>>.
 
@@ -136,14 +136,14 @@ Scheduled Co-Simulation::
 The <<hybrid-co-simulation-api,Hybrid Co-Simulation>> interface provides an indirect control over the computation of model partitions.
 With <<scheduled-co-simulation-api,Scheduled Co-Simulation>> a simulation master can directly control the time of computation (i.e. scheduling) for such model partitions.
 +
-The Scheduled Co-Simulation interface addresses simulation use cases that require:
+The Scheduled Co-Simulation interface addresses simulation use cases with the following requirements:
 +
-* That at any time (even for unpredictable events) an event can be signaled to an FMU
-* If multiple FMUs share (execution) resources, the time requirements (e.g. execution time, communication deadlines) of all model partitions have to be observed and respected
-** Time requirements may exist due to communication constraints (that are not apparent at FMU simulation level) which have to be fulfilled by the simulation master
+* At any time (even for unpredictable events), an event can be signaled to an FMU;
+* If multiple FMUs share (execution) resources, the time requirements (e.g. execution time, communication deadlines) of all model partitions have to be observed and respected;
+** Time requirements may exist due to communication constraints (that are not apparent at FMU simulation level) which have to be fulfilled by the simulation master;
 ** That requires a global execution order and preemption policy for all model partitions of the multiple FMUs
 ** Priority information provided by the FMUs has to be evaluated and merged to an overall priority for available model partitions
-* Data shall move between the different FMU model partitions for the same or next activation time, if direct communication via FMUs exist.
+* Data shall move between the different FMU model partitions for the same or next activation time.
 ** Get/set operations must also be possible for the same activation time for different model partitions between the computation of these model partitions.
 +
 This Co-Simulation interface provides support for concurrent computation of model partitions (i.e. a support of multiple rates) on a single computational resource (e.g. CPU-core) of an FMU.
@@ -151,7 +151,7 @@ For that a preemptive multitasking regime is intended (cooperative multitasking 
 +
 _[A parallel computation of model partitions is not part of the FMI 3.0 API._
 _An FMU may still internally use parallel computation on multiple cores, but handling this is (currently) not part of the FMI standard. Such an internal parallel computation is not visible to the simulation master._
-_It is a tool vendor specific solution that has ties to the used OS and the co-simulation environment]_
+_It is a tool vendor specific solution that has ties to the used OS and the co-simulation environment.]_
 
 [[intermediate-variable-access]]
 Intermediate Variable Access::
@@ -159,6 +159,9 @@ An FMU can inform a Co-Simulation master that is able to provide intermediate ou
 It is possible for the FMU to inform the master whether the internal solver is in a temporary state or if it has just completed an internal integration step.
 If the internal solver is in a temporary state, intermediate output variables shall only be used for directly computing intermediate input variables.
 If the internal integration step is completed, the master can forward intermediate outputs to interconnected simulation units.
+
+Intermediate variable access can be activated in all Co-Simulation interface types, if the FMU and the master supports it.
+More information can be found in <<intermediate-variable-access>>.
 
 Coupling Scenarios::
 +
@@ -171,9 +174,9 @@ image::images/co-simulation-single-slave.svg[width=50%, align="center"]
 image::images/co-simulation-tool-coupling.svg[width=70%, align="center"]
 +
 In the tool coupling case the FMU implementation wraps the FMI function calls to API calls which are provided by the simulation tool (for example, a COM or CORBA API).
-Additionally to the FMU the simulation tool is needed to run a co-simulation.
+Additionally to the FMU, the simulation tool is needed to run a co-simulation.
 +
-In its most general form, a tool coupling based co-simulation is implemented on distributed hardware with subsystems being handled by different computers with different OSs (cluster computer, computer farm, computers at different locations).
+In its most general form, a tool coupling based co-simulation is implemented on distributed hardware with subsystems being handled by different computers with different operating systems (cluster computer, computer farm, computers at different locations).
 The data exchange and communication between the subsystems is typically performed using one of the network communication technologies (for example, MPI, TCP/IP).
 The definition of this communication layer is not part of the FMI standard.
 However, distributed co-simulation scenarios can be implemented using FMI as shown in <<figure-distributed-co-simulation>>.
@@ -184,10 +187,7 @@ image::images/co-simulation-distributed-infrastructure.svg[width=90%, align="cen
 +
 The master has to implement the communication layer.
 Additional parameters for establishing the network communication (for example, identification of the remote computer, port numbers, user account) are to be set via the GUI of the master.
-These data are not transferred via the FMI API.
-
-For all Co-Simulation interface types intermediate variable access can be activated, if the FMU and the master supports this.
-More information can be found in <<intermediate-variable-access>>.
+This data is not transferred via the FMI API.
 
 The Co-Simulation master signals to the FMU which features shall be used for the current instance of the FMU in <<fmi3Instantiate>>:
 
@@ -209,7 +209,7 @@ The described multi-mode support is based on wrapping functionality into the <<f
 +
 _[An FMU that supports <<scheduled-co-simulation-api,Scheduled Co-Simulation>> will in most cases also support <<hybrid-co-simulation-api,Hybrid Co-Simulation>>._
 _Wrapping towards other Co-Simulation interfaces can influence the simulation results._
-_Depending on the model especially wrapping towards the Basic Co-Simulation interface may result in divergent simulation results._
+_Depending on the model, wrapping towards the Basic Co-Simulation interface may result in divergent simulation results._
 _Especially aperiodic <<inputClock,`input clocks`>> can not always be sufficiently emulated in modes that do not directly support <<clock,`clocks`>>._
 _Therefore it is recommended that the FMU provides logging information to the user about the influence of the current mode on simulation results, if non-optimal modes are used by the simulation environment.]_
 
@@ -237,7 +237,7 @@ The following output parameters in <<fmi3CallbackIntermediateUpdate>> are used f
 * If `intermediateStepFinished = fmi3False`, the Co-Simulation master shall only use intermediate output variables to compute intermediate <<input>> variables at the current state.
 
 Hence, it is important to distinguish intermediate output from successful internal integration steps from intermediate outputs valid only for temporary solver states.
-The <<figure-intermediate-variable-access>> shows an overview of the solver states and the intended use of intermediate variable access.
+<<figure-intermediate-variable-access>> shows an overview of the solver states and the intended use of intermediate variable access.
 It is not necessary that temporary solver states occur before a finished step.
 For example, variable step-size solvers may try longer steps first and then reduce step size before the step is finished.
 
