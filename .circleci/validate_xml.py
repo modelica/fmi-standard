@@ -27,5 +27,11 @@ print("Parsing fmiBuildConfiguration schema")
 schema = etree.XMLSchema(file='schema/fmi3BuildConfiguration.xsd')
 parser = etree.XMLParser(schema=schema)
 
-print("Parsing build_configuration.xml")
-etree.parse(os.path.join('docs', 'examples', 'build_configuration.xml'), parser)
+xml_files = [
+    'complex_build_configuration.xml',
+    'simple_build_configuration.xml',
+]
+
+for xml_file in xml_files:
+    print("Parsing %s" % xml_file)
+    etree.parse(os.path.join('docs', 'examples', xml_file), parser)
