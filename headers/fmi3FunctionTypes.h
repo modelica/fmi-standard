@@ -190,17 +190,13 @@ typedef void fmi3FreeInstanceTYPE(fmi3Instance instance);
 /* end::FreeInstance[] */
 
 /* Enter and exit initialization mode, enter event mode, terminate and reset */
-/* tag::SetupExperiment[] */
-typedef fmi3Status fmi3SetupExperimentTYPE(fmi3Instance instance,
-                                           fmi3Boolean toleranceDefined,
-                                           fmi3Float64 tolerance,
-                                           fmi3Float64 startTime,
-                                           fmi3Boolean stopTimeDefined,
-                                           fmi3Float64 stopTime);
-/* end::SetupExperiment[] */
-
 /* tag::EnterInitializationMode[] */
-typedef fmi3Status fmi3EnterInitializationModeTYPE(fmi3Instance instance);
+typedef fmi3Status fmi3EnterInitializationModeTYPE(fmi3Instance instance,
+                                                   fmi3Boolean toleranceDefined,
+                                                   fmi3Float64 tolerance,
+                                                   fmi3Float64 startTime,
+                                                   fmi3Boolean stopTimeDefined,
+                                                   fmi3Float64 stopTime);
 /* end::EnterInitializationMode[] */
 
 /* tag::ExitInitializationMode[] */

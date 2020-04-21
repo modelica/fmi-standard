@@ -467,39 +467,6 @@ Depending on the generating modeling environment, none, some or all allowed valu
 
 This section documents functions that deal with configuration, initialization, termination, and resetting of an FMU.
 
-[[fmi3SetupExperiment,`fmi3SetupExperiment`]]
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=SetupExperiment]
-----
-
-This function call informs the FMU to setup the experiment.
-This function must be called after <<fmi3Instantiate>> and before <<fmi3EnterInitializationMode>> is called.
-
-* `toleranceDefined` and `tolerance` depend on the FMI interface type:
-
-Model Exchange::
-If `toleranceDefined = fmi3True`, then the model is called with a numerical integration scheme where the step size is controlled by using `tolerance` for error estimation (usually as relative tolerance).
-In such a case all numerical algorithms used inside the model (for example, to solve non-linear algebraic equations) should also operate with an error estimation of an appropriate smaller relative tolerance.
-
-Co-Simulation::
-If `toleranceDefined = fmi3True`, then the communication step size of the FMU is controlled by error estimation.
-In case the FMU utilizes a numerical integrator with variable step size and error estimation, it is suggested to use `tolerance` for the error estimation of the integrator (usually as relative tolerance). +
-An FMU for Co-Simulation might ignore this argument.
-
-* `startTime` and `stopTime` can be used to check whether the model is valid within the given boundaries, or to allocate the necessary memory for storing results.
-`startTime` is the <<fixed>> <<initial>> value of the <<independent>> variable.
-+
-_[It is defined with <<causality>> = <<independent>> in the `modelDescription.xml`._
-_If the <<independent>> variable is `time`, `startTime` is the starting time of initialization.]_
-
-* If `stopTimeDefined = fmi3True`, then `stopTime` is the final value of the <<independent>> variable.
-If the environment tries to compute past `stopTime`, the FMU has to return `fmi3Status = fmi3Error`.
-If `stopTimeDefined = fmi3False`, then no final value of the <<independent>> variable is defined and argument `stopTime` is meaningless.
-+
-_[If the <<independent>> variable is `time`, `stopTime` is the stop time of the simulation.]_
-
-
 [[fmi3EnterConfigurationMode,`fmi3EnterConfigurationMode`]]
 [source, C]
 ----
@@ -525,7 +492,29 @@ include::../headers/fmi3FunctionTypes.h[tags=EnterInitializationMode]
 Informs the FMU to enter *Initialization Mode*.
 Before calling this function, all variables with attribute <<initial>> = <<exact>> or <<approx>> can be set with the `fmi3Set{VariableType}` functions (the variable attributes are defined in the Model Description File, see <<definition-of-model-variables>>).
 Setting other variables is not allowed.
-Furthermore, <<fmi3SetupExperiment>> must be called at least once before calling <<fmi3EnterInitializationMode>>, in order that `startTime` is defined.
+
+The arguments `toleranceDefined` and `tolerance` depend on the interface type:
+
+Model Exchange::
+If `toleranceDefined = fmi3True`, then the model is called with a numerical integration scheme where the step size is controlled by using `tolerance` for error estimation (usually as relative tolerance).
+In such a case all numerical algorithms used inside the model (for example, to solve non-linear algebraic equations) should also operate with an error estimation of an appropriate smaller relative tolerance.
+
+Co-Simulation::
+If `toleranceDefined = fmi3True`, then the communication step size of the FMU is controlled by error estimation.
+In case the FMU utilizes a numerical integrator with variable step size and error estimation, it is suggested to use `tolerance` for the error estimation of the integrator (usually as relative tolerance). +
+An FMU for Co-Simulation might ignore this argument.
+
+The arguments `startTime` and `stopTime` can be used to check whether the model is valid within the given boundaries, or to allocate the necessary memory for storing results.
+`startTime` is the <<fixed>> <<initial>> value of the <<independent>> variable.
++
+_[It is defined with <<causality>> = <<independent>> in the `modelDescription.xml`._
+_If the <<independent>> variable is `time`, `startTime` is the starting time of initialization.]_
+
+* If `stopTimeDefined = fmi3True`, then `stopTime` is the final value of the <<independent>> variable.
+If the environment tries to compute past `stopTime`, the FMU has to return `fmi3Status = fmi3Error`.
+If `stopTimeDefined = fmi3False`, then no final value of the <<independent>> variable is defined and argument `stopTime` is meaningless.
++
+_[If the <<independent>> variable is `time`, `stopTime` is the stop time of the simulation.]_
 
 [[fmi3ExitInitializationMode,`fmi3ExitInitializationMode`]]
 [source, C]
@@ -555,7 +544,7 @@ include::../headers/fmi3FunctionTypes.h[tags=Reset]
 Is called by the environment to reset the FMU after a simulation run.
 The FMU goes into the same state as if <<fmi3Instantiate>> would have been called.
 All variables have their default values.
-Before starting a new run, <<fmi3SetupExperiment>> and <<fmi3EnterInitializationMode>> have to be called.
+Before starting a new run <<fmi3EnterInitializationMode>> has to be called.
 
 ==== Getting and Setting Variable Values [[get-and-set-variable-values]]
 
