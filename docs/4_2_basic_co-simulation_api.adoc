@@ -6,14 +6,30 @@ This section contains the interface description to access the input/output data 
 
 <<input,`Input`>> and <<output>> variables and other variables are accessed via the `fmi3Get{VariableType}` and `fmi3Set{VariableType}` functions, defined in <<get-and-set-variable-values>>.
 
-In order to enable the slave to interpolate the <<continuous>> floating point <<input,`inputs`>> between communication steps, the <<derivative,`derivatives`>> of the <<input,`inputs`>> with respect to time can be provided.
-Also, higher <<derivative,`derivatives`>> can be set to allow higher order interpolation.
-Whether the slave is able to handle the <<derivative,`derivatives`>> of <<input,`inputs`>> is given by the unsigned integer capability flag `MaxInputDerivativeOrder`. It delivers the maximum order of the input <<derivative>>.
 
-[[fmi3SetInputDerivatives,`fmi3SetInputDerivatives`]]
+
+
+===== Input Approximation [[api-input-approximation]]
+
+In order to enable the slave to approximate the <<continuous>> floating point <<input,`inputs`>> between communication steps, the the coefficients of a polynomial can be provided.
+The order of this approximation is given by the unsigned integer capability flag `MaxInputApproximationOrder`.
+
+The input approximation polynomial on the interval latexmath:[[tc_i, tc_{i+1}]] is defined to be
+
+latexmath:[u(t)= \sum_{j=0}^{k} \frac{1}{j!} u_j (t-tc_i)^j]
+
+where k is the `MaxInputApproximationOrder`.
+
+It is up to the master to define the cofficients latexmath:[u_1] to latexmath:[u_k], while latexmath:[u_0=u_{tc_i}].
+
+_[One choice of the master could be to use the output derivatives of an connectd FMU at time latexmath:[tc_i]:_
+_Then the polynomial corresponds to a Taylor polynomial._+
+_Another choice would be to define them to reach a certain value for latexmath:[u_0=u_{tc_{i+1}}]  ]_
+
+[[fmi3SetInputApproximation,`fmi3SetInputApproximation`]]
 [source, C]
 ----
-include::../headers/fmi3FunctionTypes.h[tags=SetInputDerivatives]
+include::../headers/fmi3FunctionTypes.h[tags=SetInputApproximation]
 ----
 
 [[fmi3GetOutputDerivatives,`fmi3GetOutputDerivatives`]]
@@ -36,7 +52,7 @@ Both functions have the same arguments:
 * `nValues` is the size of the argument `values`.
 --
 
-<<fmi3SetInputDerivatives>>::
+<<fmi3SetInputApproximation>>::
 Sets the n-th time <<derivative>> of <<input>> variables.
 Restrictions on using the function are the same as for the `fmi3Set{VariableType}` function.
 Different input variables may have different interpolation order.
@@ -152,7 +168,7 @@ In this state the FMU can do one-time initializations and allocate memory.
 The FMU sets all variables to its <<start>> values.
 
 Allowed Function Calls::
-<<fmi3SetupExperiment>>, <<fmi3EnterInitializationMode>>, <<fmi3SetInputDerivatives>>, <<fmi3EnterConfigurationMode>>
+<<fmi3SetupExperiment>>, <<fmi3EnterInitializationMode>>, <<fmi3SetInputApproximation>>, <<fmi3EnterConfigurationMode>>
 
 `fmi3Set{VariableType}`::
 For variables with <<variability>> latexmath:[\neq] <<constant>> and for which <<initial>> = <<exact>> or <<approx>>.
@@ -168,7 +184,7 @@ In between the FMU must evaluate all relevant equations.
 In this way artificial or real algebraic loops over connected FMUs in *Initialization Mode* may be handled by using appropriate numerical algorithms.
 
 Allowed Function Calls::
-<<fmi3ExitInitializationMode>>, <<fmi3SetInputDerivatives>>, <<fmi3GetDirectionalDerivative>>
+<<fmi3ExitInitializationMode>>, <<fmi3SetInputApproximation>>, <<fmi3GetDirectionalDerivative>>
 
 `fmi3Set{VariableType}`::
 For variables with:
@@ -187,7 +203,7 @@ Forbidden Function Calls::
 This state is used by the master to progress simulation time.
 
 Allowed Function Calls::
-<<fmi3SetInputDerivatives>>, <<fmi3GetDirectionalDerivative>>, <<fmi3GetOutputDerivatives>>, `fmi3Get{VariableType}`, <<fmi3Terminate>>
+<<fmi3SetInputApproximation>>, <<fmi3GetDirectionalDerivative>>, <<fmi3GetOutputDerivatives>>, `fmi3Get{VariableType}`, <<fmi3Terminate>>
 
 <<fmi3EnterConfigurationMode>>::
 With this function call the *Reconfiguration Mode* is entered.
@@ -246,7 +262,7 @@ If the function returns `fmi3Fatal` the FMU enters the terminal state.
 Allowed Function Calls::
 <<fmi3DoEarlyReturn>>
 
-`fmi3Set{VariableType}`, <<fmi3SetInputDerivatives>>::
+`fmi3Set{VariableType}`, <<fmi3SetInputApproximation>>::
 If `intermediateVariableSetAllowed = fmi3True`, the value of intermediate variables can be set.
 Intermediate variables are variables that are marked with attribute <<intermediateAccess>> = `true` in the `modelDescription.xml`.
 
@@ -270,7 +286,7 @@ Allowed Function Calls::
 Only for variables with <<causality>> = <<structuralParameter>> and <<variability>> = <<tunable>>.
 
 Forbidden Function Calls::
-<<fmi3EnterConfigurationMode>>, <<fmi3Instantiate>>, <<fmi3SetupExperiment>>, <<fmi3EnterInitializationMode>>, <<fmi3ExitInitializationMode>>, <<fmi3GetDoStepDiscardedStatus>>, <<fmi3DoStep>>, <<fmi3EnterStepMode>>, <<fmi3SetInputDerivatives>>, <<fmi3GetDirectionalDerivative>>, <<fmi3GetOutputDerivatives>>, `fmi3Get{VariableType}`
+<<fmi3EnterConfigurationMode>>, <<fmi3Instantiate>>, <<fmi3SetupExperiment>>, <<fmi3EnterInitializationMode>>, <<fmi3ExitInitializationMode>>, <<fmi3GetDoStepDiscardedStatus>>, <<fmi3DoStep>>, <<fmi3EnterStepMode>>, <<fmi3SetInputApproximation>>, <<fmi3GetDirectionalDerivative>>, <<fmi3GetOutputDerivatives>>, `fmi3Get{VariableType}`
 
 ===== State: Step Discarded [[state-step-discarded-co-simulation]]
 
@@ -295,7 +311,7 @@ _[In *Step Mode*, the master may change again FMU <<input,`inputs`>> and <<param
 In this case, a new step may be started from `lastSuccessfulTime` which can be retrieved by the <<fmi3GetDoStepDiscardedStatus>> function in state *Step Discarded*.
 
 Forbidden Function Calls::
-<<fmi3EnterConfigurationMode>>, <<fmi3ExitConfigurationMode>>, <<fmi3Instantiate>>, <<fmi3SetupExperiment>>, <<fmi3EnterInitializationMode>>, <<fmi3ExitInitializationMode>>, <<fmi3DoStep>>, `fmi3Set{VariableType}`, <<fmi3DoEarlyReturn>>, <<fmi3SetInputDerivatives>>
+<<fmi3EnterConfigurationMode>>, <<fmi3ExitConfigurationMode>>, <<fmi3Instantiate>>, <<fmi3SetupExperiment>>, <<fmi3EnterInitializationMode>>, <<fmi3ExitInitializationMode>>, <<fmi3DoStep>>, `fmi3Set{VariableType}`, <<fmi3DoEarlyReturn>>, <<fmi3SetInputApproximation>>
 
 ===== State: Terminated [[state-terminated-co-simulation]]
 
@@ -305,7 +321,7 @@ Allowed Function Calls::
 `fmi3Get{VariableType}`, <<fmi3GetDirectionalDerivative>>, <<fmi3GetOutputDerivatives>>
 
 Forbidden Function Calls::
-<<fmi3EnterConfigurationMode>>, <<fmi3ExitConfigurationMode>>, <<fmi3Instantiate>>, <<fmi3SetupExperiment>>, <<fmi3EnterInitializationMode>>, <<fmi3ExitInitializationMode>>, <<fmi3DoStep>>, `fmi3Set{VariableType}`, <<fmi3DoEarlyReturn>>, <<fmi3SetInputDerivatives>>
+<<fmi3EnterConfigurationMode>>, <<fmi3ExitConfigurationMode>>, <<fmi3Instantiate>>, <<fmi3SetupExperiment>>, <<fmi3EnterInitializationMode>>, <<fmi3ExitInitializationMode>>, <<fmi3DoStep>>, `fmi3Set{VariableType}`, <<fmi3DoEarlyReturn>>, <<fmi3SetInputApproximation>>
 
 ===== State: Configuration Mode [[state-configuration-mode-co-simulation]]
 
@@ -320,7 +336,7 @@ Allowed Function Calls::
 Only for variables with <<causality>> = <<structuralParameter>> and <<variability>> = <<tunable>>.
 
 Forbidden Function Calls::
- <<fmi3EnterConfigurationMode>>, <<fmi3Instantiate>>, <<fmi3SetupExperiment>>, <<fmi3EnterInitializationMode>>, <<fmi3ExitInitializationMode>>, <<fmi3GetDoStepDiscardedStatus>>, <<fmi3DoStep>>, <<fmi3EnterStepMode>>, <<fmi3SetInputDerivatives>>, <<fmi3GetDirectionalDerivative>>, <<fmi3GetOutputDerivatives>>, `fmi3Get{VariableType}`
+ <<fmi3EnterConfigurationMode>>, <<fmi3Instantiate>>, <<fmi3SetupExperiment>>, <<fmi3EnterInitializationMode>>, <<fmi3ExitInitializationMode>>, <<fmi3GetDoStepDiscardedStatus>>, <<fmi3DoStep>>, <<fmi3EnterStepMode>>, <<fmi3SetInputApproximation>>, <<fmi3GetDirectionalDerivative>>, <<fmi3GetOutputDerivatives>>, `fmi3Get{VariableType}`
 
 _[The allowed function calls in the respective states are summarized in the following table (functions marked in [yellow-background]#"yellow"# are only available for Co-Simulation, the other functions are available both for Model Exchange and Co-Simulation):_
 
@@ -364,7 +380,7 @@ _[The allowed function calls in the respective states are summarized in the foll
 |<<fmi3SerializeFMUState>>        |  |x |x |x |  |x |x |x |x
 |<<fmi3DeSerializeFMUState>>      |  |x |x |x |  |x |x |x |x
 |<<fmi3GetDirectionalDerivative>> |  |  |x |x |  |8 |7 |x |7
-|<<fmi3SetInputDerivatives>>  {set:cellbgcolor:yellow}     |  {set:cellbgcolor!} |x |x |x |  |  |  |  |
+|<<fmi3SetInputApproximation>>  {set:cellbgcolor:yellow}     |  {set:cellbgcolor!} |x |x |x |  |  |  |  |
 |<<fmi3GetOutputDerivatives>> {set:cellbgcolor:yellow}     |  {set:cellbgcolor!} |  |  |x |  |8 |x |x |7
 |<<fmi3DoStep>>                   {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |x |  |  |  |  |
 |<<fmi3DoEarlyReturn>>            {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |  |x |  |  |  |
