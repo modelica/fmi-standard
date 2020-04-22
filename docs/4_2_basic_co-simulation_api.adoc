@@ -118,7 +118,8 @@ include::../headers/fmi3FunctionTypes.h[tags=GetDoStepDiscardedStatus]
 
 * If argument `terminate = true`, the slave wants to terminate the simulation.
 
-* `lastSuccessfulTime` is the time instant at which the slave stopped the <<fmi3DoStep>> call.
+[[lastSuccessfulTime,`lastSuccessfulTime`]]
+* <<lastSuccessfulTime>> is the time instant at which the slave stopped the <<fmi3DoStep>> call.
 
 ==== State Machine for Basic Co-Simulation [[state-machine-co-simulation]]
 
@@ -247,12 +248,12 @@ Allowed Function Calls::
 <<fmi3DoEarlyReturn>>
 
 `fmi3Set{VariableType}`, <<fmi3SetInputDerivatives>>::
-If `intermediateVariableSetAllowed = fmi3True`, the value of intermediate variables can be set.
-Intermediate variables are variables that are marked with attribute <<intermediateAccess>> = `true` in the `modelDescription.xml`.
+If <<intermediateVariableSetAllowed,`intermediateVariableSetAllowed = fmi3True`>>, the value of intermediate variables can be set.
+Intermediate variables are variables that are marked with attribute <<intermediateAccess,`intermediateAccess = fmi3True`>> in the `modelDescription.xml`.
 
 `fmi3Get{VariableType}`, <<fmi3GetOutputDerivatives>>::
-If `intermediateVariableGetAllowed = fmi3True`, the value of intermediate variables can be retrieved.
-Intermediate variables are variables that are marked with attribute <<intermediateAccess>> = `true` in the `modelDescription.xml`.
+If <<intermediateVariableGetAllowed,`intermediateVariableGetAllowed = fmi3True`>>, the value of intermediate variables can be retrieved.
+Intermediate variables are variables that are marked with attribute <<intermediateAccess,`intermediateAccess = fmi3True`>> in the `modelDescription.xml`.
 
 Forbidden Function Calls::
 The same functions which are not allowed to be called in *Step Mode* must not be called in this state.
@@ -280,7 +281,7 @@ The master can call <<fmi3GetDoStepDiscardedStatus>> to get further information.
 In case of numerical problems the master may try to achieve a correct solution for example by repeating the last step with a different communication step size. _[Redoing a step is only possible if the FMU state has been recorded at the beginning of the current (discarded) step with <<fmi3GetFMUState>>._
 _Redoing a step is performed by calling `fmi3SetFMUState` and afterwards calling <<fmi3DoStep>> with the new communicationStepSize._
 _Note that it is not possible to change `currentCommunicationPoint` in such a call.]_
-The master can also continue from the `lastSuccessfulTime`.
+The master can also continue from the <<lastSuccessfulTime>>.
 It does not enter into this state if the FMU returns early from a communication step caused by <<fmi3DoEarlyReturn>>.
 
 Allowed Function Calls::
@@ -292,7 +293,7 @@ The master calls this functions to retrieve information about the reason for dis
 <<fmi3EnterStepMode>>::
 The <<fmi3EnterStepMode>> function pushes the FMU from *Step Discarded* to *Step Mode*.
 _[In *Step Mode*, the master may change again FMU <<input,`inputs`>> and <<parameter,`parameters`>>, or push the FMU into other states]_
-In this case, a new step may be started from `lastSuccessfulTime` which can be retrieved by the <<fmi3GetDoStepDiscardedStatus>> function in state *Step Discarded*.
+In this case, a new step may be started from <<lastSuccessfulTime>> which can be retrieved by the <<fmi3GetDoStepDiscardedStatus>> function in state *Step Discarded*.
 
 Forbidden Function Calls::
 <<fmi3EnterConfigurationMode>>, <<fmi3ExitConfigurationMode>>, <<fmi3Instantiate>>, <<fmi3EnterInitializationMode>>, <<fmi3ExitInitializationMode>>, <<fmi3DoStep>>, `fmi3Set{VariableType}`, <<fmi3DoEarlyReturn>>, <<fmi3SetInputDerivatives>>
@@ -408,9 +409,10 @@ include::Reference-FMUs/examples/co_simulation.c[tags=CoSimulation]
 
 ==== Early-return Requested by the Co-Simulation Master in Co-Simulation Interface Types [[earlyreturn-co-simulation]]
 
-The Boolean capability flag `canReturnEarlyAfterIntermediateUpdate` in the modelDescription XML file indicates whether the FMU supports the early-return feature.
+[[canReturnEarlyAfterIntermediateUpdate,`canReturnEarlyAfterIntermediateUpdate`]]
+The Boolean capability flag <<canReturnEarlyAfterIntermediateUpdate>> in the modelDescription XML file indicates whether the FMU supports the early-return feature.
 The default value of this capability flag is `false`.
-Each time an internal discontinuity or an event happens inside an FMU with capability flag `canReturnEarlyAfterIntermediateUpdate = true`, the callback function <<fmi3CallbackIntermediateUpdate>> is invoked by the FMU.
+Each time an internal discontinuity or an event happens inside an FMU with capability flag <<canReturnEarlyAfterIntermediateUpdate,`canReturnEarlyAfterIntermediateUpdate = fmi3True`>>, the callback function <<fmi3CallbackIntermediateUpdate>> is invoked by the FMU.
 The master can only use this early return functionality if it provides the <<fmi3CallbackIntermediateUpdate>> callback function pointer in the instantiate function.
 
 [[fmi3CallbackIntermediateUpdate,`fmi3CallbackIntermediateUpdate`]]
@@ -420,7 +422,7 @@ include::../headers/fmi3FunctionTypes.h[tag=CallbackIntermediateUpdate]
 ----
 
 The Co-Simulation master can request the FMU to end the <<fmi3DoStep>> at a Newtonian time instant and to do an early return by calling the <<fmi3DoEarlyReturn>> function inside the callback function <<fmi3CallbackIntermediateUpdate>>.
-The Co-Simulation master is only allowed to call this function, if `canReturnEarly = fmi3True`.
+The Co-Simulation master is only allowed to call this function, if <<canReturnEarly,`canReturnEarly = fmi3True`>>.
 If the master does not call <<fmi3DoEarlyReturn>> the FMU continues the <<fmi3DoStep>> computation until the next predefined communication instant (i.e., `currentCommunicationPoint + communicationStepSize`) or until the next call of <<fmi3CallbackIntermediateUpdate>>.
 
 [[fmi3DoEarlyReturn,`fmi3DoEarlyReturn`]]
@@ -429,15 +431,16 @@ If the master does not call <<fmi3DoEarlyReturn>> the FMU continues the <<fmi3Do
 include::../headers/fmi3FunctionTypes.h[tag=DoEarlyReturn]
 ----
 
-The FMU should return early from the current <<fmi3DoStep>> at the time instant defined by argument `earlyReturnTime`.
+[[earlyReturnTime,`earlyReturnTime`]]
+The FMU should return early from the current <<fmi3DoStep>> at the time instant defined by argument <<earlyReturnTime>>.
 
-If the `earlyReturnTime` is greater than the last signaled `intermediateUpdateTime`, the FMU may integrate up to the time instant `earlyReturnTime`.
+If the <<earlyReturnTime>> is greater than the last signaled <<intermediateUpdateTime>>, the FMU may integrate up to the time instant <<earlyReturnTime>>.
 
 If the early return is conducted successfully by the FMU it must set the argument `earlyReturn` to `fmi3True` in <<fmi3DoStep>> and return `fmi3OK`.
-In that case the internal simulation time of the FMU equals the value of `earlyReturnTime` of the last <<fmi3DoEarlyReturn>> call.
+In that case the internal simulation time of the FMU equals the value of <<earlyReturnTime>> of the last <<fmi3DoEarlyReturn>> call.
 
-If the requested `earlyReturnTime` is less than the last signaled `intermediateUpdateTime` or the FMU can not reach the requested `earlyReturnTime` for other reasons, the FMU must set the argument `earlyReturn` to `fmi3True` in <<fmi3DoStep>> and return `fmi3Discard` and enter state *Step Discarded*.
+If the requested <<earlyReturnTime>> is less than the last signaled <<intermediateUpdateTime>> or the FMU can not reach the requested <<earlyReturnTime>> for other reasons, the FMU must set the argument `earlyReturn` to `fmi3True` in <<fmi3DoStep>> and return `fmi3Discard` and enter state *Step Discarded*.
 
-In state *Step Discarded* the Co-Simulation master can retrieve the `lastSuccessfulTime` via calling <<fmi3GetDoStepDiscardedStatus>>.
-The Co-Simulation master can decide if a rollback of the FMU to reach the `earlyReturnTime` time is required or it may continue the simulation from `lastSuccessfulTime` for that FMU.
+In state *Step Discarded* the Co-Simulation master can retrieve the <<lastSuccessfulTime>> via calling <<fmi3GetDoStepDiscardedStatus>>.
+The Co-Simulation master can decide if a rollback of the FMU to reach the <<earlyReturnTime>> time is required or it may continue the simulation from <<lastSuccessfulTime>> for that FMU.
 Note that *Event Mode* is not supported in Basic Co-Simulation and Scheduled Co-Simulation.
