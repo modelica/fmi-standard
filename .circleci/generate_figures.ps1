@@ -66,6 +66,9 @@ Export-Schema Terminals 2 -schema fmi3TerminalsAndIcons.xsd
 Export-Schema TerminalMemberVariable 1 -schema fmi3TerminalsAndIcons.xsd
 Export-Schema TerminalStreamMemberVariable 1 -schema fmi3TerminalsAndIcons.xsd
 Export-Schema GraphicalRepresentation 2 -schema fmi3TerminalsAndIcons.xsd
+Export-Schema CoordinateSystem 2 -schema fmi3TerminalsAndIcons.xsd
+Export-Schema Icon 2 -schema fmi3TerminalsAndIcons.xsd
+Export-Schema GraphicalRepresentation 2 -schema fmi3Terminal.xsd -outName "TerminalGraphicalRepresentation.png"
 Export-Schema VendorAnnotations 2
 Export-Schema ModelVariables 2
 Export-Schema fmi3VariableBase 1
