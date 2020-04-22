@@ -23,13 +23,13 @@ for xml_file in xml_files:
     print("Parsing %s" % xml_file)
     etree.parse(os.path.join('docs', 'examples', xml_file), parser)
 
-print("Parsing fmiBuildConfiguration schema")
-schema = etree.XMLSchema(file='schema/fmi3BuildConfiguration.xsd')
+print("Parsing fmiBuildDescription schema")
+schema = etree.XMLSchema(file='schema/fmi3BuildDescription.xsd')
 parser = etree.XMLParser(schema=schema)
 
 xml_files = [
-    'complex_build_configuration.xml',
-    'simple_build_configuration.xml',
+    'build_description_complex.xml',
+    'build_description_simple.xml',
 ]
 
 for xml_file in xml_files:
