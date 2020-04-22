@@ -842,9 +842,74 @@ On the top level, the schema consists of the following elements (see xref:system
 |If present, contains information for authoring tools to draw graphical representations of the FMU in a system view.
 |====
 
-==== Definition of Terminals (Terminals)
+===== Definition of a Graphical Representation (GraphicalRepresentation)
 
-===== Rationale
+====== Rationale
+
+The graphical representation of the FMU and terminals are needed in order to more easily comprehend the meaning of connected FMUs and to help an importing tool to display the terminals and the FMU icon in the way the exporter intended.
+
+The graphical representation is fully optional.
+The graphical representation of terminals is separate from the terminal definitions in the `<Terminals>` element.
+
+There are three optional elements in the `<GraphicalRepresentation>`:
+
+. The `<CoordinateSystem>` defines the extent of the whole icon (graphical items may exceed that rectangle).
+. The `<Icon>` defines an image source for the FMU.
+. The `<Terminal>` sequence contains the graphical representation of the visible terminals.
+
+image::images/schema/GraphicalRepresentation.png[width=100%, align="center"]
+
+====== CoordinateSystem
+
+The `<CoordinateSystem>` element and its defined extent is used as reference for other graphical items. It also provides a scaling factor to millimeter.
+
+The coordinate system is defined by the coordinates of two points, the lower left (`x1`, `y1`) corner and the upper right (`x2`, `y2`) corner, where the coordinates of the first point shall be less than the coordinates of the second point _[a first quadrant coordinate system]_.
+The x-axis directed to the right, the y-axis is directed upwards.
+
+_[The exporting tool should define how the coordinate system unit relates to mm display or print out size._
+_However, an importing tool might choose to use the factor from the default coordinate system extent to the actual coordinate system extent to calculate a scaling factor, to match the default icon size in the importing tool._
+
+_The area defined by the coordinate system suggested to be used as "clickable icon size" in other tools._
+_A `<Terminal>` might be placed outside of this area, so the visible bounding box has to be determined by the importing tool.]_
+
+The coordinate system default is `x1=-100, y1=-100, x2=100, y2=100`. This extent is used if the `<CoordinateSystem>` element is missing.
+The default `suggestedScalingFactorTo_mm` is 0.1.
+So the default coordinate system display size should be 20 mm width and 20 mm height.
+
+The FMU icon and all graphical representations provide the position and extent with the attributes `x1`, `y1`, `x2`, `y2`.
+The values of these attributes directly relate to this coordinate system and are not normalized.
+Flipping of the FMU icon or a terminal can be realized by setting its attributes `x2 < x1` or `y2 < y1` without changing the coordinate system.
+
+====== Icon
+
+image::images/schema/ModelStructure.png[width=80%, align="center"]
+
+The extent and position of the FMU icon are defined in the `<Icon>` element.
+The optional image file of the FMU icon is placed at the path `icon/icon.png` in ZIP archive of the FMU. The terminals should not be visible in the image.
+Optionally an SVG file can be provided if also the PNG file is present.
+This enables high quality rendering and printing in importing tools.
+This SVG file has to be placed at the path `icon/icon.svg` in the ZIP archive.
+
+The point (`x1`, `y1`) maps to the left lower corner of the PNG image or SVG viewport.
+The point (`x2`, `y2`) maps to the right upper corner of the PNG image or SVG viewport.
+
+====== Placement, Extent, and Painting Order of Graphical Items
+
+image::images/GraphicalRepresentation.svg[width=70%, pdfwidth=70%, align="center"]
+
+The clickable icon size is defined by the `<CoordinateSystem>` element.
+The FMU icon itself may exceed this extent (or bounding box).
+The bounding box of the terminals is given by the extent in the terminals element.
+Their location is neither limited to the extent of the icon nor the extent of the coordinate system.
+_[An importing tool has to determine the outer bounding box enclosing all graphical items.]_
+
+Transparent SVG or PNG files are allowed and wanted. The order of the elements in the XML file defines the order of painting.
+The first element in the `<GraphicalRepresentation>` is painted first and therefore behind the others, the last element is painted on top of the others and because of that in front of them.
+_[So the FMU icon should be placed first in the XML file, terminal below.]_
+
+===== Definition of Terminals (Terminals)
+
+====== Rationale
 
 Terminals are fully optional and can be ignored by any importing tool.
 
@@ -868,7 +933,7 @@ _It is not required that the <<causality>> of the terminal member variables in c
 _The SSP standard refers to a `connectorKind`._
 _This `connectorKind` is not related to the `terminalKind` or `variableKind` described in the following sections.]_
 
-===== Terminals
+====== Terminals
 
 Element `<fmiTerminalsAndIcons><Terminals>` is defined as:
 
@@ -922,7 +987,7 @@ _The structured naming convention of the `<ModelVariables>` is <<independent>> f
 
 _A tool may choose to connect terminals with a different or unknown `terminalKind`, if the `matchingRule` matches.]_
 
-===== Terminal Member Variable
+====== Terminal Member Variable
 
 The `<TerminalMemberVariable>` is defined as:
 
@@ -985,7 +1050,7 @@ Restricted to <<input>> and <<output>>, <<parameter>> and <<calculatedParameter>
 _[Example: Electric current]_
 |====
 
-===== General remark on signal
+====== General remark on signal
 
 _[The signal `variableKind` can be applied for different use cases._
 _The first use case is a signal flow from an <<output>> of one FMU to an <<input>> of another FMU. The <<output>> value has to be forwarded to the <<input>>._
@@ -1006,7 +1071,7 @@ _This is also possible with <<calculated>> <<parameter,`parameters`>>._
 _One example of use would be the cross sectional flow area in pipes which is calculated from geometry parameters._
 _A change in the cross sectional flow area is relevant for the momentum equation, and therefore the connection has to be deemed incompatible if these variables are present and unequal.]_
 
-===== General remark on inflow and outflow
+====== General remark on inflow and outflow
 
 _[Flow variables have a direction and must fulfill a zero sum constraint i.e. the sum of all flow variables connected together must be zero (Kirchhoff's current law)._
 _In addition because different tools might have different direction definitions both, `inflow` and `outflow` are available as `variableKind`._
@@ -1022,7 +1087,7 @@ Other, none scalar, quantities which also sum up to zero, like a mechanical forc
 This is the case since Kirchhoff's current law only holds for scalars where a sign convention is sufficient.
 Other definitions are beyond the scope of this terminal specification and need clear definition in other specifications on top of this.]_
 
-===== Terminal Stream Member Variable
+====== Terminal Stream Member Variable
 
 The `<TerminalStreamMemberVariable>` is defined as:
 
@@ -1068,58 +1133,7 @@ _In Modelica the inStream variable is not directly visible, the value can only b
 _It is suggested that Modelica tools exporting an FMU derive the member name for the inStream variable according to the scheme "<outStream name>_inStream"._
 _E.g. if the outStream name is "h_outflow" then the inStream name should be "h_outflow_inStream".]_
 
-==== Definition of a Graphical Representation (GraphicalRepresentation)
-
-===== Rationale
-
-The graphical representation of the FMU and terminals are needed in order to more easily comprehend the meaning of connected FMUs and to help an importing tool to display the terminals and the FMU icon in the way the exporter intended.
-
-The graphical representation is fully optional.
-The graphical representation of terminals is separate from the terminal definitions in the `<Terminals>` element.
-
-There are three optional elements in the `<GraphicalRepresentation>`:
-
-. The `<CoordinateSystem>` defines the extent of the whole icon (graphical items may exceed that rectangle).
-. The `<Icon>` defines an image source for the FMU.
-. The `<Terminal>` sequence contains the graphical representation of the visible terminals.
-
-image::images/schema/GraphicalRepresentation.png[width=100%, align="center"]
-
-===== CoordinateSystem
-
-The `<CoordinateSystem>` element and its defined extent is used as reference for other graphical items. It also provides a scaling factor to millimeter.
-
-The coordinate system is defined by the coordinates of two points, the lower left (`x1`, `y1`) corner and the upper right (`x2`, `y2`) corner, where the coordinates of the first point shall be less than the coordinates of the second point _[a first quadrant coordinate system]_.
-The x-axis directed to the right, the y-axis is directed upwards.
-
-_[The exporting tool should define how the coordinate system unit relates to mm display or print out size._
-_However, an importing tool might choose to use the factor from the default coordinate system extent to the actual coordinate system extent to calculate a scaling factor, to match the default icon size in the importing tool._
-
-_The area defined by the coordinate system suggested to be used as "clickable icon size" in other tools._
-_A `<Terminal>` might be placed outside of this area, so the visible bounding box has to be determined by the importing tool.]_
-
-The coordinate system default is `x1=-100, y1=-100, x2=100, y2=100`. This extent is used if the `<CoordinateSystem>` element is missing.
-The default `suggestedScalingFactorTo_mm` is 0.1.
-So the default coordinate system display size should be 20 mm width and 20 mm height.
-
-The FMU icon and all graphical representations provide the position and extent with the attributes `x1`, `y1`, `x2`, `y2`.
-The values of these attributes directly relate to this coordinate system and are not normalized.
-Flipping of the FMU icon or a terminal can be realized by setting its attributes `x2 < x1` or `y2 < y1` without changing the coordinate system.
-
-===== Icon
-
-image::images/schema/ModelStructure.png[width=80%, align="center"]
-
-The extent and position of the FMU icon are defined in the `<Icon>` element.
-The optional image file of the FMU icon is placed at the path `icon/icon.png` in ZIP archive of the FMU. The terminals should not be visible in the image.
-Optionally an SVG file can be provided if also the PNG file is present.
-This enables high quality rendering and printing in importing tools.
-This SVG file has to be placed at the path `icon/icon.svg` in the ZIP archive.
-
-The point (`x1`, `y1`) maps to the left lower corner of the PNG image or SVG viewport.
-The point (`x2`, `y2`) maps to the right upper corner of the PNG image or SVG viewport.
-
-===== Terminals
+====== Graphical Representation of Terminals
 
 For `fmi3Terminals` (terminals which are listed in the `<Terminals>` element) the name of the terminal in the `<GraphicalRepresentation>` is equal to the name of the terminal in the `<Terminals>` element (e.g. `port_a`).
 Only `Terminal` elements which are direct children of the `Terminals` element can have a graphical representation.
@@ -1144,20 +1158,6 @@ _The attribute `name` of the connector element is equal to the `name` attribute 
 
 _[Only terminals from the `<Terminals>` element can have a graphical representation._
 _For simple <<input,`inputs`>> / <<output,`outputs`>> a terminal with one member has to be added.]_
-
-===== Placement, Extent, and Painting Order of Graphical Items
-
-image::images/GraphicalRepresentation.svg[width=70%, pdfwidth=70%, align="center"]
-
-The clickable icon size is defined by the `<CoordinateSystem>` element.
-The FMU icon itself may exceed this extent (or bounding box).
-The bounding box of the terminals is given by the extent in the terminals element.
-Their location is neither limited to the extent of the icon nor the extent of the coordinate system.
-_[An importing tool has to determine the outer bounding box enclosing all graphical items.]_
-
-Transparent SVG or PNG files are allowed and wanted. The order of the elements in the XML file defines the order of painting.
-The first element in the `<GraphicalRepresentation>` is painted first and therefore behind the others, the last element is painted on top of the others and because of that in front of them.
-_[So the FMU icon should be placed first in the XML file, terminal below.]_
 
 ==== Definition of Vendor Annotations (VendorAnnotations)
 
