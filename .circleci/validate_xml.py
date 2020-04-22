@@ -23,3 +23,14 @@ xml_files = [
 for xml_file in xml_files:
     print("Parsing %s" % xml_file)
     etree.parse(os.path.join('docs', 'examples', xml_file), parser)
+
+print("Parsing fmiTerminalsAndIcons schema")
+schema = etree.XMLSchema(file='schema/fmi3TerminalsAndIcons.xsd')
+parser = etree.XMLParser(schema=schema)
+
+xml_files = [
+]
+
+for xml_file in xml_files:
+    print("Parsing %s" % xml_file)
+    etree.parse(os.path.join('docs', 'examples', xml_file), parser)
