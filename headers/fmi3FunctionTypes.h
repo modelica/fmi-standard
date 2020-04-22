@@ -604,6 +604,7 @@ typedef fmi3Status fmi3SetInputApproximationTYPE(fmi3Instance instance,
 typedef fmi3Status fmi3GetOutputDerivativesTYPE(fmi3Instance instance,
                                                 const fmi3ValueReference valueReferences[],
                                                 size_t nValueReferences,
+                                                const fmi3Int32 order,
                                                 fmi3Float64 values[],
                                                 size_t nValues);
 /* end::GetOutputDerivatives[] */
