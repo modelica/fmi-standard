@@ -23,13 +23,18 @@ include::../headers/fmi3FunctionTypes.h[tags=SetInputApproximation]
 --
 * `valueReferences` is a vector of value references that define the variables whose input approximation coefficients shall be set.
 
-* `nValueReferences` is the dimension of the arguments `valueReferences` and `orders`.
+* `nValueReferences` is the dimension of the argument `valueReferences`
 
-* `orders` contains the orders of the respective approximatioan (`orders` must be larger than zero and smaller than `maxInputApproxmationOrder`).
+* `values` is a vector with the values of the approximation coefficients. The or of the `values` elements is derived from a threefold serialization: the outer level corresponds to the index of the coefficient, the middle level to the `valueReferences`, the inner level to the serialization of variables. The inner level does not exist for scalar variables.
 
-* `values` is a vector with the values of the approximation coefficients
+Example:
 
-* `nValues` is the size of the argument `values`.
+u1[2*3] u2 u3[2]
+`inputApproximationOrder`=2
+
+((array serialization of coefficient a_0 for u1), coefficient a_0 for  u2, (array serialization of coefficient a_0 for u3) , (array serialization of coefficient a_1 for u1), coefficient a_1 for  u2, (array serialization of coefficient a_1 for u3) )
+
+* `nValues` is the size of the argument `values`. `nValues` only equals `inputApproximationOrder` * `nValueReferences` if all corresponding input variables are scalar variables.
 --
 
 <<fmi3SetInputApproximation>>::
@@ -37,11 +42,11 @@ Restrictions on using the function are the same as for the `fmi3Set{VariableType
 
 The input approximation polynomial on the interval latexmath:[[tc_i, tc_{i+1}]] is defined to be
 
-latexmath:[u(t)= \sum_{j=0}^{k} \frac{1}{j!} u_j (t-tc_i)^j]
+latexmath:[u(t)= \sum_{j=0}^{k} \frac{1}{j!} a_j (t-tc_i)^j]
 
 where k is the `inputApproximationOrder`.
 
-It is up to the master to calculate the cofficients latexmath:[u_0] to latexmath:[u_k]. latexmath:[u_1] to latexmath:[u_k] is set using <<fmi3SetInputApproximation>>, while latexmath:[u_0=u_{tc_i}] is set with <<fmi3SetReal64>>.
+It is up to the master to calculate the cofficients latexmath:[a_0] to latexmath:a_k]. latexmath:[a_1] to latexmath:[a_k] is set using <<fmi3SetInputApproximation>>, while latexmath:[a_0=u_{tc_i}] is set with <<fmi3SetReal64>>.
 
 _[One choice of the master could be to define them to reach a certain value for latexmath:[u_{tc_{i+1}}] with a linear interpolation._ +
 _Another choice of the master could be to use the output derivatives of an connected FMU at time latexmath:[tc_i]:_ +
@@ -58,13 +63,14 @@ include::../headers/fmi3FunctionTypes.h[tags=GetOutputDerivatives]
 --
 * `valueReferences` is a vector of value references that define the variables whose <<derivative,`derivatives`>> shall be get.
 
-* `nValueReferences` is the dimension of the arguments `valueReferences` and `orders`.
+* `nValueReferences` is the dimension of the argument `valueReferences`.
 
-* `orders` contains the orders of the respective <<derivative>> (`orders` must be larger than zero and smaller than `maxOutputDerivativesOrder`).
+* `order` defines up which order the respective <<derivative>> are provided (`order` must be larger than zero and must not exceed `maxOutputDerivativesOrder`). +
+_[ This is realized differently than for <<fmi3SetInputApproximation>> because it is expensive to calculate higher orders of derivatives if they are not needed. ]_
 
-* `values` is a vector with the values of the <<derivative,`derivatives`>>.
+* `values` is a vector with the values of the <<derivative,`derivatives`>>. The serialization is analogous as for the `values` in <<fmi3SetInputApproximation>>.
 
-* `nValues` is the size of the argument `values`.
+* `nValues` is the size of the argument `values`. `nValues` only equals `order` * `nValueReferences` if all corresponding input variables are scalar variables.
 --
 
 <<fmi3GetOutputDerivatives>>::
