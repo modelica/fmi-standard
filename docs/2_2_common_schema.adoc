@@ -712,6 +712,16 @@ The ticks of these clocks define the sampling points (i.e. communication points)
 These clocks are ignored by Model Exchange, and it is not allowed to include <<clock,`clocks`>> of different `clockType` in one FMU.
 `clockType` is a required attribute.
 
+
+|`relatedOutputClockReference`
+|
+[[relatedOutputClockReference,`relatedOutputClockReference`]]
+The optional attribute <<relatedOutputClockReference>> is used to define a tick relationship from a <<outputClock>> to an aperiodic <<inputClock>> (see <<clock-relationships-for-communication-point-clocks>>).
+
+Only <<clock,`clocks`>> with <<causality>> = <<input>> and <<clockType>> = <<communicationPoint>> can have this attribute.
+It is not allowed to combine <<outputClock,`output clocks`>> with periodic or strict periodic <<inputClock,`input clocks`>> based on <<relatedOutputClockReference>>.
+
+
 |`priority`
 |The <<clock,`clocks`>> are ordered descending based on their priorities.
 The priority of a <<clock>> has to be defined via the unsigned integer attribute `priority` - smaller values have a higher priority.
@@ -1237,11 +1247,13 @@ Allowed values of this enumeration:
 
 [[input,`input`]]
 - `input`: The variable value can be provided from another model or slave.
+If <<variability>> = <<clock>> the variable defines an <<inputClock, `input clock`>> that is controlled by the master.
 It is not allowed to define <<initial>>.
 
 [[output,`output`]]
 - `output`: The variable value can be used by another model or slave.
 The algebraic relationship to the <<input,`inputs`>> is defined via the <<dependencies>> attribute of `<fmiModelDescription><ModelStructure><Output>`.
+If <<variability>> = <<clock>> the variable defines an <<outputClock,`output clock`>> that is controlled  by the FMU..
 
 [[local,`local`]]
 - `local`: Local variable that is calculated from other variables or is a continuous-time <<state>> or an event indicator (see <<ModelStructure>>).
@@ -1277,15 +1289,6 @@ _]_
 
 <<structuralParameter,`structural parameters`>> that are referenced in `<Dimension>` elements may have a `min` attribute with 0 but the <<start>> attribute, which is mandatory for <<structuralParameter,`structural parameters`>>, must have a value larger than 0 for <<structuralParameter,`structural parameters`>> used in `<Dimension>` elements. _[This allows importing tools to ignore <<structuralParameter,`structural parameters`>> because that <<start>> value reflects the internal default setting of that <<structuralParameter,`structural parameter`>>]_.
 
-[[inputClock,`input clock`]]
-- `input`: the variable defines an <<inputClock>> that is controlled by the master.
-Variability must be <<clock>>.
-Only a variable of type `<Clock>` can have this <<causality>>.
-
-[[outputClock,`output clock`]]
-- `output`: the variable defines an <<outputClock>> that is controlled by the FMU.
-Variability must be <<clock>>.
-Only a variable of type `<Clock>` can have this <<causality>>.
 
 The default of <<causality>> is <<local>>. +
 A continuous-time <<state>> or a event indicator must have <<causality>> = <<local>> or <<output>>, see also <<ModelStructure>>.
@@ -1380,22 +1383,16 @@ _For example, there is no mechanism in the Modelica language to formulate connec
 |
 [[clockReference,`clockReference`]]
 The optional attribute <<clockReference>> is used to define the <<clock,`clocks`>> this variable is assigned to.
-This attribute can be used in all variable sub types with restrictions based on the `clockType`  attribute.
+This attribute can be used in all variable sub types with restrictions based on the `clockType` attribute of the referenced <<clock>>.
 The <<clockReference>> holds only <<valueReference>> information for variables with base type `fmi3Clock`.
 
-Clock (`clockType = STClock`): If present, the variable is a clocked variable associated uniquely with the <<clock>> referenced by <<valueReference>> and defined in element `<ModelVariables>`.
+If the <<clock>> referenced by <<clockReference>> is a synchronous clock (<<clockType>> = <<synchronousTime>>), the variable is a clocked variable associated uniquely with this <<clock>>.
 It is not possible to associate more than one <<clock>> to a variable.
 
-Communication Point Clock (`clockType = communicationPoint`): If present, the variable is associated with the <<clock>> referenced by <<valueReference>> and defined in element `<ModelVariables>`.
-It is possible to associate multiple <<clock,`clocks`>> to a variable.
-Variables that are assigned to a Communication Point Clock are not necessarily `clocked` in the sense of synchronous time clock theory. Such variables can also be continuous-time or discrete-time variables.
+If the <<clock>> referenced by <<clockReference>> is a communication point clock (<<clockType>> = <<communicationPoint>>) the variable is not necessarily `clocked` in the sense of synchronous time clock theory. Such variables can also be continuous-time or discrete-time variables.
 
-If <<outputClock,`output clocks`>> and <<inputClock,`input clocks`>> of `clockType = communicationPoint` are defined in the `modelDescription.xml` it is possible to define a tick relationship from a <<outputClock>> to an aperiodic <<inputClock>> based on <<clockReference>> (<<clock-relationships-for-communication-point-clocks>>).
-This is done for aperiodic <<inputClock,`input clocks`>> that have the `clockType = communicationPoint` via providing a list of <<valueReference>> of <<outputClock,`output clocks`>> of the same FMU.
-If a <<outputClock>> of this <<valueReference>> list ticks the master has to create a tick for the associated aperiodic <<inputClock>> at the same time instant.
-It is not allowed to combine <<outputClock,`output clocks`>> with periodic or strict periodic <<inputClock,`input clocks`>> based on <<clockReference>>.
+If <<causality>> = <<output>> and <<variablity>> = <<clock>> the <<outputClock>> tick event can occur only in the model partition that is related to the referenced <<inputClock>>, i.e. the <<outputClock,`output clock's`>> value (active/inactive) can only change in this model partition.
 
-The attribute <<clockReference>> must not be used if <<causality>> = <<output>> for a variable.
 
 |`intermediateAccess`
 |
@@ -1432,10 +1429,10 @@ _[in order to provide new values for <<input,`inputs`>> during continuous integr
 
 If <<initial>> is not present, its value is defined by the following tables based on the values of <<causality>> and <<variability>>:
 
-[cols="1,1,1,1,1,1,1,1,1,1,1,1"]
+[cols="1,1,1,1,1,1,1,1,1,1"]
 |====
 3.2+|
-9+^|<<causality>>
+7+^|<<causality>>
 ^|<<structuralParameter>>
 ^|<<parameter>>
 ^|<<calculatedParameter>>
@@ -1443,8 +1440,6 @@ If <<initial>> is not present, its value is defined by the following tables base
 ^|<<output>>
 ^|<<local>>
 ^|<<independent>>
-^|<<input>>
-^|<<output>>
 
 .7+^|<<variability>>
 .3+^|data
@@ -1456,8 +1451,6 @@ If <<initial>> is not present, its value is defined by the following tables base
 ^|[green]#(A)#
 ^|[green]#(A)#
 ^|[red]#--#
-^|[red]#--#
-^|[red]#--#
 
 ^|<<fixed>>
 ^|[green]#(A)#
@@ -1467,8 +1460,6 @@ If <<initial>> is not present, its value is defined by the following tables base
 ^|[red]#--#
 ^|[maroon]#(B)#
 ^|[red]#--#
-^|[red]#--#
-^|[red]#--#
 
 ^|<<tunable>>
 ^|[green]#(A)#
@@ -1477,8 +1468,6 @@ If <<initial>> is not present, its value is defined by the following tables base
 ^|[red]#--#
 ^|[red]#--#
 ^|[maroon]#(B)#
-^|[red]#--#
-^|[red]#--#
 ^|[red]#--#
 
 .2+^|signals
@@ -1490,8 +1479,6 @@ If <<initial>> is not present, its value is defined by the following tables base
 ^|\(C)
 ^|\(C)
 ^|[red]#--#
-^|[red]#--#
-^|[red]#--#
 
 ^|<<continuous>>
 ^|[red]#--#
@@ -1501,20 +1488,16 @@ If <<initial>> is not present, its value is defined by the following tables base
 ^|\(C)
 ^|\(C)
 ^|[purple]#(E)#
-^|[red]#--#
-^|[red]#--#
 
 1+^|<<clock,`clocks`>>
 ^|<<clock>>
 ^|[red]#--#
 ^|[red]#--#
 ^|[red]#--#
-^|[red]#--#
-^|[red]#--#
-^|[red]#--#
-^|[red]#--#
 ^|[brown]#(F)#
 ^|[brown]#(G)#
+^|[red]#--#
+^|[red]#--#
 |====
 
 with
@@ -1565,10 +1548,10 @@ _(3) If \(C) and <<initial>> = <<exact>>, then the variable is explicitly define
 
 The following combinations of <<variability>>/<<causality>> settings are allowed:
 
-[cols="1,1,1,1,1,1,1,1,1,1,1,1"]
+[cols="1,1,1,1,1,1,1,1,1,1"]
 |====
 3.2+|
-9+^|<<causality>>
+7+^|<<causality>>
 ^|<<structuralParameter>>
 ^|<<parameter>>
 ^|<<calculatedParameter>>
@@ -1576,8 +1559,6 @@ The following combinations of <<variability>>/<<causality>> settings are allowed
 ^|<<output>>
 ^|<<local>>
 ^|<<independent>>
-^|<<input>>
-^|<<output>>
 
 .6+^|<<variability>>
 .3+^|data
@@ -1589,8 +1570,6 @@ The following combinations of <<variability>>/<<causality>> settings are allowed
 ^|[green]#(7)#
 ^|[green]#(10)#
 ^|[red]#-- (c)#
-^|[red]#--#
-^|[red]#--#
 
 ^|<<fixed>>
 ^|[green]#(16)#
@@ -1600,8 +1579,6 @@ The following combinations of <<variability>>/<<causality>> settings are allowed
 ^|[red]#-- (e)#
 ^|[green]#(11)#
 ^|[red]#-- (c)#
-^|[red]#--#
-^|[red]#--#
 
 ^|<<tunable>>
 ^|[green]#(17)#
@@ -1611,8 +1588,6 @@ The following combinations of <<variability>>/<<causality>> settings are allowed
 ^|[red]#-- (e)#
 ^|[green]#(12)#
 ^|[red]#-- (c)#
-^|[red]#--#
-^|[red]#--#
 
 .2+^|signals
 ^|<<discrete>>
@@ -1623,8 +1598,6 @@ The following combinations of <<variability>>/<<causality>> settings are allowed
 ^|[green]#(8)#
 ^|[green]#(13)#
 ^|[red]#--(c)#
-^|[red]#--#
-^|[red]#--#
 
 ^|<<continuous>>
 ^|[red]#-- (b)#
@@ -1634,20 +1607,16 @@ The following combinations of <<variability>>/<<causality>> settings are allowed
 ^|[green]#(9)#
 ^|[green]#(14)#
 ^|[green]#(15)#
-^|[red]#--#
-^|[red]#--#
 
 .1+^|clocks
 ^|<<clock>>
 ^|[red]#--#
 ^|[red]#--#
 ^|[red]#--#
+^|[red]#(18)#
+^|[red]#(18)#
 ^|[red]#--#
 ^|[red]#--#
-^|[red]#--#
-^|[red]#--#
-^|[red]#18#
-^|[red]#18#
 |====
 
 _[Discussion of the combinations that are not allowed:_

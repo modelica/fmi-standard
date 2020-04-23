@@ -391,7 +391,7 @@ In other cases, a null pointer can be assigned to the <<intermediateUpdate>> cal
 * <<eventOccurred,`eventOccurred = fmi3True`>> means that an internal event has occurred.
 
 [[clocksTicked,`clocksTicked`]]
-* <<clocksTicked,`clocksTicked = fmi3True`>> means that an FMU clock has ticked.
+* <<clocksTicked,`clocksTicked = fmi3True`>> means that an FMU <<outputClock>> has ticked.
 
 [[intermediateVariableSetAllowed,`intermediateVariableSetAllowed`]]
 * <<intermediateVariableSetAllowed,`intermediateVariableSetAllowed = fmi3True`>> means the master algorithm is allowed to set FMU variables using `fmi3Set{VariableType}`.
@@ -664,7 +664,7 @@ _This mode can also be requested by the calling environment with <<fmi3SetClock>
 
 ====== Communication Point Clocks
 
-Communication Point Clocks, introduced here, are used only in FMI for Basic Co-Simulation to define the communication points of model partitions (defined below).
+Communication Point Clocks, introduced here, are used only in Basic Co-Simulation, Hybrid Co-Simulation and Scheduled Co-Simulation to define the communication points of model partitions (defined below).
 These <<clock,`clocks`>> are not compatible with synchronous clocks theory and must not be used together with synchronous clocks in one model.
 
 A model partition is mathematically defined as:
@@ -687,7 +687,7 @@ This section gives a definition of the two clock variants.
 
 ====== Output Clocks
 
-An <<outputClock>> is a general <<clock>> that ticks when a time-, state- or step-event occurs in the continuous-model partition of the FMU (for Communication Point Clocks these <<outputClock>> tick events can occur in all model partitions) and are identified based on their <<clockReference>> (see <<operation-on-clocks>>).
+An <<outputClock>> is a general <<clock>> that ticks when a time-, state- or step-event occurs in the continuous-model partition of the FMU (for Communication Point Clocks these <<outputClock>> tick events can occur in all model partitions) and are identified based on their <<valueReference>>.
 The events can be periodic or non-periodic.
 
 _[Example: If_ latexmath:[b = x > 0] _, and a state event is defined when b changes from `false` to `true`, and b is defined as <<outputClock>>, then this <<clock>> is active whenever x changes from negative to positive values.]_
@@ -778,8 +778,8 @@ If <<outputClock,`output clocks`>> and <<inputClock,`input clocks`>> are defined
 This is needed to allow for an external resource management to achieve an optimal control of model partitions.
 The <<outputClock,`output clocks`>> and the associated <<inputClock,`input clocks`>> define a union of <<clock,`clocks`>>.
 In that sense, if an <<outputClock>> ticks the associated <<inputClock>> ticks at the same time instant in such a union.
-It is only meaningful to combine one or multiple <<outputClock,`output clocks`>> with a single aperiodic <<inputClock>> in such a union.
-It is possible to define multiple unions of <<clock,`clocks`>>, with the maximum number defined by the number of available aperiodic <<inputClock,`input clocks`>>.
+It is only meaningful to combine an <<outputClock,`output clock`>> with an aperiodic <<inputClock>> in such a union.
+It is possible to define multiple unions of <<clock,`clocks`>>, with the maximum number defined by the number of available aperiodic <<inputClock,`input clocks`>>, i.e. each <<inputClock,`input clock`>> may be contained at most in one union of clocks.
 
 [cols="1,2"]
 |===
@@ -796,7 +796,7 @@ It is possible to define multiple unions of <<clock,`clocks`>>, with the maximum
 |-
 |===
 
-A clock union can be defined based on the <<clockReference>> attribute of <<inputClock>> variables.
+A clock union can be defined based on the <<relatedOutputClockReference>> attribute of <<inputClock>> variables.
 
 [#ExampleUseCase]
 image::images/example_usecase.png[]
@@ -830,6 +830,7 @@ Sets <<clock,`clocks`>> activation status by providing the value references of t
 * `nValueReferences` indicates the size of the parallel arrays `valueReferences` and `values` (and potentially `subactive`).
 
 * `subactive` requires evaluation of a clocked partition in subactive mode (only output equations) if the argument subactive is not a null pointer and `subactive[i] = fmi3True`. `subactive[i]` has no meaning for Communication Point Clocks and is ignored for such <<clock,`clocks`>>.
+
 It is not allowed to call this function within the callback function <<intermediateUpdate>>.
 
 [[fmi3GetClock,`fmi3GetClock`]]
@@ -889,7 +890,7 @@ The following table summarizes the use of the API functions by the environment f
 |<<inputClock,`Input clock`>>
 
 |`fmi3GetClock`
-|Call during *Event Mode*
+|Call during *Event Mode* or *Intermediate Update Mode* 
 |Call during *Event Mode*
 
 |`fmi3SetClock`
