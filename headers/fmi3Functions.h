@@ -200,7 +200,6 @@ Functions for Co-Simulation
 
 /* Simulating the slave */
 #define fmi3EnterStepMode            fmi3FullName(fmi3EnterStepMode)
-#define fmi3SetInputDerivatives      fmi3FullName(fmi3SetInputDerivatives)
 #define fmi3GetOutputDerivatives     fmi3FullName(fmi3GetOutputDerivatives)
 #define fmi3DoStep                   fmi3FullName(fmi3DoStep)
 #define fmi3ActivateModelPartition   fmi3FullName(fmi3ActivateModelPartition)
@@ -311,7 +310,6 @@ Functions for Co-Simulation
 
 /* Simulating the slave */
 FMI3_Export fmi3EnterStepModeTYPE          fmi3EnterStepMode;
-FMI3_Export fmi3SetInputDerivativesTYPE    fmi3SetInputDerivatives;
 FMI3_Export fmi3GetOutputDerivativesTYPE   fmi3GetOutputDerivatives;
 FMI3_Export fmi3ActivateModelPartitionTYPE fmi3ActivateModelPartition;
 FMI3_Export fmi3DoStepTYPE                 fmi3DoStep;
