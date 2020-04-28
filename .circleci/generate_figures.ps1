@@ -61,10 +61,14 @@ Export-Schema Enumeration 3 -schema fmi3Type.xsd
 Export-Schema Clock 3 -schema fmi3Type.xsd
 Export-Schema LogCategories 3
 Export-Schema DefaultExperiment 1
-Export-Schema Terminals 2
-Export-Schema TerminalMemberVariable 1
-Export-Schema TerminalStreamMemberVariable 1
-Export-Schema GraphicalRepresentation 2
+Export-Schema fmiTerminalsAndIcons 1 -schema fmi3TerminalsAndIcons.xsd
+Export-Schema Terminals 2 -schema fmi3TerminalsAndIcons.xsd
+Export-Schema TerminalMemberVariable 1 -schema fmi3TerminalsAndIcons.xsd
+Export-Schema TerminalStreamMemberVariable 1 -schema fmi3TerminalsAndIcons.xsd
+Export-Schema GraphicalRepresentation 2 -schema fmi3TerminalsAndIcons.xsd
+Export-Schema CoordinateSystem 2 -schema fmi3TerminalsAndIcons.xsd
+Export-Schema Icon 2 -schema fmi3TerminalsAndIcons.xsd
+Export-Schema GraphicalRepresentation 2 -schema fmi3Terminal.xsd -outName "TerminalGraphicalRepresentation.png"
 Export-Schema VendorAnnotations 2
 Export-Schema ModelVariables 2
 Export-Schema fmi3VariableBase 1
