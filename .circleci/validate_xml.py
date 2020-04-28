@@ -7,7 +7,6 @@ parser = etree.XMLParser(schema=schema)
 
 xml_files = [
     'alias_example.xml',
-    # 'build_configuration.xml',
     'co_simulation.xml',
     'co_simulation_early_return.xml',
     'model_exchange.xml',
