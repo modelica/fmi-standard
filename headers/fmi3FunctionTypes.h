@@ -78,17 +78,6 @@ typedef void  (*fmi3CallbackLogMessage)     (fmi3InstanceEnvironment instanceEnv
                                              fmi3String message);
 /* end::CallbackLogMessage[] */
 
-/* tag::CallbackAllocateMemory[] */
-typedef void* (*fmi3CallbackAllocateMemory) (fmi3InstanceEnvironment instanceEnvironment,
-                                             size_t nobj,
-                                             size_t size);
-/* end::CallbackAllocateMemory[] */
-
-/* tag::CallbackFreeMemory[] */
-typedef void  (*fmi3CallbackFreeMemory)     (fmi3InstanceEnvironment instanceEnvironment,
-                                             void* obj);
-/* end::CallbackFreeMemory[] */
-
 /* tag::CallbackIntermediateUpdate[] */
 typedef fmi3Status (*fmi3CallbackIntermediateUpdate) (
                    fmi3InstanceEnvironment instanceEnvironment,
@@ -133,9 +122,7 @@ typedef fmi3Instance fmi3InstantiateModelExchangeTYPE(
     fmi3Boolean                visible,
     fmi3Boolean                loggingOn,
     fmi3InstanceEnvironment    instanceEnvironment,
-    fmi3CallbackLogMessage     logMessage,
-    fmi3CallbackAllocateMemory allocateMemory,
-    fmi3CallbackFreeMemory     freeMemory);
+    fmi3CallbackLogMessage     logMessage);
 
 typedef fmi3Instance fmi3InstantiateBasicCoSimulationTYPE(
     fmi3String                     instanceName,
@@ -148,8 +135,6 @@ typedef fmi3Instance fmi3InstantiateBasicCoSimulationTYPE(
     fmi3Boolean                    intermediateVariableSetRequired,
     fmi3InstanceEnvironment        instanceEnvironment,
     fmi3CallbackLogMessage         logMessage,
-    fmi3CallbackAllocateMemory     allocateMemory,
-    fmi3CallbackFreeMemory         freeMemory,
     fmi3CallbackIntermediateUpdate intermediateUpdate);
 
 typedef fmi3Instance fmi3InstantiateHybridCoSimulationTYPE(
@@ -163,8 +148,6 @@ typedef fmi3Instance fmi3InstantiateHybridCoSimulationTYPE(
     fmi3Boolean                    intermediateVariableSetRequired,
     fmi3InstanceEnvironment        instanceEnvironment,
     fmi3CallbackLogMessage         logMessage,
-    fmi3CallbackAllocateMemory     allocateMemory,
-    fmi3CallbackFreeMemory         freeMemory,
     fmi3CallbackIntermediateUpdate intermediateUpdate);
 
 typedef fmi3Instance fmi3InstantiateScheduledCoSimulationTYPE(
@@ -178,8 +161,6 @@ typedef fmi3Instance fmi3InstantiateScheduledCoSimulationTYPE(
     fmi3Boolean                    intermediateVariableSetRequired,
     fmi3InstanceEnvironment        instanceEnvironment,
     fmi3CallbackLogMessage         logMessage,
-    fmi3CallbackAllocateMemory     allocateMemory,
-    fmi3CallbackFreeMemory         freeMemory,
     fmi3CallbackIntermediateUpdate intermediateUpdate,
     fmi3CallbackLockPreemption     lockPreemption,
     fmi3CallbackUnlockPreemption   unlockPreemption);
@@ -190,17 +171,13 @@ typedef void fmi3FreeInstanceTYPE(fmi3Instance instance);
 /* end::FreeInstance[] */
 
 /* Enter and exit initialization mode, enter event mode, terminate and reset */
-/* tag::SetupExperiment[] */
-typedef fmi3Status fmi3SetupExperimentTYPE(fmi3Instance instance,
-                                           fmi3Boolean toleranceDefined,
-                                           fmi3Float64 tolerance,
-                                           fmi3Float64 startTime,
-                                           fmi3Boolean stopTimeDefined,
-                                           fmi3Float64 stopTime);
-/* end::SetupExperiment[] */
-
 /* tag::EnterInitializationMode[] */
-typedef fmi3Status fmi3EnterInitializationModeTYPE(fmi3Instance instance);
+typedef fmi3Status fmi3EnterInitializationModeTYPE(fmi3Instance instance,
+                                                   fmi3Boolean toleranceDefined,
+                                                   fmi3Float64 tolerance,
+                                                   fmi3Float64 startTime,
+                                                   fmi3Boolean stopTimeDefined,
+                                                   fmi3Float64 stopTime);
 /* end::EnterInitializationMode[] */
 
 /* tag::ExitInitializationMode[] */
