@@ -1,14 +1,15 @@
 === FMI Description Schema [[fmi-description-schema]]
 
-All static information related to an FMU is stored in the text file `modelDescription.xml` in XML format.
+All static information related to the core functionality of an FMU is stored in the text file `modelDescription.xml` in XML format as specified by the XML schema file `fmi3ModelDescription.xsd`.
 Especially, the FMU variables and their attributes such as `name`, `unit`, default <<initial>> value, etc. are stored in this file.
+Additional optional information about the graphical representation and the grouping of FMU variables into terminals is stored in the optional text file `icon/terminalsAndIcons.xml` in XML format as specified by the XML schema file `fmi3TerminalsAndIcons.xsd`.
 
 It is not allowed to change the `modelDescription.xml` file.
 _[Reason: The `modelDescription.xml` file has to be consistent with the binary or source code implementations._
 _Specifically, changes to the start values are not allowed.]_
 
-The structure of this XML file is defined with the schema file `fmi3ModelDescription.xsd`.
-This schema file utilizes several helper schema files.
+The structure of the XML files is defined with the schema files `fmi3ModelDescription.xsd` and the optional `fmi3TerminalsAndIcons.xsd`.
+These schema files utilize several helper schema files.
 
 In this section these schema files are discussed.
 The normative definition are the above mentioned schema files.
@@ -148,12 +149,6 @@ These definitions are used in the XML element `<ModelVariables>`.
 
 |`<DefaultExperiment>`
 |Providing default settings for the integrator, such as stop time and relative tolerance.
-
-|`<Terminals>`
-|If present, this allows combining input and output signals into logical groups to ease connections on a system level.
-
-|`<GraphicalRepresentation>`
-|If present, contains information for authoring tools to draw graphical representations of the FMU in a system view.
 
 |`<VendorAnnotations>`
 |Additional data that a vendor might want to store and that other vendors might ignore.
@@ -688,9 +683,98 @@ A tool may ignore this information.
 However, it is convenient for a user that `startTime`, `stopTime`, `tolerance` and `stepSize` have already a meaningful default value for the model at hand.
 Furthermore, for Co-Simulation FMUs the `stepSize` defines the preferred `communicationStepSize`.
 
-==== Definition of Terminals (Terminals)
+==== Definition of Terminals and Icons (fmiTerminalsAndIcons) [[fmiTerminalsAndIcons]]
 
-===== Overview
+This is the root element of the XML file `icon/terminalsAndIcons.xml`, and is defined as:
+
+[[terminals_and_icons_overview]]
+image::images/schema/fmiTerminalsAndIcons.png[width=60%, align="center"]
+
+On the top level, the schema consists of the following elements (see xref:terminals_and_icons_overview[figure above]).
+
+[cols="1,3",options="header"]
+|====
+|Element
+|Description
+
+|`<GraphicalRepresentation>`
+|If present, contains information for authoring tools to draw graphical representations of the FMU in a system view.
+
+|`<Terminals>`
+|If present, this allows combining input and output signals into logical groups to ease connections on a system level.
+|====
+
+===== Definition of a Graphical Representation (GraphicalRepresentation) [[graphicalRepresentation]]
+
+
+====== Overview
+
+The graphical representation of the FMU and terminals are needed in order to more easily comprehend the meaning of connected FMUs and to help an importing tool to display the terminals and the FMU icon in the way the exporter intended.
+
+The graphical representation is fully optional.
+The graphical representation of terminals is separate from the terminal definitions in the `<Terminals>` element.
+
+There are two optional elements in the `<GraphicalRepresentation>`:
+
+. The `<CoordinateSystem>` defines the extent of the whole icon (graphical items may exceed that rectangle).
+. The `<Icon>` defines an image source for the FMU.
+
+
+image::images/schema/GraphicalRepresentation.png[width=100%, align="center"]
+
+====== CoordinateSystem
+
+image::images/schema/CoordinateSystem.png[width=70%, align="center"]
+
+The `<CoordinateSystem>` element and its defined extent is used as reference for other graphical items. It also provides a scaling factor to millimeter.
+
+The coordinate system is defined by the coordinates of two points, the lower left (`x1`, `y1`) corner and the upper right (`x2`, `y2`) corner, where the coordinates of the first point shall be less than the coordinates of the second point _[a first quadrant coordinate system]_.
+The x-axis is directed to the right, the y-axis is directed upwards.
+
+_[The exporting tool should define how the coordinate system unit relates to mm display or print out size._
+_However, an importing tool might choose to use the factor from the default coordinate system extent to the actual coordinate system extent to calculate a scaling factor, to match the default icon size in the importing tool._
+
+_The area defined by the coordinate system is suggested to be used as "clickable icon size" in other tools._
+_A `<Terminal>` might be placed outside of this area, so the visible bounding box has to be determined by the importing tool.]_
+
+The coordinate system default is `x1=-100, y1=-100, x2=100, y2=100`. This extent is used if the `<CoordinateSystem>` element is missing.
+The default `suggestedScalingFactorTo_mm` is 0.1.
+So the default coordinate system display size should be 20 mm width and 20 mm height.
+
+The FMU icon and all graphical representations provide the position and extent with the attributes `x1`, `y1`, `x2`, `y2`.
+The values of these attributes directly relate to this coordinate system and are not normalized.
+Flipping of the FMU icon or a terminal can be realized by setting its attributes `x2 < x1` or `y2 < y1` without changing the coordinate system.
+
+====== Icon
+
+image::images/schema/Icon.png[width=40%, align="center"]
+
+The extent and position of the FMU icon are defined in the `<Icon>` element.
+The optional image file of the FMU icon is placed at the path `icon/icon.png` in the ZIP archive of the FMU. The terminals should not be visible in the image.
+Optionally an SVG file can be provided if also the PNG file is present.
+This enables high quality rendering and printing in importing tools.
+This SVG file has to be placed at the path `icon/icon.svg` in the ZIP archive.
+
+The point (`x1`, `y1`) maps to the left lower corner of the PNG image or SVG viewport.
+The point (`x2`, `y2`) maps to the right upper corner of the PNG image or SVG viewport.
+
+====== Placement, Extent, and Painting Order of Graphical Items
+
+image::images/GraphicalRepresentation.svg[width=70%, pdfwidth=70%, align="center"]
+
+The clickable icon size is defined by the `<CoordinateSystem>` element.
+The FMU icon itself may exceed this extent (or bounding box).
+The bounding box of the terminals is given by the extent in the terminals element.
+Their location is neither limited to the extent of the icon nor the extent of the coordinate system.
+_[An importing tool has to determine the outer bounding box enclosing all graphical items.]_
+
+Transparent SVG or PNG files are allowed and wanted. The order of the elements in the XML file defines the order of painting.
+The first element in the `<GraphicalRepresentation>` is painted first and therefore behind the others, the last element is painted on top of the others and because of that in front of them.
+_[So the FMU icon should be placed first in the XML file, terminal below.]_
+
+===== Definition of Terminals (Terminals)
+
+====== Overview
 
 Terminals are fully optional and can be ignored by any importing tool.
 
@@ -714,13 +798,13 @@ _It is not required that the <<causality>> of the terminal member variables in c
 _The SSP standard refers to a `connectorKind`._
 _This `connectorKind` is not related to the `terminalKind` or `variableKind` described in the following sections.]_
 
-===== Terminals
+====== Terminals
 
-Element `<fmiModelDescription><Terminals>` is defined as:
+Element `<fmiTerminalsAndIcons><Terminals>` is defined as:
 
 image::images/schema/Terminals.png[width=80%, align="center"]
 
-All instances of `<Terminal>` have the type `fmi3Terminal` and are listed in the `<Terminals>` sequence:
+All instances of `<Terminal>` have the type `fmi3Terminal` and are listed in the `<Terminals>` sequence.
 
 The normalized string attribute `name` of the `<Terminal>` element is the instance name of the terminal. The terminal name must be unique on each level.
 //_[The terminal name may contain dots, to enable structured terminals.]_
@@ -730,7 +814,7 @@ There are three predefined matching rules: plug, bus, and sequence.
 Other standards may define new matching rules.
 _[It is recommended that vendor specific rules start with `_vendorName` or `_toolName` to avoid namespace clashes.]_
 
-There is a sequence of terminal member variables, terminal stream member variables, and nested terminals in the `<Terminal>` element.
+There is a sequence of terminal member variables, terminal stream member variables, nested terminals, and an optional `<GraphicalRepresentation>` element in the `<Terminal>` element.
 The member variables are the exchanged variables.
 The type of the nested terminals is `fmi3Terminal`, and they can be used to implement structured terminals.
 
@@ -768,7 +852,7 @@ _The structured naming convention of the `<ModelVariables>` is <<independent>> f
 
 _A tool may choose to connect terminals with a different or unknown `terminalKind`, if the `matchingRule` matches.]_
 
-===== Terminal Member Variable
+====== Terminal Member Variable
 
 The `<TerminalMemberVariable>` is defined as:
 
@@ -826,7 +910,7 @@ Restricted to <<input>> and <<output>>, <<parameter>> and <<calculatedParameter>
 _[Example: Electric current]_
 |====
 
-===== General remark on signal
+====== General remark on signal
 
 _[The signal `variableKind` can be applied for different use cases._
 _The first use case is a signal flow from an <<output>> of one FMU to an <<input>> of another FMU. The <<output>> value has to be forwarded to the <<input>>._
@@ -847,14 +931,14 @@ _This is also possible with <<calculated>> <<parameter,`parameters`>>._
 _One example of use would be the cross sectional flow area in pipes which is calculated from geometry parameters._
 _A change in the cross sectional flow area is relevant for the momentum equation, and therefore the connection has to be deemed incompatible if these variables are present and unequal.]_
 
-===== General remark on inflow and outflow
+====== General remark on inflow and outflow
 
 _[Flow variables have a direction and must fulfill a zero sum constraint i.e. the sum of all flow variables connected together must be zero (Kirchhoff's current law)._
 _In addition because different tools might have different direction definitions both, `inflow` and `outflow` are available as `variableKind`._
 _For variables with `inflow` a positive value means that the flow is inwards, and for `outflow` a positive value means that the flow is outwards._
 _For the sake of simplicity in the following latexmath:[\dot{m}_i] denotes an inflowing quantity:_
 
-latexmath:[0 = \sum{\dot{m}_i}]
+_latexmath:[0 = \sum{\dot{m}_i}]_
 
 _[Connecting a single <<output>> `outflow` to a single <<input>> `inflow`, or vice versa automatically fulfills the flow constraint, while connecting two single signals of the same flow type requires a negation of the signal._
 
@@ -863,7 +947,7 @@ _Other, nonscalar, quantities which also sum up to zero, like a mechanical force
 _This is the case since Kirchhoff's current law only holds for scalars where a sign convention is sufficient._
 _Other definitions are beyond the scope of this terminal specification and need clear definition in other specifications on top of this.]_
 
-===== Terminal Stream Member Variable
+====== Terminal Stream Member Variable
 
 The `<TerminalStreamMemberVariable>` is defined as:
 
@@ -909,96 +993,32 @@ _In Modelica the inStream variable is not directly visible, the value can only b
 _It is suggested that Modelica tools exporting an FMU derive the member name for the inStream variable according to the scheme "<outStream name>_inStream"._
 _E.g. if the outStream name is "h_outflow" then the inStream name should be "h_outflow_inStream".]_
 
-==== Definition of a Graphical Representation (GraphicalRepresentation)
+====== Graphical Representation of Terminals
 
-===== Overview
+image::images/schema/TerminalGraphicalRepresentation.png[width=75%, pdfwidth=60%, align="center"]
 
-The graphical representation of the FMU and terminals are needed in order to more easily comprehend the meaning of connected FMUs and to help an importing tool to display the terminals and the FMU icon in the way the exporter intended.
-
-The graphical representation is fully optional.
-The graphical representation of terminals is separate from the terminal definitions in the `<Terminals>` element.
-
-There are three optional elements in the `<GraphicalRepresentation>`:
-
-. The `<CoordinateSystem>` defines the extent of the whole icon (graphical items may exceed that rectangle).
-. The `<Icon>` defines an image source for the FMU.
-. The `<Terminal>` sequence contains the graphical representation of the visible terminals.
-
-image::images/schema/GraphicalRepresentation.png[width=100%, align="center"]
-
-===== CoordinateSystem
-
-The `<CoordinateSystem>` element and its defined extent is used as reference for other graphical items. It also provides a scaling factor to millimeter.
-
-The coordinate system is defined by the coordinates of two points, the lower left (`x1`, `y1`) corner and the upper right (`x2`, `y2`) corner, where the coordinates of the first point shall be less than the coordinates of the second point _[a first quadrant coordinate system]_.
-The x-axis directed to the right, the y-axis is directed upwards.
-
-_[The exporting tool should define how the coordinate system unit relates to mm display or print out size._
-_However, an importing tool might choose to use the factor from the default coordinate system extent to the actual coordinate system extent to calculate a scaling factor, to match the default icon size in the importing tool._
-
-_The area defined by the coordinate system suggested to be used as "clickable icon size" in other tools._
-_A `<Terminal>` might be placed outside of this area, so the visible bounding box has to be determined by the importing tool.]_
-
-The coordinate system default is `x1=-100, y1=-100, x2=100, y2=100`. This extent is used if the `<CoordinateSystem>` element is missing.
-The default `suggestedScalingFactorTo_mm` is 0.1.
-So the default coordinate system display size should be 20 mm width and 20 mm height.
-
-The FMU icon and all graphical representations provide the position and extent with the attributes `x1`, `y1`, `x2`, `y2`.
-The values of these attributes directly relate to this coordinate system and are not normalized.
-Flipping of the FMU icon or a terminal can be realized by setting its attributes `x2 < x1` or `y2 < y1` without changing the coordinate system.
-
-===== Icon
-
-image::images/schema/ModelStructure.png[width=80%, align="center"]
-
-The extent and position of the FMU icon are defined in the `<Icon>` element.
-The optional image file of the FMU icon is placed at the path `icon/icon.png` in ZIP archive of the FMU. The terminals should not be visible in the image.
-Optionally an SVG file can be provided if also the PNG file is present.
-This enables high quality rendering and printing in importing tools.
-This SVG file has to be placed at the path `icon/icon.svg` in the ZIP archive.
-
-The point (`x1`, `y1`) maps to the left lower corner of the PNG image or SVG viewport.
-The point (`x2`, `y2`) maps to the right upper corner of the PNG image or SVG viewport.
-
-===== Terminals
-
-For `fmi3Terminals` (terminals which are listed in the `<Terminals>` element) the name of the terminal in the `<GraphicalRepresentation>` is equal to the name of the terminal in the `<Terminals>` element (e.g. `port_a`).
-Only `Terminal` elements which are direct children of the `Terminals` element can have a graphical representation.
-_[If the graphical representation is used for an <<input>> or <<output>> (e.g. a `fmi3Float64` <<input>> `u`), then a `<Terminal>` has to be added to the `<Terminals>` element which has one `<TerminalMemberVariable>`._
-_The name of the `<Terminal>` and the name of the `<TerminalMemberVariable>` should be equal to the name of the <<input>> / <<output>>.]_
-
+The description of the general attributes can be found in <<graphicalRepresentation>>.
 The `iconBaseName` attribute is mandatory.
 This attribute defines the base name of the image file as a relative URI according to RFC 3986.
-The base URI that this relative URI is resolved against is the URI of the `icon` folder in the FMU ZIP archive.
+The base URI that this relative URI is resolved against is the URI of the `icon/terminalsAndIcons.xml` file in the FMU ZIP archive.
 Implementations are only REQUIRED to support relative URIs, excluding relative URIs that move beyond the baseURI (i.e. go "up" a level via ..).
 Implementations are NOT REQUIRED to support any absolute URIs and any specific URI schemes.
 The PNG file with the extension '.png' has to be provided. An additional SVG file with extension '.svg' is optional.
 
-_[Note that this specification is functionally equivalent to looking up image sources from the icon folder of the FMU ZIP Archive after dot removal from the path as per section 5.2.4 of RFC 3986.]_
+_[Note that this specification is functionally equivalent to looking up image sources from the icon folder of the FMU ZIP archive after dot removal from the path as per section 5.2.4 of RFC 3986.]_
 
 The default connection stroke size and color can be provided, to define the intended connection line layout in the importing tool. The stroke size is given relative to the coordinate system extent.
 The stroke color is given in RGB values from 0 to 255. E.g.: `255 255 0`.
+
+_[Nested terminals may have a `<GraphicalRepresentation>` element. However, if and how nested terminals are displayed, is up to the importing tool.]_
+
+_[The order of painting of the `<GraphicalRepresentation>` of terminals on each level is equal to the order of appearance in the `<Terminal>` element. So graphical representations appearing first, are painted first, are behind graphical representations which appear below.]_
 
 The `<VendorAnnotations>` element can be used by vendors to store additional information for the graphical representation.
 _[It is suggested that Modelica tools store the Modelica annotation of the connector under the tool name `Modelica3Annotation` in the attribute `annotation` of an element `connector`._
 _The attribute `name` of the connector element is equal to the `name` attribute of the referenced `fmi3Terminal`.]_
 
-_[Only terminals from the `<Terminals>` element can have a graphical representation._
-_For simple <<input,`inputs`>> / <<output,`outputs`>> a terminal with one member has to be added.]_
-
-===== Placement, Extent, and Painting Order of Graphical Items
-
-image::images/GraphicalRepresentation.svg[width=70%, pdfwidth=70%, align="center"]
-
-The clickable icon size is defined by the `<CoordinateSystem>` element.
-The FMU icon itself may exceed this extent (or bounding box).
-The bounding box of the terminals is given by the extent in the terminals element.
-Their location is neither limited to the extent of the icon nor the extent of the coordinate system.
-_[An importing tool has to determine the outer bounding box enclosing all graphical items.]_
-
-Transparent SVG or PNG files are allowed and wanted. The order of the elements in the XML file defines the order of painting.
-The first element in the `<GraphicalRepresentation>` is painted first and therefore behind the others, the last element is painted on top of the others and because of that in front of them.
-_[So the FMU icon should be placed first in the XML file, terminal below.]_
+_[If the graphical representation is used for an <<input>> or <<output>> (e.g. a `fmi3Float64` <<input>> `u`), then a `<Terminal>` has to be added to the `<Terminals>` element which has one `<TerminalMemberVariable>`.]_
 
 ==== Definition of Vendor Annotations (VendorAnnotations)
 
@@ -1043,8 +1063,6 @@ For these reasons implementations must take platform-specific constraints into a
 
 Changing any dimension of a variable in *Configuration Mode* or *Reconfiguration Mode* invalidates the variable's current value (including its <<start>> value).
 It should be noted that changing a <<structuralParameter,`structural parameter`>> might affect dimension sizes of several variables.
-
-It is not possible to use a variable of type `<Clock>` in arrays, since array elements do not have individual <<valueReference>> and the access to <<clock,`clocks`>> requires a unique <<valueReference>> information.
 
 A variable can have any number of `<Alias>` elements that define a variable alias.
 Each variable alias has a required attribute `name` whose value must be unique among all variables and variable aliases, and an optional attribute `description`.
@@ -1241,7 +1259,7 @@ _For example, there is no mechanism in the Modelica language to formulate connec
 |`clockReference`
 |
 [[clockReference,`clockReference`]]
-The optional attribute <<clockReference>> is used to define the <<clock,`clocks`>> this variable is assigned to.
+The optional attribute <<clockReference>> is used, in conjunction with the <<clockElementIndex>> attribute, to define the <<clock,`clocks`>> this variable is assigned to.
 This attribute can be used in all variable sub types with restrictions based on the `clockType`  attribute.
 The <<clockReference>> holds only <<valueReference>> information for variables with base type `fmi3Clock`.
 
@@ -1258,6 +1276,13 @@ If a <<outputClock>> of this <<valueReference>> list ticks the master has to cre
 It is not allowed to combine <<outputClock,`output clocks`>> with periodic or strict periodic <<inputClock,`input clocks`>> based on <<clockReference>>.
 
 The attribute <<clockReference>> must not be used if <<causality>> = <<output>> for a variable.
+
+|`clockElementIndex`
+|
+[[clockElementIndex,`clockElementIndex`]]
+The optional attribute <<clockElementIndex>> is used in conjuction with the <<clockReference>> attribute to define the element index of the <<clock,`clocks`>> this variable is assigned to for array clock variables.
+The element index is the 1-based index of the element (with serialization of indices for multi-dimensional arrays in the usual row-major order).
+For scalar clock variables this attribute must not be specified or must be specified as 0.
 
 |`intermediateAccess`
 |
