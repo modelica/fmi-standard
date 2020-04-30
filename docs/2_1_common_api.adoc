@@ -822,14 +822,17 @@ include::../headers/fmi3FunctionTypes.h[tag=SetClock]
 ----
 
 Sets <<clock,`clocks`>> activation status by providing the value references of the corresponding <<clock>> variables and their values.
+Note that <<clock>> variables, like any other variables can be scalar or array variables.
+When getting or setting the values of array variables, the serialization of array variable values used in C-API function calls is defined as row major - i.e. dimension order from left to right for the C-API (e.g. `array[dim1][dim2]...[dimN]`).
 
-* `valueReferences` points to an array of value references of clocks to be activated or deactivated at the current time instant depending on
+* `valueReferences` is a vector of `nValueReferences` value handles that define the clock variables that shall be set.
 
-* `values` content: if the nth element is `fmi3ClockActive` the nth clock is activated, otherwise deactivated.
+* `values` is a vector with the actual activation values of the clock variables, `fmi3ClockActive` specifying that the clock is activated, otherwise it is deactivated.
 
-* `nValueReferences` indicates the size of the parallel arrays `valueReferences` and `values` (and potentially `subactive`).
+* `subactive` requires evaluation of a clocked partition in subactive mode (only output equations) if the argument subactive is not a null pointer and `subactive[i] = fmi3True`.
+`subactive[i]` has no meaning for Communication Point Clocks and is ignored for such <<clock,`clocks`>>.
 
-* `subactive` requires evaluation of a clocked partition in subactive mode (only output equations) if the argument subactive is not a null pointer and `subactive[i] = fmi3True`. `subactive[i]` has no meaning for Communication Point Clocks and is ignored for such <<clock,`clocks`>>.
+* `nValues` provides the number of values in the `values` and `subactive` vectors, which is only equal to `nValueReferences` if all <<valueReference>>pass:[s] point to scalar clock variables.
 
 It is not allowed to call this function within the callback function <<intermediateUpdate>>.
 
@@ -841,14 +844,14 @@ include::../headers/fmi3FunctionTypes.h[tag=GetClock]
 
 Inquires whether a set of <<clock,`clocks`>> is active by providing the value references of the corresponding <<clock>> variables.
 
-* `valueReferences` contains a list of value references to <<clock,`clocks`>> of the size indicated by
+* `valueReferences` is a vector of `nValueReferences` value handles that define the clock variables that shall be inquired.
 
-* `nValueReferences`.
-
-* `values` will return the activation status at the current time instant of the <<clock,`clocks`>> referenced by `valueReferences`.
+* `values` will return the activation status at the current time instant of the <<clock,`clocks`>> referenced by `valueReferences[]`.
 If `values[i] = fmi3ClockActive` the <<clock>> is currently active, otherwise the <<clock>> is not active.
 
-It is allowed to call this function within the callback function <<intermediateUpdate>>.
+* `nValues` provides the number of values in the `values` vector, which is only equal to `nValueReferences` if all <<valueReference>>pass:[s] point to scalar clock variables.
+
+It is allowed to call this function within the callback function `fmi3IntermediateUpdate`.
 It is required for an FMU to directly internally set back the activation <<state>> of an output <<clock,clock[i]>> to `fmi3ClockInactive`, if the function <<fmi3GetClock>> is called for a <<clock,`clock[i]`>> and the interface is Scheduled Co-Simulation.
 _[This is required to allow preemption.]_
 

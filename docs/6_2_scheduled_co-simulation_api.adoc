@@ -15,7 +15,7 @@ In case of `fmi3Discard` or `fmi3Error` no repetition of the step is possible, t
 The simulation master sets and gets variable values as defined in <<get-and-set-variable-values>>.
 
 Before scheduling a model partition it is allowed to set all variables assigned to that model partition via its associated <<clock>> (including all global variables that are not associated to a <<clock>>) via `fmi3Set{VariableType}`.
-After the computation of a model partition (call of <<fmi3ActivateModelPartition>> with the <<clockReference>> of the <<clock>> that is associated to the model partition) all variables that are assigned to this model partition (including all global variables that are not associated to a <<clock>>) can be retrieved via `fmi3Get{VariableType}`.
+After the computation of a model partition (call of <<fmi3ActivateModelPartition>> with the <<clockReference>> and <<clockElementIndex>> of the <<clock>> that is associated to the model partition) all variables that are assigned to this model partition (including all global variables that are not associated to a <<clock>>) can be retrieved via `fmi3Get{VariableType}`.
 Set/get operations have to be atomic for a single variable.
 
 _[The value of global variables can be influenced by more than one model partition if multiple model partitions are active at the same time.]_
@@ -44,7 +44,12 @@ The <<fmi3ActivateModelPartition>> function has the following arguments:
 
 - `fmi3Instance instance`: same meaning as for other `fmi3*` functions
 
-- `fmi3ValueReference` <<clockReference>>: <<valueReference>> of an <<inputClock>> defined in the `modelDescription.xml` which shall be activated
+- `fmi3ValueReference` <<clockReference>>: <<valueReference>> of an <<inputClock>> variable defined in the `modelDescription.xml` which shall be activated
+
+- `size_t` <<clockElementIndex>>:: The element index of the <<inputClock>> variable which shall be activated.
+For a scalar <<clock>> variable this must be 0; for array <<clock>> variables the element clock to activate is specified using the 1-based element index.
+Using the element index 0 means all elements of the <<clock>> variable.
+(Note: If an array has more than one dimension the indices are serialized in the same order as defined for values).
 
 - `fmi3Float64 activationTime`: simulation (i.e. virtual) time of the <<clock>> tick
 
@@ -58,14 +63,14 @@ The value for the <<fmi3ActivateModelPartition>> argument `activationTime` is th
 Refer to <<math-scheduled-co-simulation>> and <<clock-types-for-evaluation-of-clocked-model-partitions>>.
 
 This is a different timing concept compared to <<fmi3DoStep>> calls.
-A <<fmi3ActivateModelPartition>> call will compute the results of the model partition defined by <<clockReference>> (i.e. <<valueReference>> of the variable that defines a <<clock>>) for the current <<clock>> tick latexmath:[t_i].
+A <<fmi3ActivateModelPartition>> call will compute the results of the model partition defined by <<clockReference>> and <<clockElementIndex>> (i.e. <<valueReference>> of the variable that defines a <<clock>> and an element index into that for arrays) for the current <<clock>> tick latexmath:[t_i].
 
 The value for the <<fmi3ActivateModelPartition>> argument `activationTime` is the <<clock>> tick time latexmath:[t_i] from the assigned <<inputClock>> (which is known to the Co-Simulation master).
 Refer to the <<clock>> time progress definition (<<clock-types-for-evaluation-of-clocked-model-partitions>>) for <<periodic>> <<clock,`clocks`>>.
 
-If required, the FMU can internally derive the <<clock>> interval latexmath:[\Delta T_i] based on the last <<clock>> tick time latexmath:[t_{i-1}] i.e. last activationTime for this <<clockReference>> (based on last <<fmi3ActivateModelPartition>> call).
+If required, the FMU can internally derive the <<clock>> interval latexmath:[\Delta T_i] based on the last <<clock>> tick time latexmath:[t_{i-1}] i.e. last activationTime for this <<clockReference>> and <<clockElementIndex>> (based on last <<fmi3ActivateModelPartition>> call).
 
-It is not allowed to call <<fmi3ActivateModelPartition>> for a <<clockReference>> (i.e. <<valueReference>> of <<clock>> variable) more than once for the same activationTime latexmath:[t_i].
+It is not allowed to call <<fmi3ActivateModelPartition>> for a <<clockReference>> and <<clockElementIndex>> (i.e. <<valueReference>> of <<clock>> variable and element index into that for arrays) more than once for the same activationTime latexmath:[t_i].
 
 ==== State Machine for Scheduled Co-Simulation [[state-machine-scheduled-co-simulation]]
 
