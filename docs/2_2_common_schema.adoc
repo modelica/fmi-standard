@@ -544,8 +544,8 @@ _If the FMU is generated so that min/max shall be checked whenever meaningful (f
 
 _If `fmi3Set{VariableType}` is called violating the min/max attribute settings of the corresponding variable, the following actions are performed:_
 
-- _On a <<fixed>> or <<tunable>> <<parameter>> `fmi3Status = fmi3Discard` is returned._
-- _On an <<input>>, the FMU decides what to return (If no computation is possible, it could return `fmi3Status = fmi3Discard`, in other situations it may return `fmi3Warning` or `fmi3Error`, or `fmi3OK`, if it is uncritical)._
+- _On a <<fixed>> or <<tunable>> <<parameter>> `fmi3Status == fmi3Discard` is returned._
+- _On an <<input>>, the FMU decides what to return (If no computation is possible, it could return `fmi3Status == fmi3Discard`, in other situations it may return `fmi3Warning` or `fmi3Error`, or `fmi3OK`, if it is uncritical)._
 
 _If an FMU defines min/max values for integer types and `<Enumeration>` variables (<<local>> and <<output>> variables), then the expected behavior of the FMU is that `fmi3Get{VariableType}` functions return values in the defined range._
 
@@ -870,7 +870,7 @@ _Vendor specific terminal kinds should start with `_vendorName` or `_toolName` t
 
 _Examples for `terminalKind`: `StandardXXX_Mechanical_Translational`, `Modelica.Mechanics.Translational.Interfaces.Flange_a`, `vendorNameA_customTypeA`, `_vendorNameB_customLibrary_customTypeB`._
 
-_The structured naming convention of the `<ModelVariables>` is <<independent>> from the terminal names and member variable names._
+_The structured naming convention of the `<ModelVariables>` is independent from the terminal names and member variable names._
 
 _A tool may choose to connect terminals with a different or unknown `terminalKind`, if the `matchingRule` matches.]_
 
@@ -1128,8 +1128,9 @@ Enumeration that defines the causality of the variable.
 Allowed values of this enumeration:
 
 [[parameter,`parameter`]]
-- `parameter`: independent parameter (a data value that is constant during the simulation and is provided by the environment and cannot be used in connections).
+- `parameter`: A data value that is constant during the simulation and is provided by the environment and cannot be used in connections.
 <<variability>> must be <<fixed>> or <<tunable>>.
+These parameters can be changed independently, unlike <<calculatedParameter,calculated parameters>>.
 <<initial>> must be <<exact>> or not present (meaning <<exact>>).
 
 [[calculatedParameter,`calculatedParameter`]]
@@ -1214,7 +1215,7 @@ Co-Simulation: By convention, the variable is from a real sampled data system an
 // TODO how does this work with IVA?
 
 [[continuous,`continuous`]]
-- `continuous`: Only a variable of `type = fmi3GetFloat32` or `type = fmi3GetFloat64` can be <<continuous>>. +
+- `continuous`: Only a variable of `type == fmi3GetFloat32` or `type == fmi3GetFloat64` can be <<continuous>>. +
 Model Exchange: No restrictions on value changes. +
 Co-Simulation: By convention, the variable is part of a differential equation.
 
@@ -1297,7 +1298,7 @@ For scalar clock variables this attribute must not be specified or must be speci
 |
 [[intermediateAccess,`intermediateAccess`]]
 If this boolean attribute is `true`, the variable can be accessed during a communication step.
-Variables with <<causality>> <<parameter>> must not be marked with <<intermediateAccess,`intermediateAccess = fmi3True`>>.
+Variables with <<causality>> <<parameter>> must not be marked with <<intermediateAccess,`intermediateAccess == fmi3True`>>.
 // TODO: link to see math-intermediate-variable-access)
 This attribute is only used for Basic Co-Simulation and Hybrid Co-Simulation. The default value of this attribute is `false`.
 // TODO: default false is not defined in the xsd (yet?)
@@ -1553,11 +1554,11 @@ _Discussion of the combinations that are allowed_:
 
 >|_[green]#(1)#_
 |_<<fixed>> <<parameter>>_
-|_Non-<<tunable>> <<independent>> <<parameter>>_
+|_Non-<<tunable>> <<parameter>>_
 
 >|_[green]#(2)#_
 |_<<tunable>> <<parameter>>_
-|_<<tunable,`Tunable`>> <<independent>> <<parameter>> (changing such a <<parameter>> triggers an external event (ME) or takes effect at the next communication point (xCS), and <<tunable>> <<calculatedParameter>>/<<output>>/<<local>> variables might change their values)._
+|_<<tunable,`Tunable`>> <<parameter>> (changing such a <<parameter>> triggers an external event (ME) or takes effect at the next communication point (xCS), and <<tunable>> <<calculatedParameter>>/<<output>>/<<local>> variables might change their values)._
 
 >|_[green]#(3)#_
 |_<<fixed>> <<dependenciesKind,`dependent`>> <<parameter>>_
@@ -1565,7 +1566,7 @@ _Discussion of the combinations that are allowed_:
 
 >|_[green]#(4)#_
 |_<<tunable>> <<dependenciesKind,`dependent`>> <<parameter>>_
-|_<<tunable,`Tunable`>> <<dependenciesKind,`dependent`>> <<parameter>> (changing an <<independent>> <<parameter>> triggers an external event (ME) or takes effect at the next communication point (xCS), and <<tunable>> <<dependenciesKind,`dependent`>> <<parameter,`parameters`>> and <<tunable>> <<local>> variables might change their values)._
+|_<<tunable,`Tunable`>> <<dependenciesKind,`dependent`>> <<parameter>> (changing a <<parameter>> triggers an external event (ME) or takes effect at the next communication point (xCS), and <<tunable>> <<dependenciesKind,`dependent`>> <<parameter,`parameters`>> and <<tunable>> <<local>> variables might change their values)._
 
 >|_[green]#(5)#_
 |_<<discrete>> <<input>>_
@@ -1620,7 +1621,7 @@ _Usually, this is `time`._
 
 >|_[green]#(16)#_
 |_<<fixed>> <<structuralParameter>>_
-|_<<parameter,`Paramter`>> used in  `<Dimension>` element;  can be changed before initialization in *Configuration Mode*._
+|_<<parameter,`Parameter`>> used in  `<Dimension>` element;  can be changed before initialization in *Configuration Mode*._
 
 >|_[green]#(17)#_
 |_<<tunable>> <<structuralParameter>>_
@@ -1900,7 +1901,7 @@ _[<<parameter,`parameters`>> and <<tunable>> <<parameter,`parameters`>> must not
 
 - inputs (variables with <<causality>> = <<input>>)
 
-- variables with <<initial>> = <<exact>> _[for example, <<independent>> <<parameter,`parameters`>> or initial <<state,`states`>>]_
+- variables with <<initial>> = <<exact>> _[for example, <<parameter,`parameters`>> or initial <<state,`states`>>]_
 
 - <<independent>> variable (usually time; <<causality>> = <<independent>>).
 If an <<independent>> variable is not explicitly defined under variables, it is assumed that the unknown depends explicitly on the <<independent>> variable.
