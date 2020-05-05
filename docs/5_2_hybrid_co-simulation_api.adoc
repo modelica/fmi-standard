@@ -14,6 +14,8 @@ The output arguments of <<fmi3CallbackIntermediateUpdate>> are used to signal <<
 include::../headers/fmi3FunctionTypes.h[tag=CallbackIntermediateUpdate]
 ----
 
+// TODO this section should go to 2.4 common co-sim concepts
+
 * Argument <<intermediateUpdateTime>> is the internal simulation time of the FMU at which the callback has been called.
 If an event happens or a <<outputClock>> ticks, <<intermediateUpdateTime>> is the time of event or <<outputClock>> tick.
 If the FMU signals an `earlyReturn == fmi3True` and `fmi3OK` after returning from <<fmi3DoStep>> then <<intermediateUpdateTime>> is the internal simulation time of the FMU of the last <<fmi3CallbackIntermediateUpdate>> call that signaled <<canReturnEarly,`canReturnEarly == fmi3True`>>.
@@ -23,13 +25,11 @@ The following `fmi3Boolean` variables define the reasons for the <<fmi3CallbackI
 Several variables can be set by the FMU.
 Default value of variables is `fmi3False`.
 
-* When <<eventOccurred,`eventOccurred == fmi3True`>>, the master must call <<fmi3DoEarlyReturn>> to do an early return and handle the event via entering *Event Mode*.
-In this case, <<earlyReturnTime>> argument of <<fmi3DoEarlyReturn>> is ignored.
+* When <<eventOccurred,`eventOccurred == fmi3True`>>, the master returns <<fmi3EarlyReturn>> from <<fmi3CallbackIntermediateUpdate>> request the FMU for an early return of the current <<fmi3DoStep>> and handle the event via entering *Event Mode*.
 In *Event Mode* the master shall call the <<fmi3NewDiscreteStates>> function for gathering related information about the event that occurred at <<intermediateUpdateTime>>.
 
 * When <<clocksTicked,`clocksTicked == fmi3True`>>, it means that <<fmi3GetClock>> function should be called for gathering all <<clock>> related information about ticking <<outputClock,`output clocks`>> at <<intermediateUpdateTime>>.
-If this flag is `fmi3True` the master must call <<fmi3DoEarlyReturn>> to do an early return and handle the <<clock>> event in *Event Mode*.
-In this case, <<earlyReturnTime>> argument of <<fmi3DoEarlyReturn>> is ignored.
+If this flag is `fmi3True` the master must return with <<fmi3EarlyReturn>> from <<fmi3CallbackIntermediateUpdate>> to request the FMU for an early return and handle the <<clock>> event in *Event Mode*.
 
 * When <<intermediateVariableSetAllowed,`intermediateVariableSetAllowed == fmi3True`>>, the FMU signals that intermediate output values can be collected by the Co-Simulation master.
 
@@ -37,7 +37,7 @@ In this case, <<earlyReturnTime>> argument of <<fmi3DoEarlyReturn>> is ignored.
 
 * When <<intermediateStepFinished, `intermediateStepFinished == fmi3True`>>, the FMU signals that the internal solver step for this time instant is complete.
 
-* When <<canReturnEarly,`canReturnEarly == fmi3True`>> the master can request the FMU to return early at the current <<intermediateUpdateTime>> time instant via calling <<fmi3DoEarlyReturn>> within the callback function <<fmi3CallbackIntermediateUpdate>>.
+* When <<canReturnEarly,`canReturnEarly == fmi3True`>> the master can request the FMU to return early at the current <<intermediateUpdateTime>> time instant returning with <<fmi3EarlyReturn>> from the callback function <<fmi3CallbackIntermediateUpdate>>.
 If <<canReturnEarly,`canReturnEarly == fmi3False`>> the FMU will not do the early return, regardless of the master request.
 
 * `earlyReturnTime` is used to tell the FMU at what time to return early from the current <<fmi3DoStep>> (at the earliest), if the return value of <<fmi3CallbackIntermediateUpdate>> is <<fmi3EarlyReturn>>.
@@ -111,7 +111,7 @@ include::../headers/fmi3FunctionTypes.h[tag=EnterStepMode]
 
 If the Co-Simulation master supports <<clock,`clocks`>>, all <<inputClock,`input clocks`>> of the model should be handled and <<inputClock>> events should be scheduled by the master.
 If an <<outputClock>> ticks, the FMU calls <<fmi3CallbackIntermediateUpdate>> with <<clocksTicked,`clocksTicked == fmi3True`>>.
-Then the master must call <<fmi3DoEarlyReturn>> to do an early return from <<fmi3DoStep>> and push the FMU into *Event Mode* by calling <<fmi3EnterEventMode>>.
+Then the master returns with <<fmi3EarlyReturn>> from <<fmi3CallbackIntermediateUpdate>> to request the FMU for an early return from <<fmi3DoStep>> and push the FMU into *Event Mode* by calling <<fmi3EnterEventMode>>.
 Once the FMU is in *Event Mode*, the activation status of <<outputClock,`output clocks`>> are retrieved by <<fmi3GetClock>> function.
 Then <<fmi3SetClock>> (and <<fmi3SetIntervalDecimal>> or <<fmi3SetIntervalFraction>> if necessary) should be invoked to enable the ticked <<inputClock,`input clocks`>>.
 Each <<clock>>, that ticks outside of the FMU (i.e. <<inputClock>>), is activated for an FMU based on its <<clockReference>> and an associated <<fmi3SetClock>> in *Event Mode*.
@@ -224,9 +224,7 @@ This state in Hybrid Co-Simulation does not differ from Basic Co-Simulation desc
 This state in Hybrid Co-Simulation differ from Basic Co-Simulation described in <<state-step-mode-co-simulation>> as following:
 
 Allowed Function Calls::
-
-<<fmi3DoEarlyReturn>>::
-If <<canReturnEarly,`canReturnEarly == fmi3True`>>, the Co-Simulation master can request the FMU to end the <<fmi3DoStep>> and to do an early return by calling this function.
+None.
 
 Forbidden Function Calls::
 All API functions not listed in the allowed function list, including <<fmi3GetClock>> and  <<fmi3SetClock>> are forbidden in this mode.
@@ -294,7 +292,6 @@ _[The allowed function calls in the respective states are summarized in the foll
 |<<fmi3GetOutputDerivatives>>     {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |  |  |  |  |  |x |  |8 |x |x |7
 |<<fmi3DoStep>>                   {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |  |  |  |  |  |x |  |  |  |  |
 |<<fmi3ActivateModelPartition>>   {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |  |  |  |  |  |  |  |  |  |  |
-|<<fmi3DoEarlyReturn>>            {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |  |  |  |  |  |  |x |  |  |  |
 |<<fmi3GetDoStepDiscardedStatus>> {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |  |  |  |  |  |  |  |x |  |  |
 |====
 
