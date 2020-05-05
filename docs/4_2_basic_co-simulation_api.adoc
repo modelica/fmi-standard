@@ -57,15 +57,13 @@ _[Example: If the internal polynomial is of order 1 and the master inquires the 
 
 ==== Computation in Co-Simulation interface types
 
-The computation of time steps is controlled by the following function.
+The importer requests the computation of the next time step with the following function:
 
 [[fmi3DoStep,`fmi3DoStep`]]
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=DoStep]
 ----
-
-The computation of a time step is started.
 
 * `currentCommunicationPoint` is the current communication point of the master (latexmath:[tc_i]) and
 
@@ -75,7 +73,20 @@ The computation of a time step is started.
 
 * `earlyReturn` signals to the Co-Simulation master if the FMU returns early from the `doStep` call (`earlyReturn == fmi3True`) or if the `doStep` was completed successfully (`earlyReturn == fmi3False`).
 
-The slave must integrate until time instant latexmath:[tc_{i+1} = tc_i + hc_i].
+* `terminate` signals to the Co-Simulation master that the FMU requests the end of the simulation for internal reasons.
+This is not due to an error, but a natural limit to the simulation time has been reached inside the FMU.
+
+* `lastSuccessfulTime` represents the internal time of the FMU when <<fmi3DoStep>> returns.
+
+The slave is expected to compute until time latexmath:[tc_{i+1} = tc_i + hc_i], or `lastSuccessfulTime = currentCommunicationPoint + communicationStepSize`.
+
+This is especially interesting, if <<fmi3DoStep>> returns with <<fmi3EarlyReturn>>.
+In this case, the step did not compute until latexmath:[tc_{i+1}], but stopped computation error free until `lastSuccessfulTime`.
+However, even when the FMU returns from <<fmi3DoStep>> with <<fmi3OK>>, it is allowed that `lastSuccessfulTime` deviates from the expected `currentCommunicationPoint + communicationStepSize`.
+_[An example is a fixed-step integrator inside the FMU that cannot possibly stop at exactly the requested time._
+_Advanced Co-Simulation master algorithms might be able to take this information into account.]_
+It is even possible that the `lastSuccessfulTime` is still equal to `currentCommunicationPoint` when <<fmi3EarlyReturn>> is returned (contrary to the possibly expected <<fmi3Discard>>) to indicate a changed internal state of the FMU, e.g. steps in super dense time.
+
 
 _[The calling environment defines the communication points and <<fmi3DoStep>> must synchronize to these points by always integrating exactly to latexmath:[tc_i + hc_i]._
 _It is up to <<fmi3DoStep>> how to achieve this.]_
@@ -92,19 +103,24 @@ The function returns:
 `fmi3OK`::
 if the communication step was computed successfully until its end.
 
+`fmi3EarlyReturn`::
+if the FMU computed successfully only a subinterval of the communication step.
+
 `fmi3Discard`::
-if the slave computed successfully only a subinterval of the communication step. The FMU enters the *Step Discarded* state, see <<state-step-discarded-co-simulation>> for more information.
+if the FMU could not compute any new (more advanced) state successfully, but was able to return its internal state to exactly the state when <<fmi3DoStep>> was called.
+This return code indicates that the call to <<fmi3DoStep>> was essentially a NOOP.
+The importer may now try alternative ways to simulate, or, simply, treat this equal to <<fmi3Error>>.
 
 `fmi3Error`::
-the communication step could not be carried out at all.
-The master can try to repeat the step with other input values and/or a different communication step size in the same way as described in the <<fmi3Discard>> case above.
+the communication step could not be carried out at all, the internal state of the FMU is undefined.
+The master can try to repeat the step with other input values and/or a different communication step size, but has to re-initialize the state by either <<fmi3SetState>> or terminating and reinitializing the instance.
 
 `fmi3Fatal`::
 if an error occurred which corrupted the FMU irreparably.
 See <<status-returned-by-functions>> for details.
 _[The master should stop the simulation run immediately.]_
 
-It depends on the capabilities of the slave which argument constellations and calling sequences are allowed (see <<fmi-for-basic-co-simulation>>).
+It depends on the capabilities of the FMU which argument constellations and calling sequences are allowed (see <<fmi-for-basic-co-simulation>>).
 
 ==== Retrieving Status Information from the Slave in Co-Simulation Interface Types [[retrieving-status-from-slave]]
 

@@ -203,6 +203,11 @@ this function has shown the prepared information message to the user.
 
 `fmi3Discard`::
 [[fmi3Discard,`fmi3Discard`]]
+With this return value, the FMU signals that the function called could not achieve the defined effect and was able to keep its state as before the call.
+This essentially indicates that the function call was a NOOP.
+The master can now try alternative approaches to drive the simulation.
+If the master is incapable of such an alternative, it needs to treat this just like the `fmi3Error` return code.
+
 In Model Exchange, this return status is only possible for the functions:
 `fmi3Set{VariableType}`,
 <<fmi3SetContinuousStates>>,
@@ -210,20 +215,26 @@ In Model Exchange, this return status is only possible for the functions:
 <<fmi3GetDerivatives>>,
 <<fmi3GetContinuousStates>>, and
 <<fmi3GetEventIndicators>>.
+// TODO: check this list: if we allow illegal arguments to be rejected with this return code, more functions might have to be listed here
 When the target simulator encounters this status in Model Exchange, it is recommended to perform a smaller step size and evaluate the model equations again, for example because an iterative solver in the model did not converge or because a function is outside of its domain _[for example, `sqrt(<negative number>)`]_.
 If this is not possible, the simulation has to be terminated.
 +
-In a co-simulation interface, the `fmi3Discard` return status is only possible for the functions:
-`fmi3Set{VariableType}`,
-<<fmi3DoStep>>, and when the FMU is not able to return the required status information.
-When <<fmi3Discard>> is returned, the master has to decide if the simulation run can be continued.
+In the co-simulation interfaces, the `fmi3Discard` return status is only possible for the functions:
+`fmi3Set{VariableType}`, and
+<<fmi3DoStep>>.
+When <<fmi3Discard>> is returned to the importer, the importer has to decide if the simulation run can be continued or if to treat the <<fmi3Discard>> like <<fmi3Error>>.
 +
 _[Functions `fmi3Set{VariableType}` are usually not performing calculations but just store the passed values in internal buffers._
 _The actual calculation is performed by `fmi3Get{VariableType}` functions._
-_Still, `fmi3Set{VariableType}` functions could check whether the input arguments are in their validity range._
-_If not, these functions could return with <<fmi3Discard>>.]_
+_Still, `fmi3Set{VariableType}` functions could check whether the input arguments are valid (e.g. <<valueReferences>>) or in their validity range (e.g. between min and max as defined in the <<modelDescription.xml>>)._
+_If not, these functions could return with <<fmi3Discard>> and leave the internal state unchanged.]_
 +
-In both model exchange and co-simulation interfaces, function <<logMessage>> was called in the FMU, and it is expected that this function has shown the prepared information message to the user if the FMU was called in debug mode (`loggingOn == fmi3True`). If the FMU was not called in debug mode, <<logMessage>> should not show a message.
+In Model Exchange and all Co-Simulation interfaces, function <<logMessage>> was called by the FMU, and it is expected that this function has shown the prepared information message to the user if the FMU was called in debug mode (`loggingOn == fmi3True`). If the FMU was not called in debug mode, <<logMessage>> should not show a message.
+
+`fmi3EarlyReturn`::
+This status can only be returned from an <<fmi3DoStep>> call and the <<fmi3CallbackIntermediateUpdate>> in Basic Co-Simulation or Hybrid Co-Simulation.
+Returned by <<fmi3DoStep>> the FMU indicates, that the simulation step was only partially successful and `lastSuccessfulTime` returns the time inside the FMU when returning. 
+Returned by <<fmi3CallbackIntermediateUpdate>> the importer signals to the FMU the desire to stop the simulation step, but no earlier than the <<earlyReturnTime>> argument indicates.
 
 `fmi3Error`::
 the FMU encountered an error.
