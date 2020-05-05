@@ -608,16 +608,6 @@ typedef fmi3Status fmi3ActivateModelPartitionTYPE(fmi3Instance instance,
                                                   fmi3Float64 activationTime);
 /* end::ActivateModelPartition[] */
 
-/* tag::DoEarlyReturn[] */
-typedef fmi3Status fmi3DoEarlyReturnTYPE(fmi3Instance instance, fmi3Float64 earlyReturnTime);
-/* end::DoEarlyReturn[] */
-
-/* tag::GetDoStepDiscardedStatus[] */
-typedef fmi3Status fmi3GetDoStepDiscardedStatusTYPE(fmi3Instance instance,
-                                                    fmi3Boolean* terminate,
-                                                    fmi3Float64* lastSuccessfulTime);
-/* end::GetDoStepDiscardedStatus[] */
-
 #ifdef __cplusplus
 }  /* end of extern "C" { */
 #endif
