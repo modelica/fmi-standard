@@ -54,6 +54,7 @@ typedef enum {
     fmi3OK,
     fmi3Warning,
     fmi3Discard,
+    fmi3EarlyReturn,
     fmi3Error,
     fmi3Fatal,
 } fmi3Status;
