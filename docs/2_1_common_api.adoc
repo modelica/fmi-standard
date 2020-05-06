@@ -163,7 +163,7 @@ An `fmi3ValueReference` references one such value (scalar or array).
 The coding of `fmi3ValueReference` is a "secret" of the environment that generated the FMU.
 The interface to the equations only provides access to variables via this handle.
 Extracting concrete information about a variable can be done by reading the `modelDescription.xml` in which the value handles are defined.
-If a function in the following sections is called with a wrong `fmi3ValueReference` value _[for example, setting a constant with a call to `fmi3SetFloat64`]_, then the function must return with an error ( `fmi3Status = fmi3Error`, see <<status-returned-by-functions>>).
+If a function in the following sections is called with a wrong `fmi3ValueReference` value _[for example, setting a constant with a call to `fmi3SetFloat64`]_, then the function must return with an error ( `fmi3Status == fmi3Error`, see <<status-returned-by-functions>>).
 
 The following data types are the base types used in the interfaces of the C functions.
 
@@ -222,7 +222,7 @@ _The actual calculation is performed by `fmi3Get{VariableType}` functions._
 _Still, `fmi3Set{VariableType}` functions could check whether the input arguments are in their validity range._
 _If not, these functions could return with `fmi3Discard`.]_
 +
-In both model exchange and co-simulation interfaces, function <<logMessage>> was called in the FMU, and it is expected that this function has shown the prepared information message to the user if the FMU was called in debug mode (`loggingOn = fmi3True`). If the FMU was not called in debug mode, <<logMessage>> should not show a message.
+In both model exchange and co-simulation interfaces, function <<logMessage>> was called in the FMU, and it is expected that this function has shown the prepared information message to the user if the FMU was called in debug mode (`loggingOn == fmi3True`). If the FMU was not called in debug mode, <<logMessage>> should not show a message.
 
 `fmi3Error`::
 the FMU encountered an error.
@@ -313,12 +313,12 @@ The following schemes must be understood by the FMU:
 _[Example: An FMU is unzipped in directory `C:\temp\MyFMU`, then `resourceLocation` = `file:///C:/temp/MyFMU/resources` or `file:/C:/temp/MyFMU/resources`._
 _The <<fmi3Instantiate>> functions are then able to read all needed resources from this directory, for example maps or tables used by the FMU.]_
 
-* `visible = fmi3False` defines that the interaction with the user should be reduced to a minimum (no application window, no plotting, no animation, etc.).
+* `visible == fmi3False` defines that the interaction with the user should be reduced to a minimum (no application window, no plotting, no animation, etc.).
 In other words, the FMU is executed in batch mode.
-If `visible = fmi3True`, the FMU is executed in interactive mode, and the FMU might require to explicitly acknowledge start of simulation / instantiation / initialization (acknowledgment is non-blocking).
+If `visible == fmi3True`, the FMU is executed in interactive mode, and the FMU might require to explicitly acknowledge start of simulation / instantiation / initialization (acknowledgment is non-blocking).
 
-* If `loggingOn = fmi3False`, then any logging is disabled and the logger function is not called by the FMU.
-If `loggingOn = fmi3True`, the FMU enables a vendor defined set of `<LogCategories>`.
+* If `loggingOn == fmi3False`, then any logging is disabled and the logger function is not called by the FMU.
+If `loggingOn == fmi3True`, the FMU enables a vendor defined set of `<LogCategories>`.
 This set should typically contain categories for messages that explain execution errors, like `fmi3Discard`, `fmi3Error` and `fmi3Fatal`.
 The function <<fmi3SetDebugLogging>> gives more detailed control about required `<LogCategories>` (see <<definition-of-log-categories>>).
 
@@ -352,7 +352,7 @@ Pointer to a function that is called in the FMU _[usually if an `fmi3XXX` functi
 * `instanceName` is the instance name of the model that calls this function.
 // TODO fix following sentence
 * `status` contains the severity of the message.
-If <<logMessage>> is called with `status = fmi3OK`, then the message is a pure information message.
+If <<logMessage>> is called with `status == fmi3OK`, then the message is a pure information message.
 
 * `category` is the category of the message.
 The meaning of `category` is defined by the modeling environment that generated the FMU.
@@ -388,22 +388,22 @@ In other cases, a null pointer can be assigned to the <<intermediateUpdate>> cal
 * <<intermediateUpdateTime>> indicates the internal time of the FMU at the time of calling the callback function.
 
 [[eventOccurred,`eventOccurred`]]
-* <<eventOccurred,`eventOccurred = fmi3True`>> means that an internal event has occurred.
+* <<eventOccurred,`eventOccurred == fmi3True`>> means that an internal event has occurred.
 
 [[clocksTicked,`clocksTicked`]]
-* <<clocksTicked,`clocksTicked = fmi3True`>> means that an FMU clock has ticked.
+* <<clocksTicked,`clocksTicked == fmi3True`>> means that an FMU <<outputClock>> has ticked.
 
 [[intermediateVariableSetAllowed,`intermediateVariableSetAllowed`]]
-* <<intermediateVariableSetAllowed,`intermediateVariableSetAllowed = fmi3True`>> means the master algorithm is allowed to set FMU variables using `fmi3Set{VariableType}`.
+* <<intermediateVariableSetAllowed,`intermediateVariableSetAllowed == fmi3True`>> means the master algorithm is allowed to set FMU variables using `fmi3Set{VariableType}`.
 
 [[intermediateVariableGetAllowed,`intermediateVariableGetAllowed`]]
-* <<intermediateVariableGetAllowed,`intermediateVariableGetAllowed = fmi3True`>> means the master algorithm is allowed to get FMU variables using `fmi3Get{VariableType}`.
+* <<intermediateVariableGetAllowed,`intermediateVariableGetAllowed == fmi3True`>> means the master algorithm is allowed to get FMU variables using `fmi3Get{VariableType}`.
 
 [[intermediateStepFinished,`intermediateStepFinished`]]
-* <<intermediateStepFinished, `intermediateStepFinished = fmi3True`>> means that an internal step was finished.
+* <<intermediateStepFinished, `intermediateStepFinished == fmi3True`>> means that an internal step was finished.
 
 [[canReturnEarly,`canReturnEarly`]]
-* <<canReturnEarly,`canReturnEarly = fmi3True`>> means the master is allowed to ask the FMU to return early from a <<fmi3DoStep>>.
+* <<canReturnEarly,`canReturnEarly == fmi3True`>> means the master is allowed to ask the FMU to return early from a <<fmi3DoStep>>.
 
 The various combinations of flags allow a Co-Simulation master algorithm to react appropriately to the needs and capabilities of the FMU.
 
@@ -435,11 +435,11 @@ include::../headers/fmi3FunctionTypes.h[tags=SetDebugLogging]
 ----
 The function controls debug logging that is output via the logger function callback.
 
-* If `loggingOn = fmi3True`, debug logging is enabled, otherwise it is switched off.
+* If `loggingOn == fmi3True`, debug logging is enabled, otherwise it is switched off.
 
 * `nCategories` defines the length of the next argument `categories`
-If `loggingOn = fmi3True` and `nCategories = 0`, then all debug messages shall be output.
-If `loggingOn = fmi3True` and `nCategories > 0`, then only debug messages according to the `categories` argument shall be printed via the <<logMessage>> function.
+If `loggingOn == fmi3True` and `nCategories == 0`, then all debug messages shall be output.
+If `loggingOn == fmi3True` and `nCategories > 0`, then only debug messages according to the `categories` argument shall be printed via the <<logMessage>> function.
 
 * `categories` is a vector with `nCategories` elements.
 The allowed values of `categories` are defined by the modeling environment that generated the FMU.
@@ -478,11 +478,11 @@ Setting other variables is not allowed.
 * `toleranceDefined` and `tolerance` depend on the interface type:
 
 Model Exchange::
-If `toleranceDefined = fmi3True`, then the model is called with a numerical integration scheme where the step size is controlled by using `tolerance` for error estimation (usually as relative tolerance).
+If `toleranceDefined == fmi3True`, then the model is called with a numerical integration scheme where the step size is controlled by using `tolerance` for error estimation (usually as relative tolerance).
 In such a case all numerical algorithms used inside the model (for example, to solve non-linear algebraic equations) should also operate with an error estimation of an appropriate smaller relative tolerance.
 
 Co-Simulation::
-If `toleranceDefined = fmi3True`, then the communication step size of the FMU is controlled by error estimation.
+If `toleranceDefined == fmi3True`, then the communication step size of the FMU is controlled by error estimation.
 In case the FMU utilizes a numerical integrator with variable step size and error estimation, it is suggested to use `tolerance` for the error estimation of the integrator (usually as relative tolerance). +
 An FMU for Co-Simulation might ignore this argument.
 
@@ -492,9 +492,9 @@ An FMU for Co-Simulation might ignore this argument.
 _[It is defined with <<causality>> = <<independent>> in the `modelDescription.xml`._
 _If the <<independent>> variable is `time`, `startTime` is the starting time of initialization.]_
 
-* If `stopTimeDefined = fmi3True`, then `stopTime` is the final value of the <<independent>> variable.
-If the environment tries to compute past `stopTime`, the FMU has to return `fmi3Status = fmi3Error`.
-If `stopTimeDefined = fmi3False`, then no final value of the <<independent>> variable is defined and argument `stopTime` is meaningless.
+* If `stopTimeDefined == fmi3True`, then `stopTime` is the final value of the <<independent>> variable.
+If the environment tries to compute past `stopTime`, the FMU has to return `fmi3Status == fmi3Error`.
+If `stopTimeDefined == fmi3False`, then no final value of the <<independent>> variable is defined and argument `stopTime` is meaningless.
 +
 _[If the <<independent>> variable is `time`, `stopTime` is the stop time of the simulation.]_
 
@@ -581,7 +581,7 @@ Furthermore, the actual value of every variable defined in the `modelDescription
 
 The strings returned by `fmi3GetString`, as well as the binary values returned by `fmi3GetBinary`, must be copied in the target environment because the allocated memory for these strings might be deallocated or overwritten by the next call to any of the FMI functions.
 
-For Model Exchange: `fmi3Status = fmi3Discard` is possible for `fmi3GetFloat32` and `fmi3GetFloat64` only, but not for `fmi3Get*Int*`, `fmi3GetBoolean`, `fmi3GetString`, `fmi3GetBinary`, because these are discrete-time variables and their values can only change at an event instant where `fmi3Discard` does not make sense.
+For Model Exchange: `fmi3Status == fmi3Discard` is possible for `fmi3GetFloat32` and `fmi3GetFloat64` only, but not for `fmi3Get*Int*`, `fmi3GetBoolean`, `fmi3GetString`, `fmi3GetBinary`, because these are discrete-time variables and their values can only change at an event instant where `fmi3Discard` does not make sense.
 
 It is also possible to set the values of certain variables at particular instants in time using the following functions:
 
@@ -602,7 +602,7 @@ Set <<parameter,`parameters`>>, <<input,`inputs`>>, and <<start>> values, and re
 
 All strings passed as arguments to `fmi3SetString`, as well as all binary values passed as arguments to `fmi3SetBinary`, must be copied inside these functions, because there is no guarantee of the lifetime of strings or binary values, when these functions return.
 
-Note, `fmi3Status = fmi3Discard` is possible for the `fmi3Set{VariableType}` functions.
+Note, `fmi3Status == fmi3Discard` is possible for the `fmi3Set{VariableType}` functions.
 
 For Co-Simulation FMUs, additional functions are defined in <<transfer-of-input-output-and-parameters>> to set and inquire <<derivative,`derivatives`>> of variables with respect to time in order to allow interpolation.
 
@@ -664,7 +664,7 @@ _This mode can also be requested by the calling environment with <<fmi3SetClock>
 
 ====== Communication Point Clocks
 
-Communication Point Clocks, introduced here, are used only in FMI for Basic Co-Simulation to define the communication points of model partitions (defined below).
+Communication Point Clocks, introduced here, are used only in Basic Co-Simulation, Hybrid Co-Simulation and Scheduled Co-Simulation to define the communication points of model partitions (defined below).
 These <<clock,`clocks`>> are not compatible with synchronous clocks theory and must not be used together with synchronous clocks in one model.
 
 A model partition is mathematically defined as:
@@ -687,8 +687,8 @@ This section gives a definition of the two clock variants.
 
 ====== Output Clocks
 
-An <<outputClock>> is a general <<clock>> that ticks when a time-, state- or step-event occurs in the continuous-model partition of the FMU (for Communication Point Clocks these <<outputClock>> tick events can occur in all model partitions) and are identified based on their <<clockReference>> (see <<operation-on-clocks>>).
-The events can be periodic or non-periodic.
+An <<outputClock>> is a general <<clock>> that ticks when a time-, state- or step-event occurs in the continuous-model partition of the FMU (for Communication Point Clocks these <<outputClock>> tick events can occur in all model partitions) and are identified based on their <<valueReference>>.
+The events can be <<periodic>> or <<periodic,aperiodic>>.
 
 _[Example: If_ latexmath:[b = x > 0] _, and a state event is defined when b changes from `false` to `true`, and b is defined as <<outputClock>>, then this <<clock>> is active whenever x changes from negative to positive values.]_
 
@@ -705,7 +705,7 @@ _]_
 
 ====== Input Clocks
 
-An <<inputClock>> is a periodic or non-periodic <<clock>> that is defined by a <<clock>> outside of the FMU.
+An <<inputClock>> is a <<periodic>> or <<periodic,aperiodic>> <<clock>> that is defined by a <<clock>> outside of the FMU.
 Its interval is initialized by the environment.
 
 _[Inside of the FMU it is not known in advance when this <<clock>> ticks._
@@ -720,7 +720,7 @@ This section gives a definition of additional clock properties.
 
 ====== Periodic Clock Ticks
 
-Either <<output>> or <<input>>, a periodic <<clock>> ticks at equidistant sample time points that are known a priori (defined in `modelDescription.xml`) or are alternatively determined by the environment in case of <<inputClock,`input clocks`>>.
+Either <<output>> or <<input>>, a <<periodic>> <<clock>> ticks at equidistant sample time points that are known a priori (defined in `modelDescription.xml`) or are alternatively determined by the environment in case of <<inputClock,`input clocks`>>.
 Mathematically, the next <<clock>> tick at time instant latexmath:[t_i] is defined as:
 
 [latexmath]
@@ -746,13 +746,13 @@ where:
 It is defined as a rational number based on `intervalCounter` and `resolution` via <<clock>> variable attributes.
 |===
 
-The interval latexmath:[\Delta T] and latexmath:[t_{offset}] must be defined for periodic <<clock,`clocks`>> in the XML file.
-In case of periodic <<inputClock,`input clocks`>> these values are the start interval values if they are not given by the simulation master.
-_[This information can be used for emulating periodic <<inputClock,`input clocks`>> in the Co-Simulation interface types.]_.
+The interval latexmath:[\Delta T] and latexmath:[t_{offset}] must be defined for <<periodic>> <<clock,`clocks`>> in the XML file.
+In case of <<periodic>> <<inputClock,`input clocks`>> these values are the start interval values if they are not given by the simulation master.
+_[This information can be used for emulating <<periodic>> <<inputClock,`input clocks`>> in the Co-Simulation interface types.]_.
 
-A <<clock>> is strictly periodic if latexmath:[\Delta T] is fixed for an FMU and cannot be changed.
+A <<clock>> is <<strict,strictly>> <<periodic>> if latexmath:[\Delta T] is fixed for an FMU and cannot be changed.
 The <<clock>> is periodic, if latexmath:[\Delta T] can be defined before calling `fmi3EnterInitializationMode` via <<fmi3SetIntervalDecimal>> or <<fmi3SetIntervalFraction>>.
-The <<clock>> is aperiodic if latexmath:[\Delta T] is not constant during a simulation run (<<fmi3SetIntervalDecimal>> or <<fmi3SetIntervalFraction>> can be called for that <<clock>> during *Event Mode*).
+The <<clock>> is <<periodic,aperiodic>> if latexmath:[\Delta T] is not constant during a simulation run (<<fmi3SetIntervalDecimal>> or <<fmi3SetIntervalFraction>> can be called for that <<clock>> during *Event Mode*).
 
 ====== Clock Priority
 
@@ -762,7 +762,7 @@ No ordering is defined for <<clock,`clocks`>> of the same priority.
 If a computational order information is needed, different priorities for <<clock,`clocks`>> have to be defined.
 The priority of a <<clock>> has to be defined in the `modelDescription.xml` via the <<clock>> variable integer attribute `priority` - smaller values have a higher priority.
 
-_[For periodic <<clock,`clocks`>> it is recommended to derive the priorities based on a rate monotonic scheduling scheme (smallest period leads to highest priority, that is, has the smallest priority value.]_
+_[For <<periodic>> <<clock,`clocks`>> it is recommended to derive the priorities based on a rate monotonic scheduling scheme (smallest period leads to highest priority, that is, has the smallest priority value.]_
 
 _[The clock priorities are local to an FMU.
 It is not possible for an FMU exporting tool to know in advance the priorities of other FMUs that will be connected to an FMU in a simulation setup.
@@ -778,8 +778,8 @@ If <<outputClock,`output clocks`>> and <<inputClock,`input clocks`>> are defined
 This is needed to allow for an external resource management to achieve an optimal control of model partitions.
 The <<outputClock,`output clocks`>> and the associated <<inputClock,`input clocks`>> define a union of <<clock,`clocks`>>.
 In that sense, if an <<outputClock>> ticks the associated <<inputClock>> ticks at the same time instant in such a union.
-It is only meaningful to combine one or multiple <<outputClock,`output clocks`>> with a single aperiodic <<inputClock>> in such a union.
-It is possible to define multiple unions of <<clock,`clocks`>>, with the maximum number defined by the number of available aperiodic <<inputClock,`input clocks`>>.
+It is only meaningful to combine an <<outputClock,`output clock`>> with an <<periodic,aperiodic>> <<inputClock>> in such a union.
+It is possible to define multiple unions of <<clock,`clocks`>>, with the maximum number defined by the number of available <<periodic,aperiodic>> <<inputClock,`input clocks`>>, i.e. each <<inputClock,`input clock`>> may be contained at most in one union of clocks.
 
 [cols="1,2"]
 |===
@@ -796,7 +796,7 @@ It is possible to define multiple unions of <<clock,`clocks`>>, with the maximum
 |-
 |===
 
-A clock union can be defined based on the <<clockReference>> attribute of <<inputClock>> variables.
+A clock union can be defined based on the <<triggeredBy>> attribute of <<inputClock>> variables.
 
 [#ExampleUseCase]
 image::images/example_usecase.png[]
@@ -829,11 +829,12 @@ When getting or setting the values of array variables, the serialization of arra
 
 * `values` is a vector with the actual activation values of the clock variables, `fmi3ClockActive` specifying that the clock is activated, otherwise it is deactivated.
 
-* `subactive` is a vector of booleans for each actual clock specifying whether evaluation of a clocked partition should occur in subactive mode (only output equations are evaluated) or not. This value has no meaning for Communication Point Clocks and is ignored for such <<clock,`clocks`>>.
+* `subactive` requires evaluation of a clocked partition in subactive mode (only output equations) if the argument subactive is not a null pointer and `subactive[i] = fmi3True`.
+`subactive[i]` has no meaning for Communication Point Clocks and is ignored for such <<clock,`clocks`>>.
 
 * `nValues` provides the number of values in the `values` and `subactive` vectors, which is only equal to `nValueReferences` if all <<valueReference>>pass:[s] point to scalar clock variables.
 
-It is not allowed to call this function within the callback function `fmi3IntermediateUpdate`.
+It is not allowed to call this function within the callback function <<intermediateUpdate>>.
 
 [[fmi3GetClock,`fmi3GetClock`]]
 [source, C]
@@ -846,7 +847,7 @@ Inquires whether a set of <<clock,`clocks`>> is active by providing the value re
 * `valueReferences` is a vector of `nValueReferences` value handles that define the clock variables that shall be inquired.
 
 * `values` will return the activation status at the current time instant of the <<clock,`clocks`>> referenced by `valueReferences[]`.
-If `values[i] = fmi3ClockActive` the <<clock>> is currently active, otherwise the <<clock>> is not active.
+If `values[i] == fmi3ClockActive` the <<clock>> is currently active, otherwise the <<clock>> is not active.
 
 * `nValues` provides the number of values in the `values` vector, which is only equal to `nValueReferences` if all <<valueReference>>pass:[s] point to scalar clock variables.
 
@@ -880,8 +881,8 @@ include::../headers/fmi3FunctionTypes.h[tag=GetIntervalDecimal]
 include::../headers/fmi3FunctionTypes.h[tag=GetIntervalFraction]
 ----
 
-Both functions inquire the interval value for the provided <<clock,`clocks`>> (periodic or non-periodic).
-If the <<clock,`clocks`>> are non-periodic, the interval has to be inquired at every <<clock>> tick, to define the follow-up <<clock>> tick.
+Both functions inquire the interval value for the provided <<clock,`clocks`>> (<<periodic>> or <<periodic,aperiodic>>).
+If the <<clock,`clocks`>> are aperiodic, the interval has to be inquired at every <<clock>> tick, to define the follow-up <<clock>> tick.
 
 The following table summarizes the use of the API functions by the environment for different kinds of <<clock,`clocks`>>:
 
@@ -892,7 +893,7 @@ The following table summarizes the use of the API functions by the environment f
 |<<inputClock,`Input clock`>>
 
 |`fmi3GetClock`
-|Call during *Event Mode*
+|Call during *Event Mode* or *Intermediate Update Mode*
 |Call during *Event Mode*
 
 |`fmi3SetClock`
@@ -907,7 +908,7 @@ Repeated calls if recomputations of clock state are needed during *Event Mode*.
 |`fmi3SetIntervalDecimal` `fmi3SetIntervalFraction`
 |Don't call.
 |Call after first <<clock>> activation.
-(only for periodic <<clock,`clocks`>>)
+(only for <<periodic>> <<clock,`clocks`>>)
 |===
 
 //TODO-API: check if addition (only for periodic clocks) is correct
@@ -1226,7 +1227,17 @@ h_2(u_1, u_2)
 ++++
 
 _and latexmath:[\left( w_1,  w_2 \right)^T \cdot \mathbf{ \frac{\partial h}{\partial u} }] for some vector latexmath:[\left( w_1,  w_2 \right)^T] is needed._
-_Then one can get this with one function call of <<fmi3GetAdjointDerivative>> (with arguments_ latexmath:[\mathbf{v}_{unknown} = \text{valueReferences of} \left \{ y_1, y_2 \right \},  \mathbf{v}_{knwon} = \text{valueReferences of} \left \{ u_1, u_2 \right \},  \mathbf{v}_{seed} = \left( w_1, w_2 \right)^T] _), while with <<fmi3GetDirectionalDerivative>> at least two calls would be necessary to first construct the Jacobian column-wise and then multiplying from the right with_ latexmath:[\left( w_1,  w_2 \right)^T] _]_
+_Then one can get this with one function call of <<fmi3GetAdjointDerivative>> (with arguments_ latexmath:[\mathbf{v}_{unknown} = \text{valueReferences of} \left \{ y_1, y_2 \right \},  \mathbf{v}_{knwon} = \text{valueReferences of} \left \{ u_1, u_2 \right \},  \mathbf{v}_{seed} = \left( w_1, w_2 \right)^T] _), while with <<fmi3GetDirectionalDerivative>> at least two calls would be necessary to first construct the Jacobian column-wise and then multiplying from the right with_ latexmath:[\left( w_1,  w_2 \right)^T] _._
+
+_If a dense matrix shall be computed, the rows of the matrix can be easily constructed by successive calls of <<fmi3GetAdjointDerivative>>._
+_For example, constructing the system Jacobian latexmath:[{\mathbf{A} = \frac{\partial \mathbf{f}}{\partial \mathbf{x}}}] as a dense matrix can be performed in the following way:_
+
+[source, C]
+----
+include::Reference-FMUs/examples/jacobian.c[tags=GetJacobianAdjoint]
+----
+
+_]_
 
 ==== Getting Number of Event Indicators
 

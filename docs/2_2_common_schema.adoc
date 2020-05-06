@@ -219,9 +219,9 @@ The format is a subset of `dateTime` and should be: `YYYY-MM-DDThh:mm:ssZ` (with
 |Defines whether the variable names in `<ModelVariables>` and in `<TypeDefinitions>` follow a particular convention.
 For the details, see <<variableNamingConvention>>. Currently standardized are:
 
-- `flat`: A list of strings (the default).
+`= flat`: A list of strings (the default).
 
-- `structured`: Hierarchical names with `.` as hierarchy separator, and with array elements and derivative characterization.
+`= structured`: Hierarchical names with `.` as hierarchy separator, and with array elements and derivative characterization.
 
 |====
 
@@ -544,8 +544,8 @@ _If the FMU is generated so that min/max shall be checked whenever meaningful (f
 
 _If `fmi3Set{VariableType}` is called violating the min/max attribute settings of the corresponding variable, the following actions are performed:_
 
-- _On a <<fixed>> or <<tunable>> <<parameter>> `fmi3Status = fmi3Discard` is returned._
-- _On an <<input>>, the FMU decides what to return (If no computation is possible, it could return `fmi3Status = fmi3Discard`, in other situations it may return `fmi3Warning` or `fmi3Error`, or `fmi3OK`, if it is uncritical)._
+- _On a <<fixed>> or <<tunable>> <<parameter>> `fmi3Status == fmi3Discard` is returned._
+- _On an <<input>>, the FMU decides what to return (If no computation is possible, it could return `fmi3Status == fmi3Discard`, in other situations it may return `fmi3Warning` or `fmi3Error`, or `fmi3OK`, if it is uncritical)._
 
 _If an FMU defines min/max values for integer types and `<Enumeration>` variables (<<local>> and <<output>> variables), then the expected behavior of the FMU is that `fmi3Get{VariableType}` functions return values in the defined range._
 
@@ -562,12 +562,31 @@ The variable sub type `fmi3Clock` provides additional attributes for defining <<
 |Description
 
 |`clockType`
-|The type of <<clock,`clocks`>> is defined based on the mandatory attribute `clockType`.
-If the properties of a <<clock>> adhere to synchronous clock theory it is defined with `clockType = synchronousTime`.
-Otherwise, if the <<clock>> is to be used in FMI for Hybrid Co-Simulation, FMI for Scheduled Co-Simulation, or can be associated to model partitions in continuous parts of the FMU, then `clockType = communicationPoint`.
-The ticks of these clocks define the sampling points (i.e. communication points) for the variables of these model partitions.
-These clocks are ignored by Model Exchange, and it is not allowed to include <<clock,`clocks`>> of different `clockType` in one FMU.
+
+a|
+[[clockType,`clockType`]]
+The type of <<clock,`clocks`>> is defined based on the mandatory attribute `clockType` with the following two values:
+
+[[synchronousTime,`synchronousTime`]]
+`= synchronousTime` is used, if the properties of the <<clock>> adhere to synchronous clock theory.
+
+[[communicationPoint,`communicationPoint`]]
+`= communicationPoint` <<clock,`clocks`>> define sampling points (i.e. communication points) for the variables of model partitions and are used in Hybrid Co-Simulation and FMI for Scheduled Co-Simulation.
+These clocks are ignored by Model Exchange.
+
+It is not allowed to include <<clock,`clocks`>> of different `clockType` in one FMU.
 `clockType` is a required attribute.
+
+// TODO still unclear: where can I use which clockType? What if we have multiple interfaces in the FMU with different clock types?
+
+|`triggeredBy`
+|
+[[triggeredBy,`triggeredBy`]]
+The optional attribute <<triggeredBy>> is used to define a tick relationship from an <<outputClock>> to an <<periodic,aperiodic>> <<inputClock>> (see <<clock-relationships-for-communication-point-clocks>>).
+
+Only <<clock,`clocks`>> with <<causality>> = <<input>> and <<clockType>> = <<communicationPoint>> can have this attribute.
+It is not allowed to combine <<outputClock,`output clocks`>> with <<periodic>> or <<strict>> <<periodic>> <<inputClock,`input clocks`>> based on <<triggeredBy>>.
+
 
 |`priority`
 |The <<clock,`clocks`>> are ordered descending based on their priorities.
@@ -576,17 +595,21 @@ It is possible to define multiple <<clock,`clocks`>> with the same priority.
 No ordering is defined for <<clock,`clocks`>> of the same priority.
 If a computational order information is needed, different priorities have to be defined.
 
-_[For periodic <<clock,`clocks`>> it is recommended to derive the priorities based on a rate monotonic scheduling scheme (smallest period leads to highest priority, that is, has the smallest priority value.]_
+_[For <<periodic>> <<clock,`clocks`>> it is recommended to derive the priorities based on a rate monotonic scheduling scheme (smallest period leads to highest priority, that is, has the smallest priority value.]_
 
 `priority` is a required attribute.
 
 |`periodic`
-|Clocks can be periodic or non-periodic. If a <<clock>> is periodic, the attribute `periodic = true`.
+|
+[[periodic,`periodic`]]
+Clocks can be periodic or aperiodic. If a <<clock>> is periodic, the attribute `periodic = true`.
 
 `periodic` is an optional attribute. The default value is `false`.
 
 |`strict`
-|If a periodic <<clock>> is strictly periodic, the `strict` attribute is `true`.
+|
+[[strict,`strict`]]
+If a <<periodic>> <<clock>> is strictly periodic, the `strict` attribute is `true`.
 If the optional attribute `strict` is set to `true`, then the FMU and the simulation master have to respect the predefined interval and offset.
 If the optional attribute `strict` is set to `false` another interval or offset can be used, derived from the current simulation setup.
 
@@ -594,18 +617,18 @@ If the optional attribute `strict` is set to `false` another interval or offset 
 The FMU exporter is not allowed to set `strict` to `true` if `periodic = false`.
 
 |`intervalCounter`, `shiftCounter`, `resolution`
-|The interval of <<output>> or <<input>> periodic <<clock,`clocks`>> is a rational number defined with unsignedLong valued `intervalCounter` and `resolution`:
+|The interval of <<output>> or <<input>> <<periodic>> <<clock,`clocks`>> is a rational number defined with unsignedLong valued `intervalCounter` and `resolution`:
 
 `interval = intervalCounter / resolution`.
 
-The initial tick of periodic <<clock,`clocks`>> may be delayed by defining a `shiftCounter` (default value 0). This results in the actual
+The initial tick of <<periodic>> <<clock,`clocks`>> may be delayed by defining a `shiftCounter` (default value 0). This results in the actual
 
 `offset = interval * shiftCounter / resolution`.
 
 More information about clock intervals:
  <<additional-clock-properties>>.
 
-The attributes `intervalCounter`, `shiftCounter` and `resolution` are interval <<start>> values for periodic <<clock,`clocks`>> and must not be used together with non-periodic <<clock,`clocks`>>.
+The attributes `intervalCounter`, `shiftCounter` and `resolution` are interval <<start>> values for <<periodic>> <<clock,`clocks`>> and must not be used together with <<periodic,aperiodic>> <<clock,`clocks`>>.
 If `strict = true` it is required to provide values for `intervalCounter`, `shiftCounter` and `resolution`.
 
 `intervalCounter` and `resolution` have no default value.
@@ -848,7 +871,7 @@ _Vendor specific terminal kinds should start with `_vendorName` or `_toolName` t
 
 _Examples for `terminalKind`: `StandardXXX_Mechanical_Translational`, `Modelica.Mechanics.Translational.Interfaces.Flange_a`, `vendorNameA_customTypeA`, `_vendorNameB_customLibrary_customTypeB`._
 
-_The structured naming convention of the `<ModelVariables>` is <<independent>> from the terminal names and member variable names._
+_The structured naming convention of the `<ModelVariables>` is independent from the terminal names and member variable names._
 
 _A tool may choose to connect terminals with a different or unknown `terminalKind`, if the `matchingRule` matches.]_
 
@@ -1106,29 +1129,31 @@ Enumeration that defines the causality of the variable.
 Allowed values of this enumeration:
 
 [[parameter,`parameter`]]
-- `parameter`: independent parameter (a data value that is constant during the simulation and is provided by the environment and cannot be used in connections).
+`= parameter`: A data value that is constant during the simulation and is provided by the environment and cannot be used in connections.
 <<variability>> must be <<fixed>> or <<tunable>>.
+These parameters can be changed independently, unlike <<calculatedParameter,calculated parameters>>.
 <<initial>> must be <<exact>> or not present (meaning <<exact>>).
 
 [[calculatedParameter,`calculatedParameter`]]
-- `calculatedParameter`: A data value that is constant during the simulation and is computed during initialization or when <<tunable>> <<parameter,`parameters`>> change.
+`= calculatedParameter`: A data value that is constant during the simulation and is computed during initialization or when <<tunable>> <<parameter,`parameters`>> change.
 <<variability>> must be <<fixed>> or <<tunable>>.
 <<initial>> must be <<approx>>, <<calculated>> or not present (meaning <<calculated>>).
 
 [[input,`input`]]
-- `input`: The variable value can be provided from another model or slave.
-It is not allowed to define <<initial>>.
+`= input`: The variable value can be provided from another FMU.
+[[inputClock,`inputClock`]] If <<variability>> = <<clock>> the variable defines an <<inputClock, `input clock`>> that is controlled by the master.
 
 [[output,`output`]]
-- `output`: The variable value can be used by another model or slave.
+`= output`: The variable value can be used by another FMU.
 The algebraic relationship to the <<input,`inputs`>> is defined via the <<dependencies>> attribute of `<fmiModelDescription><ModelStructure><Output>`.
+[[outputClock,`outputClock`]] If <<variability>> = <<clock>> the variable defines an <<outputClock,`output clock`>> that is controlled  by the FMU..
 
 [[local,`local`]]
-- `local`: Local variable that is calculated from other variables or is a continuous-time <<state>> or an event indicator (see <<ModelStructure>>).
+`= local`: Local variable that is calculated from other variables or is a continuous-time <<state>> or an event indicator (see <<ModelStructure>>).
 It is not allowed to use the variable value in another model or slave.
 
 [[independent,`independent`]]
-- `independent`: The independent variable (usually `time`).
+`= independent`: The independent variable (usually `time`).
 All variables are a function of this <<independent>> variable.
 <<variability>> must be <<continuous>>.
 At most one variable of an FMU can be defined as <<independent>>.
@@ -1139,33 +1164,20 @@ Instead, its value is initialized with <<fmi3EnterInitializationMode>> and after
 _[The actual value can be inquired with `fmi3Get{VariableType}`.]_
 
 [[structuralParameter,`structuralParameter`]]
-- `structuralParameter`: parameter (a data value that is constant during the simulation and is provided by the environment and cannot be used in connections). <<variability>> must be <<fixed>> or <<tunable>>. <<initial>> must be <<exact>> or not present (meaning <<exact>>).
+`= structuralParameter`: parameter (a data value that is constant during the simulation and is provided by the environment and cannot be used in connections). <<variability>> must be <<fixed>> or <<tunable>>. <<initial>> must be <<exact>> or not present (meaning <<exact>>).
 This <<causality>> requires the variable not to have a `<Dimension>` element.
 
 _[_
 _Example:_
 
-// TODO: include example from XML AND remove change Variable into an existing element type
-[source, XML]
+[source, xml]
 ----
-<Variable name="spD" valueReference="126" causality="structuralParameter" variability="fixed">
-  <Integer start="3"/>
-</Variable>
+include::examples/structural_paramer_example.xml[tags=structuralParameter]
 ----
 
 _]_
 
 <<structuralParameter,`structural parameters`>> that are referenced in `<Dimension>` elements may have a `min` attribute with 0 but the <<start>> attribute, which is mandatory for <<structuralParameter,`structural parameters`>>, must have a value larger than 0 for <<structuralParameter,`structural parameters`>> used in `<Dimension>` elements. _[This allows importing tools to ignore <<structuralParameter,`structural parameters`>> because that <<start>> value reflects the internal default setting of that <<structuralParameter,`structural parameter`>>]_.
-
-[[inputClock,`input clock`]]
-- `input`: the variable defines an <<inputClock>> that is controlled by the master.
-Variability must be <<clock>>.
-Only a variable of type `<Clock>` can have this <<causality>>.
-
-[[outputClock,`output clock`]]
-- `output`: the variable defines an <<outputClock>> that is controlled by the FMU.
-Variability must be <<clock>>.
-Only a variable of type `<Clock>` can have this <<causality>>.
 
 The default of <<causality>> is <<local>>. +
 A continuous-time <<state>> or a event indicator must have <<causality>> = <<local>> or <<output>>, see also <<ModelStructure>>.
@@ -1183,28 +1195,28 @@ _For example, <<discrete>> variables change their values only at event instants 
 Allowed values of this enumeration:
 
 [[constant,`constant`]]
-- `constant`: The value of the variable never changes.
+`= constant`: The value of the variable never changes.
 
 [[fixed,`fixed`]]
-- `fixed`: The value of the variable is fixed after initialization, in other words, after <<fmi3ExitInitializationMode>> was called the variable value does not change anymore.
+`= fixed`: The value of the variable is fixed after initialization, in other words, after <<fmi3ExitInitializationMode>> was called the variable value does not change anymore.
 
 [[tunable,`tunable`]]
-- `tunable`: The value of the variable is constant between external events (ME) and between communication points (xCS) due to changing variables with <<causality>> = <<parameter>> or <<input>> and <<variability>> = <<tunable>>.
+`= tunable`: The value of the variable is constant between external events (ME) and between communication points (xCS) due to changing variables with <<causality>> = <<parameter>> or <<input>> and <<variability>> = <<tunable>>.
 Whenever a <<parameter>> or <<input>> signal with <<variability>> = <<tunable>> changes, an event is triggered externally (ME), or the change is performed at the next communication point (xCS) and the variables with <<variability>> = <<tunable>> and <<causality>> = <<calculatedParameter>> or <<output>> must be newly computed.
 
 [[discrete,`discrete`]]
-- `discrete`: +
+`= discrete`: +
 Model Exchange: The value of the variable is constant between external and internal events (= time, state, step events defined implicitly in the FMU). +
 Co-Simulation: By convention, the variable is from a real sampled data system and its value is only changed at communication points (also inside the slave).
 // TODO how does this work with IVA?
 
 [[continuous,`continuous`]]
-- `continuous`: Only a variable of `type = fmi3GetFloat32` or `type = fmi3GetFloat64` can be <<continuous>>. +
+`= continuous`: Only a variable of `type == fmi3GetFloat32` or `type == fmi3GetFloat64` can be <<continuous>>. +
 Model Exchange: No restrictions on value changes. +
 Co-Simulation: By convention, the variable is part of a differential equation.
 
 [[clock,`clock`]]
-- `clock`: Only a variable of type `<Clock>` can have this variability.
+`= clock`: Only a variable of type `<Clock>` can have this variability.
 
 The default is <<continuous>> for variables of type `<Float32>` and `<Float64>`, and <<discrete>> for all other types.
 
@@ -1217,13 +1229,13 @@ Enumeration that defines how the variable is initialized.
 It is not allowed to provide a value for <<initial>> if <<causality>> = <<input>> or <<independent>>:
 
 [[exact,`exact`]]
-- = `exact`: The variable is initialized with the <<start>> value (provided under the variable type element).
+`= exact`: The variable is initialized with the <<start>> value (provided under the variable type element).
 
 [[approx,`approx`]]
-- = `approx`: The variable is an iteration variable of an algebraic loop and the iteration at initialization starts with the <<start>> value.
+`= approx`: The variable is an iteration variable of an algebraic loop and the iteration at initialization starts with the <<start>> value.
 
 [[calculated,`calculated`]]
-- = `calculated`: The variable is calculated from other variables during initialization.
+`= calculated`: The variable is calculated from other variables during initialization.
 It is not allowed to provide a <<start>> value.
 
 If <<initial>> is not present, it is defined by the table below based on <<causality>> and <<variability>>.
@@ -1246,10 +1258,11 @@ If `fmi3Set{VariableType}` is not called on a variable with <<causality>> = <<in
 |`canHandleMultipleSetPerTimeInstant`
 |
 [[canHandleMultipleSetPerTimeInstant,`canHandleMultipleSetPerTimeInstant`]]
-Only for Model Exchange (if only a Co-Simulation FMU, this attribute must not be present.
-If both Model Exchange and Co-Simulation FMU, this attribute is ignored for co-simulation): +
+Only useful for Model Exchange FMUs, if only a Co-Simulation FMU, this attribute must not be present.
+If Model Exchange and Co-Simulation are combined in one FMU, this attribute is ignored for Co-Simulation: +
 Only for variables with <<variability>> = <<input>> : +
-If present with value equals `false`, then only one `fmi3Set{VariableType}` call is allowed at one super-dense time instant (model evaluation) on this variable.
+If not present, the default value is assumed to be `true`.
+If `canHandleMultipleSetPerTimeInstant = false`, then only one `fmi3Set{VariableType}` call is allowed at one super-dense time instant (model evaluation) on this variable.
 That is, this <<input>> is not allowed to appear in a (real) algebraic loop requiring multiple calls of `fmi3Set{VariableType}` on this variable _[for example, due to a Newton iteration]_. +
 _[This flag must be set by FMUs where (internal) discrete-time <<state,`states`>> are directly updated when assigned (xd := f(xd) instead of xd = f(previous(xd)), and at least one <<output>> depends on this <<input>> and on discrete <<state,`states`>>._ +
 _It is strongly recommended that such an FMU checks the fulfillment of the requirement by itself during run-time, because an environment might not be able to check it; usually, there is a generic mechanism to import an FMU in an environment, but the mechanism to connect FMUs together is unrelated to the import mechanism._
@@ -1259,23 +1272,17 @@ _For example, there is no mechanism in the Modelica language to formulate connec
 |`clockReference`
 |
 [[clockReference,`clockReference`]]
-The optional attribute <<clockReference>> is used, in conjunction with the <<clockElementIndex>> attribute, to define the <<clock,`clocks`>> this variable is assigned to.
-This attribute can be used in all variable sub types with restrictions based on the `clockType`  attribute.
+
+The optional attribute <<clockReference>> is used, in conjunction with the <<clockElementIndex>> attribute, to reference the <<clock,`clocks`>> this variable is assigned to.
 The <<clockReference>> holds only <<valueReference>> information for variables with base type `fmi3Clock`.
 
-Clock (`clockType = STClock`): If present, the variable is a clocked variable associated uniquely with the <<clock>> referenced by <<valueReference>> and defined in element `<ModelVariables>`.
+If the <<clock>> referenced by <<clockReference>> is a synchronous clock (<<clockType>> = <<synchronousTime>>), the variable is a clocked variable associated uniquely with this <<clock>>.
 It is not possible to associate more than one <<clock>> to a variable.
 
-Communication Point Clock (`clockType = communicationPoint`): If present, the variable is associated with the <<clock>> referenced by <<valueReference>> and defined in element `<ModelVariables>`.
-It is possible to associate multiple <<clock,`clocks`>> to a variable.
-Variables that are assigned to a Communication Point Clock are not necessarily `clocked` in the sense of synchronous time clock theory. Such variables can also be continuous-time or discrete-time variables.
+If the <<clock>> referenced by <<clockReference>> is a communication point clock (<<clockType>> = <<communicationPoint>>) the variable is not necessarily `clocked` in the sense of synchronous time clock theory. Such variables can also be continuous-time or discrete-time variables.
 
-If <<outputClock,`output clocks`>> and <<inputClock,`input clocks`>> of `clockType = communicationPoint` are defined in the `modelDescription.xml` it is possible to define a tick relationship from a <<outputClock>> to an aperiodic <<inputClock>> based on <<clockReference>> (<<clock-relationships-for-communication-point-clocks>>).
-This is done for aperiodic <<inputClock,`input clocks`>> that have the `clockType = communicationPoint` via providing a list of <<valueReference>> of <<outputClock,`output clocks`>> of the same FMU.
-If a <<outputClock>> of this <<valueReference>> list ticks the master has to create a tick for the associated aperiodic <<inputClock>> at the same time instant.
-It is not allowed to combine <<outputClock,`output clocks`>> with periodic or strict periodic <<inputClock,`input clocks`>> based on <<clockReference>>.
+If <<causality>> = <<output>> and <<variability>> = <<clock>> the <<outputClock>> tick event can occur only in the model partition that is related to the referenced <<inputClock>>, i.e. the <<outputClock,`output clock's`>> value (active/inactive) can only change in this model partition.
 
-The attribute <<clockReference>> must not be used if <<causality>> = <<output>> for a variable.
 
 |`clockElementIndex`
 |
@@ -1288,7 +1295,7 @@ For scalar clock variables this attribute must not be specified or must be speci
 |
 [[intermediateAccess,`intermediateAccess`]]
 If this boolean attribute is `true`, the variable can be accessed during a communication step.
-Variables with <<causality>> <<parameter>> must not be marked with <<intermediateAccess,`intermediateAccess = fmi3True`>>.
+Variables with <<causality>> <<parameter>> must not be marked with <<intermediateAccess,`intermediateAccess == fmi3True`>>.
 // TODO: link to see math-intermediate-variable-access)
 This attribute is only used for Basic Co-Simulation and Hybrid Co-Simulation. The default value of this attribute is `false`.
 // TODO: default false is not defined in the xsd (yet?)
@@ -1319,10 +1326,10 @@ _[in order to provide new values for <<input,`inputs`>> during continuous integr
 
 If <<initial>> is not present, its value is defined by the following tables based on the values of <<causality>> and <<variability>>:
 
-[cols="1,1,1,1,1,1,1,1,1,1,1,1"]
+[cols="1,1,1,1,1,1,1,1,1,1"]
 |====
 3.2+|
-9+^|<<causality>>
+7+^|<<causality>>
 ^|<<structuralParameter>>
 ^|<<parameter>>
 ^|<<calculatedParameter>>
@@ -1330,8 +1337,6 @@ If <<initial>> is not present, its value is defined by the following tables base
 ^|<<output>>
 ^|<<local>>
 ^|<<independent>>
-^|<<input>>
-^|<<output>>
 
 .7+^|<<variability>>
 .3+^|data
@@ -1343,8 +1348,6 @@ If <<initial>> is not present, its value is defined by the following tables base
 ^|[green]#(A)#
 ^|[green]#(A)#
 ^|[red]#--#
-^|[red]#--#
-^|[red]#--#
 
 ^|<<fixed>>
 ^|[green]#(A)#
@@ -1354,8 +1357,6 @@ If <<initial>> is not present, its value is defined by the following tables base
 ^|[red]#--#
 ^|[maroon]#(B)#
 ^|[red]#--#
-^|[red]#--#
-^|[red]#--#
 
 ^|<<tunable>>
 ^|[green]#(A)#
@@ -1364,8 +1365,6 @@ If <<initial>> is not present, its value is defined by the following tables base
 ^|[red]#--#
 ^|[red]#--#
 ^|[maroon]#(B)#
-^|[red]#--#
-^|[red]#--#
 ^|[red]#--#
 
 .2+^|signals
@@ -1377,8 +1376,6 @@ If <<initial>> is not present, its value is defined by the following tables base
 ^|\(C)
 ^|\(C)
 ^|[red]#--#
-^|[red]#--#
-^|[red]#--#
 
 ^|<<continuous>>
 ^|[red]#--#
@@ -1388,20 +1385,16 @@ If <<initial>> is not present, its value is defined by the following tables base
 ^|\(C)
 ^|\(C)
 ^|[purple]#(E)#
-^|[red]#--#
-^|[red]#--#
 
 1+^|<<clock,`clocks`>>
 ^|<<clock>>
 ^|[red]#--#
 ^|[red]#--#
 ^|[red]#--#
-^|[red]#--#
-^|[red]#--#
-^|[red]#--#
-^|[red]#--#
 ^|[brown]#(F)#
 ^|[brown]#(G)#
+^|[red]#--#
+^|[red]#--#
 |====
 
 with
@@ -1452,10 +1445,10 @@ _(3) If \(C) and <<initial>> = <<exact>>, then the variable is explicitly define
 
 The following combinations of <<variability>>/<<causality>> settings are allowed:
 
-[cols="1,1,1,1,1,1,1,1,1,1,1,1"]
+[cols="1,1,1,1,1,1,1,1,1,1"]
 |====
 3.2+|
-9+^|<<causality>>
+7+^|<<causality>>
 ^|<<structuralParameter>>
 ^|<<parameter>>
 ^|<<calculatedParameter>>
@@ -1463,8 +1456,6 @@ The following combinations of <<variability>>/<<causality>> settings are allowed
 ^|<<output>>
 ^|<<local>>
 ^|<<independent>>
-^|<<input>>
-^|<<output>>
 
 .6+^|<<variability>>
 .3+^|data
@@ -1476,8 +1467,6 @@ The following combinations of <<variability>>/<<causality>> settings are allowed
 ^|[green]#(7)#
 ^|[green]#(10)#
 ^|[red]#-- (c)#
-^|[red]#--#
-^|[red]#--#
 
 ^|<<fixed>>
 ^|[green]#(16)#
@@ -1487,8 +1476,6 @@ The following combinations of <<variability>>/<<causality>> settings are allowed
 ^|[red]#-- (e)#
 ^|[green]#(11)#
 ^|[red]#-- (c)#
-^|[red]#--#
-^|[red]#--#
 
 ^|<<tunable>>
 ^|[green]#(17)#
@@ -1498,8 +1485,6 @@ The following combinations of <<variability>>/<<causality>> settings are allowed
 ^|[red]#-- (e)#
 ^|[green]#(12)#
 ^|[red]#-- (c)#
-^|[red]#--#
-^|[red]#--#
 
 .2+^|signals
 ^|<<discrete>>
@@ -1510,8 +1495,6 @@ The following combinations of <<variability>>/<<causality>> settings are allowed
 ^|[green]#(8)#
 ^|[green]#(13)#
 ^|[red]#--(c)#
-^|[red]#--#
-^|[red]#--#
 
 ^|<<continuous>>
 ^|[red]#-- (b)#
@@ -1521,20 +1504,16 @@ The following combinations of <<variability>>/<<causality>> settings are allowed
 ^|[green]#(9)#
 ^|[green]#(14)#
 ^|[green]#(15)#
-^|[red]#--#
-^|[red]#--#
 
 .1+^|clocks
 ^|<<clock>>
 ^|[red]#--#
 ^|[red]#--#
 ^|[red]#--#
+^|[red]#(18)#
+^|[red]#(18)#
 ^|[red]#--#
 ^|[red]#--#
-^|[red]#--#
-^|[red]#--#
-^|[red]#18#
-^|[red]#18#
 |====
 
 _[Discussion of the combinations that are not allowed:_
@@ -1572,11 +1551,11 @@ _Discussion of the combinations that are allowed_:
 
 >|_[green]#(1)#_
 |_<<fixed>> <<parameter>>_
-|_Non-<<tunable>> <<independent>> <<parameter>>_
+|_Non-<<tunable>> <<parameter>>_
 
 >|_[green]#(2)#_
 |_<<tunable>> <<parameter>>_
-|_<<tunable,`Tunable`>> <<independent>> <<parameter>> (changing such a <<parameter>> triggers an external event (ME) or takes effect at the next communication point (xCS), and <<tunable>> <<calculatedParameter>>/<<output>>/<<local>> variables might change their values)._
+|_<<tunable,`Tunable`>> <<parameter>> (changing such a <<parameter>> triggers an external event (ME) or takes effect at the next communication point (xCS), and <<tunable>> <<calculatedParameter>>/<<output>>/<<local>> variables might change their values)._
 
 >|_[green]#(3)#_
 |_<<fixed>> <<dependenciesKind,`dependent`>> <<parameter>>_
@@ -1584,7 +1563,7 @@ _Discussion of the combinations that are allowed_:
 
 >|_[green]#(4)#_
 |_<<tunable>> <<dependenciesKind,`dependent`>> <<parameter>>_
-|_<<tunable,`Tunable`>> <<dependenciesKind,`dependent`>> <<parameter>> (changing an <<independent>> <<parameter>> triggers an external event (ME) or takes effect at the next communication point (xCS), and <<tunable>> <<dependenciesKind,`dependent`>> <<parameter,`parameters`>> and <<tunable>> <<local>> variables might change their values)._
+|_<<tunable,`Tunable`>> <<dependenciesKind,`dependent`>> <<parameter>> (changing a <<parameter>> triggers an external event (ME) or takes effect at the next communication point (xCS), and <<tunable>> <<dependenciesKind,`dependent`>> <<parameter,`parameters`>> and <<tunable>> <<local>> variables might change their values)._
 
 >|_[green]#(5)#_
 |_<<discrete>> <<input>>_
@@ -1639,7 +1618,7 @@ _Usually, this is `time`._
 
 >|_[green]#(16)#_
 |_<<fixed>> <<structuralParameter>>_
-|_<<parameter,`Paramter`>> used in  `<Dimension>` element;  can be changed before initialization in *Configuration Mode*._
+|_<<parameter,`Parameter`>> used in  `<Dimension>` element;  can be changed before initialization in *Configuration Mode*._
 
 >|_[green]#(17)#_
 |_<<tunable>> <<structuralParameter>>_
@@ -1836,11 +1815,11 @@ The functional dependency is defined as (dependencies of variables that are fixe
 Ordered list of all exposed unknowns in *Initialization Mode*.
 This list consists of all variables with
 
-. <<causality>> = <<output>> and (<<initial>> = <<approx>> or <<calculated>>), and
+- <<causality>> = <<output>> and (<<initial>> = <<approx>> or <<calculated>>), and
 
-. <<causality>> = <<calculatedParameter>> and
+- <<causality>> = <<calculatedParameter>> and
 
-. all continuous-time <<state,`states`>> and all state derivatives (defined with elements `<ModelStructure><Derivative>`) with <<initial>> = <<approx>> or <<calculated>> _[if a Basic Co-Simulation FMU does not define the `<ModelStructure><Derivative>` elements, (3) cannot be present]_.
+- all continuous-time <<state,`states`>> and all state derivatives (defined with elements `<ModelStructure><Derivative>`) with <<initial>> = <<approx>> or <<calculated>> _[if a Basic Co-Simulation FMU does not define the `<ModelStructure><Derivative>` elements, (3) cannot be present]_.
 
 The resulting list is not allowed to have duplicates (for example, if a <<state>> is also an <<output>>, it is included only once in the list). +
 Attribute <<dependencies>> defines the dependencies of the unknowns from the knowns in *Initialization Mode* at the initial time.
@@ -1919,7 +1898,7 @@ _[<<parameter,`parameters`>> and <<tunable>> <<parameter,`parameters`>> must not
 
 - inputs (variables with <<causality>> = <<input>>)
 
-- variables with <<initial>> = <<exact>> _[for example, <<independent>> <<parameter,`parameters`>> or initial <<state,`states`>>]_
+- variables with <<initial>> = <<exact>> _[for example, <<parameter,`parameters`>> or initial <<state,`states`>>]_
 
 - <<independent>> variable (usually time; <<causality>> = <<independent>>).
 If an <<independent>> variable is not explicitly defined under variables, it is assumed that the unknown depends explicitly on the <<independent>> variable.
