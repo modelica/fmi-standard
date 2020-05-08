@@ -50,7 +50,7 @@ Typical examples are:
 
 FMI for Co-Simulation is restricted to slaves with the following properties:
 
-. All calculated values are time-dependent functions within an a priori defined time interval latexmath:[t_{start} \leq t \leq t_{stop}] (provided `stopTimeDefined = fmi3True` when calling <<fmi3EnterInitializationMode>>).
+. All calculated values are time-dependent functions within an a priori defined time interval latexmath:[t_{start} \leq t \leq t_{stop}] (provided `stopTimeDefined == fmi3True` when calling <<fmi3EnterInitializationMode>>).
 
 . All simulations are carried out with increasing time in general.
 The current time latexmath:[t] is running step by step from latexmath:[t_{start}] to latexmath:[t_{stop}].
@@ -195,7 +195,7 @@ The described multi-mode support is based on wrapping functionality into the <<f
 _[An FMU that supports <<scheduled-co-simulation-api,Scheduled Co-Simulation>> will in most cases also support <<hybrid-co-simulation-api,Hybrid Co-Simulation>>._
 _Wrapping towards other Co-Simulation interfaces can influence the simulation results._
 _Depending on the model, wrapping towards the Basic Co-Simulation interface may result in divergent simulation results._
-_Especially aperiodic <<inputClock,`input clocks`>> can not always be sufficiently emulated in modes that do not directly support <<clock,`clocks`>>._
+_Especially <<periodic,aperiodic>> <<inputClock,`input clocks`>> can not always be sufficiently emulated in modes that do not directly support <<clock,`clocks`>>._
 _Therefore it is recommended that the FMU provides logging information to the user about the influence of the current mode on simulation results, if non-optimal modes are used by the simulation environment.]_
 
 ==== Common Co-Simulation Application Programming Interface
@@ -215,7 +215,7 @@ In this way multiple event types and also <<outputClock>> ticks or interrupts ca
 
 ===== Intermediate Variable Access [[api-intermediate-variable-access]]
 
-If the Co-Simulation master signals the support for intermediate variable access and an FMU has at least one variable with <<intermediateAccess,`intermediateAccess = fmi3True`>>, the FMU can use the callback function <<fmi3CallbackIntermediateUpdate>> to communicate information back to the Co-Simulation master.
+If the Co-Simulation master signals the support for intermediate variable access and an FMU has at least one variable with <<intermediateAccess,`intermediateAccess == fmi3True`>>, the FMU can use the callback function <<fmi3CallbackIntermediateUpdate>> to communicate information back to the Co-Simulation master.
 
 [source, C]
 ----
@@ -226,24 +226,25 @@ The following output arguments in <<fmi3CallbackIntermediateUpdate>> are used fo
 
 * <<intermediateUpdateTime>> is the simulation time at which the <<fmi3CallbackIntermediateUpdate>> callback function is called by the FMU.
 
-* If <<intermediateVariableSetAllowed,`intermediateVariableSetAllowed = fmi3True`>>, the Co-Simulation master may provide intermediate <<input>> variables by calling `fmi3Set{VariableType}` for variables with <<intermediateAccess,`intermediateAccess = fmi3True`>>.
+* If <<intermediateVariableSetAllowed,`intermediateVariableSetAllowed == fmi3True`>>, the Co-Simulation master may provide intermediate <<input>> variables by calling `fmi3Set{VariableType}` for variables with <<intermediateAccess,`intermediateAccess == fmi3True`>>.
 
-* If <<intermediateVariableGetAllowed,`intermediateVariableGetAllowed = fmi3True`>>, the Co-Simulation master may collect intermediate output variables by calling `fmi3Get{VariableType}` for variables with <<intermediateAccess,`intermediateAccess = fmi3True`>>.
+* If <<intermediateVariableGetAllowed,`intermediateVariableGetAllowed == fmi3True`>>, the Co-Simulation master may collect intermediate output variables by calling `fmi3Get{VariableType}` for variables with <<intermediateAccess,`intermediateAccess == fmi3True`>>.
 
-* If <<intermediateStepFinished, `intermediateStepFinished = fmi3False`>>, the Co-Simulation master shall only use intermediate output variables to compute intermediate <<input>> variables at the current state.
+* If <<intermediateStepFinished, `intermediateStepFinished == fmi3False`>>, the Co-Simulation master shall only use intermediate output variables to compute intermediate <<input>> variables at the current state.
 
 Hence, it is important to distinguish intermediate output from successful internal integration steps from intermediate outputs valid only for temporary solver states.
 <<figure-intermediate-variable-access>> shows an overview of the solver states and the intended use of intermediate variable access.
-It is not allowed to call <<intermediateUpdate>> for a simulation time point prior to a previous call with <<intermediateStepFinished,`intermediateStepFinished = fmi3True`>>.
+It is not allowed to call <<intermediateUpdate>> for a simulation time point prior to a previous call with <<intermediateStepFinished,`intermediateStepFinished == fmi3True`>>.
 
 .Overview of solver states and intermediate variable access during a communication step
 [#figure-intermediate-variable-access]
-image::images/intermediatevariableaccess.svg[width=400%, align="center"]
+image::images/intermediatevariableaccess.svg[width=65%, align="center"]
 
-====== Pseudo-code Example for Intermediate Variable Access
+====== Example for Intermediate Variable Access
 
-In the following example, the usage of the intermediate variable access is illustrated in order to clarify the typical calling sequence of the functions:
+The following code example shows an implementation of <<fmi3CallbackIntermediateUpdate>> that uses intermediate variable access to record a set of variables at every internal solver step.
+
 [source, c]
 ----
-include::examples/pseudo_code_co_simulation_intermediate_variable_access.txt[]
+include::Reference-FMUs/examples/bcs_intermediate_variable_access.c[tag=IntermediateUpdateCallback]
 ----
