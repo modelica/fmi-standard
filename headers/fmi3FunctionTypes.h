@@ -88,7 +88,8 @@ typedef fmi3Status (*fmi3CallbackIntermediateUpdate) (
                    fmi3Boolean intermediateVariableSetAllowed,
                    fmi3Boolean intermediateVariableGetAllowed,
                    fmi3Boolean intermediateStepFinished,
-                   fmi3Boolean canReturnEarly);
+                   fmi3Boolean canReturnEarly
+                   fmi3Float64 *earlyReturnTime);
 /* end::CallbackIntermediateUpdate[] */
 
 /* tag::CallbackPreemptionLock[] */
