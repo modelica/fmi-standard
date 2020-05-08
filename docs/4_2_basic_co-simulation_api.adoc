@@ -6,15 +6,9 @@ This section contains the interface description to access the input/output data 
 
 <<input,`Input`>> and <<output>> variables and other variables are accessed via the `fmi3Get{VariableType}` and `fmi3Set{VariableType}` functions, defined in <<get-and-set-variable-values>>.
 
-In order to enable the slave to interpolate the <<continuous>> floating point <<input,`inputs`>> between communication steps, the <<derivative,`derivatives`>> of the <<input,`inputs`>> with respect to time can be provided.
-Also, higher <<derivative,`derivatives`>> can be set to allow higher order interpolation.
-Whether the slave is able to handle the <<derivative,`derivatives`>> of <<input,`inputs`>> is given by the unsigned integer capability flag `MaxInputDerivativeOrder`. It delivers the maximum order of the input <<derivative>>.
+In order to enable the master to interpolate the <<continuous>> floating point <<input,`inputs`>> between communication steps, the <<derivative,`derivatives`>> of the <<output,`outputs`>> with respect to time at the end of a communication step can be enquired by the master. This is also possible for higher <<derivative,`derivatives`>> with respect to time.
 
-[[fmi3SetInputDerivatives,`fmi3SetInputDerivatives`]]
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=SetInputDerivatives]
-----
+_[The master is then able to extrapolate inputs using this information using <<api-intermediate-variable-access>>. This enables the same functionality as with `fmi2SetInputDerivatives` in FMI1.0 and FMI2.0]_
 
 [[fmi3GetOutputDerivatives,`fmi3GetOutputDerivatives`]]
 [source, C]
@@ -22,25 +16,22 @@ include::../headers/fmi3FunctionTypes.h[tags=SetInputDerivatives]
 include::../headers/fmi3FunctionTypes.h[tags=GetOutputDerivatives]
 ----
 
-Both functions have the same arguments:
+With the arguments:
 
 --
-* `valueReferences` is a vector of value references that define the variables whose <<derivative,`derivatives`>> shall be set or get.
+* `valueReferences` is a vector of value references that define the variables whose <<derivative,`derivatives`>> shall be retrieved.
+If multiple derivatives of a variable shall be retrieved, list the value reference multiple times.
 
 * `nValueReferences` is the dimension of the arguments `valueReferences` and `orders`.
 
-* `orders` contains the orders of the respective <<derivative>> (1 means the first <<derivative>>, 0 is not allowed).
+* `orders` contains the orders of the respective <<derivative>> (1 means the first <<derivative>>, 2 means the second <<derivative>>, ..., 0 is not allowed).
+If multiple derivatives of a variable shall be retrieved, provide a list of them in the `orders` array, corresponding to a multiply occurring value reference in the `valueReferences` array.
 
-* `values` is a vector with the values of the <<derivative,`derivatives`>>.
+* `values` is a vector with the values of the <<derivative,`derivatives`>>. The order of the `values` elements is derived from a twofold serialization: the outer level corresponds to the combination of a value reference (e.g., `valueReferences[k]`) and order (e.g., `orders[k]`), and the inner level to the serialization of variables. The inner level does not exist for scalar variables.
 
-* `nValues` is the size of the argument `values`.
+* `nValues` is the size of the argument `values`. `nValues` only equals `nValueReferences` if all corresponding output variables are scalar variables.
 --
 
-<<fmi3SetInputDerivatives>>::
-Sets the n-th time <<derivative>> of <<input>> variables.
-Restrictions on using the function are the same as for the `fmi3Set{VariableType}` function.
-Different input variables may have different interpolation order.
-<<input,`Inputs`>> and their <<derivative,`derivatives`>> are set with respect to the beginning of a communication time step.
 
 <<fmi3GetOutputDerivatives>>::
 Retrieves the n-th <<derivative>> of <<output>> values.
@@ -48,12 +39,17 @@ Restrictions on using the function are the same as for the `fmi3Get{VariableType
 The returned <<output,`outputs`>> correspond to the current slave time.
 E.g. after a successful call to <<fmi3DoStep>> the returned values are related to the end of the communication time step.
 
-To allow interpolation/approximation of the floating point output variables between communication steps (if they are used as inputs for other slaves), the <<derivative,`derivatives`>> of the <<output,`outputs`>> with respect to time can be read.
+To allow interpolation/approximation of the floating point output variables between communication steps by the master, the <<derivative,`derivatives`>> of the <<output,`outputs`>> with respect to time can be read.
 Whether the slave is able to provide the <<derivative,`derivatives`>> of <<output,`output`>> is given by the unsigned integer capability flag `maxOutputDerivativeOrder`.
 It delivers the maximum order of the <<output>> <<derivative, `derivatives`>>.
 If the actual order is lower (because the order of integration algorithm is low), the retrieved value is 0.
 
-_[Example: If the internal polynomial is of order 1 and the master inquires the second <<derivative>> of an <<output>>, the slave will return zero.]_
+
+_[ Example:_ +
+_Assuming an FMU has outputs latexmath:[y_1][2*3] with value reference 1, latexmath:[y_2] with value reference 2, latexmath:[ y_3][2] value reference 3, latexmath:[y_4] with value reference 4 and `maxOutputDerivativeOrder`=2._ +
+_With `valueReferences`= [1, 1, 3, 3, 4, 4], and `orders`= [1, 2, 1, 2, 1, 2], <<fmi3GetOutputDerivatives>> will provide first and second time derivatives of the outputs y1, y3, y4, which in `values` are serialized in the following way:_
+_((array serialization of latexmath:[\dot y_1]), (array serialization of latexmath:[\ddot y_1]), (array serialization of latexmath:[\dot y_3]), (array serialization of latexmath:[\ddot y_3]), latexmath:[\dot y_4], latexmath:[\ddot y_4])_ +
+_If the internal polynomial is of order 1 and the master inquires the second <<derivative>> of an <<output>>, the slave will return zero.]_
 
 ==== Computation in Co-Simulation interface types
 
@@ -153,7 +149,7 @@ In this state the FMU can do one-time initializations and allocate memory.
 The FMU sets all variables to its <<start>> values.
 
 Allowed Function Calls::
-<<fmi3EnterInitializationMode>>, <<fmi3SetInputDerivatives>>, <<fmi3EnterConfigurationMode>>
+<<fmi3EnterInitializationMode>>, <fmi3EnterConfigurationMode>>
 
 `fmi3Set{VariableType}`::
 For variables with <<variability>> latexmath:[\neq] <<constant>> and for which <<initial>> = <<exact>> or <<approx>>.
@@ -169,7 +165,7 @@ In between the FMU must evaluate all relevant equations.
 In this way artificial or real algebraic loops over connected FMUs in *Initialization Mode* may be handled by using appropriate numerical algorithms.
 
 Allowed Function Calls::
-<<fmi3ExitInitializationMode>>, <<fmi3SetInputDerivatives>>, <<fmi3GetDirectionalDerivative>>
+<<fmi3ExitInitializationMode>>, <<fmi3GetDirectionalDerivative>>
 
 `fmi3Set{VariableType}`::
 For variables with:
@@ -188,7 +184,7 @@ Forbidden Function Calls::
 This state is used by the master to progress simulation time.
 
 Allowed Function Calls::
-<<fmi3SetInputDerivatives>>, <<fmi3GetDirectionalDerivative>>, <<fmi3GetOutputDerivatives>>, `fmi3Get{VariableType}`, <<fmi3Terminate>>
+<<fmi3GetDirectionalDerivative>>, <<fmi3GetOutputDerivatives>>, `fmi3Get{VariableType}`, <<fmi3Terminate>>
 
 <<fmi3EnterConfigurationMode>>::
 With this function call the *Reconfiguration Mode* is entered.
@@ -247,9 +243,10 @@ If the function returns `fmi3Fatal` the FMU enters the terminal state.
 Allowed Function Calls::
 <<fmi3DoEarlyReturn>>
 
-`fmi3Set{VariableType}`, <<fmi3SetInputDerivatives>>::
+`fmi3Set{VariableType}`::
 If <<intermediateVariableSetAllowed,`intermediateVariableSetAllowed == fmi3True`>>, the value of intermediate variables can be set.
 Intermediate variables are variables that are marked with attribute <<intermediateAccess,`intermediateAccess == fmi3True`>> in the `modelDescription.xml`.
+
 
 `fmi3Get{VariableType}`, <<fmi3GetOutputDerivatives>>::
 If <<intermediateVariableGetAllowed,`intermediateVariableGetAllowed == fmi3True`>>, the value of intermediate variables can be retrieved.
@@ -257,7 +254,7 @@ Intermediate variables are variables that are marked with attribute <<intermedia
 
 Forbidden Function Calls::
 The same functions which are not allowed to be called in *Step Mode* must not be called in this state.
-Additionally the following functions must not be called  <<fmi3EnterConfigurationMode>>, <<fmi3Terminate>>, <<fmi3DoStep>>, <<fmi3GetDirectionalDerivative>>.
+Additionally the following functions must not be called <<fmi3EnterConfigurationMode>>, <<fmi3Terminate>>, <<fmi3DoStep>>, <<fmi3GetDirectionalDerivative>>.
 
 ===== State: Reconfiguration Mode [[state-reconfiguration-mode-co-simulation]]
 
@@ -271,7 +268,7 @@ Allowed Function Calls::
 Only for variables with <<causality>> = <<structuralParameter>> and <<variability>> = <<tunable>>.
 
 Forbidden Function Calls::
-<<fmi3EnterConfigurationMode>>, <<fmi3Instantiate>>, <<fmi3EnterInitializationMode>>, <<fmi3ExitInitializationMode>>, <<fmi3GetDoStepDiscardedStatus>>, <<fmi3DoStep>>, <<fmi3EnterStepMode>>, <<fmi3SetInputDerivatives>>, <<fmi3GetDirectionalDerivative>>, <<fmi3GetOutputDerivatives>>, `fmi3Get{VariableType}`
+<<fmi3EnterConfigurationMode>>, <<fmi3Instantiate>>, <<fmi3EnterInitializationMode>>, <<fmi3ExitInitializationMode>>, <<fmi3GetDoStepDiscardedStatus>>, <<fmi3DoStep>>, <<fmi3EnterStepMode>>, <<fmi3GetDirectionalDerivative>>, <<fmi3GetOutputDerivatives>>, `fmi3Get{VariableType}`
 
 ===== State: Step Discarded [[state-step-discarded-co-simulation]]
 
@@ -296,7 +293,7 @@ _[In *Step Mode*, the master may change again FMU <<input,`inputs`>> and <<param
 In this case, a new step may be started from <<lastSuccessfulTime>> which can be retrieved by the <<fmi3GetDoStepDiscardedStatus>> function in state *Step Discarded*.
 
 Forbidden Function Calls::
-<<fmi3EnterConfigurationMode>>, <<fmi3ExitConfigurationMode>>, <<fmi3Instantiate>>, <<fmi3EnterInitializationMode>>, <<fmi3ExitInitializationMode>>, <<fmi3DoStep>>, `fmi3Set{VariableType}`, <<fmi3DoEarlyReturn>>, <<fmi3SetInputDerivatives>>
+<<fmi3EnterConfigurationMode>>, <<fmi3ExitConfigurationMode>>, <<fmi3Instantiate>>, <<fmi3EnterInitializationMode>>, <<fmi3ExitInitializationMode>>, <<fmi3DoStep>>, `fmi3Set{VariableType}`, <<fmi3DoEarlyReturn>>
 
 ===== State: Terminated [[state-terminated-co-simulation]]
 
@@ -306,7 +303,7 @@ Allowed Function Calls::
 `fmi3Get{VariableType}`, <<fmi3GetDirectionalDerivative>>, <<fmi3GetOutputDerivatives>>
 
 Forbidden Function Calls::
-<<fmi3EnterConfigurationMode>>, <<fmi3ExitConfigurationMode>>, <<fmi3Instantiate>>, <<fmi3EnterInitializationMode>>, <<fmi3ExitInitializationMode>>, <<fmi3DoStep>>, `fmi3Set{VariableType}`, <<fmi3DoEarlyReturn>>, <<fmi3SetInputDerivatives>>
+<<fmi3EnterConfigurationMode>>, <<fmi3ExitConfigurationMode>>, <<fmi3Instantiate>>, <<fmi3EnterInitializationMode>>, <<fmi3ExitInitializationMode>>, <<fmi3DoStep>>, `fmi3Set{VariableType}`, <<fmi3DoEarlyReturn>>
 
 ===== State: Configuration Mode [[state-configuration-mode-co-simulation]]
 
@@ -321,7 +318,7 @@ Allowed Function Calls::
 Only for variables with <<causality>> = <<structuralParameter>> and <<variability>> = <<tunable>>.
 
 Forbidden Function Calls::
- <<fmi3EnterConfigurationMode>>, <<fmi3Instantiate>>, <<fmi3EnterInitializationMode>>, <<fmi3ExitInitializationMode>>, <<fmi3GetDoStepDiscardedStatus>>, <<fmi3DoStep>>, <<fmi3EnterStepMode>>, <<fmi3SetInputDerivatives>>, <<fmi3GetDirectionalDerivative>>, <<fmi3GetOutputDerivatives>>, `fmi3Get{VariableType}`
+ <<fmi3EnterConfigurationMode>>, <<fmi3Instantiate>>, <<fmi3EnterInitializationMode>>, <<fmi3ExitInitializationMode>>, <<fmi3GetDoStepDiscardedStatus>>, <<fmi3DoStep>>, <<fmi3EnterStepMode>>, <<fmi3GetDirectionalDerivative>>, <<fmi3GetOutputDerivatives>>, `fmi3Get{VariableType}`
 
 _[The allowed function calls in the respective states are summarized in the following table (functions marked in [yellow-background]#"yellow"# are only available for Co-Simulation, the other functions are available both for Model Exchange and Co-Simulation):_
 
@@ -364,7 +361,6 @@ _[The allowed function calls in the respective states are summarized in the foll
 |<<fmi3SerializeFMUState>>        |  |x |x |x |  |x |x |x |x
 |<<fmi3DeSerializeFMUState>>      |  |x |x |x |  |x |x |x |x
 |<<fmi3GetDirectionalDerivative>> |  |  |x |x |  |8 |7 |x |7
-|<<fmi3SetInputDerivatives>>  {set:cellbgcolor:yellow}     |  {set:cellbgcolor!} |x |x |x |  |  |  |  |
 |<<fmi3GetOutputDerivatives>> {set:cellbgcolor:yellow}     |  {set:cellbgcolor!} |  |  |x |  |8 |x |x |7
 |<<fmi3DoStep>>                   {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |x |  |  |  |  |
 |<<fmi3DoEarlyReturn>>            {set:cellbgcolor:yellow} |  {set:cellbgcolor!} |  |  |  |x |  |  |  |

@@ -575,15 +575,6 @@ Types for Functions for Co-Simulation
 typedef fmi3Status fmi3EnterStepModeTYPE(fmi3Instance instance);
 /* end::EnterStepMode[] */
 
-/* tag::SetInputDerivatives[] */
-typedef fmi3Status fmi3SetInputDerivativesTYPE(fmi3Instance instance,
-                                               const fmi3ValueReference valueReferences[],
-                                               size_t nValueReferences,
-                                               const fmi3Int32 orders[],
-                                               const fmi3Float64 values[],
-                                               size_t nValues);
-/* end::SetInputDerivatives[] */
-
 /* tag::GetOutputDerivatives[] */
 typedef fmi3Status fmi3GetOutputDerivativesTYPE(fmi3Instance instance,
                                                 const fmi3ValueReference valueReferences[],
