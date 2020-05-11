@@ -18,18 +18,18 @@ include::../headers/fmi3FunctionTypes.h[tag=CallbackIntermediateUpdate]
 
 * Argument <<intermediateUpdateTime>> is the internal simulation time of the FMU at which the callback has been called.
 If an event happens or a <<outputClock>> ticks, <<intermediateUpdateTime>> is the time of event or <<outputClock>> tick.
-If the FMU returns <<fmi3EarlyReturn>> from <<fmi3DoStep>> then <<intermediateUpdateTime>> is the internal simulation time of the FMU of the last <<fmi3CallbackIntermediateUpdate>> call that signaled <<canReturnEarly,`canReturnEarly == fmi3True`>>.
+If the FMU returns `earlyReturn == fmi3True` from <<fmi3DoStep>> then <<intermediateUpdateTime>> is the internal simulation time of the FMU of the last <<fmi3CallbackIntermediateUpdate>> call that signaled <<canReturnEarly,`canReturnEarly == fmi3True`>>.
 <<intermediateUpdateTime>> is also the time of intermediate steps of the internal FMU solver.
 
 The following two `fmi3Boolean` variables define the reasons for the <<fmi3CallbackIntermediateUpdate>> call.
 Several variables can be set by the FMU.
 Default value of variables is `fmi3False`.
 
-* When <<eventOccurred,`eventOccurred == fmi3True`>>, the master returns <<fmi3EarlyReturn>> from <<fmi3CallbackIntermediateUpdate>> request the FMU for an early return of the current <<fmi3DoStep>> and handle the event via entering *Event Mode*.
-In *Event Mode* the master shall call the <<fmi3NewDiscreteStates>> function for gathering related information about the event that occurred at <<intermediateUpdateTime>>.
+* When <<eventOccurred,`eventOccurred == fmi3True`>>, the master returns `earlyReturnRequested == fmi3True` from <<fmi3CallbackIntermediateUpdate>> and request the FMU to return early from the current <<fmi3DoStep>> and handle the event via entering *Event Mode*.
+In *Event Mode* the master shall call <<fmi3NewDiscreteStates>> to gather related information about the event that occurred at <<intermediateUpdateTime>>.
 
 * When <<clocksTicked,`clocksTicked == fmi3True`>>, it means that <<fmi3GetClock>> function should be called for gathering all <<clock>> related information about ticking <<outputClock,`output clocks`>> at <<intermediateUpdateTime>>.
-If this flag is `fmi3True` the master must return with <<fmi3EarlyReturn>> from <<fmi3CallbackIntermediateUpdate>> to request the FMU for an early return and handle the <<clock>> event in *Event Mode*.
+If this flag is `fmi3True` the master must return with `earlyReturnRequested == fmi3True` from <<fmi3CallbackIntermediateUpdate>> to request an early return and handle the <<clock>> event in *Event Mode*.
 
 * When <<intermediateVariableSetAllowed,`intermediateVariableSetAllowed == fmi3True`>>, the FMU signals that intermediate output values can be collected by the Co-Simulation master.
 
@@ -37,10 +37,10 @@ If this flag is `fmi3True` the master must return with <<fmi3EarlyReturn>> from 
 
 * When <<intermediateStepFinished, `intermediateStepFinished == fmi3True`>>, the FMU signals that the internal solver step for this time instant is complete.
 
-* When <<canReturnEarly,`canReturnEarly == fmi3True`>> the master can request the FMU to return early at the current <<intermediateUpdateTime>> time instant returning with <<fmi3EarlyReturn>> from the callback function <<fmi3CallbackIntermediateUpdate>>.
+* When <<canReturnEarly,`canReturnEarly == fmi3True`>> the master can request the FMU to return early at the current <<intermediateUpdateTime>> time instant by returning with `earlyReturnRequested == fmi3True` from the callback function <<fmi3CallbackIntermediateUpdate>>.
 If <<canReturnEarly,`canReturnEarly == fmi3False`>> the FMU will not do the early return, regardless of the master request.
 
-* `earlyReturnTime` is used to tell the FMU at what time to return early from the current <<fmi3DoStep>> (at the earliest), if the return value of <<fmi3CallbackIntermediateUpdate>> is <<fmi3EarlyReturn>>.
+* `earlyReturnTime` is used to tell the FMU at what time to return early from the current <<fmi3DoStep>> (at the earliest), if the return value of `earlyReturnRequested` or <<fmi3CallbackIntermediateUpdate>> is `fmi3True`.
 
 Note that only the first discontinuity event at a Newtonian time instant shall be signaled that way.
 But in *Event Mode*, there may be an event iteration at a Newtonian time instant and have super-dense time instants.
@@ -51,8 +51,8 @@ The FMU must not call the callback function <<fmi3CallbackIntermediateUpdate>> w
 
 ==== Handling a Successful Early-Return by the Co-Simulation Master in Hybrid Co-Simulation
 
-If the FMU is successful in conducting an early return, the return code of <<fmi3DoStep>> is <<fmi3EarlyReturn>>.
-If the FMU returns from <<fmi3DoStep>> with <<fmi3EarlyReturn>>, the Co-Simulation master has to call <<fmi3EnterEventMode>> for that FMU.
+If the FMU is successful in conducting an early return, <<fmi3DoStep>> returns with `earlyReturn == fmi3True`.
+If the FMU returns from <<fmi3DoStep>> with `earlyReturn == fmi3True`, the Co-Simulation master has to call <<fmi3EnterEventMode>> for that FMU.
 
 [source, C]
 ----
@@ -65,14 +65,14 @@ If an FMU provides the early-return capability that includes the handling of eve
 the FMU signals this via <<canReturnEarlyAfterIntermediateUpdate>> in the `modelDescription.xml`.
 
 The FMU stops computation at the first encountered internal event (if any) and the event time is provided through <<intermediateUpdateTime>>.
-If <<fmi3DoStep>> returns with <<fmi3EarlyReturn>> and an event has happened, i.e. <<eventOccurred,`eventOccurred == fmi3True`>>, then an event handling has to be done by the Co-Simulation master.
+If <<fmi3DoStep>> returns with `earlyReturn == fmi3True` and an event has happened, i.e. <<eventOccurred,`eventOccurred == fmi3True`>>, then an event handling has to be done by the Co-Simulation master.
 In order to start event handling the Co-Simulation master has to call <<fmi3EnterEventMode>> for that FMU to push the FMU into *Event Mode*.
 In this mode the Co-Simulation master is supposed to catch all events through the <<fmi3NewDiscreteStates>> function.
 
-If the early-return request of the Co-Simulation master is ignored by the FMU, then <<fmi3DoStep>> returns with a code other than <<fmi3EarlyReturn>>.
+If the early-return request of the Co-Simulation master is ignored by the FMU, then <<fmi3DoStep>> returns with `earlyReturn == fmi3False`.
 The master can start a resynchronization of FMUs at an event time, if the `currentCommunicationPoint` has passed the event time, the master can roll-back the FMU and repeat the step with a suitable `communicationStepSize` (if the FMU supports the roll-back).
 
-In *Event Mode* and only after <<fmi3DoStep>> returned with <<fmi3EarlyReturn>> the function <<fmi3NewDiscreteStates>> may be called.
+In *Event Mode* and only after <<fmi3DoStep>> returned with `earlyReturn == fmi3True` the function <<fmi3NewDiscreteStates>> may be called.
 Only the following output arguments may be considered:
 
 - When `newDiscreteStatesNeeded = true`, the master should stay in *Event Mode* and another call to <<fmi3NewDiscreteStates>> is required.
@@ -111,7 +111,7 @@ include::../headers/fmi3FunctionTypes.h[tag=EnterStepMode]
 
 If the Co-Simulation master supports <<clock,`clocks`>>, all <<inputClock,`input clocks`>> of the model should be handled and <<inputClock>> events should be scheduled by the master.
 If an <<outputClock>> ticks, the FMU calls <<fmi3CallbackIntermediateUpdate>> with <<clocksTicked,`clocksTicked == fmi3True`>>.
-Then the master returns with <<fmi3EarlyReturn>> from <<fmi3CallbackIntermediateUpdate>> to request the FMU for an early return from <<fmi3DoStep>> and push the FMU into *Event Mode* by calling <<fmi3EnterEventMode>>.
+Then the master returns with `earlyReturnReqested == fmi3True` from <<fmi3CallbackIntermediateUpdate>> to request the FMU for an early return from <<fmi3DoStep>> and push the FMU into *Event Mode* by calling <<fmi3EnterEventMode>>.
 Once the FMU is in *Event Mode*, the activation status of <<outputClock,`output clocks`>> are retrieved by <<fmi3GetClock>> function.
 Then <<fmi3SetClock>> (and <<fmi3SetIntervalDecimal>> or <<fmi3SetIntervalFraction>> if necessary) should be invoked to enable the ticked <<inputClock,`input clocks`>>.
 Each <<clock>>, that ticks outside of the FMU (i.e. <<inputClock>>), is activated for an FMU based on its <<clockReference>> and an associated <<fmi3SetClock>> in *Event Mode*.
@@ -126,7 +126,7 @@ The simulation master sets and gets <<clock>> variable values similar to the FMI
 ===== Computation in Hybrid Co-Simulation [[computation-clocked-co-simulation]]
 
 Similar to FMI for Model Exchange, in order to activate <<inputClock,`input clocks`>> of an FMU, it is required to push the FMU into *Event Mode* by calling <<fmi3EnterEventMode>>.
-If <<fmi3DoStep>> returns with <<fmi3EarlyReturn>> and <<eventOccurred,`eventOccurred == fmi3True`>> or <<clocksTicked,`clocksTicked == fmi3True`>>, the FMU must be pushed into the *Event Mode* by calling <<fmi3EnterEventMode>>.
+If <<fmi3DoStep>> returns with `earlyReturn == fmi3True` and <<eventOccurred,`eventOccurred == fmi3True`>> or <<clocksTicked,`clocksTicked == fmi3True`>>, the FMU must be pushed into the *Event Mode* by calling <<fmi3EnterEventMode>>.
 
 In order to retrieve the status of <<outputClock,`output clocks`>>, <<fmi3GetClock>> and <<fmi3GetIntervalDecimal>> or <<fmi3GetIntervalFraction>> need to be called in the *Event Mode*.
 If the <<fmi3DoStep>> return value is `fmi3OK`, the calling of <<fmi3GetClock>>, <<fmi3GetIntervalDecimal>>, <<fmi3GetIntervalFraction>>, <<fmi3NewDiscreteStates>> is only meaningful after <<fmi3SetClock>> in the case of super-dense time iterations are desired.

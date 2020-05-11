@@ -193,71 +193,41 @@ include::../headers/fmi3FunctionTypes.h[tags=Status]
 
 The status has the following meaning:
 
-`fmi3OK`::
 [[fmi3OK,`fmi3OK`]]
-all well.
+`fmi3OK`::
+ The call was successful.
+All output arguments are defined.
 
-`fmi3Warning`::
 [[fmi3Warning,`fmi3Warning`]]
-things are not quite right, but the computation can continue.
-Function <<logMessage>> was called in the model, and it is expected that
-this function has shown the prepared information message to the user.
+`fmi3Warning`::
+A non-critical problem was detected, but the computation can continue.
+All return values are defined.
+Function <<logMessage>> was called by the FMU and the user is expected to handle the problem.
+_[In certain applications, e.g. in a prototyping environment, warnings may be acceptable._
+_For production environments warnings should be treated like errors unless they can be safely ignored.]_
 
-`fmi3Discard`::
 [[fmi3Discard,`fmi3Discard`]]
-With this return value, the FMU signals that the function called could not achieve the defined effect and was able to keep its state as before the call.
-Reasons could be arguments with illegal values, or wrong function calls for the current FMU state.
-This return value essentially indicates that the function call had no effect on the FMU state.
-The master can now try alternative approaches to drive the simulation.
-If the master is incapable of such an alternative, it needs to treat this just like the `fmi3Error` return code.
+`fmi3Discard`::
+The call was not successful and the FMU is in the same state as before the call.
+The output arguments are not defined, but the computation can continue.
+When debug logging is enabled (`loggingOn == fmi3True`) the function <<logMessage>> was called by the FMU.
+Advanced master implementations can try alternative approaches to drive the simulation by calling the function with different arguments or calling another function.
+Otherwise the master has to treat this return code like <<fmi3Error>> and has to terminate the simulation.
 
-In Model Exchange, this return status is only possible for the functions:
-`fmi3Set{VariableType}`,
-<<fmi3SetContinuousStates>>,
-`fmi3Get{VariableType}`,
-<<fmi3GetDerivatives>>,
-<<fmi3GetContinuousStates>>, and
-<<fmi3GetEventIndicators>>.
-// TODO: check this list: if we allow illegal arguments to be rejected with this return code, more functions might have to be listed here
-When the target simulator encounters this status in Model Exchange, it is recommended to perform a smaller step size and evaluate the model equations again, for example because an iterative solver in the model did not converge or because a function is outside of its domain _[for example, `sqrt(<negative number>)`]_.
-If this is not possible, the simulation has to be terminated.
-+
-In the co-simulation interfaces, the `fmi3Discard` return status is only possible for the functions:
-`fmi3Set{VariableType}`, and
-<<fmi3DoStep>>.
-When <<fmi3Discard>> is returned to the importer, the importer has to decide if the simulation run can be continued or if to treat the <<fmi3Discard>> like <<fmi3Error>>.
-+
-_[Functions `fmi3Set{VariableType}` are usually not performing calculations but just store the passed values in internal buffers._
-_The actual calculation is performed by `fmi3Get{VariableType}` functions._
-_Still, `fmi3Set{VariableType}` functions could check whether the input arguments are valid (e.g. <<valueReference,`valueReferences`>>) or in their validity range (e.g. between min and max as defined in the `modelDescription.xml`)._
-_If not, these functions could return with <<fmi3Discard>> and leave the internal state unchanged.]_
-+
-In Model Exchange and all Co-Simulation interfaces, function <<logMessage>> was called by the FMU, and it is expected that this function has shown the prepared information message to the user if the FMU was called in debug mode (`loggingOn == fmi3True`). If the FMU was not called in debug mode, <<logMessage>> should not show a message.
-
-`fmi3EarlyReturn`::
-[[fmi3EarlyReturn,`fmi3EarlyReturn`]]
-This status can only be returned from an <<fmi3DoStep>> call and the <<fmi3CallbackIntermediateUpdate>> in Basic Co-Simulation or Hybrid Co-Simulation.
-Returned by <<fmi3DoStep>> the FMU indicates, that the simulation step was only partially successful and `lastSuccessfulTime` returns the time inside the FMU when returning. 
-Returned by <<fmi3CallbackIntermediateUpdate>> the importer signals to the FMU the desire to stop the simulation step, but no earlier than the <<earlyReturnTime>> argument indicates.
-
-`fmi3Error`::
 [[fmi3Error,`fmi3Error`]]
-the FMU encountered an error.
-The simulation cannot be continued with this FMU instance.
-If one of the functions returns `fmi3Error`, it can be tried to restart the simulation from a formerly stored FMU state by calling <<fmi3SetFMUState>>.
-This can be done if the capability flag `canGetAndSetFMUState = true` and <<fmi3GetFMUState>> was called before in non-erroneous state.
-If not, the simulation cannot be continued and <<fmi3FreeInstance>> or <<fmi3Reset>> must be called afterwards.
-_[Typically, `fmi3Error` return is for non-numerical reasons, like "disk full"._
-_There may be cases where the environment can fix such errors (possibly with the help of the user), and the simulation can continue at the last consistent state set with <<fmi3SetFMUState>>.]_ +
-Further processing is possible after this call and other FMU instances are not affected.
-Function <<logMessage>> was called in the FMU, and it is expected that this function has shown the prepared information message to the user.
+`fmi3Error`::
+The call failed. All output arguments are undefined and the simulation cannot be continued.
+Function <<logMessage>> was called by the FMU and the FMU is in state **Terminated**.
+If a function returns <<fmi3Error>>, it is possible to restore a previously retrieved FMU state by calling <<fmi3SetFMUState>>.
+Otherwise <<fmi3FreeInstance>> or <<fmi3Reset>> must be called.
+Other instances of this FMU are not affected by the error.
 
-`fmi3Fatal`::
 [[fmi3Fatal,`fmi3Fatal`]]
-the model computations are irreparably corrupted for all FMU instances.
-_[For example, due to a run-time exception such as access violation or integer division by zero during the execution of an fmi function]_.
-Function <<logMessage>> was called in the FMU, and it is expected that this function has shown the prepared information message to the user.
-It is not possible to call any other function for any of the FMU instances.
+`fmi3Fatal`::
+The state of all instances of the model is irreparably corrupted.
+_[For example, due to a run-time exception such as access violation or integer division by zero during the execution of an FMI function.]_
+Function <<logMessage>> was called by the FMU.
+It is not allowed to call any other function for any instance of the FMU.
 
 ==== Inquire Platform and Version Number of Header Files [[inquire-platform-and-version-number]]
 

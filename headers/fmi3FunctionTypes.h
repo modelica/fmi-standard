@@ -54,7 +54,6 @@ typedef enum {
     fmi3OK,
     fmi3Warning,
     fmi3Discard,
-    fmi3EarlyReturn,
     fmi3Error,
     fmi3Fatal,
 } fmi3Status;
@@ -80,16 +79,17 @@ typedef void  (*fmi3CallbackLogMessage)     (fmi3InstanceEnvironment instanceEnv
 /* end::CallbackLogMessage[] */
 
 /* tag::CallbackIntermediateUpdate[] */
-typedef fmi3Status (*fmi3CallbackIntermediateUpdate) (
-                   fmi3InstanceEnvironment instanceEnvironment,
-                   fmi3Float64 intermediateUpdateTime,
-                   fmi3Boolean eventOccurred,
-                   fmi3Boolean clocksTicked,
-                   fmi3Boolean intermediateVariableSetAllowed,
-                   fmi3Boolean intermediateVariableGetAllowed,
-                   fmi3Boolean intermediateStepFinished,
-                   fmi3Boolean canReturnEarly
-                   fmi3Float64 *earlyReturnTime);
+typedef void (*fmi3CallbackIntermediateUpdate) (
+    fmi3InstanceEnvironment instanceEnvironment,
+    fmi3Float64 intermediateUpdateTime,
+    fmi3Boolean eventOccurred,
+    fmi3Boolean clocksTicked,
+    fmi3Boolean intermediateVariableSetAllowed,
+    fmi3Boolean intermediateVariableGetAllowed,
+    fmi3Boolean intermediateStepFinished,
+    fmi3Boolean canReturnEarly,
+    fmi3Boolean *earlyReturnRequested,
+    fmi3Float64 *earlyReturnTime);
 /* end::CallbackIntermediateUpdate[] */
 
 /* tag::CallbackPreemptionLock[] */

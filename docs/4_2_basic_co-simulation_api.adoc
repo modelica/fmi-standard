@@ -75,13 +75,12 @@ This is not due to an error, but a natural limit to the simulation time has been
 
 The slave is expected to compute until time latexmath:[tc_{i+1} = tc_i + hc_i], or `lastSuccessfulTime = currentCommunicationPoint + communicationStepSize`.
 
-This is especially interesting, if <<fmi3DoStep>> returns with <<fmi3EarlyReturn>>.
+This is especially interesting, if <<fmi3DoStep>> returns with `earlyReturn == fmi3True`.
 In this case, the step did not compute until latexmath:[tc_{i+1}], but stopped computation error free until `lastSuccessfulTime`.
 However, even when the FMU returns from <<fmi3DoStep>> with <<fmi3OK>>, it is allowed that `lastSuccessfulTime` deviates from the expected `currentCommunicationPoint + communicationStepSize`.
 _[An example is a fixed-step integrator inside the FMU that cannot possibly stop at exactly the requested time._
 _Advanced Co-Simulation master algorithms might be able to take this information into account._
-_It is even possible that the `lastSuccessfulTime` is still equal to `currentCommunicationPoint` when <<fmi3EarlyReturn>> is returned (contrary to the possibly expected <<fmi3Discard>>) to indicate a changed internal state of the FMU, e.g. steps in super-dense time.]_
-
+_It is even possible that the `lastSuccessfulTime` is still equal to `currentCommunicationPoint` when `earlyReturn == fmi3True` is returned (contrary to the possibly expected <<fmi3Discard>>) to indicate a changed internal state of the FMU, e.g. steps in super-dense time.]_
 
 _[The calling environment defines the communication points and <<fmi3DoStep>> must synchronize to these points by always integrating exactly to latexmath:[tc_i + hc_i]._
 _It is up to <<fmi3DoStep>> how to achieve this.]_
@@ -91,29 +90,6 @@ At the first call to <<fmi3DoStep>> after <<fmi3ExitInitializationMode>> was cal
 _[Formally, argument `currentCommunicationPoint` is not needed._
 _It is present in order to handle a mismatch between the master and the FMU state of the slave: The `currentCommunicationPoint` and the FMU state of the slaves defined by former_ <<fmi3DoStep>> _or_ `fmi3SetFMUState` _calls have to be consistent with respect to each other._
 _For example, if the slave does not use the update formula for the <<independent>> variable as required above,_ latexmath:[tc_{i+1} = tc_i + hc_i] _(using argument_ latexmath:[tc_i] = `currentCommunicationPoint` _of_ <<fmi3DoStep>>) _but uses internally an own update formula, such as_ latexmath:[tc_{s,i+1} = tc_{s,i} + hc_{s,i}] _then the slave could use as time increment_ latexmath:[\text{hc}_{s,i} := (tc_i - tc_{s,i}) + hc_i] _(instead of_ latexmath:[\text{hc}_{s,i} := hc_i] _) to avoid a mismatch between the master time_ latexmath:[tc_{i+1}] _and the slave internal time_ latexmath:[tc_{s,i+1}] _for large i.]_
-
-
-The function returns:
-
-`fmi3OK`::
-if the communication step was computed successfully until its end.
-
-<<fmi3EarlyReturn>>::
-if the FMU computed successfully only a subinterval of the communication step.
-
-<<fmi3Discard>>::
-if the FMU could not compute any new (more advanced) state successfully, but was able to return its internal state to exactly the state when <<fmi3DoStep>> was called.
-This return code indicates that the call to <<fmi3DoStep>> was essentially without effect (did not change the FMU state).
-The importer may now try alternative ways to simulate, or, simply, treat this equal to <<fmi3Error>>.
-
-`fmi3Error`::
-the communication step could not be carried out at all, the internal state of the FMU is undefined.
-The master can try to repeat the step with other input values and/or a different communication step size, but has to re-initialize the state by either <<fmi3SetFMUState>> or terminating and reinitializing the instance.
-
-`fmi3Fatal`::
-if an error occurred which corrupted the FMU irreparably.
-See <<status-returned-by-functions>> for details.
-_[The master should stop the simulation run immediately.]_
 
 It depends on the capabilities of the FMU which argument constellations and calling sequences are allowed (see <<fmi-for-basic-co-simulation>>).
 
@@ -193,7 +169,7 @@ This function must not be called if the FMU contains no <<tunable>> <<structural
 <<fmi3DoStep>>::
 Within <<fmi3DoStep>> the FMU may call <<fmi3CallbackIntermediateUpdate>>
 * If the function returns with `fmi3OK` or `fmi3Warning` the FMU stays in this state.
-* If the function returns with <<fmi3EarlyReturn>> the FMU will change to states depending on the flags of <<fmi3CallbackIntermediateUpdate>>.
+* If the function returns with `earlyReturn == fmi3True` the FMU will change to states depending on the flags of <<fmi3CallbackIntermediateUpdate>>.
 
 `fmi3Set{VariableType}`::
 For variables with:
@@ -388,17 +364,17 @@ The master can only use this early return functionality if it provides the <<fmi
 include::../headers/fmi3FunctionTypes.h[tag=CallbackIntermediateUpdate]
 ----
 
-// TODO: merge this with the section from hybrid-co-sim (and/or remove) 2_4 common co-sim concepts 
+// TODO: merge this with the section from hybrid-co-sim (and/or remove) 2_4 common co-sim concepts
 
-The Co-Simulation master can request the FMU to end the <<fmi3DoStep>> at a Newtonian time instant and to do an early return returning with the status <<fmi3EarlyReturn>> from the callback function <<fmi3CallbackIntermediateUpdate>>.
-The Co-Simulation master is only allowed to return this status code, if <<canReturnEarly,`canReturnEarly == fmi3True`>>.
+The Co-Simulation master can request the FMU to end the <<fmi3DoStep>> at a Newtonian time instant and to do an early return by returning with `earlyReturnRequested == fmi3True` from the callback function <<fmi3CallbackIntermediateUpdate>>.
+This is only allowed if <<canReturnEarly,`canReturnEarly == fmi3True`>>.
 
 [[earlyReturnTime,`earlyReturnTime`]]
 The FMU should return early from the current <<fmi3DoStep>> at the time instant defined by argument <<earlyReturnTime>>.
 
 If the <<earlyReturnTime>> is greater than the last signaled <<intermediateUpdateTime>>, the FMU may integrate up to the time instant <<earlyReturnTime>>.
 
-If the early return is conducted successfully by the FMU it must return with <<fmi3EarlyReturn>> from <<fmi3DoStep>>.
+If the early return is conducted successfully by the FMU it must return with `earlyReturn == fmi3True` from <<fmi3DoStep>>.
 
 The Co-Simulation master can decide if a rollback of the FMU to reach the <<earlyReturnTime>> time is required or it may continue the simulation from <<lastSuccessfulTime>> for that FMU.
 Note that *Event Mode* is not supported in Basic Co-Simulation and Scheduled Co-Simulation.
