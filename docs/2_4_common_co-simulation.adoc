@@ -152,10 +152,18 @@ The Co-Simulation master signals to the FMU which features shall be used for the
 
 If the FMU does not support the Co-Simulation interface selected in <<fmi3Instantiate>>, it has to return a null pointer.
 
-==== Early Return [[api-early-return]]
+==== Early Return [[early-return]]
 
 An FMU is allowed to stop the execution of <<fmi3DoStep>> and return without reaching the predefined communication time, i.e. `currentCommunicationPoint + communicationStepSize`.
 This mechanism is called "early return".
+
+[[canReturnEarlyAfterIntermediateUpdate,`canReturnEarlyAfterIntermediateUpdate`]]
+The Boolean capability flag <<canReturnEarlyAfterIntermediateUpdate>> in the modelDescription XML file indicates whether the FMU supports the early-return feature.
+The default value of this capability flag is `false`.
+
+Each time an internal discontinuity or an event happens inside an FMU with capability flag <<canReturnEarlyAfterIntermediateUpdate,`canReturnEarlyAfterIntermediateUpdate == fmi3True`>>, the callback function <<fmi3CallbackIntermediateUpdate>> is called by the FMU.
+The master can only use this early return functionality if it provides the <<fmi3CallbackIntermediateUpdate>> callback function pointer in the instantiate function.
+
 With the early return feature, an FMU can signal <<outputClock>> events or internal state changes, i.e., discontinuity events to the Co-Simulation master at any time (not only at the end of <<fmi3DoStep>> function calls).
 When an internal event occurs inside the FMU at a time instant, it informs the master that a new communication point for the Co-Simulation can be created.
 Note that an event signal is not seen in the narrow sense of solver induced discontinuity events but in the general sense of a simulation event that has to be handled by the Co-Simulation master (e.g. state changes that require extended handling).
@@ -197,22 +205,56 @@ Intermediate variable access can be activated in all Co-Simulation interface typ
 
 If the Co-Simulation master signals the support for intermediate variable access and an FMU has at least one variable with <<intermediateAccess,`intermediateAccess == fmi3True`>>, the FMU can use the callback function <<fmi3CallbackIntermediateUpdate>> to communicate information back to the Co-Simulation master.
 
+[[fmi3CallbackIntermediateUpdate,`fmi3CallbackIntermediateUpdate`]]
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tag=CallbackIntermediateUpdate]
 ----
 
-The following output arguments in <<fmi3CallbackIntermediateUpdate>> are used for intermediate variable access:
+* <<intermediateUpdateTime>> is the internal simulation time of the FMU at which the callback has been called.
+[[intermediateUpdateTime,`intermediateUpdateTime`]]
+If an event happens or an <<outputClock>> ticks, <<intermediateUpdateTime>> is the time of event or <<outputClock>> tick.
+If the FMU returns with `earlyReturn == fmi3True` from <<fmi3DoStep>> then <<intermediateUpdateTime>> is the internal simulation time of the FMU of the last <<fmi3CallbackIntermediateUpdate>> call that signaled <<canReturnEarly,`canReturnEarly == fmi3True`>>.
+<<intermediateUpdateTime>> is also the time of intermediate steps of the internal FMU solver.
+The FMU must not call the callback function <<fmi3CallbackIntermediateUpdate>> with an <<intermediateUpdateTime>> that is smaller than the <<intermediateUpdateTime>> given in a previous call of <<fmi3CallbackIntermediateUpdate>> with `intermediateStepFinished == fmi3True`.
 
-* <<intermediateUpdateTime>> is the simulation time at which the <<fmi3CallbackIntermediateUpdate>> callback function is called by the FMU.
+The following two `fmi3Boolean` variables define reasons for the <<fmi3CallbackIntermediateUpdate>> call and can only be set to `fmi3True` in Hybrid Co-Simulation.
 
+[[eventOccurred,`eventOccurred`]]
+* When <<eventOccurred,`eventOccurred == fmi3True`>>, the master returns <<earlyReturnRequested,`earlyReturnRequested == fmi3True`>> from <<fmi3CallbackIntermediateUpdate>> and request the FMU to return early from the current <<fmi3DoStep>> and handle the event via entering *Event Mode*.
+In *Event Mode* the master shall call <<fmi3NewDiscreteStates>> to gather related information about the event that occurred at <<intermediateUpdateTime>>.
+
+[[clocksTicked,`clocksTicked`]]
+* When <<clocksTicked,`clocksTicked == fmi3True`>>, it means that <<fmi3GetClock>> function should be called for gathering all <<clock>> related information about ticking <<outputClock,`output clocks`>> at <<intermediateUpdateTime>>.
+If this flag is `fmi3True` the master must return with <<earlyReturnRequested,`earlyReturnRequested == fmi3True`>> from <<fmi3CallbackIntermediateUpdate>> to request an early return and handle the <<clock>> event in *Event Mode*.
+
+[[intermediateVariableSetAllowed,`intermediateVariableSetAllowed`]]
 * If <<intermediateVariableSetAllowed,`intermediateVariableSetAllowed == fmi3True`>>, the Co-Simulation master may provide intermediate <<input>> variables by calling `fmi3Set{VariableType}` for variables with <<intermediateAccess,`intermediateAccess == fmi3True`>>.
 
+[[intermediateVariableGetAllowed,`intermediateVariableGetAllowed`]]
 * If <<intermediateVariableGetAllowed,`intermediateVariableGetAllowed == fmi3True`>>, the Co-Simulation master may collect intermediate output variables by calling `fmi3Get{VariableType}` for variables with <<intermediateAccess,`intermediateAccess == fmi3True`>>.
 
+[[intermediateStepFinished,`intermediateStepFinished`]]
 * If <<intermediateStepFinished, `intermediateStepFinished == fmi3False`>>, the Co-Simulation master shall only use intermediate output variables to compute intermediate <<input>> variables at the current state.
 
-Hence, it is important to distinguish intermediate output from successful internal integration steps from intermediate outputs valid only for temporary solver states.
+[[canReturnEarly,`canReturnEarly`]]
+* When <<canReturnEarly,`canReturnEarly == fmi3True`>> the master can request the FMU to return early at the current <<intermediateUpdateTime>> time instant by returning with <<earlyReturnRequested,`earlyReturnRequested == fmi3True`>> from the callback function <<fmi3CallbackIntermediateUpdate>>.
+If <<canReturnEarly,`canReturnEarly == fmi3False`>> the FMU will not do the early return, regardless of the master request.
+
+[[earlyReturnRequested,`earlyReturnRequested`]]
+* `earlyReturnRequested == fmi3True` requests the FMU to end the <<fmi3DoStep>> at a Newtonian time instant and return early.
+This is only allowed if <<canReturnEarly,`canReturnEarly == fmi3True`>>.
+
+[[earlyReturnTime,`earlyReturnTime`]]
+* `earlyReturnTime` is used to tell the FMU at what time to return early from the current <<fmi3DoStep>> (at the earliest), if the return value of <<earlyReturnRequested>> of <<fmi3CallbackIntermediateUpdate>> is `fmi3True`.
+If the <<earlyReturnTime>> is greater than the last signaled <<intermediateUpdateTime>>, the FMU may integrate up to the time instant <<earlyReturnTime>>.
+
+If the early return is conducted successfully by the FMU it must return with `earlyReturn == fmi3True` from <<fmi3DoStep>>, indicating the current FMU time with <<lastSuccessfulTime>>.
+
+The Co-Simulation master can decide if a rollback of the FMU to reach the <<earlyReturnTime>> time is required or it may continue the simulation from <<lastSuccessfulTime>> for that FMU.
+Note that *Event Mode* is not supported in Basic Co-Simulation and Scheduled Co-Simulation.
+
+It is important to distinguish intermediate output from successful internal integration steps from intermediate outputs valid only for temporary solver states.
 <<figure-intermediate-variable-access>> shows an overview of the solver states and the intended use of intermediate variable access.
 It is not allowed to call <<intermediateUpdate>> for a simulation time point prior to a previous call with <<intermediateStepFinished,`intermediateStepFinished == fmi3True`>>.
 
