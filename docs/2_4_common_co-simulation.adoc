@@ -108,7 +108,7 @@ _[A parallel computation of model partitions is not part of the FMI 3.0 API._
 _An FMU may still internally use parallel computation on multiple cores, but handling this is (currently) not part of the FMI standard. Such an internal parallel computation is not visible to the simulation master._
 _It is a tool vendor specific solution that has ties to the used OS and the co-simulation environment.]_
 
-===== Multiple Co-Simulation Interface Support in one FMU
+===== Supporting Multiple Co-Simulation Interfaces in one FMU
 Exporters are encouraged to support multiple Co-Simulation interfaces in one FMU, so it can be used in differently capable Co-Simulation master implementations and for different use cases.
 To indicate support for a specific Co-Simulation interface, the `<fmiModelDescription>` must have the respective Co-Simulation element present. +
 _[That improves the reusability of FMUs._
@@ -169,11 +169,13 @@ When an internal event occurs inside the FMU at a time instant, it informs the m
 Note that an event signal is not seen in the narrow sense of solver induced discontinuity events but in the general sense of a simulation event that has to be handled by the Co-Simulation master (e.g. state changes that require extended handling).
 
 A second use of the early-return mechanism is the following:
-In particular on a multi-node architectures, significant co-simulation speed-up may be obtained if the Co-Simulation master can avoid waiting until the end of the slowest <<fmi3DoStep>> when many FMUs are integrating in parallel and an event occurred.
+In particular in multi-node architectures, significant co-simulation speed-up may be obtained if the Co-Simulation master can avoid waiting until the end of the slowest <<fmi3DoStep>> when many FMUs are integrating in parallel and an event occurres.
 To exploit such efficiency gains, the Co-Simulation master can command the FMU to return early from the current communication step.
+_[In this use case, early return is a simple form of cooperative preemption.]_
 
 Early return is even helpful if the FMU or the Co-Simulation master do not support the advanced handling of events based on the <<hybrid-co-simulation-api, Hybrid Co-Simulation>> functionalities.
-In this way multiple event types and also <<outputClock>> ticks or interrupts can be supported based on the early return functionality and additional functionalities provided by <<hybrid-co-simulation-api,Hybrid Co-Simulation>>.
+In this way, multiple event types and also <<outputClock>> ticks or interrupts can be supported based on the early-return functionality and additional functionalities provided by <<hybrid-co-simulation-api,Hybrid Co-Simulation>>.
+
 
 ==== Intermediate Variable Access [[intermediate-variable-access]]
 
@@ -196,14 +198,18 @@ Whenever the internal solver in the FMU needs updated intermediate <<input>> var
 Combinations of the above methods are also allowed.
 
 Access to intermediate variables enables several features such as:
+
 * Advanced interpolation/extrapolation techniques _[especially enabling the same input approximation that was possible in FMI 2.0 with `fmi2SetInputDerivatives`, now evaluating the approximation polynomial in the master compared to within the FMU in FMI 2.0]_,
+
 * Asynchronous communication,
+
 * Anti-alias filtering, and
+
 * Smoothing of inputs.
 
-Intermediate variable access can be activated in all Co-Simulation interface types, if the FMU and the master support it.
+Intermediate variable access can be activated in all Co-Simulation interface types, if both, the FMU and the master, support it.
 
-If the Co-Simulation master signals the support for intermediate variable access and an FMU has at least one variable with <<intermediateAccess,`intermediateAccess == fmi3True`>>, the FMU can use the callback function <<fmi3CallbackIntermediateUpdate>> to communicate information back to the Co-Simulation master.
+If the Co-Simulation master signals the support for intermediate variable access and an FMU has at least one variable with <<intermediateAccess,`intermediateAccess == fmi3True`>>, the FMU can use the callback function <<fmi3CallbackIntermediateUpdate>> to communicate information back to the Co-Simulation master:
 
 [[fmi3CallbackIntermediateUpdate,`fmi3CallbackIntermediateUpdate`]]
 [source, C]
