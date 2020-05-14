@@ -203,8 +203,6 @@ Functions for Co-Simulation
 #define fmi3GetOutputDerivatives     fmi3FullName(fmi3GetOutputDerivatives)
 #define fmi3DoStep                   fmi3FullName(fmi3DoStep)
 #define fmi3ActivateModelPartition   fmi3FullName(fmi3ActivateModelPartition)
-#define fmi3DoEarlyReturn            fmi3FullName(fmi3DoEarlyReturn)
-#define fmi3GetDoStepDiscardedStatus fmi3FullName(fmi3GetDoStepDiscardedStatus)
 
 /***************************************************
 Common Functions
@@ -313,10 +311,6 @@ FMI3_Export fmi3EnterStepModeTYPE          fmi3EnterStepMode;
 FMI3_Export fmi3GetOutputDerivativesTYPE   fmi3GetOutputDerivatives;
 FMI3_Export fmi3ActivateModelPartitionTYPE fmi3ActivateModelPartition;
 FMI3_Export fmi3DoStepTYPE                 fmi3DoStep;
-FMI3_Export fmi3DoEarlyReturnTYPE          fmi3DoEarlyReturn;
-
-/* Inquire slave status */
-FMI3_Export fmi3GetDoStepDiscardedStatusTYPE fmi3GetDoStepDiscardedStatus;
 
 #ifdef __cplusplus
 }  /* end of extern "C" { */

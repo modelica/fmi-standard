@@ -79,15 +79,17 @@ typedef void  (*fmi3CallbackLogMessage)     (fmi3InstanceEnvironment instanceEnv
 /* end::CallbackLogMessage[] */
 
 /* tag::CallbackIntermediateUpdate[] */
-typedef fmi3Status (*fmi3CallbackIntermediateUpdate) (
-                   fmi3InstanceEnvironment instanceEnvironment,
-                   fmi3Float64 intermediateUpdateTime,
-                   fmi3Boolean eventOccurred,
-                   fmi3Boolean clocksTicked,
-                   fmi3Boolean intermediateVariableSetAllowed,
-                   fmi3Boolean intermediateVariableGetAllowed,
-                   fmi3Boolean intermediateStepFinished,
-                   fmi3Boolean canReturnEarly);
+typedef void (*fmi3CallbackIntermediateUpdate) (
+    fmi3InstanceEnvironment instanceEnvironment,
+    fmi3Float64 intermediateUpdateTime,
+    fmi3Boolean eventOccurred,
+    fmi3Boolean clocksTicked,
+    fmi3Boolean intermediateVariableSetAllowed,
+    fmi3Boolean intermediateVariableGetAllowed,
+    fmi3Boolean intermediateStepFinished,
+    fmi3Boolean canReturnEarly,
+    fmi3Boolean *earlyReturnRequested,
+    fmi3Float64 *earlyReturnTime);
 /* end::CallbackIntermediateUpdate[] */
 
 /* tag::CallbackPreemptionLock[] */
@@ -589,7 +591,9 @@ typedef fmi3Status fmi3DoStepTYPE(fmi3Instance instance,
                                   fmi3Float64 currentCommunicationPoint,
                                   fmi3Float64 communicationStepSize,
                                   fmi3Boolean noSetFMUStatePriorToCurrentPoint,
-                                  fmi3Boolean* earlyReturn);
+                                  fmi3Boolean* terminate,
+                                  fmi3Boolean* earlyReturn,
+                                  fmi3Float64* lastSuccessfulTime);
 /* end::DoStep[] */
 
 /* tag::ActivateModelPartition[] */
@@ -598,16 +602,6 @@ typedef fmi3Status fmi3ActivateModelPartitionTYPE(fmi3Instance instance,
                                                   size_t clockElementIndex,
                                                   fmi3Float64 activationTime);
 /* end::ActivateModelPartition[] */
-
-/* tag::DoEarlyReturn[] */
-typedef fmi3Status fmi3DoEarlyReturnTYPE(fmi3Instance instance, fmi3Float64 earlyReturnTime);
-/* end::DoEarlyReturn[] */
-
-/* tag::GetDoStepDiscardedStatus[] */
-typedef fmi3Status fmi3GetDoStepDiscardedStatusTYPE(fmi3Instance instance,
-                                                    fmi3Boolean* terminate,
-                                                    fmi3Float64* lastSuccessfulTime);
-/* end::GetDoStepDiscardedStatus[] */
 
 #ifdef __cplusplus
 }  /* end of extern "C" { */

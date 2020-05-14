@@ -163,7 +163,7 @@ An `fmi3ValueReference` references one such value (scalar or array).
 The coding of `fmi3ValueReference` is a "secret" of the environment that generated the FMU.
 The interface to the equations only provides access to variables via this handle.
 Extracting concrete information about a variable can be done by reading the `modelDescription.xml` in which the value handles are defined.
-If a function in the following sections is called with a wrong `fmi3ValueReference` value _[for example, setting a constant with a call to `fmi3SetFloat64`]_, then the function must return with an error ( `fmi3Status == fmi3Error`, see <<status-returned-by-functions>>).
+If a function in the following sections is called with a wrong `fmi3ValueReference` value _[for example, setting a constant with a call to `fmi3SetFloat64`]_, then the function must return with an error ( <<fmi3Error,`fmi3Status == fmi3Error`>>, see <<status-returned-by-functions>>).
 
 The following data types are the base types used in the interfaces of the C functions.
 
@@ -193,53 +193,42 @@ include::../headers/fmi3FunctionTypes.h[tags=Status]
 
 The status has the following meaning:
 
+[[fmi3OK,`fmi3OK`]]
 `fmi3OK`::
-all well.
+The call was successful.
+The output argument values are defined.
 
+[[fmi3Warning,`fmi3Warning`]]
 `fmi3Warning`::
-things are not quite right, but the computation can continue.
-Function <<logMessage>> was called in the model, and it is expected that
-this function has shown the prepared information message to the user.
+A non-critical problem was detected, but the computation can continue.
+The output argument values are defined.
+Function <<logMessage>> was called by the FMU and the user is expected to handle the problem.
+_[In certain applications, e.g. in a prototyping environment, warnings may be acceptable._
+_For production environments warnings should be treated like errors unless they can be safely ignored.]_
 
+[[fmi3Discard,`fmi3Discard`]]
 `fmi3Discard`::
-In Model Exchange, this return status is only possible for the functions:
-`fmi3Set{VariableType}`,
-<<fmi3SetContinuousStates>>,
-`fmi3Get{VariableType}`,
-<<fmi3GetDerivatives>>,
-<<fmi3GetContinuousStates>>, and
-<<fmi3GetEventIndicators>>.
-When the target simulator encounters this status in Model Exchange, it is recommended to perform a smaller step size and evaluate the model equations again, for example because an iterative solver in the model did not converge or because a function is outside of its domain _[for example, `sqrt(<negative number>)`]_.
-If this is not possible, the simulation has to be terminated.
-+
-In a co-simulation interface, the `fmi3Discard` return status is only possible for the functions:
-`fmi3Set{VariableType}`,
-<<fmi3DoStep>>, and when the FMU is not able to return the required status information.
-When `fmi3Discard` is returned, the master has to decide if the simulation run can be continued.
-+
-_[Functions `fmi3Set{VariableType}` are usually not performing calculations but just store the passed values in internal buffers._
-_The actual calculation is performed by `fmi3Get{VariableType}` functions._
-_Still, `fmi3Set{VariableType}` functions could check whether the input arguments are in their validity range._
-_If not, these functions could return with `fmi3Discard`.]_
-+
-In both model exchange and co-simulation interfaces, function <<logMessage>> was called in the FMU, and it is expected that this function has shown the prepared information message to the user if the FMU was called in debug mode (`loggingOn == fmi3True`). If the FMU was not called in debug mode, <<logMessage>> should not show a message.
+The call was not successful and the FMU is in the same state as before the call.
+The output argument values are not defined, but the computation can continue.
+When debug logging is enabled (`loggingOn == fmi3True`) the function <<logMessage>> was called by the FMU.
+Advanced master implementations can try alternative approaches to drive the simulation by calling the function with different arguments or calling another function.
+Otherwise the master has to treat this return code like <<fmi3Error>> and has to terminate the simulation.
 
+[[fmi3Error,`fmi3Error`]]
 `fmi3Error`::
-the FMU encountered an error.
-The simulation cannot be continued with this FMU instance.
-If one of the functions returns `fmi3Error`, it can be tried to restart the simulation from a formerly stored FMU state by calling <<fmi3SetFMUState>>.
-This can be done if the capability flag `canGetAndSetFMUState = true` and <<fmi3GetFMUState>> was called before in non-erroneous state.
-If not, the simulation cannot be continued and <<fmi3FreeInstance>> or <<fmi3Reset>> must be called afterwards.
-_[Typically, `fmi3Error` return is for non-numerical reasons, like "disk full"._
-_There may be cases where the environment can fix such errors (possibly with the help of the user), and the simulation can continue at the last consistent state set with <<fmi3SetFMUState>>.]_ +
-Further processing is possible after this call and other FMU instances are not affected.
-Function <<logMessage>> was called in the FMU, and it is expected that this function has shown the prepared information message to the user.
+The call failed.
+The output argument values are undefined and the simulation cannot be continued.
+Function <<logMessage>> was called by the FMU and the FMU is in state **Terminated**.
+If a function returns <<fmi3Error>>, it is possible to restore a previously retrieved FMU state by calling <<fmi3SetFMUState>>.
+Otherwise <<fmi3FreeInstance>> or <<fmi3Reset>> must be called.
+Other instances of this FMU are not affected by the error.
 
+[[fmi3Fatal,`fmi3Fatal`]]
 `fmi3Fatal`::
-the model computations are irreparably corrupted for all FMU instances.
-_[For example, due to a run-time exception such as access violation or integer division by zero during the execution of an fmi function]_.
-Function <<logMessage>> was called in the FMU, and it is expected that this function has shown the prepared information message to the user.
-It is not possible to call any other function for any of the FMU instances.
+The state of all instances of the model is irreparably corrupted.
+_[For example, due to a run-time exception such as access violation or integer division by zero during the execution of an FMI function.]_
+Function <<logMessage>> was called by the FMU.
+It is not allowed to call any other function for any instance of the FMU.
 
 ==== Inquire Platform and Version Number of Header Files [[inquire-platform-and-version-number]]
 
@@ -319,7 +308,7 @@ If `visible == fmi3True`, the FMU is executed in interactive mode, and the FMU m
 
 * If `loggingOn == fmi3False`, then any logging is disabled and the logger function is not called by the FMU.
 If `loggingOn == fmi3True`, the FMU enables a vendor defined set of `<LogCategories>`.
-This set should typically contain categories for messages that explain execution errors, like `fmi3Discard`, `fmi3Error` and `fmi3Fatal`.
+This set should typically contain categories for messages that explain execution errors, like <<fmi3Discard>>, <<fmi3Error>> and <<fmi3Fatal>>.
 The function <<fmi3SetDebugLogging>> gives more detailed control about required `<LogCategories>` (see <<definition-of-log-categories>>).
 
 * `instanceEnvironment` is a pointer that can be passed to the <<fmi3CallbackIntermediateUpdate>> function in order that the simulation environment can provide an efficient way to identify the slave that called <<fmi3CallbackIntermediateUpdate>>.
@@ -352,7 +341,7 @@ Pointer to a function that is called in the FMU _[usually if an `fmi3XXX` functi
 * `instanceName` is the instance name of the model that calls this function.
 // TODO fix following sentence
 * `status` contains the severity of the message.
-If <<logMessage>> is called with `status == fmi3OK`, then the message is a pure information message.
+If <<logMessage>> is called with <<fmi3OK,`status == fmi3OK`>>, then the message is a pure information message.
 
 * `category` is the category of the message.
 The meaning of `category` is defined by the modeling environment that generated the FMU.
@@ -373,39 +362,8 @@ _[Example: The message `\#1365# must be larger than zero (used in IO channel ##4
 
 [[intermediateUpdate,`intermediateUpdate`]]
 Function `intermediateUpdate`::
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=CallbackIntermediateUpdate]
-----
 
-This callback allows internal events of different types (e.g. associated to <<outputClock>> ticks or intermediate variable access) to be signaled from an FMU to the simulation environment.
-For Hybrid Co-Simulation and Scheduled Co-Simulation, or if any of the intermediate variable access arguments
-(<<intermediateVariableGetRequired>>, <<intermediateInternalVariableGetRequired>>, or <<intermediateVariableSetRequired>>) in <<fmi3Instantiate>> is set to `true`,
-the callback function <<fmi3CallbackIntermediateUpdate>> must be passed to <<fmi3Instantiate>>.
-In other cases, a null pointer can be assigned to the <<intermediateUpdate>> callback.
-
-[[intermediateUpdateTime,`intermediateUpdateTime`]]
-* <<intermediateUpdateTime>> indicates the internal time of the FMU at the time of calling the callback function.
-
-[[eventOccurred,`eventOccurred`]]
-* <<eventOccurred,`eventOccurred == fmi3True`>> means that an internal event has occurred.
-
-[[clocksTicked,`clocksTicked`]]
-* <<clocksTicked,`clocksTicked == fmi3True`>> means that an FMU <<outputClock>> has ticked.
-
-[[intermediateVariableSetAllowed,`intermediateVariableSetAllowed`]]
-* <<intermediateVariableSetAllowed,`intermediateVariableSetAllowed == fmi3True`>> means the master algorithm is allowed to set FMU variables using `fmi3Set{VariableType}`.
-
-[[intermediateVariableGetAllowed,`intermediateVariableGetAllowed`]]
-* <<intermediateVariableGetAllowed,`intermediateVariableGetAllowed == fmi3True`>> means the master algorithm is allowed to get FMU variables using `fmi3Get{VariableType}`.
-
-[[intermediateStepFinished,`intermediateStepFinished`]]
-* <<intermediateStepFinished, `intermediateStepFinished == fmi3True`>> means that an internal step was finished.
-
-[[canReturnEarly,`canReturnEarly`]]
-* <<canReturnEarly,`canReturnEarly == fmi3True`>> means the master is allowed to ask the FMU to return early from a <<fmi3DoStep>>.
-
-The various combinations of flags allow a Co-Simulation master algorithm to react appropriately to the needs and capabilities of the FMU.
+See <<fmi3CallbackIntermediateUpdate>> for details.
 
 [[lockUnlockPreemption,`lockUnlockPreemption`]]
 Function `lockPreemption` and `unlockPreemption`::
@@ -493,7 +451,7 @@ _[It is defined with <<causality>> = <<independent>> in the `modelDescription.xm
 _If the <<independent>> variable is `time`, `startTime` is the starting time of initialization.]_
 
 * If `stopTimeDefined == fmi3True`, then `stopTime` is the final value of the <<independent>> variable.
-If the environment tries to compute past `stopTime`, the FMU has to return `fmi3Status == fmi3Error`.
+If the environment tries to compute past `stopTime`, the FMU has to return <<fmi3Error,`fmi3Status == fmi3Error`>>.
 If `stopTimeDefined == fmi3False`, then no final value of the <<independent>> variable is defined and argument `stopTime` is meaningless.
 +
 _[If the <<independent>> variable is `time`, `stopTime` is the stop time of the simulation.]_
@@ -515,7 +473,7 @@ include::../headers/fmi3FunctionTypes.h[tags=Terminate]
 
 Informs the FMU that the simulation run is terminated.
 After calling this function, the final values of all variables can be inquired with the `fmi3Get{VariableType}` functions.
-It is not allowed to call this function after one of the functions returned with a status flag of `fmi3Error` or `fmi3Fatal`.
+It is not allowed to call this function after one of the functions returned with a status flag of <<fmi3Error>> or <<fmi3Fatal>>.
 
 [[fmi3Reset,`fmi3Reset`]]
 [source, C]
@@ -581,7 +539,7 @@ Furthermore, the actual value of every variable defined in the `modelDescription
 
 The strings returned by `fmi3GetString`, as well as the binary values returned by `fmi3GetBinary`, must be copied in the target environment because the allocated memory for these strings might be deallocated or overwritten by the next call to any of the FMI functions.
 
-For Model Exchange: `fmi3Status == fmi3Discard` is possible for `fmi3GetFloat32` and `fmi3GetFloat64` only, but not for `fmi3Get*Int*`, `fmi3GetBoolean`, `fmi3GetString`, `fmi3GetBinary`, because these are discrete-time variables and their values can only change at an event instant where `fmi3Discard` does not make sense.
+For Model Exchange: <<fmi3Discard,`fmi3Status == fmi3Discard`>> is possible for `fmi3GetFloat32` and `fmi3GetFloat64` only, but not for `fmi3Get*Int*`, `fmi3GetBoolean`, `fmi3GetString`, `fmi3GetBinary`, because these are discrete-time variables and their values can only change at an event instant where <<fmi3Discard>> does not make sense.
 
 It is also possible to set the values of certain variables at particular instants in time using the following functions:
 
@@ -590,7 +548,7 @@ It is also possible to set the values of certain variables at particular instant
 include::../headers/fmi3FunctionTypes.h[tags=Setters]
 ----
 
-Set <<parameter,`parameters`>>, <<input,`inputs`>>, and <<start>> values, and re-initialize caching of variables that depend on these variables (see <<definition-of-model-variables>> for the exact rules on which type of variables `fmi3Set{VariableType}` can be called, as well as <<state-machine-model-exchange>> in case of Model Exchange, and <<state-machine-co-simulation>>/<<state-machine-calling-sequence-clocked-co-simulation>>/<<state-machine-scheduled-co-simulation>> in case of each co-simulation interface type).
+Set <<parameter,`parameters`>>, <<input,`inputs`>>, and <<start>> values, and re-initialize caching of variables that depend on these variables (see <<definition-of-model-variables>> for the exact rules on which type of variables `fmi3Set{VariableType}` can be called, as well as <<state-machine-model-exchange>> in case of Model Exchange, and <<state-machine-basic-co-simulation>>/<<state-machine-calling-sequence-clocked-co-simulation>>/<<state-machine-scheduled-co-simulation>> in case of each co-simulation interface type).
 
 * `valueReferences` is a vector of `nValueReferences` value handles that define the variables that shall be set.
 
@@ -602,7 +560,7 @@ Set <<parameter,`parameters`>>, <<input,`inputs`>>, and <<start>> values, and re
 
 All strings passed as arguments to `fmi3SetString`, as well as all binary values passed as arguments to `fmi3SetBinary`, must be copied inside these functions, because there is no guarantee of the lifetime of strings or binary values, when these functions return.
 
-Note, `fmi3Status == fmi3Discard` is possible for the `fmi3Set{VariableType}` functions.
+Note, <<fmi3Discard,`fmi3Status == fmi3Discard`>> is possible for the `fmi3Set{VariableType}` functions.
 
 For Co-Simulation FMUs, additional functions are defined in <<transfer-of-input-output-and-parameters>> to set and inquire <<derivative,`derivatives`>> of variables with respect to time in order to allow interpolation.
 
