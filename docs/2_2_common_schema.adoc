@@ -3,13 +3,16 @@
 [[modelDescription.xml,`modelDescription.xml`]]
 All static information related to the core functionality of an FMU is stored in the text file <<modelDescription.xml>> in XML format as specified by the XML schema file `fmi3ModelDescription.xsd`.
 Especially, the FMU variables and their attributes such as `name`, `unit`, default <<initial>> value, etc. are stored in this file.
+
 Additional optional information about the graphical representation and the grouping of FMU variables into terminals is stored in the optional text file `icons/terminalsAndIcons.xml` in XML format as specified by the XML schema file `fmi3TerminalsAndIcons.xsd`.
+
+Build information for source code FMUs is provided together with a `buildDescription.xml` file in the `sources` directory that adheres to the `fmi3BuildDescription.xsd` schema file.
 
 It is not allowed to change the <<modelDescription.xml>> file.
 _[Reason: The <<modelDescription.xml>> file has to be consistent with the binary or source code implementations._
 _Specifically, changes to the start values are not allowed.]_
 
-The structure of the XML files is defined with the schema files `fmi3ModelDescription.xsd` and the optional `fmi3TerminalsAndIcons.xsd`.
+The structure of the XML files is defined with the schema file `fmi3ModelDescription.xsd` and the optional `fmi3TerminalsAndIcons.xsd` and `fmi3BuildDescription.xsd` files.
 These schema files utilize several helper schema files.
 
 In this section these schema files are discussed.
@@ -107,6 +110,25 @@ _[Note that child information items, such as elements in a sequence are ordered 
 _The FMI schema is based on ordered lists in a sequence and therefore parsing must preserve this order._
 _For example, the information stored in `<ModelVariables><Derivative>` is only correct if this property is fulfilled.]_
 
+All XML-based file formats defined in this standard allow optional `Annotation` elements to be inserted in all XML elements that represent entities of the underlying data model.
+This is achieved through the `Annotations` element:
+
+image::images/schema/Annotations.png[width=80%]
+
+Each `Annotation` element contains a required `type` attribute, which contains the namespace for that annotation.
+The content of the `Annotation` element can be arbitrary XML data, and can make use of XML namespaces and XML schemas for combined validation where appropriate.
+
+The namespace mechanism for the `type` attribute is based on reverse domain notation:
+The originator of a specification for additional data specifies a domain name under their control as the namespace for the additional data, in order to avoid conflicts due to name collisions.
+The namespace is used in reverse domain notation.
+All namespaces under both the `org.modelica` and `org.fmi-standard` domains are reserved for use in future layered standards.
+
+_[For example, extensions defined by the Modelica Association might make use of the `org.modelica.fmi` namespace._
+_This could lead to annotations with a `type` attribute of `org.modelica.fmi.something`, and/or extra files under the `extra/org.modelica.ssp.something` sub-directory.]_
+
+Annotations are intended to allow structured extensions of the FMI XML files, without creating conflicting extensions, or leaving ambiguities in interpretation.
+All annotations can safely be ignored by implementations that just implement the base FMI standard.
+
 ==== Definition of an FMU (fmiModelDescription) [[fmiModelDescription]]
 
 This is the root-level schema file and contains the following definition (the figure below contains all elements in the schema file.
@@ -151,9 +173,6 @@ These definitions are used in the XML element `<ModelVariables>`.
 |`<DefaultExperiment>`
 |Providing default settings for the integrator, such as stop time and relative tolerance.
 
-|`<VendorAnnotations>`
-|Additional data that a vendor might want to store and that other vendors might ignore.
-
 |`<ModelVariables>`
 |The central FMU data structure defining all variables of the FMU that are visible/accessible via the FMU functions.
 
@@ -165,6 +184,10 @@ Furthermore, the dependency of the unknowns from the knowns can be optionally de
 _[This information can be, for example, used to compute efficiently a sparse Jacobian for simulation, or to utilize the <<input>> / <<output>> dependency in order to detect that in some cases there are actually no algebraic loops when connecting FMUs together]_.
 Dependencies for event indicators are not provided.
 _[The calculation of derivatives of event indicators is not provided.]_.
+
+|`<Annotations>`
+|Optional annotations for the top-level element.
+
 |====
 
 At least one element of `<ModelExchange>`, `<BasicCoSimulation>`, `<HybridCoSimulation>` or `<ScheduledCoSimulation>` must be present to identify the type of the FMU.
@@ -1037,21 +1060,11 @@ _[Nested terminals may have a `<GraphicalRepresentation>` element. However, if a
 
 _[The order of painting of the `<GraphicalRepresentation>` of terminals on each level is equal to the order of appearance in the `<Terminal>` element. So graphical representations appearing first, are painted first, are behind graphical representations which appear below.]_
 
-The `<VendorAnnotations>` element can be used by vendors to store additional information for the graphical representation.
-_[It is suggested that Modelica tools store the Modelica annotation of the connector under the tool name `Modelica3Annotation` in the attribute `annotation` of an element `connector`._
+The `Annotations` element can be used by vendors to store additional information for the graphical representation.
+_[It is suggested that Modelica tools store the Modelica annotation of the connector under the `type` `org.modelica.Modelica3Annotation` in the annotations of an element `connector`._
 _The attribute `name` of the connector element is equal to the `name` attribute of the referenced `fmi3Terminal`.]_
 
 _[If the graphical representation is used for an <<input>> or <<output>> (e.g. a `fmi3Float64` <<input>> `u`), then a `<Terminal>` has to be added to the `<Terminals>` element which has one `<TerminalMemberVariable>`.]_
-
-==== Definition of Vendor Annotations (VendorAnnotations)
-
-Element `<fmiModelDescription><VendorAnnotations>` is defined as:
-
-image::images/schema/VendorAnnotations.png[width=80%, align="center"]
-
-`<VendorAnnotations>` consist of an ordered set of annotations that are identified by the name of the tool that can interpret the `any` element.
-The `any` element can be an arbitrary XML data structure defined by the tool.
-The attribute `name` must be unique with respect to all other elements of the `<VendorAnnotations>` list.
 
 ==== Definition of Model Variables (ModelVariables) [[definition-of-model-variables]]
 
@@ -1712,15 +1725,6 @@ If `false`, <<state>> will not be reinitialized at an event by the FMU.
 The `min/max` definitions are information from the FMU to the environment defining the region in which the FMU is designed to operate, see also comment in <<definition-of-types>>.
 _[If, for example, an `<Enumeration>` is defined with `name1 = -4`, `name2 = 1`, `name3 = 5`, `name4 = 11` and `min = -2`, `max = 5`, then only `name2` and `name3` are allowed.]_
 |====
-
-With element `<Annotations>` additional, tool specific data can be defined:
-
-image::images/schema/Annotations.png[width=80%]
-
-With the attribute `name` of `<Tool>` the name of the tool is defined that can interpret the `any` element.
-The `any` element can be an arbitrary XML data structure defined by the tool.
-_[Typically, additional data is defined here how to build up the menu for the variable, including the graphical layout and enabling/disabling an input field based on the values of other <<parameter,`parameters`>>.]_
-The attribute `name` must be unique with respect to all other elements of the `<Annotations>` list.
 
 ==== Definition of the Model Structure (ModelStructure) [[ModelStructure]]
 
