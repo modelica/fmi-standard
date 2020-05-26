@@ -1,33 +1,35 @@
 === FMU Distribution [[fmu-distribution]]
 
-An FMU description consists of several files.
-An FMU implementation may be distributed in source code and/or in binary format.
-All relevant files are stored in a ZIP file with a pre-defined structure.
-The implementation must implement all the functions for at least one of the FMI interface types.
-Specifically it is required that all functions specified for the specified FMI interface type are present, even if they are only needed for capabilities that the FMU does not support.
+An FMU consists of several files, that are stored in a ZIP file with a pre-defined structure.
+The implementation of the simulation model represented by the FMU may be distributed in source code and/or in binary format.
+The FMU must be distributed with at least one implementation, in other words, either sources or one of the binaries for a particular machine.
+It is also possible to provide the sources and binaries for different target machines together in one ZIP file.
+The FMU must implement all common API functions according to <<fmi-application-programming-interface>> and the functions for at least one of the FMI interface types.Especially it is required that all functions that are part of the specified FMI interface type are present, even if they are only needed for optional capabilities that the FMU does not support.
 The behavior of those functions is unspecified, so while calling environments can rely on the functions being present, they cannot rely on any particular behavior for functions only needed for capabilities the FMU does not support.
 The extension of the ZIP file must be `.fmu` _[, for example, `HybridVehicle.fmu`]_.
 The compression method used for the ZIP file must be `deflate` _[(most free tools, such as zlib, offer only the common compression method `deflate`)]_.
+
 
 _[Note: especially section 4.4.17 of https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT[the ZIP format specification] states that backslashes "\" are forbidden as path separator, only forward slashes "/" are allowed._ +
 _Non-ASCII directory names are not explicitly forbidden, but might pose a problem on different operating systems and are thus discouraged.]_
 
 Every FMU is distributed with its own ZIP file.
-This ZIP file has the following structure:
+
+==== Structure of the ZIP file of an FMU [[structure-of-zip]]
 
 ----
 // Structure of ZIP file of an FMU
 modelDescription.xml          // description of FMU (required file)
 documentation                 // directory containing the documentation (optional)
    index.html                 // entry point of the documentation
-   diagram.png                // image file of a descriptive diagram view of the model (optional)
+   diagram.png                // descriptive diagram view of the model (optional)
    diagram.svg                // if existing the diagram.png is required (optional)
    <other documentation files>
-   licenses                   // Optional directory for licenses
+   licenses                   // directory for licenses (optional)
       license.{txt|html}      // Entry point for license information
       <license files>         // For example BSD licenses
 icons                         // FMU and terminal icons (optional)
-   terminalsAndIcons.xml      // description of terminals and graphical representation (optional)
+   terminalsAndIcons.xml      // description of terminals and icons (optional)
    icon.png                   // image file of icon without terminals (optional)
    icon.svg                   // if existing the icon.png is required (optional)
    // all terminal and fmu icons referenced in the graphical representation
@@ -41,8 +43,8 @@ binaries                      // directory containing the binaries (optional)
    x86_64-windows             // binaries for Windows on Intel 64-bit
       <modelIdentifier>.dll   // shared library of the FMI implementation
       <other DLLs>            // the DLL can include other DLLs
-   x86_64-windows-msvc140mt   // static libraries for 64-bit Windows generated with
-      <modelIdentifier>.lib   // Visual Studio 2015 with /MT flag
+   x86_64-windows-msvc140mt   // static libraries for 64-bit Windows generated
+      <modelIdentifier>.lib   // with Visual Studio 2015 with /MT flag
    i686-linux                 // binaries for Linux on Intel 32-bit
       <modelIdentifier>.so    // shared library of the FMI implementation
    aarch32-linux              // binaries for Linux on ARM 32-bit
@@ -64,11 +66,35 @@ extra                         // Additional (meta-)data of the FMU (optional)
    // see below for structure and content definition.
 ----
 
-An FMU has to implement all common functions (according to tables in <<state-machine-model-exchange>> and <<state-machine-basic-co-simulation>>).
-Additionally, all FMUs have to provide the respective FMU interface-type function they implement.
+==== Documentation directory [[documentation-directory]]
 
-The FMU must be distributed with at least one implementation, in other words, either sources or one of the binaries for a particular machine.
-It is also possible to provide the sources and binaries for different target machines together in one ZIP file.
+===== Licenses subdirectory [[license-information]]
+This optional subdirectory can be used to bundle all license texts for the code, binaries or other material (documentation, content of resources folder) contained tin the FMU. If it is present, it must contain either a `license.txt` or `license.html` file as entry point.
+
+_[It is strongly recommended to include all license and copyright related information in the licenses folder of an FMU (especially but not only for contained open source software) - the `license.{txt|html}` file can serve as an entry point for describing the contained licenses._
+_This will help the users to comply with license conditions when passing source or binary code contained in an FMU to other persons or organizations.]_
+
+==== Sources directory [[sources-directory]]
+
+`#include` directive with `"..."` should be used for header files distributed in the FMU instead of using `<...>`.
+In case information beyond `<BuildConfiguration>` is required to compile the FMU for specific targets, the `documentation` directory is the place to store further instructions.
+
+_[Note that the header files `fmi3PlatformTypes.h` and `fmi3FunctionTypes.h/fmi3Functions.h` are not included in the FMU due to the following reasons:_
+
+_pass:[]`fmi3PlatformTypes.h` makes no sense in the `sources` directory, because if sources are provided, then the target simulator defines this header file and not the FMU._ +
+_This header file is not included in the `binaries` directory, because it is implicitly defined by the platform directory (for example, `i686-windows` for a 32-bit machine or `x86_64-linux` for a 64-bit machine)._
+
+_pass:[]`fmi3FunctionTypes.h` / `fmi3Functions.h` are not needed in the `sources` directory, because they are implicitly defined by attribute `fmiVersion` in file <<modelDescription.xml>>._
+_Furthermore, in order that the C compiler can check for consistent function arguments, the header file from the target simulator should be used when compiling the C sources._
+_It would therefore be counter-productive (unsafe) if this header file was present._ +
+_These header files are not included in the `binaries` directory, since they are already utilized to build the target simulator executable._
+_The version number of the header file used to construct the FMU can be deduced via attribute `fmiVersion` in file <<modelDescription.xml>> or via function call <<fmi3GetVersion>>.]_
+
+
+==== Binaries directory [[binarie-directory]]
+
+===== Platform tuple definition [[platform-tupe-definition]]
+
 The names of the binary directories are standardized by the "platform tuple".
 Further names can be introduced by vendors.
 Dynamic link libraries must include all referenced resources that are not available on a standard target machine _[for example, DLLs on Windows that are built  with Visual Studio should be compiled with the `/MT` option to include the required symbols from the Visual C runtime in the DLL, and not use the option `/MD` where this is not the case]_.
@@ -192,55 +218,51 @@ Sub-ABI `<abi_sub>`::
 |====
 
 _[Typical scenarios are to provide binaries only for one machine type (for example, on the machine where the target simulator is running and for which licenses of run-time libraries are available) or to provide only sources (for example, for translation and download for a particular micro-processor).]_
-If run-time libraries cannot be shipped due to licensing, special handling is needed, for example, by providing the run-time libraries at appropriate places by the receiver.
+
+===== External libraries [[external-libraries]]
+
+If run-time libraries are needed by the FMU that have to be present on the target machine and cannot be shipped within the FMU (e.g., due to licensing issues), then automatic processing is likely impossible.
+In such cases special handling is needed, for example, by providing the run-time libraries at appropriate places by the receiver. The requirements and the expected processing should be documented in the `documentation` directory in this case. +
+
+===== Dependency on installed tool [[dependency-on-exteranl-tool]]
 
 FMI provides the means for two kinds of implementation: `needsExecutionTool = true` and `needsExecutionTool = false`.
 In the first case a tool specific wrapper DLL/SharedObject has to be provided as the binary, in the second a compiled or source code version of the model with its solver is stored (see <<fmi-for-basic-co-simulation>> for details).
 
+===== Multiple interface types [[multiple-interface-types]]
+
 In an FMU multiple interface types might be present.
-If in both cases the executable part is provided as a shared library, then two different or only one library can be provided.
+If in all cases the executable part is provided as a shared library, then one of up to four libraries can be provided.
 The library names are defined in the `modelIdentifier` attribute of elements `<fmiModelDescription><ModelExchange|{Basic|Hybrid|Scheduled}CoSimulation>`:
 
 ----
 [Example of different libraries:
    binaries
      x86_64-windows
-        MyModel_ModelExchange.dll   // modelIdentifier of <ModelExchange> =
-                                    //    "MyModel_ModelExchange"
-        MyModel_CoSimulation.dll    // modelIdentifier of <CoSimulation> =
-                                    //    "MyModel_CoSimulation"
+        MyModel_ModelExchange.dll      // modelIdentifier of <ModelExchange> =
+                                       //    "MyModel_ModelExchange"
+        MyModel_BasicCoSimulation.dll  // modelIdentifier of <BasicCoSimulation> =
+                                       //    "MyModel_BasicCoSimulation"
+        MyModel_HybridCoSimulation.dll // modelIdentifier of <HybridCoSimulation> =
+                                       //    "MyModel_HybridCoSimulation"
 ]
 ----
 
 _[The usual distribution of an FMU will be with DLLs/SharedObjects because then further automatic processing (for example, importing into another tool) is possible.]_ +
-If run-time libraries are needed by the FMU that have to be present on the target machine, then automatic processing is likely impossible.
-The requirements and the expected processing should be documented in the `documentation` directory in this case. +
+
 A source-based distribution might require manual interaction in order that it can be utilized.
 The intention is to support platforms that are not known in advance (such as HIL platforms or microcontrollers).
 All source file names that need to be defined in a compiler directive have to be defined in `sources/buildDescription.xml`.
 
-`#include` directive with `"..."` should be used for header files distributed in the FMU instead of using `<...>`.
-In case information beyond `<BuildConfiguration>` is required to compile the FMU for specific targets, the `documentation` directory is the place to store further instructions.
-_[The subdirectory `licenses` can be used to bundle all license files._
-_It is strongly recommended to include all license and copyright related information in the licenses folder of an FMU (especially but not only for contained open source software) - the `license.{txt|html}` file can serve as an entry point for describing the contained licenses._
-_This will help the users to comply with license conditions when passing source or binary code contained in an FMU to other persons or organizations.]_
+==== Resources directory [[resources-directory]]
 
 In the mandatory directory `resources`, additional data can be provided in FMU specific formats, typically for tables and maps used in the FMU.
 This data must be read into the model at the latest during initialization (that is, before <<fmi3ExitInitializationMode>> is called).
 The actual file names in the ZIP file to access the data files can either be hard-coded in the generated FMU functions, or the file names can be provided as string arguments via the `fmi3SetString` function.
 _[Note that the absolute file name of the resource directory is provided by the initialization functions.]_
-In the case of a Basic Co-Simulation implementation of `needsExecutionTool = true` type, the `resources` directory can contain the model file in the tool specific file format.
+In the case of an FMU implementation of `needsExecutionTool = true` type, the `resources` directory can contain the model file in the tool specific file format.
 
-_[Note that the header files `fmi3PlatformTypes.h` and `fmi3FunctionTypes.h/fmi3Functions.h` are not included in the FMU due to the following reasons:_
-
-_pass:[]`fmi3PlatformTypes.h` makes no sense in the `sources` directory, because if sources are provided, then the target simulator defines this header file and not the FMU._ +
-_This header file is not included in the `binaries` directory, because it is implicitly defined by the platform directory (for example, `i686-windows` for a 32-bit machine or `x86_64-linux` for a 64-bit machine)._
-
-_pass:[]`fmi3FunctionTypes.h` / `fmi3Functions.h` are not needed in the `sources` directory, because they are implicitly defined by attribute `fmiVersion` in file <<modelDescription.xml>>._
-_Furthermore, in order that the C compiler can check for consistent function arguments, the header file from the target simulator should be used when compiling the C sources._
-_It would therefore be counter-productive (unsafe) if this header file was present._ +
-_These header files are not included in the `binaries` directory, since they are already utilized to build the target simulator executable._
-_The version number of the header file used to construct the FMU can be deduced via attribute `fmiVersion` in file <<modelDescription.xml>> or via function call <<fmi3GetVersion>>.]_
+==== Extra directory [[extra-directory]]
 
 The ZIP archive may contain additional entries with the prefix `extra/` that can be used to store additional data and meta-data.
 In order to avoid ambiguities, the extra files should be provided in subdirectories using a reverse domain name notation of a domain that is controlled by the entity defining the semantics and content of the additional entries _[(for example `extra/com.example/SimTool/meta.xml` or `extra/org.example.stdname/data.asd`)]_.
