@@ -94,7 +94,7 @@ At every event instant latexmath:[t_i], variables might be discontinuous (see <<
 [#figure-piecwise-continuous-variables]
 image::images/PieceWiseContinuousVariables.svg[width=60%]
 
-An event instant latexmath:[t_i] is defined by one of the following conditions that give the smallest time instant:
+The next event instance t_i is defined by the earliest occurance of one of the following conditions:
 
 . The environment of the FMU triggers an event at the current time instant because at least one discrete-time <<input>> changes its value, a continuous-time <<input>> has a discontinuous change, or a <<tunable>> <<parameter>> changes its value.
 Such an event is called external event.
@@ -210,6 +210,8 @@ This mode is used to compute new values for all continuous-time variables, as we
 This is performed by solving algebraic equations consisting of all continuous-time and all active discrete-time equations.
 In FMI 2.0 there is no mechanism that the FMU can provide the information whether a discrete-time variable is active or is not active (is not computed) at an event instant.
 Therefore, the environment has to assume that at an event instant always all discrete-time variables are computed, although internally in the FMU only a subset might be newly computed.
+
+==== Model evaluations, dependencies and call sequence
 
 When connecting FMUs together, loop structures can occur that lead to particular difficulties because linear or non-linear algebraic systems of equations in floating point variables but also in Boolean or Integer variables might be present.
 In order to solve such systems of equations over FMUs efficiently, the dependency information is needed stating, for example, which <<output,`outputs`>> depend directly on <<input,`inputs`>>.
@@ -349,11 +351,11 @@ latexmath:[\mathbf{f}_{\mathit{init}}, \mathbf{f}_{\mathit{sim}} \in C^0] (=cont
 _[Remark 1 - Calling Sequences:_
 
 _In the table above, for notational convenience in every mode one function call is defined to compute all output arguments from all inputs arguments._
-_In reality, every scalar output argument is computed by one `fmi3Get{VariableType}` function call._
+_In reality, every scalar output argument can be computed by one `fmi3Get{VariableType}` function call._
 _Additionally, the output argument need not be a function of all input arguments, but of only a subset from it, as defined in the XML file under `<ModelStructure>`._
 _This is essential when FMUs are connected in a loop, as shown in <<figure-connected-fmus>>. For example, since_ latexmath:[y_{\mathit{2a}}] _depends only on_ latexmath:[u_{\mathit{1a}}] _, but not on_ latexmath:[u_{\mathit{1b}}]_, it is possible to call_ `fmi3Set{VariableType}` _to set_ latexmath:[u_{\mathit{1a}}] _, and then inquire_ latexmath:[y_{\mathit{2a}}] _with_ `fmi3Get{VariableType}` _without setting_ latexmath:[u_{\mathit{1b}}] _beforehand._
 
-_It is non-trivial to provide code for `fmi3Set{VariableType}`, `fmi3Get{VariableType}`, if the environment can call_ `fmi3Set{VariableType}` _on the <<input,`inputs`>> in quite different orders._
+_It is non-trivial to provide code for `fmi3Set{VariableType}`, `fmi3Get{VariableType}`, if the environment can call `fmi3Set{VariableType}` on the <<input,`inputs`>> in quite different orders._
 _A simple remedy is to provide the dependency information, not according to the real functional dependency, but according to the sorted equations in the generated code._
 _Example:_
 
