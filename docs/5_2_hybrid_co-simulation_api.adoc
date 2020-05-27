@@ -4,8 +4,7 @@
 
 The <<fmi3CallbackIntermediateUpdate>> callback described in <<intermediate-variable-access>> is also used in order to communicate the <<input>> and <<output>> and, in particular, the event and <<clock>> time from the FMU to the Co-Simulation master.
 The <<fmi3CallbackIntermediateUpdate>> callback allows internal events (e.g. associated to <<outputClock>> ticks) to be signaled from an FMU to the Co-Simulation master.
-If the interface type is Hybrid Co-Simulation, the <<fmi3CallbackIntermediateUpdate>> callback must be defined in the instantiate function.
-In other cases a null pointer can be assigned to the <<fmi3CallbackIntermediateUpdate>> callback, for instance when the interface type is Model Exchange.
+For the interface type Hybrid Co-Simulation, the <<fmi3CallbackIntermediateUpdate>> callback must be defined in the instantiate function, i.e. NULL is not allowed.
 
 The arguments of <<fmi3CallbackIntermediateUpdate>> are used to signal <<outputClock>> ticks and internal events to the master.
 See <<intermediate-variable-access>> for details of the function parameters.
@@ -16,7 +15,7 @@ include::../headers/fmi3FunctionTypes.h[tag=CallbackIntermediateUpdate]
 ----
 
 Only the first discontinuity event at a Newtonian time instant shall be signaled using this function.
-There may be an event iteration in *Event Mode* at a Newtonian time instant and have super-dense time instants.
+There may be an event iteration in *Event Mode* at a Newtonian time instant causing super-dense time instants.
 
 Based on the information provided by <<fmi3CallbackIntermediateUpdate>>, additional information about the discontinuity at that time instant can be obtained by the master from the FMU by calling <<fmi3NewDiscreteStates>> and <<fmi3GetClock>>.
 
@@ -40,7 +39,7 @@ If <<fmi3DoStep>> returns with <<earlyReturn,`earlyReturn == fmi3True`>> and an 
 In order to start event handling the Co-Simulation master has to call <<fmi3EnterEventMode>> for that FMU to push the FMU into *Event Mode*.
 In this mode the Co-Simulation master is supposed to catch all events through the <<fmi3NewDiscreteStates>> function.
 
-If the early-return request of the Co-Simulation master is ignored by the FMU, then <<fmi3DoStep>> returns with <<earlyReturn,`earlyReturn == fmi3False`>>.
+If an early-return request of the Co-Simulation master is ignored by the FMU, then <<fmi3DoStep>> returns with <<earlyReturn,`earlyReturn == fmi3False`>>.
 The master can start a resynchronization of FMUs at an event time, if the <<currentCommunicationPoint>> has passed the event time, the master can roll-back the FMU and repeat the step with a suitable <<communicationStepSize>> (if the FMU supports the roll-back).
 
 In *Event Mode* and only after <<fmi3DoStep>> returned with <<earlyReturn,`earlyReturn == fmi3True`>> the function <<fmi3NewDiscreteStates>> may be called.
@@ -57,16 +56,15 @@ This is the case when the model can report in advance the accurate time of the n
 In *Event Mode* it is allowed to call `fmi3Get{VariableType}` after <<fmi3NewDiscreteStates>> has been called and it is allowed to call `fmi3Set{VariableType}` before calling <<fmi3NewDiscreteStates>>.
 The FMU leaves *Event Mode* when the master calls <<fmi3EnterStepMode>>.
 
-It is not allowed to call <<fmi3EnterEventMode>> or <<fmi3EnterStepMode>> for an FMU with interface type Basic Co-Simulation and Scheduled Co-Simulation.
-
 ==== Co-Simulation with Clock Support in Hybrid Co-Simulation [[api-clocked-co-simulation]]
 
 In this section, signaling and retrieving <<clock>> ticks as well as the interface for supporting <<clock,`clocks`>> in FMI for Co-Simulation will be discussed.
 If an FMU for Co-Simulation declares <<clock,`clocks`>> and clocked variables in the <<modelDescription.xml>> file, it supports <<clock,`clocks`>>.
-The Co-Simulation master should indicate the FMU that the master has recognized the <<clock>> capabilities of the FMU and supports the <<clock>> handling by calling the Hybrid Co-Simulation interface instantiation function <<fmi3InstantiateHybridCoSimulation>>.
 Note, even if no <<clock>> is defined by an FMU in <<modelDescription.xml>>, the master can instantiate a Hybrid Co-Simulation FMU to be able to use early return with event handling in *Event Mode*.
 
-If an FMU provides <<clock,`clocks`>>, but the Co-Simulation master does not support or does not want to support early-return or <<clock,`clocks`>>, by setting the interface to Hybrid Co-Simulation, the activation of model partitions inside of the FMU has to be handled internally within <<fmi3DoStep>>.
+If an FMU provides <<clock,`clocks`>> and the Co-Simulation master is using the interface type Hybrid Co-Simulation, the Co-Simulation master must handle these <<clock,`clocks`>> and early return requests by the FMU.
+If the Co-Simulation master does not support or does not want to support early-return or <<clock,`clocks`>>, it must set the interface type to Basic Co-Simulation if supported by the FMU.
+If the FMU provides the Basic Co-Simulation interface type and is instantiated with it, the FMU must internally handle all events during <<fmi3DoStep>>.
 
 _[Remark: Wrapping towards other Co-Simulation interfaces can influence the simulation results._
 _Depending on the model especially wrapping towards Hybrid Co-Simulation may result in divergent simulation results._
