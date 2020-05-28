@@ -94,14 +94,15 @@ At every event instant latexmath:[t_i], variables might be discontinuous (see <<
 [#figure-piecwise-continuous-variables]
 image::images/PieceWiseContinuousVariables.svg[width=60%]
 
-An event instant latexmath:[t_i] is defined by one of the following conditions that give the smallest time instant:
+The next event instance t_i is defined by the earliest occurance of one of the following conditions:
 
 . The environment of the FMU triggers an event at the current time instant because at least one discrete-time <<input>> changes its value, a continuous-time <<input>> has a discontinuous change, or a <<tunable>> <<parameter>> changes its value.
 Such an event is called external event.
 _[Note that if an FMU A is connected to an FMU B, and an event is triggered for A, then potentially all <<output,`outputs`>> of A will be discontinuous at this time instant._
 _It is therefore adviceable to trigger an external event for B at this time instant too, if an <<output>> of A is connected to B._
 _This means to call <<fmi3EnterEventMode>> on B.]_ +
-All the following events are internal events.
++
+All the following events are internal events:
 
 . At a predefined time instant latexmath:[t_i=(T_{\mathit{next}}(t_{i-1}, 0)] that was defined at the previous event instant latexmath:[t_{i-1}] by the FMU.
 Such an event is called time event.
@@ -198,7 +199,7 @@ Computing the solution of an FMI model means to split the solution process in di
 The phases can be categorized according to the following modes:
 
 ===== Initialization Mode
-This mode is used to compute at the start time stem[t_0] initial values for continuous-time <<state,`states`>>, latexmath:[\mathbf{x}_c(t_0)], and for the previous (internal) discrete-time <<state,`states`>>, latexmath:[\mathbf{x}_d(t_0)], by utilizing extra equations not present in the other modes (for example, equations to define the <<start>> value for a <<state>> or for the derivative of a <<state>>).
+This mode is used to compute at the start time latexmath:[t_0] initial values for continuous-time <<state,`states`>>, latexmath:[\mathbf{x}_c(t_0)], and for the previous (internal) discrete-time <<state,`states`>>, latexmath:[\mathbf{x}_d(t_0)], by utilizing extra equations not present in the other modes (for example, equations to define the <<start>> value for a <<state>> or for the derivative of a <<state>>).
 
 ===== Continuous-Time Mode
 This mode is used to compute the values of all floating point continuous-time variables between events by numerically solving ordinary differential and algebraic equations.
@@ -209,6 +210,8 @@ This mode is used to compute new values for all continuous-time variables, as we
 This is performed by solving algebraic equations consisting of all continuous-time and all active discrete-time equations.
 In FMI 2.0 there is no mechanism that the FMU can provide the information whether a discrete-time variable is active or is not active (is not computed) at an event instant.
 Therefore, the environment has to assume that at an event instant always all discrete-time variables are computed, although internally in the FMU only a subset might be newly computed.
+
+==== Model evaluations, dependencies and call sequence
 
 When connecting FMUs together, loop structures can occur that lead to particular difficulties because linear or non-linear algebraic systems of equations in floating point variables but also in Boolean or Integer variables might be present.
 In order to solve such systems of equations over FMUs efficiently, the dependency information is needed stating, for example, which <<output,`outputs`>> depend directly on <<input,`inputs`>>.
@@ -348,11 +351,11 @@ latexmath:[\mathbf{f}_{\mathit{init}}, \mathbf{f}_{\mathit{sim}} \in C^0] (=cont
 _[Remark 1 - Calling Sequences:_
 
 _In the table above, for notational convenience in every mode one function call is defined to compute all output arguments from all inputs arguments._
-_In reality, every scalar output argument is computed by one `fmi3Get{VariableType}` function call._
+_In reality, every scalar output argument can be computed by one `fmi3Get{VariableType}` function call._
 _Additionally, the output argument need not be a function of all input arguments, but of only a subset from it, as defined in the XML file under `<ModelStructure>`._
 _This is essential when FMUs are connected in a loop, as shown in <<figure-connected-fmus>>. For example, since_ latexmath:[y_{\mathit{2a}}] _depends only on_ latexmath:[u_{\mathit{1a}}] _, but not on_ latexmath:[u_{\mathit{1b}}]_, it is possible to call_ `fmi3Set{VariableType}` _to set_ latexmath:[u_{\mathit{1a}}] _, and then inquire_ latexmath:[y_{\mathit{2a}}] _with_ `fmi3Get{VariableType}` _without setting_ latexmath:[u_{\mathit{1b}}] _beforehand._
 
-_It is non-trivial to provide code for `fmi3Set{VariableType}`, `fmi3Get{VariableType}`, if the environment can call_ `fmi3Set{VariableType}` _on the <<input,`inputs`>> in quite different orders._
+_It is non-trivial to provide code for `fmi3Set{VariableType}`, `fmi3Get{VariableType}`, if the environment can call `fmi3Set{VariableType}` on the <<input,`inputs`>> in quite different orders._
 _A simple remedy is to provide the dependency information, not according to the real functional dependency, but according to the sorted equations in the generated code._
 _Example:_
 
@@ -418,9 +421,9 @@ _This restriction is communicated to the environment of the FMU by the `ScalarVa
 
 _Remark 3 - Event Indicators / Freezing Relations:_
 
-_In the above table, vector_ *r* _is used to collect all relations together that are utilized in the event indicators_ **z** _.
+_In the above table, vector_ latexmath:[\mathbf{r}] _is used to collect all relations together that are utilized in the event indicators_ latexmath:[\mathbf{z}] _._
 _In *Continuous-Time Mode* all these relations are `frozen` and do not change during the evaluations in the respective mode._
-_This is indicated in the table above by computing_ *r* _when entering the *Continuous-Time Mode* and providing_ *r* _as (internal) input argument to the evaluation functions._
+_This is indicated in the table above by computing_ latexmath:[\mathbf{r}] _when entering the *Continuous-Time Mode* and providing_ latexmath:[\mathbf{r}] _as (internal) input argument to the evaluation functions._
 _Example:_
 
 _An equation of the form_
@@ -465,7 +468,7 @@ _An actual implementation will pack the code in an impure function, say Greater(
 y = if Greater(x1-x2,...) or Greater(x3-x1,...) then +1 else -1;
 ----
 
-_Furthermore, a hysteresis should be added for the event indicators._
+_Furthermore, a hysteresis should be added for the event indicators.]_
 
 An FMU is initialized in *Initialization Mode* with latexmath:[\mathbf{f}_{\mathit{init}}(\ldots)].
 The input arguments to this function consist of the <<input>> variables (= variables with <<causality>> = <<input>>), of the <<independent>> variable (= variable with <<causality>> = <<independent>>; usually the default value `time`), and of all variables that have a <<start>> value with (explicitly or implicitly) <<initial>> = <<exact>> in order to compute the continuous-time <<state,`states`>> and the output variables at the initial time latexmath:[t_0].
