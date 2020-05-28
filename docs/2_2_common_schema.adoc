@@ -1,14 +1,18 @@
 === FMI Description Schema [[fmi-description-schema]]
 
-All static information related to the core functionality of an FMU is stored in the text file `modelDescription.xml` in XML format as specified by the XML schema file `fmi3ModelDescription.xsd`.
+[[modelDescription.xml,`modelDescription.xml`]]
+All static information related to the core functionality of an FMU is stored in the text file <<modelDescription.xml>> in XML format as specified by the XML schema file `fmi3ModelDescription.xsd`.
 Especially, the FMU variables and their attributes such as `name`, `unit`, default <<initial>> value, etc. are stored in this file.
-Additional optional information about the graphical representation and the grouping of FMU variables into terminals is stored in the optional text file `icon/terminalsAndIcons.xml` in XML format as specified by the XML schema file `fmi3TerminalsAndIcons.xsd`.
 
-It is not allowed to change the `modelDescription.xml` file.
-_[Reason: The `modelDescription.xml` file has to be consistent with the binary or source code implementations._
+Additional optional information about the graphical representation and the grouping of FMU variables into terminals is stored in the optional text file `icons/terminalsAndIcons.xml` in XML format as specified by the XML schema file `fmi3TerminalsAndIcons.xsd`.
+
+Build information for source code FMUs is provided together with a `buildDescription.xml` file in the `sources` directory that adheres to the `fmi3BuildDescription.xsd` schema file.
+
+It is not allowed to change the <<modelDescription.xml>> file.
+_[Reason: The <<modelDescription.xml>> file has to be consistent with the binary or source code implementations._
 _Specifically, changes to the start values are not allowed.]_
 
-The structure of the XML files is defined with the schema files `fmi3ModelDescription.xsd` and the optional `fmi3TerminalsAndIcons.xsd`.
+The structure of the XML files is defined with the schema file `fmi3ModelDescription.xsd` and the optional `fmi3TerminalsAndIcons.xsd` and `fmi3BuildDescription.xsd` files.
 These schema files utilize several helper schema files.
 
 In this section these schema files are discussed.
@@ -87,7 +91,7 @@ Example: `2002-10-23T12:00:00Z` (noon on October 23, 2002, Greenwich Mean Time)
 |tool specific
 |====
 
-The first line of an XML file, such as `modelDescription.xml`, must contain the encoding scheme of the XML file.
+The first line of an XML file, such as <<modelDescription.xml>>, must contain the encoding scheme of the XML file.
 It is required that the encoding scheme is always UTF-8:
 
 [source, xml]
@@ -105,6 +109,25 @@ The special values `NaN`, `+INF`, `-INF` for variables values are not allowed in
 _[Note that child information items, such as elements in a sequence are ordered lists according to document order, whereas attribute information items are unordered sets (see http://www.w3.org/TR/XML-infoset/#infoitem.element)._
 _The FMI schema is based on ordered lists in a sequence and therefore parsing must preserve this order._
 _For example, the information stored in `<ModelVariables><Derivative>` is only correct if this property is fulfilled.]_
+
+All XML-based file formats defined in this standard allow optional `Annotation` elements to be inserted in all XML elements that represent entities of the underlying data model.
+This is achieved through the `Annotations` element:
+
+image::images/schema/Annotations.png[width=80%]
+
+Each `Annotation` element contains a required `type` attribute, which contains the namespace for that annotation.
+The content of the `Annotation` element can be arbitrary XML data, and can make use of XML namespaces and XML schemas for combined validation where appropriate.
+
+The namespace mechanism for the `type` attribute is based on reverse domain notation:
+The originator of a specification for additional data specifies a domain name under their control as the namespace for the additional data, in order to avoid conflicts due to name collisions.
+The namespace is used in reverse domain notation.
+All namespaces under both the `org.modelica` and `org.fmi-standard` domains are reserved for use in future layered standards.
+
+_[For example, extensions defined by the Modelica Association might make use of the `org.modelica.fmi` namespace._
+_This could lead to annotations with a `type` attribute of `org.modelica.fmi.something`, and/or extra files under the `extra/org.modelica.ssp.something` sub-directory.]_
+
+Annotations are intended to allow structured extensions of the FMI XML files, without creating conflicting extensions, or leaving ambiguities in interpretation.
+All annotations can safely be ignored by implementations that just implement the base FMI standard.
 
 ==== Definition of an FMU (fmiModelDescription) [[fmiModelDescription]]
 
@@ -134,9 +157,6 @@ _[If an optional element is present and defines a list (such as `<UnitDefinition
 |`<ScheduledCoSimulation>`
 |If present, the FMU is based on FMI for Scheduled Co-Simulation (<<fmi-for-scheduled-co-simulation>>).
 
-|`<BuildConfiguration>`
-|If present, instructs how to compile sources of a C-code FMU.
-
 |`<UnitDefinitions>`
 |A global list of unit and display unit definitions _[for example, used to convert display units into the units used in the model equations]_.
 These definitions are used in the XML element `<ModelVariables>`.
@@ -150,9 +170,6 @@ These definitions are used in the XML element `<ModelVariables>`.
 |`<DefaultExperiment>`
 |Providing default settings for the integrator, such as stop time and relative tolerance.
 
-|`<VendorAnnotations>`
-|Additional data that a vendor might want to store and that other vendors might ignore.
-
 |`<ModelVariables>`
 |The central FMU data structure defining all variables of the FMU that are visible/accessible via the FMU functions.
 
@@ -164,6 +181,10 @@ Furthermore, the dependency of the unknowns from the knowns can be optionally de
 _[This information can be, for example, used to compute efficiently a sparse Jacobian for simulation, or to utilize the <<input>> / <<output>> dependency in order to detect that in some cases there are actually no algebraic loops when connecting FMUs together]_.
 Dependencies for event indicators are not provided.
 _[The calculation of derivatives of event indicators is not provided.]_.
+
+|`<Annotations>`
+|Optional annotations for the top-level element.
+
 |====
 
 At least one element of `<ModelExchange>`, `<BasicCoSimulation>`, `<HybridCoSimulation>` or `<ScheduledCoSimulation>` must be present to identify the type of the FMU.
@@ -190,7 +211,7 @@ _For example the value for the FMI 3.0 Alpha 2 release is `3.0-alpha.2`.]_
 
 |`instantiationToken`
 |The `instantiationToken` is a string that can be used by the FMU to check that the XML file is compatible with the implementation of the FMU.
-For this purpose the importing tool must pass the `instantiationToken` from the `modelDescription.xml` to the <<fmi3Instantiate>> function call.
+For this purpose the importing tool must pass the `instantiationToken` from the <<modelDescription.xml>> to the <<fmi3Instantiate>> function call.
 
 |`description`
 |Optional string with a brief description of the model.
@@ -258,13 +279,13 @@ A value with respect to `Unit` (abbreviated as `Unit_value`) is converted with r
 
 `BaseUnit_value = factor * Unit_value + offset`
 
-_[For example, if_ latexmath:[\color{blue}{p_{bar}}] _is a pressure value in unit `bar`, and_ latexmath:[\color{blue}{p_{Pa}}] _is the pressure value in `<BaseUnit>`, then_
+_[For example, if_ latexmath:[{p_{\mathit{bar}}}] _is a pressure value in unit `bar`, and_ latexmath:[{p_{\mathit{Pa}}}] _is the pressure value in `<BaseUnit>`, then_
 
-latexmath:[\color{blue}{p_{Pa} = 10^5 p_{bar}}]
+latexmath:[{p_{\mathit{Pa}} = 10^5 p_{\mathit{bar}}}]
 
 _and therefore, `factor = 1.0e5` and `offset = 0.0`._
 
-_In the following table several unit examples are given (Note that if in column `exponents` the definition "latexmath:[\color{blue}{kgm^2 / s^2}]" is present, then the attributes of `<BaseUnit>` are: `kg=1, m=2, s=-2`):_
+_In the following table several unit examples are given (Note that if in column `exponents` the definition "latexmath:[{kgm^2 / s^2}]" is present, then the attributes of `<BaseUnit>` are: `kg=1, m=2, s=-2`):_
 
 [cols="1,1,1,1,1"]
 |====
@@ -279,19 +300,19 @@ _In the following table several unit examples are given (Note that if in column 
 
 |_Torque_
 |`N.m`
-|latexmath:[\color{blue}{kg \cdot m^2 / s^2}]
+|latexmath:[{kg \cdot m^2 / s^2}]
 |`1.0`
 |`0.0`
 
 |_Energy_
 |`J`
-|latexmath:[\color{blue}{kg \cdot m^2 / s^2}]
+|latexmath:[{kg \cdot m^2 / s^2}]
 |`1.0`
 |`0.0`
 
 |_Pressure_
 |`bar`
-|latexmath:[\color{blue}{\frac{kg}{m \cdot s^2}}]
+|latexmath:[{\frac{kg}{m \cdot s^2}}]
 |`1.0e5`
 |`0.0`
 
@@ -418,7 +439,7 @@ A value with respect to Unit (abbreviated as `Unit_value`) is converted with res
 
 _[For example, `offset` is needed for temperature units.]_
 
-_[For example, if latexmath:[\color{blue}{T_K}] is the temperature value of `Unit.name` (in `K`) and latexmath:[\color{blue}{T_F}] is the temperature value of `<DisplayUnit>` (in `&#176;F`), then_
+_[For example, if latexmath:[{T_K}] is the temperature value of `Unit.name` (in `K`) and latexmath:[{T_F}] is the temperature value of `<DisplayUnit>` (in `&#176;F`), then_
 
 [latexmath]
 ++++
@@ -533,19 +554,18 @@ _Numerical algorithms (solvers or optimizers) do not guarantee constraints._
 _If a variable is outside of the bounds, the solver tries to bring it back into the bounds._
 _As a consequence, calling `fmi3Get{VariableType}` during an iteration of such a solver might return values that are not in the defined min/max region._
 _After the iteration is finalized, it is only guaranteed that a value is within its bounds up to a certain numerical precision._ +
-_In debug mode checks on min/max should be performed._
-_For maximum performance on a real-time system, the checks might not be performed._ +
+_During system creation and prototyping, checks on min/max should be performed._
+_For maximum performance on production or real-time systems, these checks might not be performed._ +
 _The approach in FMI is therefore that min/max definitions are an information from the FMU to the environment defining the region in which the FMU is designed to operate._
-_The environment is free to utilize this information (typically, in debug mode of the environment the min/max is checked in the cases as stated above)._
 _In any case, it is expected that the FMU handles variables appropriately where the region definition is critical._
-_For example, dividing by an <<input>> (so the <<input>> should not be in a small range of zero) or taking the square root of an <<input>> (so the <<input>> should not be negative) may either result in `fmi3Error`, or the FMU is able to handle this situation in other ways._
+_For example, dividing by an <<input>> (so the <<input>> should not be in a small range of zero) or taking the square root of an <<input>> (so the <<input>> should not be negative) may either result in <<fmi3Error>>, or the FMU is able to handle this situation in other ways._
 
 _If the FMU is generated so that min/max shall be checked whenever meaningful (for example, for debug purposes), then the following strategy should be used:_
 
 _If `fmi3Set{VariableType}` is called violating the min/max attribute settings of the corresponding variable, the following actions are performed:_
 
-- _On a <<fixed>> or <<tunable>> <<parameter>> `fmi3Status == fmi3Discard` is returned._
-- _On an <<input>>, the FMU decides what to return (If no computation is possible, it could return `fmi3Status == fmi3Discard`, in other situations it may return `fmi3Warning` or `fmi3Error`, or `fmi3OK`, if it is uncritical)._
+- _On a <<fixed>> or <<tunable>> <<parameter>> <<fmi3Discard,`fmi3Status == fmi3Discard`>> is returned._
+- _On an <<input>>, the FMU decides what to return (If no computation is possible, it could return <<fmi3Discard,`fmi3Status == fmi3Discard`>>, in other situations it may return <<fmi3Warning>> or <<fmi3Error>>, or <<fmi3OK>>, if it is uncritical)._
 
 _If an FMU defines min/max values for integer types and `<Enumeration>` variables (<<local>> and <<output>> variables), then the expected behavior of the FMU is that `fmi3Get{VariableType}` functions return values in the defined range._
 
@@ -668,16 +688,16 @@ If a tool supports one of these log categories and wants to expose it, then an e
 |Log the dynamic selection of <<state,`states`>>.
 
 |`logStatusWarning`
-|Log messages when returning `fmi3Warning` status from any function.
+|Log messages when returning <<fmi3Warning>> status from any function.
 
 |`logStatusDiscard`
-|Log messages when returning `fmi3Discard` status from any function.
+|Log messages when returning <<fmi3Discard>> status from any function.
 
 |`logStatusError`
-|Log messages when returning `fmi3Error` status from any function.
+|Log messages when returning <<fmi3Error>> status from any function.
 
 |`logStatusFatal`
-|Log messages when returning `fmi3Fatal` status from any function.
+|Log messages when returning <<fmi3Fatal>> status from any function.
 
 |`logAll`
 |Log all messages.
@@ -704,11 +724,11 @@ image::images/schema/DefaultExperiment.png[width=60%, align="center"]
 `<DefaultExperiment>` consists of the optional default start time, stop time, relative tolerance, and step size for the first simulation run.
 A tool may ignore this information.
 However, it is convenient for a user that `startTime`, `stopTime`, `tolerance` and `stepSize` have already a meaningful default value for the model at hand.
-Furthermore, for Co-Simulation FMUs the `stepSize` defines the preferred `communicationStepSize`.
+Furthermore, for Co-Simulation FMUs the `stepSize` defines the preferred <<communicationStepSize>>.
 
 ==== Definition of Terminals and Icons (fmiTerminalsAndIcons) [[fmiTerminalsAndIcons]]
 
-This is the root element of the XML file `icon/terminalsAndIcons.xml`, and is defined as:
+This is the root element of the XML file `icons/terminalsAndIcons.xml`, and is defined as:
 
 [[terminals_and_icons_overview]]
 image::images/schema/fmiTerminalsAndIcons.png[width=60%, align="center"]
@@ -773,10 +793,10 @@ Flipping of the FMU icon or a terminal can be realized by setting its attributes
 image::images/schema/Icon.png[width=40%, align="center"]
 
 The extent and position of the FMU icon are defined in the `<Icon>` element.
-The optional image file of the FMU icon is placed at the path `icon/icon.png` in the ZIP archive of the FMU. The terminals should not be visible in the image.
+The optional image file of the FMU icon is placed at the path `icons/icon.png` in the ZIP archive of the FMU. The terminals should not be visible in the image.
 Optionally an SVG file can be provided if also the PNG file is present.
 This enables high quality rendering and printing in importing tools.
-This SVG file has to be placed at the path `icon/icon.svg` in the ZIP archive.
+This SVG file has to be placed at the path `icons/icon.svg` in the ZIP archive.
 
 The point (`x1`, `y1`) maps to the left lower corner of the PNG image or SVG viewport.
 The point (`x2`, `y2`) maps to the right upper corner of the PNG image or SVG viewport.
@@ -933,7 +953,7 @@ Restricted to <<input>> and <<output>>, <<parameter>> and <<calculatedParameter>
 _[Example: Electric current]_
 |====
 
-====== General remark on signal
+====== General remark on signal [[GeneralRemarkOnSignal]]
 
 _[The signal `variableKind` can be applied for different use cases._
 _The first use case is a signal flow from an <<output>> of one FMU to an <<input>> of another FMU. The <<output>> value has to be forwarded to the <<input>>._
@@ -965,7 +985,7 @@ _latexmath:[0 = \sum{\dot{m}_i}]_
 
 _[Connecting a single <<output>> `outflow` to a single <<input>> `inflow`, or vice versa automatically fulfills the flow constraint, while connecting two single signals of the same flow type requires a negation of the signal._
 
-_`inflow` and `outflow` is only used as a sign convention for scalar flow quantities which obey Kirchhoff's current law (sum up to zero)._
+`inflow` _and_ `outflow` _is only used as a sign convention for scalar flow quantities which obey Kirchhoff's current law (sum up to zero)._
 _Other, nonscalar, quantities which also sum up to zero, like a mechanical force in 3D space according to D'Alembert's principle, are not covered by this sign convention._
 _This is the case since Kirchhoff's current law only holds for scalars where a sign convention is sufficient._
 _Other definitions are beyond the scope of this terminal specification and need clear definition in other specifications on top of this.]_
@@ -999,12 +1019,12 @@ _latexmath:[0 = \sum{q_i\dot{m}_i}]_
 
 _latexmath:[0 = \sum{\dot{m}_i}\cdot
 \left\{\begin{array}{ll}
-q_{\textit{$i$, outStream}} &\textit{if $\dot{m}$ is outflowing through terminal $i$}\\
-q_{\textit{$i$, inStream}} &\textit{if $\dot{m}$ is inflowing through terminal $i$}
+q_{i, \mathit{outStream}} &\textit{if $\dot{m}$ is outflowing through terminal $i$}\\
+q_{i, \mathit{inStream}} &\textit{if $\dot{m}$ is inflowing through terminal $i$}
 \end{array}\right.]_
 
-_The_ latexmath:[q_\textit{$i$, outStream}] _is the convective quantity in case the matter flows out of the FMU._
-latexmath:[q_\textit{$i$, inStream}] _is the convective quantity in case the matter flows into the FMU. Both variables are present in the terminal._
+_The_ latexmath:[q_{i,\mathit{outStream}}] _is the convective quantity in case the matter flows out of the FMU._
+latexmath:[q_{i,\mathit{inStream}}] _is the convective quantity in case the matter flows into the FMU. Both variables are present in the terminal._
 _The outStream variable has the <<causality>> <<output>> or <<calculatedParameter>> because this information has to be provided by each FMU._
 _The inStream variable has the <<causality>> <<input>> or <<parameter>>._
 _To display the actual value in an importing tool, this actual value has to be selected depending on the sign of the terminal member variable with `variableKind` `inflow` or `outflow`._
@@ -1023,12 +1043,12 @@ image::images/schema/TerminalGraphicalRepresentation.png[width=75%, pdfwidth=60%
 The description of the general attributes can be found in <<graphicalRepresentation>>.
 The `iconBaseName` attribute is mandatory.
 This attribute defines the base name of the image file as a relative URI according to RFC 3986.
-The base URI that this relative URI is resolved against is the URI of the `icon/terminalsAndIcons.xml` file in the FMU ZIP archive.
+The base URI that this relative URI is resolved against is the URI of the `icons/terminalsAndIcons.xml` file in the FMU ZIP archive.
 Implementations are only REQUIRED to support relative URIs, excluding relative URIs that move beyond the baseURI (i.e. go "up" a level via ..).
 Implementations are NOT REQUIRED to support any absolute URIs and any specific URI schemes.
 The PNG file with the extension '.png' has to be provided. An additional SVG file with extension '.svg' is optional.
 
-_[Note that this specification is functionally equivalent to looking up image sources from the icon folder of the FMU ZIP archive after dot removal from the path as per section 5.2.4 of RFC 3986.]_
+_[Note that this specification is functionally equivalent to looking up image sources from the icons folder of the FMU ZIP archive after dot removal from the path as per section 5.2.4 of RFC 3986.]_
 
 The default connection stroke size and color can be provided, to define the intended connection line layout in the importing tool. The stroke size is given relative to the coordinate system extent.
 The stroke color is given in RGB values from 0 to 255. E.g.: `255 255 0`.
@@ -1037,21 +1057,11 @@ _[Nested terminals may have a `<GraphicalRepresentation>` element. However, if a
 
 _[The order of painting of the `<GraphicalRepresentation>` of terminals on each level is equal to the order of appearance in the `<Terminal>` element. So graphical representations appearing first, are painted first, are behind graphical representations which appear below.]_
 
-The `<VendorAnnotations>` element can be used by vendors to store additional information for the graphical representation.
-_[It is suggested that Modelica tools store the Modelica annotation of the connector under the tool name `Modelica3Annotation` in the attribute `annotation` of an element `connector`._
+The `Annotations` element can be used by vendors to store additional information for the graphical representation.
+_[It is suggested that Modelica tools store the Modelica annotation of the connector under the `type` `org.modelica.Modelica3Annotation` in the annotations of an element `connector`._
 _The attribute `name` of the connector element is equal to the `name` attribute of the referenced `fmi3Terminal`.]_
 
 _[If the graphical representation is used for an <<input>> or <<output>> (e.g. a `fmi3Float64` <<input>> `u`), then a `<Terminal>` has to be added to the `<Terminals>` element which has one `<TerminalMemberVariable>`.]_
-
-==== Definition of Vendor Annotations (VendorAnnotations)
-
-Element `<fmiModelDescription><VendorAnnotations>` is defined as:
-
-image::images/schema/VendorAnnotations.png[width=80%, align="center"]
-
-`<VendorAnnotations>` consist of an ordered set of annotations that are identified by the name of the tool that can interpret the `any` element.
-The `any` element can be an arbitrary XML data structure defined by the tool.
-The attribute `name` must be unique with respect to all other elements of the `<VendorAnnotations>` list.
 
 ==== Definition of Model Variables (ModelVariables) [[definition-of-model-variables]]
 
@@ -1087,16 +1097,18 @@ For these reasons implementations must take platform-specific constraints into a
 Changing any dimension of a variable in *Configuration Mode* or *Reconfiguration Mode* invalidates the variable's current value (including its <<start>> value).
 It should be noted that changing a <<structuralParameter,`structural parameter`>> might affect dimension sizes of several variables.
 
+[[alias,`alias`]]
 A variable can have any number of `<Alias>` elements that define a variable alias.
 Each variable alias has a required attribute `name` whose value must be unique among all variables and variable aliases, and an optional attribute `description`.
 Variable aliases of floating point variables may additionally have a <<displayUnit>> that follows the same rules as for variables.
 
-Example:
+_[ Example:_
 
 [source, xml]
 ----
 include::examples/alias_example.xml[tags=VariableAliases]
 ----
+_]_
 
 The attributes of variables are:
 
@@ -1114,7 +1126,7 @@ Every variable is uniquely identified within an FMU instance by this name.
 |`valueReference`
 |
 [[valueReference,`valueReference`]]
-A handle of the variable to efficiently identify the variable value in the model interface and for references within the `modelDescription.xml`.
+A handle of the variable to efficiently identify the variable value in the model interface and for references within the <<modelDescription.xml>>.
 This handle is a secret of the tool that generated the C functions.
 It is required to be unique for an FMU.
 This attribute is `required`.
@@ -1129,7 +1141,7 @@ Enumeration that defines the causality of the variable.
 Allowed values of this enumeration:
 
 [[parameter,`parameter`]]
-`= parameter`: A data value that is constant during the simulation and is provided by the environment and cannot be used in connections.
+`= parameter`: A data value that is constant during the simulation (except for <<tunable>> parameters, see there) and is provided by the environment and cannot be used in connections, except for parameter propagation in terminals as described in <<GeneralRemarkOnSignal>>.
 <<variability>> must be <<fixed>> or <<tunable>>.
 These parameters can be changed independently, unlike <<calculatedParameter,calculated parameters>>.
 <<initial>> must be <<exact>> or not present (meaning <<exact>>).
@@ -1160,7 +1172,7 @@ At most one variable of an FMU can be defined as <<independent>>.
 If no variable is defined as <<independent>>, it is implicitly present with `name = time` and `unit = s`.
 If one variable is defined as <<independent>>, it must be defined with a floating point type without a <<start>> attribute.
 It is not allowed to call function `fmi3Set{VariableType}` on an <<independent>> variable.
-Instead, its value is initialized with <<fmi3EnterInitializationMode>> and after initialization set by <<fmi3SetTime>> for Model Exchange and by arguments `currentCommunicationPoint` and `communicationStepSize` of <<fmi3DoStep>> for Co-Simulation FMUs.
+Instead, its value is initialized with <<fmi3EnterInitializationMode>> and after initialization set by <<fmi3SetTime>> for Model Exchange and by arguments <<currentCommunicationPoint>> and <<communicationStepSize>> of <<fmi3DoStep>> for Co-Simulation FMUs.
 _[The actual value can be inquired with `fmi3Get{VariableType}`.]_
 
 [[structuralParameter,`structuralParameter`]]
@@ -1295,34 +1307,10 @@ For scalar clock variables this attribute must not be specified or must be speci
 |
 [[intermediateAccess,`intermediateAccess`]]
 If this boolean attribute is `true`, the variable can be accessed during a communication step.
-Variables with <<causality>> <<parameter>> must not be marked with <<intermediateAccess,`intermediateAccess == fmi3True`>>.
-// TODO: link to see math-intermediate-variable-access)
+Variables with <<causality>> <<parameter>> must not be marked with <<intermediateAccess,`intermediateAccess = true`>>.
+
 This attribute is only used for Basic Co-Simulation and Hybrid Co-Simulation. The default value of this attribute is `false`.
-// TODO: default false is not defined in the xsd (yet?)
 |====
-
-*fmi3Set{VariableType}* can be called on any variable with <<variability>> latexmath:[\neq] <<constant>> *before initialization* (before calling <<fmi3EnterInitializationMode>>)
-
-- if <<initial>> = <<exact>> or <<approx>> _[in order to set the corresponding <<start>> value.]_
-_[Note that this prevents any changes to the input before <<fmi3EnterInitializationMode>> is called.]_
-
-*fmi3Set{VariableType}* can be called on any variable with <<variability>> latexmath:[\neq] <<constant>> *during initialization* (after calling <<fmi3EnterInitializationMode>> and before <<fmi3ExitInitializationMode>> is called)
-
-- if <<initial>> = <<exact>> _[in order to set the corresponding <<start>> value]_, or
-
-- if <<causality>> = <<input>> _[in order to provide new values for <<input,`inputs`>>]_,
-
-// TODO: Check the following for Co-Simulation, i.e. IVA?
-*fmi3Set{VariableType}* can be called on any variable for *Model Exchange at an event instant* (after calling <<fmi3EnterEventMode>> and before <<fmi3EnterContinuousTimeMode>> is called), and *for Co-Simulation at every communication point*,
-
-- if <<causality>> = <<parameter>> and <<variability>> = <<tunable>> _[in order to change the value of the <<tunable>> <<parameter>> at an event instant or at a communication point]_, or
-
-- if <<causality>> = <<input>> _[in order to provide new values for <<input,`inputs`>>]_
-
-*fmi3Set{VariableType}* can be called on any variable for *Model Exchange in Continuous-Time Mode*
-
-- if <<causality>> = <<input>> and <<variability>> = <<continuous>> +
-_[in order to provide new values for <<input,`inputs`>> during continuous integration]_
 
 If <<initial>> is not present, its value is defined by the following tables based on the values of <<causality>> and <<variability>>:
 
@@ -1689,7 +1677,7 @@ For `<Enumeration>` it is required, because the `<Enumeration>` items are define
 Initial or guess value of variable.
 This value is also stored in the C functions.
 _[Therefore, calling_ `fmi3Set{VariableType}` _to set <<start>> values is only necessary, if a different value as stored in the XML file is desired._
-_It is not allowed to change the start values in the `modelDescription.xml` file of an FMU, as this would break the consistency with the hard-coded start values in the C-Code._
+_It is not allowed to change the start values in the <<modelDescription.xml>> file of an FMU, as this would break the consistency with the hard-coded start values in the C-Code._
 _This could lead to unpredictable behavior of the FMU in different importing tools, as it is not mandatory to call `fmi3Set{VariableType}` to set start values during initialization._
 _Instead it is recommended to use the SSP Standard (https://ssp-standard.org/) to handle modified parameters of FMUs or different parameter sets.]_
 
@@ -1697,7 +1685,7 @@ The interpretation of <<start>> is defined by variable attribute <<initial>>.
 A different <<start>> value can be provided with an `fmi3Set{VariableType}` function before <<fmi3ExitInitializationMode>> is called (but not for variables with <<variability>> = <<constant>>).
 
 _[The standard approach is to set the <<start>> value before <<fmi3EnterInitializationMode>>._
-_However, if the initialization shall be modified in the calling environment (for example, changing from initialization of states to steady-state initialization), it is also possible to use the <<start>> value as iteration variable of an algebraic loop: using an additional condition in the environment, such as_ latexmath:[\color{blue}{\dot{x} = 0}] _, the actual <<start>> value is determined.]_
+_However, if the initialization shall be modified in the calling environment (for example, changing from initialization of states to steady-state initialization), it is also possible to use the <<start>> value as iteration variable of an algebraic loop: using an additional condition in the environment, such as_ latexmath:[{\dot{x} = 0}] _, the actual <<start>> value is determined.]_
 
 If <<initial>> = <<exact>> or <<approx>> or <<causality>> = <<input>>, a <<start>> value must be provided.
 
@@ -1736,15 +1724,6 @@ The `min/max` definitions are information from the FMU to the environment defini
 _[If, for example, an `<Enumeration>` is defined with `name1 = -4`, `name2 = 1`, `name3 = 5`, `name4 = 11` and `min = -2`, `max = 5`, then only `name2` and `name3` are allowed.]_
 |====
 
-With element `<Annotations>` additional, tool specific data can be defined:
-
-image::images/schema/Annotations.png[width=80%]
-
-With the attribute `name` of `<Tool>` the name of the tool is defined that can interpret the `any` element.
-The `any` element can be an arbitrary XML data structure defined by the tool.
-_[Typically, additional data is defined here how to build up the menu for the variable, including the graphical layout and enabling/disabling an input field based on the values of other <<parameter,`parameters`>>.]_
-The attribute `name` must be unique with respect to all other elements of the `<Annotations>` list.
-
 ==== Definition of the Model Structure (ModelStructure) [[ModelStructure]]
 
 The structure of the model is defined in element `<fmiModelDescription><ModelStructure>`.
@@ -1778,7 +1757,7 @@ Note that attribute <<dependenciesKind>> for element <<InitialUnknown>> has less
 |Description
 
 |`Output`
-|Ordered list of all outputs, in other words, a list of value references where every corresponding variable must have <<causality>> = <<output>> (and *every variable with <<causality>> = <<output>> must be listed here*).
+|Ordered list of all outputs, in other words, a list of value references where every corresponding variable must have <<causality>> = <<output>> (and every variable with <<causality>> = <<output>> must be listed here).
 _[Note that all <<output>> variables are listed here, especially <<discrete>> and <<continuous>> <<output,`outputs`>>._
 _The ordering of the variables in this list is defined by the exporting tool._
 _Usually, it is best to order according to the declaration order in the source model, since then the `<Output>` list does not change if the declaration order of <<output,`outputs`>> in the source model is not changed._
@@ -1786,7 +1765,7 @@ _This is for example, important for linearization, in order that the interpretat
 Attribute <<dependencies>> defines the dependencies of the <<output,`outputs`>> from the knowns at the current super-dense time instant in Event and in *Continuous-Time Mode* (ME) and at the current communication point (xCS).
 Beside the knowns, the <<output,`outputs`>> also depend on the freeze variables (= variables which cannot be changed in the current mode) but these freeze variables are not listed as <<dependencies>>.
 The functional dependency is defined as (dependencies of variables that are fixed in Event and *Continuous-Time Mode* and at communication points are not shown): +
-[blue]#latexmath:[\color{blue}{(\mathbf{y}_c, \mathbf{y}_d) := \mathbf{f}_{output}(\mathbf{x}_c, \mathbf{u}_c, \mathbf{u}_d, t, \mathbf{p}_{tune})}]#
+latexmath:[{(\mathbf{y}_c, \mathbf{y}_d) := \mathbf{f}_{\mathit{output}}(\mathbf{x}_c, \mathbf{u}_c, \mathbf{u}_d, t, \mathbf{p}_{\mathit{tune}})}]
 
 |`Derivative`
 |Ordered list of all state derivatives, in other words, a list of value references where every corresponding variable must be a state derivative.
@@ -1798,7 +1777,7 @@ _This is for example, important for linearization, in order that the interpretat
 
 The corresponding continuous-time <<state,`states`>> are defined by attribute <<derivative>> of the corresponding variable state derivative element.
 _[Note that higher order derivatives must be mapped to first order derivatives but the mapping definition can be preserved due to attribute <<derivative>>._
-_Example: if_ latexmath:[\color{blue}{\frac{\text{ds}}{\text{dt}} = v,\ \frac{\text{dv}}{\text{dt}} =f(..)}] _,then_ latexmath:[\color{blue}{\left\{ v,\ \frac{\text{dv}}{\text{dt}} \right\}}] _is the vector of state derivatives and attribute <<derivative>> of_ latexmath:[\color{blue}{v}] _references_ latexmath:[\color{blue}{s}] _, and attribute <<derivative>> of_ latexmath:[\color{blue}{\frac{\text{dv}}{\text{dt}}}] _references_ latexmath:[\color{blue}{v}] _.]_ +
+_Example: if_ latexmath:[{\frac{\text{ds}}{\text{dt}} = v,\ \frac{\text{dv}}{\text{dt}} =f(..)}] _,then_ latexmath:[{\left\{ v,\ \frac{\text{dv}}{\text{dt}} \right\}}] _is the vector of state derivatives and attribute <<derivative>> of_ latexmath:[{v}] _references_ latexmath:[{s}] _, and attribute <<derivative>> of_ latexmath:[{\frac{\text{dv}}{\text{dt}}}] _references_ latexmath:[{v}] _.]_ +
 For Co-Simulation, elements `<Derivative>` are ignored if capability flag `providesDirectionalDerivative` has a value of `false`, in other words, it cannot be computed.
 _[This is the default._
 _If an FMU supports more than Model Exchange , then the `<Derivative>` elements might be present, since it is needed for Model Exchange._
@@ -1807,7 +1786,7 @@ _If "inline integration" is used for a co-simulation slave, then the model still
 Attribute <<dependencies>> defines the dependencies of the state derivatives from the knowns at the current super-dense time instant in Event and in *Continuous-Time Mode* (ME) and at the current communication point (xCS).
 Beside the knowns the derivatives also depend on the freeze variables (= variables which cannot be changed in the current mode) but these freeze variables are not listed as <<dependencies>>.
 The functional dependency is defined as (dependencies of variables that are fixed in Event and *Continuous-Time Mode* and at communication points are not shown): +
-[blue]#latexmath:[\color{blue}{\dot{\mathbf{x}_c} := \mathbf{f}_{der}(\mathbf{x}_c, \mathbf{u}_c, \mathbf{u}_d, t, \mathbf{p}_{tune})}]#
+latexmath:[{\dot{\mathbf{x}_c} := \mathbf{f}_{\mathit{der}}(\mathbf{x}_c, \mathbf{u}_c, \mathbf{u}_d, t, \mathbf{p}_{\mathit{tune}})}]
 
 |`InitialUnknown`
 |
@@ -1826,25 +1805,25 @@ Attribute <<dependencies>> defines the dependencies of the unknowns from the kno
 Beside the knowns the initial unknowns also depend on the freeze variables (= variables which cannot be changed in the current mode) but these freeze variables are not listed as <<dependencies>>.
 The functional dependency is defined as:
 
-[blue]#latexmath:[\color{blue}{\mathbf{v}_{initialUnknowns} := \mathbf{f}_{init}(\mathbf{u}_c, \mathbf{u}_d, t_0, \mathbf{v}_{initial=exact})}]#
+latexmath:[{\mathbf{v}_{\mathit{initialUnknowns}} := \mathbf{f}_{\mathit{init}}(\mathbf{u}_c, \mathbf{u}_d, t_0, \mathbf{v}_{\mathit{initial=exact}})}]
 
 Since, <<output,`outputs`>>, continuous-time <<state,`states`>> and state derivatives are either present as knowns (if <<initial>> = <<exact>>) or as unknowns (if <<initial>> = <<approx>> or <<calculated>>), they can be inquired with `fmi3Get{VariableType}` in *Initialization Mode*.
 
 _[Example: Assume an FMU is defined in the following way:_
 
-latexmath:[\color{blue}{(\mathbf{y}_{c+d}, \dot{\mathbf{x}}_c) := \mathbf{f}_{init}(\mathbf{x}_c, \mathbf{u}_{c+d}, t_0, \mathbf{p})}] +
+latexmath:[{(\mathbf{y}_{c+d}, \dot{\mathbf{x}}_c) := \mathbf{f}_{\mathit{init}}(\mathbf{x}_c, \mathbf{u}_{c+d}, t_0, \mathbf{p})}] +
 
-latexmath:[\color{blue}{(\mathbf{y}_{c+d}, \dot{\mathbf{x}}_c) := \mathbf{f}_{sim}(\mathbf{x}_c, \mathbf{u}_{c+d}, t_i, \mathbf{p})}] +
+latexmath:[{(\mathbf{y}_{c+d}, \dot{\mathbf{x}}_c) := \mathbf{f}_{\mathit{sim}}(\mathbf{x}_c, \mathbf{u}_{c+d}, t_i, \mathbf{p})}] +
 
-_Therefore, the initial state latexmath:[\color{blue}{\mathbf{x}_c(t_0)}] has <<initial>> = <<exact>> and the initial state derivative latexmath:[\color{blue}{\dot{\mathbf{x}}_c(t_0)}] has <<initial>> = <<calculated>>._
-_The environment can still initialize this FMU in steady-state, by using latexmath:[\color{blue}{\mathbf{x}_c(t_0)}] as iteration variables and adding the equations latexmath:[\color{blue}{\dot{\mathbf{x}}_c(t_0) = \mathbf{0}}] in the environment.]_
+_Therefore, the initial state latexmath:[{\mathbf{x}_c(t_0)}] has <<initial>> = <<exact>> and the initial state derivative latexmath:[{\dot{\mathbf{x}}_c(t_0)}] has <<initial>> = <<calculated>>._
+_The environment can still initialize this FMU in steady-state, by using latexmath:[{\mathbf{x}_c(t_0)}] as iteration variables and adding the equations latexmath:[{\dot{\mathbf{x}}_c(t_0) = \mathbf{0}}] in the environment.]_
 
 |`EventIndicator`
 |
 [[EventIndicator,`<EventIndicator>`]]
 Ordered list of all event indicators, in other words, a list of value references where every corresponding variable must be a event indicator.
 _[Note that only <<continuous>> floating point variables are listed here._
-_If an event indicator shall not be exposed from the FMU, or if event indicators are not statically associated with a variable (due to dynamic event indicator selection), then dummy variables have to be introduced, for example, `eventIndocator[4]`._
+_If an event indicator shall not be exposed from the FMU, or if event indicators are not statically associated with a variable (due to dynamic event indicator selection), then dummy variables have to be introduced, for example, `eventIndicator[4]`._
 _The ordering of the variables in this list is defined by the exporting tool.]_
 
 For Co-Simulation, elements `<EventIndicator>` are ignored.
@@ -1873,17 +1852,17 @@ Elements `<Output>`, `<Derivative>` and `<InitialUnknown>` have the following at
 |Description
 
 |`valueReference`
-|The value reference of the unknown latexmath:[\color{blue}{v_{\text{unknown}}}].
+|The value reference of the unknown latexmath:[{v_{\mathit{unknown}}}].
 
 
 |`dependencies`
 |
 [[dependencies,`dependencies`]]
-Optional attribute defining the dependencies of the unknown latexmath:[\color{blue}{v_{\text{unknown}}}] (directly or indirectly via auxiliary variables) with respect to latexmath:[\color{blue}{\mathbf{v}_{\text{known}}}].
+Optional attribute defining the dependencies of the unknown latexmath:[{v_{\mathit{unknown}}}] (directly or indirectly via auxiliary variables) with respect to latexmath:[{\mathbf{v}_{\mathit{known}}}].
 If not present, it must be assumed that the unknown depends on all knowns.
 If present as empty list, the unknown depends on none of the knowns.
 Otherwise the unknown depends on the knowns defined by the given value references. +
-Knowns latexmath:[\color{blue}{\mathbf{v}_{\text{known}}}] in *Event Mode* and *Continuous-Time Mode* (ME) and at communication points (xCS) for `<Output>` and `<Derivative>` elements:
+Knowns latexmath:[{\mathbf{v}_{\mathit{known}}}] in *Event Mode* and *Continuous-Time Mode* (ME) and at communication points (xCS) for `<Output>` and `<Derivative>` elements:
 
 - inputs (variables with <<causality>> = <<input>>)
 
@@ -1894,7 +1873,7 @@ If an <<independent>> variable is not explicitly defined under variables, it is 
 
 _[<<parameter,`parameters`>> and <<tunable>> <<parameter,`parameters`>> must not be listed as knowns in this mode. This may change in a future FMI version which implies the possibility to calculate derivatives with respect to parameters.]_
 
-`Knowns` latexmath:[\color{blue}{\mathbf{v}_{\text{known}}}] in *Initialization Mode* (for elements <<InitialUnknown>>):
+`Knowns` latexmath:[{\mathbf{v}_{\mathit{known}}}] in *Initialization Mode* (for elements <<InitialUnknown>>):
 
 - inputs (variables with <<causality>> = <<input>>)
 
@@ -1913,22 +1892,22 @@ In other words, the respective partial derivatives cannot be computed.
 |
 [[dependenciesKind, `dependenciesKind`]]
 If <<dependenciesKind>> is present, <<dependencies>> must be present and must have the same number of list elements.
-If not present, it must be assumed that the unknown latexmath:[\color{blue}{v_{\text{unknown}}}] depends on the knowns latexmath:[\color{blue}{\mathbf{v}_{\text{known}}}] without a particular structure.
-Otherwise, the corresponding known latexmath:[\color{blue}{v_{known,i}}] enters the equation as:
+If not present, it must be assumed that the unknown latexmath:[{v_{\mathit{unknow}}}}] depends on the knowns latexmath:[{\mathbf{v}_{\mathit{known}}}] without a particular structure.
+Otherwise, the corresponding known latexmath:[{v_{\mathit{known},i}}] enters the equation as:
 
-`= dependent`: no particular structure, latexmath:[\color{blue}{{h(..,\ v}_{known,i}}],..)
+`= dependent`: no particular structure, latexmath:[{{h(..,\ v}_{\mathit{known},i}}],..)
 
-Only for floating point type unknowns latexmath:[\color{blue}{v_{\text{unknown}}}]:
+Only for floating point type unknowns latexmath:[{v_{\mathit{unknown}}}]:
 
-`=` <<constant>>: constant factor, latexmath:[\color{blue}{c \cdot v_{known,i}}] where latexmath:[\color{blue}{c}] is an expression that is evaluated before <<fmi3EnterInitializationMode>> is called.
+`=` <<constant>>: constant factor, latexmath:[{c \cdot v_{\mathit{known},i}}] where latexmath:[{c}] is an expression that is evaluated before <<fmi3EnterInitializationMode>> is called.
 
-Only for floating point type unknowns latexmath:[\color{blue}{v_{\text{unknown}}}] in Event and *Continuous-Time Mode* (ME) and at communication points (xCS), and not for <<InitialUnknown>> for *Initialization Mode*:
+Only for floating point type unknowns latexmath:[{v_{\mathit{unknown}}}] in Event and *Continuous-Time Mode* (ME) and at communication points (xCS), and not for <<InitialUnknown>> for *Initialization Mode*:
 
-`=` <<fixed>>: fixed factor, latexmath:[\color{blue}{p \cdot v_{known,i}}] where latexmath:[\color{blue}{p}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called.
+`=` <<fixed>>: fixed factor, latexmath:[{p \cdot v_{\mathit{known},i}}] where latexmath:[{p}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called.
 
-`=` <<tunable>>: tunable factor, latexmath:[\color{blue}{p \cdot v_{known,i}}] where latexmath:[\color{blue}{p}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called and in *Event Mode* due to an external event (ME) or at a communication point (xCS)
+`=` <<tunable>>: tunable factor, latexmath:[{p \cdot v_{\mathit{known},i}}] where latexmath:[{p}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called and in *Event Mode* due to an external event (ME) or at a communication point (xCS)
 
-`=` <<discrete>>: discrete factor, latexmath:[\color{blue}{d \cdot v_{known,i}}] where latexmath:[\color{blue}{d}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called and in *Event Mode* due to an external or internal event or at a communication point (xCS).
+`=` <<discrete>>: discrete factor, latexmath:[{d \cdot v_{\mathit{known},i}}] where latexmath:[{d}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called and in *Event Mode* due to an external or internal event or at a communication point (xCS).
 |====
 
 _[Example 1:_
@@ -1960,7 +1939,7 @@ y &= g_1(x_2, x_3)
 \end{align*},
 ++++
 
-_where_ latexmath:[\color{blue}{u_{1}}] _is a continuous-time <<input>> (<<variability>> = <<continuous>>),_ latexmath:[\color{blue}{u_{2}}] _is any type of <<input>>,_ latexmath:[\color{blue}{u_{3}}] _is a floating point discrete-time <<input>> (<<variability>> = "discrete"`), and_ latexmath:[\color{blue}{p}] _is a <<fixed>> <<parameter>> (<<variability>> = <<fixed>>)._
+_where_ latexmath:[{u_{1}}] _is a continuous-time <<input>> (<<variability>> = <<continuous>>),_ latexmath:[{u_{2}}] _is any type of <<input>>,_ latexmath:[{u_{3}}] _is a floating point discrete-time <<input>> (<<variability>> = "discrete"`), and_ latexmath:[{p}] _is a <<fixed>> <<parameter>> (<<variability>> = <<fixed>>)._
 _The initialization is defined by:_
 
 [latexmath]
@@ -1996,7 +1975,7 @@ y = \left\{ \begin{matrix}
 \end{matrix}\right.
 ++++
 
-_where_ latexmath:[\color{blue}{u}] _is a continuous-time <<input>> with <<valueReference>> = `1` and_ latexmath:[\color{blue}{y}] _is a continuous-time <<output>> with <<valueReference>> = `2`._
+_where_ latexmath:[{u}] _is a continuous-time <<input>> with <<valueReference>> = `1` and_ latexmath:[{y}] _is a continuous-time <<output>> with <<valueReference>> = `2`._
 _The definition of the model structure is then:_
 
 [source, xml]
@@ -2004,7 +1983,7 @@ _The definition of the model structure is then:_
 include::examples/model_structure_example2.xml[tags=ModelStructure]
 ----
 
-_[Note that_ latexmath:[\color{blue}{y = d \cdot u}] _where_ latexmath:[\color{blue}{d}] _changes only during *Event Mode* (_ latexmath:[\color{blue}{d = 2 \cdot u}] _or_ latexmath:[\color{blue}{3 \cdot u\ }] _depending on relation_ latexmath:[\color{blue}{u > 0}] _that changes only at *Event Mode*)._
+_[Note that_ latexmath:[{y = d \cdot u}] _where_ latexmath:[{d}] _changes only during *Event Mode* (_ latexmath:[{d = 2 \cdot u}] _or_ latexmath:[{3 \cdot u\ }] _depending on relation_ latexmath:[{u > 0}] _that changes only at *Event Mode*)._
 _Therefore <<dependenciesKind>> = <<discrete>>.]_
 
 _Example 3:_
@@ -2017,7 +1996,7 @@ y = \left\{ \begin{matrix}
 \end{matrix}\right.
 ++++
 
-_where_ latexmath:[\color{blue}{u}] _is a continuous-time <<input>> with <<valueReference>> = `1` and_ latexmath:[\color{blue}{y}] _is a continuous-time <<output>> with <<valueReference>> = `2`._
+_where_ latexmath:[{u}] _is a continuous-time <<input>> with <<valueReference>> = `1` and_ latexmath:[{y}] _is a continuous-time <<output>> with <<valueReference>> = `2`._
 _The definition of the model structure is then:_
 
 [source, xml]
@@ -2025,8 +2004,8 @@ _The definition of the model structure is then:_
 include::examples/model_structure_example3.xml[tags=ModelStructure]
 ----
 
-_[Note that_ latexmath:[\color{blue}{y = c}] _where_ latexmath:[\color{blue}{c}] _changes only during *Event Mode* (_ latexmath:[\color{blue}{c = 2}] _or_ latexmath:[\color{blue}{3\ }] _depending on relation_ latexmath:[\color{blue}{u > 0}] _that changes only at *Event Mode*)._
-_Therefore <<dependenciesKind>> = <<dependenciesKind,`dependent`>> because it is not a linear relationship on_ latexmath:[\color{blue}{u}]. _]_
+_[Note that_ latexmath:[{y = c}] _where_ latexmath:[{c}] _changes only during *Event Mode* (_ latexmath:[{c = 2}] _or_ latexmath:[{3\ }] _depending on relation_ latexmath:[{u > 0}] _that changes only at *Event Mode*)._
+_Therefore <<dependenciesKind>> = <<dependenciesKind,`dependent`>> because it is not a linear relationship on_ latexmath:[{u}]. _]_
 
 _Example 4:_
 

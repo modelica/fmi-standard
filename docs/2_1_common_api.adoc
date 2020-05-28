@@ -40,9 +40,8 @@ _]_
 contains `typedef` definitions of all function prototypes of an FMU as well as enumerations for constants.
 This header file includes `fmi3PlatformTypes.h`.
 When dynamically loading an FMU, these definitions can be used to type-cast the function pointers to the respective function definition.
-// TODO: add note why "TYPE" suffix is necessary
+For simplicity, the function type for each function is composed of the function name itself with the suffix `TYPE`.
 +
-// TODO: include example from header
 _[Example of a definition in this header file:_
 +
 [source, C]
@@ -138,7 +137,7 @@ include::../headers/fmi3PlatformTypes.h[tags=ComponentEnvironment]
 ----
 
 This is a pointer to a data structure in the calling environment.
-Using this pointer, data from the `modelDescription.xml` file _[for example, mapping of <<valueReference, value references>> to variable names]_ can be transferred between the simulation environment and the <<logMessage>> function (see <<creation-destruction-and-logging>>).
+Using this pointer, data from the <<modelDescription.xml>> file _[for example, mapping of <<valueReference, value references>> to variable names]_ can be transferred between the simulation environment and the <<logMessage>> function (see <<creation-destruction-and-logging>>).
 
 [source, C]
 ----
@@ -154,16 +153,15 @@ include::../headers/fmi3PlatformTypes.h[tags=ValueReference]
 ----
 
 This is a handle to a (base type) variable value of the model.
-A handle uniquely identifies the value of a variable.
-Variables that have the same handle, always have identical values, but other parts of the variable definition might be different _[for example, min/max attributes]_.
+A `fmi3ValueReference` uniquely identifies the value and other properties of a variable, except for the variable name and the display unit that may differ for <<alias>> variable definitions.
 
 Structured entities, such as records, must be flattened into a set of values (scalars or arrays) of type `fmi3Float64`, `fmi3Int32`, etc.
 Arrays may be flattened into a set of scalars or represented directly as array values.
 An `fmi3ValueReference` references one such value (scalar or array).
-The coding of `fmi3ValueReference` is a "secret" of the environment that generated the FMU.
-The interface to the equations only provides access to variables via this handle.
-Extracting concrete information about a variable can be done by reading the `modelDescription.xml` in which the value handles are defined.
-If a function in the following sections is called with a wrong `fmi3ValueReference` value _[for example, setting a constant with a call to `fmi3SetFloat64`]_, then the function must return with an error ( `fmi3Status == fmi3Error`, see <<status-returned-by-functions>>).
+The coding of `fmi3ValueReferences` is a "secret" of the environment that generated the FMU.
+The interface to the equations only provides access to variable values via `fmi3ValueReferences`.
+Extracting concrete information about a variable can be done by reading the <<modelDescription.xml>> in which the `fmi3ValueReferences` are defined.
+If a function in the following sections is called with a wrong `fmi3ValueReference` value _[for example, setting a constant with a call to `fmi3SetFloat64`]_, then the function must return with an error ( <<fmi3Error,`fmi3Status == fmi3Error`>>, see <<status-returned-by-functions>>).
 
 The following data types are the base types used in the interfaces of the C functions.
 
@@ -193,53 +191,43 @@ include::../headers/fmi3FunctionTypes.h[tags=Status]
 
 The status has the following meaning:
 
+[[fmi3OK,`fmi3OK`]]
 `fmi3OK`::
-all well.
+The call was successful.
+The output argument values are defined.
 
+[[fmi3Warning,`fmi3Warning`]]
 `fmi3Warning`::
-things are not quite right, but the computation can continue.
-Function <<logMessage>> was called in the model, and it is expected that
-this function has shown the prepared information message to the user.
+A non-critical problem was detected, but the computation can continue.
+The output argument values are defined.
+Function <<logMessage>> was called by the FMU and the user is expected to handle the problem.
+_[In certain applications, e.g. in a prototyping environment, warnings may be acceptable._
+_For production environments warnings should be treated like errors unless they can be safely ignored.]_
 
+[[fmi3Discard,`fmi3Discard`]]
 `fmi3Discard`::
-In Model Exchange, this return status is only possible for the functions:
-`fmi3Set{VariableType}`,
-<<fmi3SetContinuousStates>>,
-`fmi3Get{VariableType}`,
-<<fmi3GetDerivatives>>,
-<<fmi3GetContinuousStates>>, and
-<<fmi3GetEventIndicators>>.
-When the target simulator encounters this status in Model Exchange, it is recommended to perform a smaller step size and evaluate the model equations again, for example because an iterative solver in the model did not converge or because a function is outside of its domain _[for example, `sqrt(<negative number>)`]_.
-If this is not possible, the simulation has to be terminated.
-+
-In a co-simulation interface, the `fmi3Discard` return status is only possible for the functions:
-`fmi3Set{VariableType}`,
-<<fmi3DoStep>>, and when the FMU is not able to return the required status information.
-When `fmi3Discard` is returned, the master has to decide if the simulation run can be continued.
-+
-_[Functions `fmi3Set{VariableType}` are usually not performing calculations but just store the passed values in internal buffers._
-_The actual calculation is performed by `fmi3Get{VariableType}` functions._
-_Still, `fmi3Set{VariableType}` functions could check whether the input arguments are in their validity range._
-_If not, these functions could return with `fmi3Discard`.]_
-+
-In both model exchange and co-simulation interfaces, function <<logMessage>> was called in the FMU, and it is expected that this function has shown the prepared information message to the user if the FMU was called in debug mode (`loggingOn == fmi3True`). If the FMU was not called in debug mode, <<logMessage>> should not show a message.
+The call was not successful and the FMU is in the same state as before the call.
+The output argument values are not defined, but the computation can continue.
+When debug logging is enabled (`loggingOn == fmi3True`) the function <<logMessage>> was called by the FMU.
+Advanced master implementations can try alternative approaches to drive the simulation by calling the function with different arguments or calling another function.
+Otherwise the master has to treat this return code like <<fmi3Error>> and has to terminate the simulation.
 
+[[fmi3Error,`fmi3Error`]]
 `fmi3Error`::
-the FMU encountered an error.
-The simulation cannot be continued with this FMU instance.
-If one of the functions returns `fmi3Error`, it can be tried to restart the simulation from a formerly stored FMU state by calling <<fmi3SetFMUState>>.
-This can be done if the capability flag `canGetAndSetFMUState = true` and <<fmi3GetFMUState>> was called before in non-erroneous state.
-If not, the simulation cannot be continued and <<fmi3FreeInstance>> or <<fmi3Reset>> must be called afterwards.
-_[Typically, `fmi3Error` return is for non-numerical reasons, like "disk full"._
-_There may be cases where the environment can fix such errors (possibly with the help of the user), and the simulation can continue at the last consistent state set with <<fmi3SetFMUState>>.]_ +
-Further processing is possible after this call and other FMU instances are not affected.
-Function <<logMessage>> was called in the FMU, and it is expected that this function has shown the prepared information message to the user.
+The call failed.
+The output argument values are undefined and the simulation cannot be continued.
+Function <<logMessage>> was called by the FMU and the FMU is in state **Terminated**.
+If a function returns <<fmi3Error>>, it is possible to restore a previously retrieved FMU state by calling <<fmi3SetFMUState>>.
+Otherwise <<fmi3FreeInstance>> or <<fmi3Reset>> must be called.
+When detecting illegal arguments or a wrong function call at the current FMU state, the FMU must return <<fmi3Error>>.
+Other instances of this FMU are not affected by the error.
 
+[[fmi3Fatal,`fmi3Fatal`]]
 `fmi3Fatal`::
-the model computations are irreparably corrupted for all FMU instances.
-_[For example, due to a run-time exception such as access violation or integer division by zero during the execution of an fmi function]_.
-Function <<logMessage>> was called in the FMU, and it is expected that this function has shown the prepared information message to the user.
-It is not possible to call any other function for any of the FMU instances.
+The state of all instances of the model is irreparably corrupted.
+_[For example, due to a run-time exception such as access violation or integer division by zero during the execution of an FMI function.]_
+Function <<logMessage>> was called by the FMU.
+It is not allowed to call any other function for any instance of the FMU.
 
 ==== Inquire Platform and Version Number of Header Files [[inquire-platform-and-version-number]]
 
@@ -267,29 +255,29 @@ include::../headers/fmi3FunctionTypes.h[tags=Instantiate]
 
 These functions return a new instance of an FMU with the respective interface type.
 If a null pointer is returned, then instantiation failed.
-In that case, `logMessage` is called with detailed information about the reason.
+In that case, <<logMessage>> is called with detailed information about the reason.
 An FMU can be instantiated many times (provided capability flag `canBeInstantiatedOnlyOncePerProcess = false`).
 
 --
 [[fmi3InstantiateModelExchange,`fmi3InstantiateModelExchange`]]
 `fmi3InstantiateModelExchange`::
 FMU with initialization and events; between events, the simulation of continuous systems is performed with external integrators from the environment (see <<fmi-for-model-exchange>>).
-The `modelDescription.xml` has to include a `<ModelExchange>` element to allow calling `fmi3InstantiateModelExchange`.
+The <<modelDescription.xml>> has to include a `<ModelExchange>` element to allow calling `fmi3InstantiateModelExchange`.
 
 [[fmi3InstantiateBasicCoSimulation,`fmi3InstantiateBasicCoSimulation`]]
 `fmi3InstantiateBasicCoSimulation`::
 Black box interface for Basic Co-Simulation (see <<fmi-for-basic-co-simulation>>).
-The `modelDescription.xml` has to include a `<BasicCoSimulation>` element to allow calling `fmi3InstantiateBasicCoSimulation`.
+The <<modelDescription.xml>> has to include a `<BasicCoSimulation>` element to allow calling `fmi3InstantiateBasicCoSimulation`.
 
 [[fmi3InstantiateHybridCoSimulation,`fmi3InstantiateHybridCoSimulation`]]
 `fmi3InstantiateHybridCoSimulation`::
 Black box interface for Hybrid Co-Simulation (see <<fmi-for-hybrid-co-simulation>>).
-The `modelDescription.xml` has to include a `<HybridCoSimulation>` element to allow calling `fmi3InstantiateHybridCoSimulation`.
+The <<modelDescription.xml>> has to include a `<HybridCoSimulation>` element to allow calling `fmi3InstantiateHybridCoSimulation`.
 
 [[fmi3InstantiateScheduledCoSimulation,`fmi3InstantiateScheduledCoSimulation`]]
 `fmi3InstantiateScheduledCoSimulation`::
 Black box interface for Scheduled Co-Simulation (see <<fmi-for-scheduled-co-simulation>>).
-The `modelDescription.xml` has to include a `<ScheduledCoSimulation>` element to allow calling `fmi3InstantiateScheduledCoSimulation`.
+The <<modelDescription.xml>> has to include a `<ScheduledCoSimulation>` element to allow calling `fmi3InstantiateScheduledCoSimulation`.
 --
 
 The arguments of the instantiation functions are detailed as follows:
@@ -299,7 +287,7 @@ It is used to name the instance, for example, in error or information messages g
 The argument `instanceName` must be a non empty string (in other words, must have at least one character that is not a white space).
 _[If only one FMU is simulated, as `instanceName` attribute `modelName` or `<ModelExchange{Basic|Hybrid|Scheduled}CoSimulation modelIdentifier="..">` from the XML schema `fmi3ModelDescription` might be used.]_
 
-* `instantiationToken` can be used by the FMU to check that the `modelDescription.xml` file (see <<fmu-distribution>>) is compatible with the implementation of the FMU.
+* `instantiationToken` can be used by the FMU to check that the <<modelDescription.xml>> file (see <<fmu-distribution>>) is compatible with the implementation of the FMU.
 It is an opaque string generated by the FMU exporter that is stored in the xml file as mandatory attribute `instantiationToken` (see <<fmiModelDescription>>).
 It must be passed unchanged to the FMU. This argument must not be a null pointer.
 
@@ -319,7 +307,7 @@ If `visible == fmi3True`, the FMU is executed in interactive mode, and the FMU m
 
 * If `loggingOn == fmi3False`, then any logging is disabled and the logger function is not called by the FMU.
 If `loggingOn == fmi3True`, the FMU enables a vendor defined set of `<LogCategories>`.
-This set should typically contain categories for messages that explain execution errors, like `fmi3Discard`, `fmi3Error` and `fmi3Fatal`.
+This set should typically contain categories for messages that explain execution errors, like <<fmi3Discard>>, <<fmi3Error>> and <<fmi3Fatal>>.
 The function <<fmi3SetDebugLogging>> gives more detailed control about required `<LogCategories>` (see <<definition-of-log-categories>>).
 
 * `instanceEnvironment` is a pointer that can be passed to the <<fmi3CallbackIntermediateUpdate>> function in order that the simulation environment can provide an efficient way to identify the slave that called <<fmi3CallbackIntermediateUpdate>>.
@@ -352,11 +340,11 @@ Pointer to a function that is called in the FMU _[usually if an `fmi3XXX` functi
 * `instanceName` is the instance name of the model that calls this function.
 // TODO fix following sentence
 * `status` contains the severity of the message.
-If <<logMessage>> is called with `status == fmi3OK`, then the message is a pure information message.
+If <<logMessage>> is called with <<fmi3OK,`status == fmi3OK`>>, then the message is a pure information message.
 
 * `category` is the category of the message.
 The meaning of `category` is defined by the modeling environment that generated the FMU.
-Depending on this modeling environment, none, some, or all, allowed values of `category` for this FMU are defined in the `modelDescription.xml` file via element `<fmiModelDescription><LogCategories>`, see <<definition-of-log-categories>>.
+Depending on this modeling environment, none, some, or all, allowed values of `category` for this FMU are defined in the <<modelDescription.xml>> file via element `<fmiModelDescription><LogCategories>`, see <<definition-of-log-categories>>.
 Only messages are provided by function <<logMessage>> that have a category according to a call to <<fmi3SetDebugLogging>>.
 
 * `message` is a string that contains the message.
@@ -373,39 +361,8 @@ _[Example: The message `\#1365# must be larger than zero (used in IO channel ##4
 
 [[intermediateUpdate,`intermediateUpdate`]]
 Function `intermediateUpdate`::
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=CallbackIntermediateUpdate]
-----
 
-This callback allows internal events of different types (e.g. associated to <<outputClock>> ticks or intermediate variable access) to be signaled from an FMU to the simulation environment.
-For Hybrid Co-Simulation and Scheduled Co-Simulation, or if any of the intermediate variable access arguments
-(<<intermediateVariableGetRequired>>, <<intermediateInternalVariableGetRequired>>, or <<intermediateVariableSetRequired>>) in <<fmi3Instantiate>> is set to `true`,
-the callback function <<fmi3CallbackIntermediateUpdate>> must be passed to <<fmi3Instantiate>>.
-In other cases, a null pointer can be assigned to the <<intermediateUpdate>> callback.
-
-[[intermediateUpdateTime,`intermediateUpdateTime`]]
-* <<intermediateUpdateTime>> indicates the internal time of the FMU at the time of calling the callback function.
-
-[[eventOccurred,`eventOccurred`]]
-* <<eventOccurred,`eventOccurred == fmi3True`>> means that an internal event has occurred.
-
-[[clocksTicked,`clocksTicked`]]
-* <<clocksTicked,`clocksTicked == fmi3True`>> means that an FMU <<outputClock>> has ticked.
-
-[[intermediateVariableSetAllowed,`intermediateVariableSetAllowed`]]
-* <<intermediateVariableSetAllowed,`intermediateVariableSetAllowed == fmi3True`>> means the master algorithm is allowed to set FMU variables using `fmi3Set{VariableType}`.
-
-[[intermediateVariableGetAllowed,`intermediateVariableGetAllowed`]]
-* <<intermediateVariableGetAllowed,`intermediateVariableGetAllowed == fmi3True`>> means the master algorithm is allowed to get FMU variables using `fmi3Get{VariableType}`.
-
-[[intermediateStepFinished,`intermediateStepFinished`]]
-* <<intermediateStepFinished, `intermediateStepFinished == fmi3True`>> means that an internal step was finished.
-
-[[canReturnEarly,`canReturnEarly`]]
-* <<canReturnEarly,`canReturnEarly == fmi3True`>> means the master is allowed to ask the FMU to return early from a <<fmi3DoStep>>.
-
-The various combinations of flags allow a Co-Simulation master algorithm to react appropriately to the needs and capabilities of the FMU.
+See <<fmi3CallbackIntermediateUpdate>> for details.
 
 [[lockUnlockPreemption,`lockUnlockPreemption`]]
 Function `lockPreemption` and `unlockPreemption`::
@@ -443,7 +400,7 @@ If `loggingOn == fmi3True` and `nCategories > 0`, then only debug messages accor
 
 * `categories` is a vector with `nCategories` elements.
 The allowed values of `categories` are defined by the modeling environment that generated the FMU.
-Depending on the generating modeling environment, none, some or all allowed values for `categories` for this FMU are defined in the `modelDescription.xml` file via element `<fmiModelDescription><LogCategories>`, see <<definition-of-log-categories>>.
+Depending on the generating modeling environment, none, some or all allowed values for `categories` for this FMU are defined in the <<modelDescription.xml>> file via element `<fmiModelDescription><LogCategories>`, see <<definition-of-log-categories>>.
 
 ==== Configuration, Initialization, Termination, and Resetting an FMU
 
@@ -489,11 +446,11 @@ An FMU for Co-Simulation might ignore this argument.
 * `startTime` and `stopTime` can be used to check whether the model is valid within the given boundaries, or to allocate the necessary memory for storing results.
 `startTime` is the <<fixed>> <<initial>> value of the <<independent>> variable.
 +
-_[It is defined with <<causality>> = <<independent>> in the `modelDescription.xml`._
+_[It is defined with <<causality>> = <<independent>> in the <<modelDescription.xml>>._
 _If the <<independent>> variable is `time`, `startTime` is the starting time of initialization.]_
 
 * If `stopTimeDefined == fmi3True`, then `stopTime` is the final value of the <<independent>> variable.
-If the environment tries to compute past `stopTime`, the FMU has to return `fmi3Status == fmi3Error`.
+If the environment tries to compute past `stopTime`, the FMU has to return <<fmi3Error,`fmi3Status == fmi3Error`>>.
 If `stopTimeDefined == fmi3False`, then no final value of the <<independent>> variable is defined and argument `stopTime` is meaningless.
 +
 _[If the <<independent>> variable is `time`, `stopTime` is the stop time of the simulation.]_
@@ -505,7 +462,7 @@ include::../headers/fmi3FunctionTypes.h[tags=ExitInitializationMode]
 ----
 
 Informs the FMU to exit *Initialization Mode*.
-For Model Exchange, this function switches off all initialization equations, and the FMU enters *Event Mode* implicitly; that is, all continuous-time and active discrete-time equations are available.
+This function switches off all initialization equations, and the FMU enters *Event Mode* for Model Exchange and Hybrid Co-Simulation, *Step Mode* for Basic Co-Simulation and *Clock Activation Mode* for Scheduled Co-Simulation.
 
 [[fmi3Terminate,`fmi3Terminate`]]
 [source, C]
@@ -515,7 +472,7 @@ include::../headers/fmi3FunctionTypes.h[tags=Terminate]
 
 Informs the FMU that the simulation run is terminated.
 After calling this function, the final values of all variables can be inquired with the `fmi3Get{VariableType}` functions.
-It is not allowed to call this function after one of the functions returned with a status flag of `fmi3Error` or `fmi3Fatal`.
+It is not allowed to call this function after one of the functions returned with a status flag of <<fmi3Error>> or <<fmi3Fatal>>.
 
 [[fmi3Reset,`fmi3Reset`]]
 [source, C]
@@ -531,7 +488,7 @@ Before starting a new run <<fmi3EnterInitializationMode>> has to be called.
 ==== Getting and Setting Variable Values [[get-and-set-variable-values]]
 
 All variables of an FMU are identified with a handle called <<valueReference, value reference>>.
-The handle is defined in the `modelDescription.xml` file as attribute <<valueReference>> in variable elements.
+The handle is defined in the <<modelDescription.xml>> file as attribute <<valueReference>> in variable elements.
 Each variable must have a unique <<valueReference>>.
 
 A variable can be a scalar or an array.
@@ -559,7 +516,7 @@ _is serialized as follows:_
 |========================================
 _]_
 
-The actual values of the variables that are defined in the `modelDescription.xml` file can be inquired after calling <<fmi3EnterInitializationMode>> with the following functions:
+The actual values of the variables that are defined in the <<modelDescription.xml>> file can be inquired after calling <<fmi3EnterInitializationMode>> with the following functions:
 
 [source, C]
 ----
@@ -569,7 +526,7 @@ include::../headers/fmi3FunctionTypes.h[tags=Getters]
 Get actual values of variables by providing their variable references.
 _[These functions are used to get the values of output variables if a model is connected with other models.
 Since state derivatives are also variables, it is also possible to get the value of a state derivative.
-Furthermore, the actual value of every variable defined in the `modelDescription.xml` file can be determined at the actually defined time instant (see <<definition-of-model-variables>>).]_
+Furthermore, the actual value of every variable defined in the <<modelDescription.xml>> file can be determined at the actually defined time instant (see <<definition-of-model-variables>>).]_
 
 * `valueReferences` is a vector of `nValueReferences` value handles that define the variables that shall be inquired.
 
@@ -581,7 +538,7 @@ Furthermore, the actual value of every variable defined in the `modelDescription
 
 The strings returned by `fmi3GetString`, as well as the binary values returned by `fmi3GetBinary`, must be copied in the target environment because the allocated memory for these strings might be deallocated or overwritten by the next call to any of the FMI functions.
 
-For Model Exchange: `fmi3Status == fmi3Discard` is possible for `fmi3GetFloat32` and `fmi3GetFloat64` only, but not for `fmi3Get*Int*`, `fmi3GetBoolean`, `fmi3GetString`, `fmi3GetBinary`, because these are discrete-time variables and their values can only change at an event instant where `fmi3Discard` does not make sense.
+For Model Exchange: <<fmi3Discard,`fmi3Status == fmi3Discard`>> is possible for `fmi3GetFloat32` and `fmi3GetFloat64` only, but not for `fmi3Get*Int*`, `fmi3GetBoolean`, `fmi3GetString`, `fmi3GetBinary`, because these are discrete-time variables and their values can only change at an event instant where <<fmi3Discard>> does not make sense.
 
 It is also possible to set the values of certain variables at particular instants in time using the following functions:
 
@@ -590,7 +547,7 @@ It is also possible to set the values of certain variables at particular instant
 include::../headers/fmi3FunctionTypes.h[tags=Setters]
 ----
 
-Set <<parameter,`parameters`>>, <<input,`inputs`>>, and <<start>> values, and re-initialize caching of variables that depend on these variables (see <<definition-of-model-variables>> for the exact rules on which type of variables `fmi3Set{VariableType}` can be called, as well as <<state-machine-model-exchange>> in case of Model Exchange, and <<state-machine-co-simulation>>/<<state-machine-calling-sequence-clocked-co-simulation>>/<<state-machine-scheduled-co-simulation>> in case of each co-simulation interface type).
+Set <<parameter,`parameters`>>, <<input,`inputs`>>, and <<start>> values, and re-initialize caching of variables that depend on these variables (see <<definition-of-model-variables>> for the exact rules on which type of variables `fmi3Set{VariableType}` can be called, as well as <<state-machine-model-exchange>> in case of Model Exchange, and <<state-machine-basic-co-simulation>>/<<state-machine-calling-sequence-clocked-co-simulation>>/<<state-machine-scheduled-co-simulation>> in case of each co-simulation interface type).
 
 * `valueReferences` is a vector of `nValueReferences` value handles that define the variables that shall be set.
 
@@ -602,7 +559,7 @@ Set <<parameter,`parameters`>>, <<input,`inputs`>>, and <<start>> values, and re
 
 All strings passed as arguments to `fmi3SetString`, as well as all binary values passed as arguments to `fmi3SetBinary`, must be copied inside these functions, because there is no guarantee of the lifetime of strings or binary values, when these functions return.
 
-Note, `fmi3Status == fmi3Discard` is possible for the `fmi3Set{VariableType}` functions.
+Note, <<fmi3Discard,`fmi3Status == fmi3Discard`>> is possible for the `fmi3Set{VariableType}` functions.
 
 For Co-Simulation FMUs, additional functions are defined in <<transfer-of-input-output-and-parameters>> to set and inquire <<derivative,`derivatives`>> of variables with respect to time in order to allow interpolation.
 
@@ -641,7 +598,7 @@ y_j=g_j(x_{j-1},u_j,t_j);
 
 [latexmath]
 ++++
-\text{with } j=0,1,2,...;x_{-1}=x_{start}
+\text{with } j=0,1,2,...;x_{-1}=x_{\mathit{start}}
 ++++
 
 Variables latexmath:[x_j] are called `states of a clocked partition`, or `discrete-time states` and latexmath:[j] is the latexmath:[j+1]th tick of the associated <<clock>>.
@@ -720,13 +677,13 @@ This section gives a definition of additional clock properties.
 
 ====== Periodic Clock Ticks
 
-Either <<output>> or <<input>>, a <<periodic>> <<clock>> ticks at equidistant sample time points that are known a priori (defined in `modelDescription.xml`) or are alternatively determined by the environment in case of <<inputClock,`input clocks`>>.
+Either <<output>> or <<input>>, a <<periodic>> <<clock>> ticks at equidistant sample time points that are known a priori (defined in <<modelDescription.xml>>) or are alternatively determined by the environment in case of <<inputClock,`input clocks`>>.
 Mathematically, the next <<clock>> tick at time instant latexmath:[t_i] is defined as:
 
 [latexmath]
 ++++
 \begin{align*}
-t_0 &:= t_{start} + t_{offset} \\
+t_0 &:= t_{\mathit{start}} + t_{\mathit{offset}} \\
 t_i &:= t_{i-1} + \Delta T, i = 1,2,3,{...}
 \end{align*}
 ++++
@@ -736,7 +693,7 @@ where:
 [cols="1,2"]
 |===
 |latexmath:[t_0]
-|The time instant in seconds at which the <<clock>> ticks the first time (= the base <<clock>> starts at the start of the simulation latexmath:[t_{start}] or when the controller is switched on plus an offset time latexmath:[t_{offset}] (xml-attributes `shiftCounter` and `resolution` in <<clock-type-definition>>).
+|The time instant in seconds at which the <<clock>> ticks the first time (= the base <<clock>> starts at the start of the simulation latexmath:[t_{\mathit{start}}] or when the controller is switched on plus an offset time latexmath:[t_{\mathit{offset}}] (xml-attributes `shiftCounter` and `resolution` in <<clock-type-definition>>).
 
 |latexmath:[t_{i-1}]
 |The previous time instant in seconds, where the <<clock>> ticked.
@@ -746,7 +703,7 @@ where:
 It is defined as a rational number based on `intervalCounter` and `resolution` via <<clock>> variable attributes.
 |===
 
-The interval latexmath:[\Delta T] and latexmath:[t_{offset}] must be defined for <<periodic>> <<clock,`clocks`>> in the XML file.
+The interval latexmath:[\Delta T] and latexmath:[t_{\mathit{offset}}] must be defined for <<periodic>> <<clock,`clocks`>> in the XML file.
 In case of <<periodic>> <<inputClock,`input clocks`>> these values are the start interval values if they are not given by the simulation master.
 _[This information can be used for emulating <<periodic>> <<inputClock,`input clocks`>> in the Co-Simulation interface types.]_.
 
@@ -760,7 +717,7 @@ The <<clock,`clocks`>> are ordered descending based on their priorities.
 It is nevertheless possible to define multiple <<clock,`clocks`>> with the same priority.
 No ordering is defined for <<clock,`clocks`>> of the same priority.
 If a computational order information is needed, different priorities for <<clock,`clocks`>> have to be defined.
-The priority of a <<clock>> has to be defined in the `modelDescription.xml` via the <<clock>> variable integer attribute `priority` - smaller values have a higher priority.
+The priority of a <<clock>> has to be defined in the <<modelDescription.xml>> via the <<clock>> variable integer attribute `priority` - smaller values have a higher priority.
 
 _[For <<periodic>> <<clock,`clocks`>> it is recommended to derive the priorities based on a rate monotonic scheduling scheme (smallest period leads to highest priority, that is, has the smallest priority value.]_
 
@@ -775,7 +732,7 @@ A common number of different priority levels is, e.g., 100 (0 to 99), as defined
 ====== Clock Relationships for Communication Point Clocks [[clock-relationships-for-communication-point-clocks]]
 
 If <<outputClock,`output clocks`>> and <<inputClock,`input clocks`>> are defined, it is possible to define a tick relationship from an <<outputClock>> to an <<inputClock>>.
-This is needed to allow for an external resource management to achieve an optimal control of model partitions.
+This is needed to allow for an external scheduler to achieve an optimal control of model partitions.
 The <<outputClock,`output clocks`>> and the associated <<inputClock,`input clocks`>> define a union of <<clock,`clocks`>>.
 In that sense, if an <<outputClock>> ticks the associated <<inputClock>> ticks at the same time instant in such a union.
 It is only meaningful to combine an <<outputClock,`output clock`>> with an <<periodic,aperiodic>> <<inputClock>> in such a union.
@@ -806,7 +763,7 @@ image::images/example_usecase.png[]
 When connecting imported FMUs together, <<input>> and <<output>> variables can readily be connected together only when they are defined on a <<clock>> with identical properties.
 If this is not possible, an explicit cast of one <<clock>> to another <<clock>> is typically defined in the environment.
 
-The environment can evaluate required <<clock>> casts for connections using the information on the <<clockReference>> attribute of assigned variables _[i.e. the variables that are assigned to a <<clock>> based on `modelDescription.xml` information]_.
+The environment can evaluate required <<clock>> casts for connections using the information on the <<clockReference>> attribute of assigned variables _[i.e. the variables that are assigned to a <<clock>> based on <<modelDescription.xml>> information]_.
 
 _[Example: Elementary blocks like a PI controller will have all variables on an <<inputClock>> with identical properties._
 _Connecting such blocks together will therefore be possible without computationally expensive clock cast operations (and the environment can readily do the computation of assigned variables of the connected blocks based on the same <<clock>>).]_
@@ -1002,12 +959,12 @@ In every state, the general form of the FMU equations are:
 
 [latexmath]
 ++++
-\mathbf{v}_{unknown} = \mathbf{h}(\mathbf{v}_{known}, \mathbf{v}_{rest}),
+\mathbf{v}_{\mathit{unknown}} = \mathbf{h}(\mathbf{v}_{\mathit{known}}, \mathbf{v}_{\mathit{rest}}),
 ++++
 
 where
 
-* latexmath:[\mathbf{v}_{unknonwn}] is the vector of unknown floating point variables computed in the actual state:
+* latexmath:[\mathbf{v}_{\mathit{unknonwn}}] is the vector of unknown floating point variables computed in the actual state:
 
 ** *Initialization Mode*: The exposed unknowns listed as elements `<ModelStructure><InitialUnknown>` that have a floating point type.
 
@@ -1018,14 +975,14 @@ where
 ** *Step Mode* (Basic Co-Simulation and Hybrid Co-Simulation): The variables listed as elements `<ModelStructure><Output>` with a floating point type and <<variability>> = <<continuous>> or <<discrete>>.
 Each state derivative variable listed as elements `<ModelStructure><Derivative>`, if present.
 
-* latexmath:[\mathbf{v}_{known}] is the vector of known floating point <<input>> variables of function *h* that changes its value in the actual state.
+* latexmath:[\mathbf{v}_{\mathit{known}}] is the vector of known floating point <<input>> variables of function *h* that changes its value in the actual state.
 
 Details are given in the description of element <<dependencies>> in <<ModelStructure>>.
 _[For example continuous-time <<input,`inputs`>> in *Continuous-Time Mode*._
 _If a variable with <<causality>> = <<independent>> is explicitly defined under `<ModelVariables>`, a directional derivative with respect to this variable can be computed._
 _If such a variable is not defined, the directional derivative with respect to the <<independent>> variable cannot be calculated]._
 
-* latexmath:[{\mathbf{v}_{rest}}] is the set of <<input>> variables of function *h* that either changes its value in the actual state but are non-floating point variables, or do not change their values in this state, but change their values in other states _[for example, discrete-time <<input,`inputs`>> in *Continuous-Time Mode*]_.
+* latexmath:[{\mathbf{v}_{\mathit{rest}}}] is the set of <<input>> variables of function *h* that either changes its value in the actual state but are non-floating point variables, or do not change their values in this state, but change their values in other states _[for example, discrete-time <<input,`inputs`>> in *Continuous-Time Mode*]_.
 
 _[The variable relationships are different in different states._
 _For example, during *Continuous-Time Mode*, a continuous-time output y does not depend on discrete-time <<input,`inputs`>> (because they are held constant between events)._
@@ -1034,9 +991,9 @@ _The function may compute the directional derivatives by numerical differentiati
 
 There are two access functions for partial derivatives:
 
-- <<fmi3GetDirectionalDerivative>> to compute the directional derivatives latexmath:[\mathbf{v}_{sensitivity} = \mathbf{J} \cdot \mathbf{v}_{seed}], and
+- <<fmi3GetDirectionalDerivative>> to compute the directional derivatives latexmath:[\mathbf{v}_{\mathit{sensitivity}} = \mathbf{J} \cdot \mathbf{v}_{\mathit{seed}}], and
 
-- <<fmi3GetAdjointDerivative>> to calculate the adjoint derivatives latexmath:[\mathbf{v}_{sensitivity}^T = \mathbf{v}_{seed}^T \cdot \mathbf{J}]
+- <<fmi3GetAdjointDerivative>> to calculate the adjoint derivatives latexmath:[\mathbf{v}_{\mathit{sensitivity}}^T = \mathbf{v}_{\mathit{seed}}^T \cdot \mathbf{J}]
 
 with the Jacobian
 
@@ -1045,13 +1002,13 @@ with the Jacobian
 \mathbf{J}
 =
 \begin{bmatrix}
-\frac{\partial h_1}{\partial v_{knwon,1}} & \cdots & \frac{\partial h_1}{\partial v_{knwon, n}} \\
+\frac{\partial h_1}{\partial v_{\mathit{known},1}} & \cdots & \frac{\partial h_1}{\partial v_{\mathit{known},n}} \\
 \vdots & \ddots & \vdots \\
-\frac{\partial h_m}{\partial v_{known, 1}} & \cdots & \frac{\partial h_m}{\partial v_{known, n}}
+\frac{\partial h_m}{\partial v_{\mathit{known},1}} & \cdots & \frac{\partial h_m}{\partial v_{\mathit{known},n}}
 \end{bmatrix}
 ++++
 
-where latexmath:[\mathbf{v}_{known}] are the latexmath:[n] knowns, and latexmath:[\mathbf{h}] are the latexmath:[m] functions to calculate the latexmath:[m] unknwon variables latexmath:[\mathbf{v}_{unknwon}]  from the knowns.
+where latexmath:[\mathbf{v}_{\mathit{known}}] are the latexmath:[n] knowns, and latexmath:[\mathbf{h}] are the latexmath:[m] functions to calculate the latexmath:[m] unknwon variables latexmath:[\mathbf{v}_{\mathit{unknwon}}]  from the knowns.
 
 Both functions can also be used to construct the partial derivative matrices.
 The functions may only be called if their availability is indicated by the attributes `providesDirectionalDerivative` and `providesAdjointDerivative` respectively.
@@ -1106,9 +1063,9 @@ _and this FMU is connected, so that latexmath:[{y_1, u_1, u_3}] appear in an alg
 _Then the nonlinear solver needs a Jacobian and this Jacobian can be computed (without numerical differentiation) provided the partial derivative of latexmath:[{y_1}] with respect to latexmath:[{u_1}] and latexmath:[{u_3}] is available._
 _Depending on the environment where the FMUs are connected, these <<derivative,`derivatives`>> can be provided:_
 
-(a) _with one wrapper function around function <<fmi3GetDirectionalDerivative>> to compute the directional derivatives with respect to these two variables (in other words, latexmath:[{v_{unknown} = y_1}], latexmath:[{v_{known} = \left \{ u_1, u_3 \right \}}]), and then the environment calls this wrapper function with latexmath:[{v_{seed} = \left \{ 1, 0 \right \}}] to compute the partial derivative with respect to latexmath:[{u_1}] and latexmath:[{v_{seed} = \left \{ 0, 1 \right \}}] to compute the partial derivative with respect to latexmath:[{u_3}], or_
+(a) _with one wrapper function around function <<fmi3GetDirectionalDerivative>> to compute the directional derivatives with respect to these two variables (in other words, latexmath:[{v_{\mathit{unknown}} = y_1}], latexmath:[{v_{\mathit{known}} = \left \{ u_1, u_3 \right \}}]), and then the environment calls this wrapper function with latexmath:[{v_{\mathit{seed}} = \left \{ 1, 0 \right \}}] to compute the partial derivative with respect to latexmath:[{u_1}] and latexmath:[{v_{\mathit{seed}} = \left \{ 0, 1 \right \}}] to compute the partial derivative with respect to latexmath:[{u_3}], or_
 
-(b) _with two direct function calls of <<fmi3GetDirectionalDerivative>> (in other words, latexmath:[{v_{unknown} = y_1, v_{known} = u_1, v_{seed} = 1}]; and latexmath:[{v_{unknown} = y_1, v_{known} = u_3, v_{seed} = 1}])._
+(b) _with two direct function calls of <<fmi3GetDirectionalDerivative>> (in other words, latexmath:[{v_{\mathit{unknown}} = y_1, v_{\mathit{known}} = u_1, v_{\mathit{seed}} = 1}]; and latexmath:[{v_{\mathit{unknown}} = y_1, v_{\mathit{known}} = u_3, v_{\mathit{seed}} = 1}])._
 
 _Note that a direct implementation of this function with analytic derivatives:_
 
@@ -1116,7 +1073,7 @@ _Note that a direct implementation of this function with analytic derivatives:_
 
 (b) _Initializes all seed-values to zero; so in the above example: latexmath:[{\Delta x = \Delta u_1 = \Delta u_3 = \Delta u_4 = 0}]_
 
-(c) _Computes the directional derivative with the seed-values provided in the function arguments; so in the above example: latexmath:[{v_{sensitivity} = \Delta y_1 (\Delta x = 0, \Delta u_1 = 1, \Delta u_3 = 0, \Delta u_4 = 0)}]] and latexmath:[{v_{sensitivity} = \Delta y_1 (\Delta x = 0, \Delta u_1 = 0, \Delta u_3 = 1, \Delta u_4 = 0)}]]_
+(c) _Computes the directional derivative with the seed-values provided in the function arguments; so in the above example: latexmath:[{v_{\mathit{sensitivity}} = \Delta y_1 (\Delta x = 0, \Delta u_1 = 1, \Delta u_3 = 0, \Delta u_4 = 0)}]] and latexmath:[{v_{\mathit{sensitivity}} = \Delta y_1 (\Delta x = 0, \Delta u_1 = 0, \Delta u_3 = 1, \Delta u_4 = 0)}]]_
 
 _[Note, function <<fmi3GetDirectionalDerivative>> can be utilized for the following purposes:_
 
@@ -1227,7 +1184,7 @@ h_2(u_1, u_2)
 ++++
 
 _and latexmath:[\left( w_1,  w_2 \right)^T \cdot \mathbf{ \frac{\partial h}{\partial u} }] for some vector latexmath:[\left( w_1,  w_2 \right)^T] is needed._
-_Then one can get this with one function call of <<fmi3GetAdjointDerivative>> (with arguments_ latexmath:[\mathbf{v}_{unknown} = \text{valueReferences of} \left \{ y_1, y_2 \right \},  \mathbf{v}_{knwon} = \text{valueReferences of} \left \{ u_1, u_2 \right \},  \mathbf{v}_{seed} = \left( w_1, w_2 \right)^T] _), while with <<fmi3GetDirectionalDerivative>> at least two calls would be necessary to first construct the Jacobian column-wise and then multiplying from the right with_ latexmath:[\left( w_1,  w_2 \right)^T] _._
+_Then one can get this with one function call of <<fmi3GetAdjointDerivative>> (with arguments_ latexmath:[\mathbf{v}_{\mathit{unknown}} = \text{valueReferences of} \left \{ y_1, y_2 \right \},  \mathbf{v}_{\mathit{known}} = \text{valueReferences of} \left \{ u_1, u_2 \right \},  \mathbf{v}_{\mathit{seed}} = \left( w_1, w_2 \right)^T] _), while with <<fmi3GetDirectionalDerivative>> at least two calls would be necessary to first construct the Jacobian column-wise and then multiplying from the right with_ latexmath:[\left( w_1,  w_2 \right)^T] _._
 
 _If a dense matrix shall be computed, the rows of the matrix can be easily constructed by successive calls of <<fmi3GetAdjointDerivative>>._
 _For example, constructing the system Jacobian latexmath:[{\mathbf{A} = \frac{\partial \mathbf{f}}{\partial \mathbf{x}}}] as a dense matrix can be performed in the following way:_
@@ -1249,7 +1206,7 @@ include::../headers/fmi3FunctionTypes.h[tags=GetNumberOfEventIndicators]
 ----
 
 This function returns the number of event indicators.
-The dependency of the number of event indicators on <<structuralParameter,`structural parameters`>> is implicitly given in the `modelDescription.xml` file.
+The dependency of the number of event indicators on <<structuralParameter,`structural parameters`>> is implicitly given in the <<modelDescription.xml>> file.
 _[All event indicator variables are listed as elements `<EventIndicator>` in `<ModelStructure>`._
 _If the event indicator variable is an array variable and the `<Dimension>` element maps to a dependent variable, then this dependent variable is a dependency for the number of event indicators.]_
 If all <<structuralParameter,`structural parameters`>> are unchanged then this dependency information can be used to calculate the initial number of states just using information given in the XML file without the need to call this C-API function.
@@ -1266,7 +1223,7 @@ include::../headers/fmi3FunctionTypes.h[tags=GetNumberOfContinuousStates]
 ----
 
 This function returns the number of <<state,`states`>>.
-The dependency of the number of states on <<structuralParameter,`structural parameters`>> is implicitly given in the `modelDescription.xml` file.
+The dependency of the number of states on <<structuralParameter,`structural parameters`>> is implicitly given in the <<modelDescription.xml>> file.
 _[All state derivative variables are listed as elements `<Derivative>` in `<ModelStructure>`._
 _Each state derivative variable maps to the corresponding state variable by the `derivative` attribute._
 _If the state variable is an array variable and the `<Dimension>` element maps to a dependent variable, then this dependent variable is a dependency for the number of states.]_
