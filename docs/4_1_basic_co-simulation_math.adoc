@@ -1,21 +1,22 @@
 === Mathematical Description [[math-basic-co-simulation]]
 
-// TODO: Move stuff here from the common concepts section.
 
-This section contains a formal mathematical model of Co-Simulation FMUs.
-// TODO: Is this true also for SCS?
+This section contains a formal mathematical model of Basic Co-Simulation FMUs.
 
 _[The following fundamental assumptions are made:_
 
-_The slave simulators are seen by the master simulator as purely sampled-data systems._
+_The slave simulators are seen by the master simulator as purely sampled-data systems, with the exception, that the master can provide smooth input data with the intermediate variable access mechanism (see <<intermediate-variable-access>>)._
 
 _Such a sampled-data system consists typically of a hybrid ODE that is integrated between communication points (known as "sampled access to time continuous systems") where internal events may occur and be handled, but events are not visible from the outside of the FMU._
-_It is assumed here that all <<input,`inputs`>> and all <<output,`outputs`>> of this hybrid ODE are floating point signals (defined with <<variability>> = <<continuous>>),_
 
 _Co-Simulation FMUs can also be used for real sampled-data systems (so a sampled discrete controller; the <<input,`inputs`>> and <<output,`outputs`>> could be of type `<Float{32|64}>`, `<[U]Int{8|16|32|64}>`, `<Boolean>`, `<String>`, `<Clock>` or `<Enumeration>` with <<variability>> = <<discrete>>.)_
 _However, in FMI 3.0, Hybrid Co-Simulation (HCS) and Scheduled Co-Simulation (SCS) may likely be more suitable for this use-case.]_
 
-The communication between the master and a slave takes only place at a discrete set of time instants, called communication points.
+The communication between the master and a slave takes place at
+
+- a discrete set of time instants, called communication points, where input variables may change in non-smooth or even non-continuous way.
+
+- intermediate time instances, where the master may get and set variables using <<intermediate-variable-access>>.
 
 An FMI Co-Simulation model is described by the following variables:
 
@@ -29,6 +30,7 @@ An FMI Co-Simulation model is described by the following variables:
 (Variable defined with <<causality>> = <<independent>>). +
 The i-th communication point is denoted as latexmath:[t = tc_i] +
 The communication step size is denoted as latexmath:[hc_i = tc_{i+1} - tc_i]
+Intermediate time points are t with latexmath:[t \in  (tc_i, tc_{i+1})] where the FMU exchanges information with the master.
 
 |latexmath:[\mathbf{v}]
 | A vector of all exposed variables (all variables defined in element `<ModelVariables>`, see <<definition-of-model-variables>>).
@@ -38,7 +40,7 @@ latexmath:[\mathbf{v}_{\mathit{initial=exact}}] are variables defined with attri
 These are <<parameter,`parameters`>> and <<start>> values of other variables, such as initial values for <<state,`states`>>, state derivatives or <<output,outputs>>.
 
 |latexmath:[\mathbf{p}]
-|Parameters that are constant during simulation.
+|Parameters that are constant during simulation, with the understandding, that changing a tunable parameter restarts a new simulation.
 The symbol without a subscript references <<parameter,`parameters`>> (variables with <<causality>> = <<parameter>>).
 Dependent <<parameter,`parameters`>> (variables with <<causality>> = <<calculatedParameter>>) are denoted as latexmath:[\mathbf{p}_{\mathit{calculated}}] and <<tunable>> <<parameter,`parameters`>> (variables with <<causality>> = <<parameter>> and <<variability>> = <<tunable>>) are denoted as latexmath:[\mathbf{p}_{\mathit{tune}}].
 
@@ -48,12 +50,25 @@ The values of these variables are defined outside of the model.
 Variables of this type are defined with attribute <<causality>> = <<input>>.
 Whether the <<input>> is a discrete-time or continuous-time variable is defined via attribute <<variability>> = <<discrete>> or <<continuous>> (see <<definition-of-model-variables>>).
 
-|latexmath:[\mathbf{y}(tc_i)]
+|latexmath:[\mathbf{u}_{i,IVA}]
+|Intermediate input variables corresponding to the input variables.
+The values of these variables are defined outside of the model.
+latexmath:[\mathbf{u}_{i,IVA}] are smooth functions (latexmath:[C^{∞}]) defined on the interval latexmath:[ [tc_i, tc_{i+1}] with latexmath:[\mathbf{u}_{i,IVA}(tc_i)=\mathbf{u}(tc_i)]
+
+TODO: ??? Discuss smoothness requirmenets ??? See https://github.com/modelica/fmi-standard/issues/993#issuecomment-636484307
+
+|latexmath:[\mathbf{y}(tc_{i+1)]
 |Output variables.
-The values of these variables are computed in the FMU and they are designed to be used in a model connection.
+The values of these variables are computed in the FMU and they are designed to be used in a model connection at communication time steps.
 So output variables might be used in the environment as input values to other FMUs or other submodels.
 Variables of this type are defined with attribute <<causality>> = <<output>>.
 Via attribute <<variability>> = <<discrete>> or <<continuous>> it is defined whether the <<output>> is a discrete-time or continuous-time variable, see <<definition-of-model-variables>>.
+Also j-th derivatives latexmath:[\mathbf{y}^{(j)}(tc_{i+1)] can be provided if supported by the FMU.
+
+
+|latexmath:[\mathbf{y_{i, IVA}]]
+|Intermdidate output variables corresponding to the ouput variables |latexmath:[\mathbf{y}].
+The values of these variables are computed in the FMU and they are designed to be used by the co-simulation master, for example for extrapolation
 
 |latexmath:[\mathbf{w}(tc_i)]
 |Local variables of the FMU that cannot be used for FMU connections.
@@ -83,11 +98,11 @@ When the transient simulation of the coupled system through Co-Simulation is com
 
 \begin{Bmatrix}
 
-\mathbf{x}_{i+1} = \Phi_i \left( \mathbf{x}_i \left\{ \mathbf{u}_i^{(j)} \right\}_{j=0,\cdots,m_{ido}}, \mathbf{p}_{\mathit{tune},i}, hc_i  \right)
+\mathbf{x}_{i+1} = \Phi_i \left( \mathbf{x}_i,  \mathbf{u}(tc_i), \mathbf{u}_{i,IVA}, \mathbf{p}_{\mathit{tune},i}, hc_i  \right)
 
 \\
 
-\left( \left\{ \mathbf{y}^{(j)}_{i+1} \right\}_{j=0,\cdots,m_{odo}}, \mathbf{w}_{i+1}\right) = \Gamma_i \left( \mathbf{x}_i, \left\{ \mathbf{u}^{(j)}_i \right\}_{j=0,\cdots,m_{ido}}, \mathbf{p}_{\mathit{tune}}, hc_i \right)
+\left( \left\{ \mathbf{y}^{(j)}_{i+1} \right\}_{j=0,\cdots,m_{odo}}, \mathbf{w}_{i+1}\right) = \Gamma_i \left( \mathbf{x}_i,  \mathbf{u}(tc_i), \mathbf{u}_{i, IVA}, \mathbf{p}_{\mathit{tune},i}, hc_i  \right)
 
 \end{Bmatrix}
 ++++
@@ -103,36 +118,38 @@ _[For the part of the Co-Simulation slave that is based on an ODE, a differentia
 \mathbf{p}_{\mathit{tune}} \right)
 ++++
 
-_In this case, the following relationship should hold (note the use of_ latexmath:[\mathbf{x}_{i+1}] _here):_
+_If the maste algorithm implements an extrapolation method of order_ latexmath:[\mathbf{m}_{extra}] _, it  provides intermediate inputs of the form:_
+
 
 [latexmath]
 ++++
-\frac{\partial\mathbf{\Phi_i}}{\partial hc_i}
+u_{i, IVA}(t)
 =
-\boldsymbol{\varphi} \left( \mathbf{x}_{c,i+1},
-\sum^{m_{\mathit{ido}}}_{j=0} \mathbf{u}^{(j)}_{c,i} \frac{hc^j_i}{j!},
-\mathbf{p}_{\mathit{tune},i}  \right)
+\sum^{m_{\mathit{extra}}}_{j=0} \mathbf{C_i}^{(j)}_{c,i} \frac{(t-t_i)^j}{j!}
 ++++
+_where_ latexmath:[\mathbf{C}_{i}] _are coeffients that can be equal to output derivatives of a connectd FMU to realize a taylor polynomial._
 
-_This relation is in practice inexact due to using finite precision on machines and stopping iterations early._
-_The slave simulators are responsible for implementing_ latexmath:[\mathbf{\Phi}_i] and latexmath:[\mathbf{\Gamma}_i] _; for example, to handle stiff differential equations as:_
+_The function_ latexmath:[\mathbf{\varphi}]  _shall approximate a the numerical integration of the underlying differential equaation._
+
+_For examxple, for a stiff differential equation one could use a linear implicit Euler method (neglecting intermediate variable information):_
 
 [latexmath]
 ++++
-\mathbf{\Phi}_i \left( \mathbf{x}_{c,i}, \left\{ \mathbf{u}_{c,i}^{(j)} \right\}_{j = 0,\cdots,m_{ido}},\ \mathbf{p}_{\mathit{tune},i}, tc_i \right)
+\mathbf{\Phi}_i \left( \mathbf{x}_{c,i}, \left\{ \mathbf{u}_{c,i} \right\}_{j = 0,\cdots,m_{ido}},\ \mathbf{p}_{\mathit{tune},i}, tc_i \right)
 =
 \mathbf{x}_{c,i} + \left( \mathbf{I} -
-hc_i \frac{\partial \mathbf{\varphi}}{\partial \mathbf{x}_c} \right)^{- 1}  hc_i \mathbf{\phi} \left( \mathbf{x}_{c,i}, \mathbf{u}_{c,i}, \mathbf{p}_{\mathit{tune},i} \right) +
-O(hc_i^{2}).
+hc_i \frac{\partial \mathbf{\varphi}}{\partial \mathbf{x}_c} \right)^{- 1}  hc_i \mathbf{\phi} \left( \mathbf{x}_{c,i}, \mathbf{u}_{c,i}, \mathbf{p}_{\mathit{tune},i} \right).
 ++++
 
 _]_
 
 Definition <<equation-basic-co-simulation-evaluations>> is consistent with the definition of co-simulation by <<KS00>>.
 
-* At the communication points, the master provides generalized inputs to the slave, which can be:
+TODO: ???? check this reference. Does someone have the paper? ????
 
-** The current <<input>> variables latexmath:[\mathbf{u}_i^{(0)}] of the subsystem (in other words, the <<input>> variables of the model contained in the slave simulator, in the sense of system-level simulation), along with some of their successive <<derivative,`derivatives`>> latexmath:[\left\{ \mathbf{u}_i^{(j)} \right\}_{j=1,\cdots,m_{ido}}] (in case of continuous-time variables), where latexmath:[m_{\mathit{ido}}] stands for the model input derivative order.
+* At the communication points, the master provides generalized inputs to the slave:
+
+** The current <<input>> variables latexmath:[\mathbf{u}_i] of the subsystem (in other words, the <<input>> variables of the model contained in the slave simulator, in the sense of system-level simulation).
 
 ** Varying <<parameter,`parameters`>> latexmath:[\mathbf{p}_{\mathit{tune},i}], also known as <<tunable>> <<parameter,`parameters`>>.
 
@@ -141,6 +158,9 @@ Definition <<equation-basic-co-simulation-evaluations>> is consistent with the d
 ** The current output variables latexmath:[\mathbf{y}_{i+1}^{(0)}]of the subsystem (same remark as above), along with some of their successive <<derivative,`derivatives`>> latexmath:[\left\{ \mathbf{y}_{i+1}^{(j)} \right\}_{j=1,\cdots,m_{odo}}](in case of continuous-time variables).
 
 ** Observation variables and <<calculated>> varying <<parameter,`parameters`>> latexmath:[\mathbf{w}_{i+1}], along with directional derivatives estimated at latexmath:[t = tc_{i+1}] (in case of continuous-time variables).
+
+* At intermediate times latexmath:[t\in (tc_i, tc_{i+1})] the master and slave exchange values for  latexmath:[\mathbf{u}_{i, IVA}(t)] and latexmath:[\mathbf{y}_{i, IVA}(t)].
+
 
 * Initialization: The slave being a sampled-data system, its internal states (which can be either continuous-time or discrete-time) need to be initialized at latexmath:[t = tc_0].
 This is performed through an auxiliary function _[this relationship is defined in the XML file under elements `<ModelStructure><InitialUnknown>`]_:
@@ -155,9 +175,9 @@ Algebraic equations are solved in this mode.
 
 ==== Step Mode
 This mode is used to compute the values of all continuous-time and discrete-time variables at communication points by numerically solving ordinary differential, algebraic and discrete equations.
-If the slave is connected in loops with other models, no iterations over the FMU equations are possible.
+If the slave is connected in loops with other models, no iterations over the FMU equations are possible for a given communication time point.
 
-_[Note that for a Co-Simulation FMU, no super-dense time description is used at communication points.]_
+_[Note that for a Basic Co-Simulation FMU, no super-dense time description is used at communication points.]_
 
 The equations are defined in <<table-math-basic-co-simulation>> can be evaluated in the respective mode.
 The following color coding is used in the table:
@@ -178,13 +198,12 @@ For an output argument, calling `fmi3Get{VariableType}` on such a variable retur
 |Equations
 |FMI functions
 
-2+|Equations before *Initialization Mode* (*Instantiated* in state machine)
+2+|Equations before *Initialization Mode* in state machine
 
 |Set variables and that have a start value (<<initial>> = <<exact>> or <<approx>>)
 |`fmi3Set{VariableType}`
 
-2+|Equations during *Initialization Mode* (*Initialization Mode* in state machine)
-
+2+|Equations during *Initialization Mode* in state machine)
 |[lime]#Enter *Initialization Mode* at (activate initialization, discrete-time and continuous-time equations). Set and set <<start>> value of <<independent>> variable latexmath:[tc_{i=0}].#
 |[lime]#fmi3EnterInitializationMode#
 
@@ -201,20 +220,31 @@ For an output argument, calling `fmi3Get{VariableType}` on such a variable retur
 |[lime]#Exit *Initialization Mode* (de-activate initialization equations)#
 |[lime]#fmi3ExitInitializationMode#
 
-2+|Equations during *Step Mode* (`stepComplete`, `stepInProgress` in state machine)
+2+|Equations during *Step Mode* ` in state machine
 
 |Set <<tunable>> <<parameter,`parameters`>> latexmath:[\mathbf{p}_{\mathit{tune}}] (and do not set other <<parameter,`parameters`>> latexmath:[\mathbf{p}_{\mathit{other}}])
 |`fmi3Set{VariableType}`
 
-|Set continuous-time and discrete-time <<input,`inputs`>> latexmath:[\mathbf{u}_{d+c}(tc_i)] of continuous-time <<input,`inputs`>> latexmath:[\mathbf{u}_{c}^{(j)}(tc_i)]
+|Set continuous-time and discrete-time <<input,`inputs`>> latexmath:[\mathbf{u}_{d+c}(tc_i)]
 |`fmi3Set{VariableType}`
 
-|[blue]#latexmath:[\begin{matrix} tc_{i+1} := tc_i + hc_i \\ (\mathbf{y}_{c+d}, \mathbf{y}_c^{(j)}, \mathbf{w}_{c+d}) := \mathbf{f}_{\mathit{doStep}}(\mathbf{u}_{c+d}, \mathbf{u}_{c}^{(j)}, tc_i, hc_i, \mathbf{p}_{\mathit{tune}}, \mathbf{p}_{\mathit{other}})_{tc_i} \\ tc_i := tc_{i+1} \end{matrix}]# +
+|[blue]#latexmath:[\begin{matrix} tc_{i+1} := tc_i + hc_i \\ (\mathbf{y}_{c+d}, \mathbf{y}_c^{(j)}, \mathbf{w}_{c+d}) := \mathbf{f}_{\mathit{doStep}}(\mathbf{u}_{c+d}, \mathbf{u}_{i, IVA},  tc_i, hc_i, \mathbf{p}_{\mathit{tune}}, \mathbf{p}_{\mathit{other}})_{tc_i} \\ tc_i := tc_{i+1} \end{matrix}]# +
 [blue]#latexmath:[\mathbf{f}_{\mathit{doStep}}] is also a function of the internal variables latexmath:[\mathbf{x}_c], latexmath:[^{\bullet}\mathbf{x}_d]#
 |`[blue]#fmi3DoStep#` +
-`fmi3Get{VariableType}` +
+`[blue]#fmi3Get{VariableType}#` +
 `[blue]#fmi3GetOutputDerivatives#` +
-`[blue]#fmi3GetDirectionalDerivative#`
+`[blue]#fmi3GetDirectionalDerivative#` +
+`[blue]#fmi3CallbackIntermediateUpdate#`
+
+
+2+|Equations during *Intermediate update mode*  in state machine
+
+|Set continuous-time  <<input,`inputs`>> latexmath:[\mathbf{u}_{c, IVA}(t)]
+|`fmi3Set{VariableType}`
+
+
+| latexmath:[\mathbf{y}_{i, IVA}(t)= \mathbf{f}_{\mathit{Intermediate}}(\mathbf{u}_{i, c+d}, \mathbf{u}_{i, IVA} ( t \in [tc_i, t]),  t, hc_i, \mathbf{p}_{\mathit{tune}}, \mathbf{p}_{\mathit{other}})_{tc_i}]
+|`[blue]#fmi3Get{VariableType}#`
 
 2+|*Data types*
 
