@@ -90,7 +90,7 @@ include::../headers/fmi3FunctionTypes.h[tags=NewDiscreteStates]
 ----
 
 The FMU is in *Event Mode* and the super-dense time is incremented by this call. +
-If the super-dense time before a call to <<fmi3NewDiscreteStates>> was latexmath:[(t_R,t_I)], then the time instant after the call is latexmath:[(t_R,t_I)]. +
+If the super-dense time before a call to <<fmi3NewDiscreteStates>> was latexmath:[(t_R,t_I)], then the time instant after the call is latexmath:[(t_R,t_I + 1)]. +
 
 * If output argument `newDiscreteStatesNeeded == fmi3True`, the FMU should stay in *Event Mode*, and the FMU requires to set new inputs to the FMU (`fmi3Set{VariableType}` on <<input,`inputs`>>) to compute and get the <<output,`outputs`>> (`fmi3Get{VariableType}` on <<output,`outputs`>>) and to call <<fmi3NewDiscreteStates>> again.
 Depending on the connection with other FMUs, the environment shall
@@ -107,7 +107,7 @@ When the FMU is terminated, it is assumed that an appropriate message is printed
 * If argument `valuesOfContinuousStatesChanged == fmi3True`, then at least one element of the continuous state vector has changed its value due to the function call.
 
 [[state,`state`]]
-The new values of the <<state,`states`>> can be inquired with <<fmi3GetContinuousStates>> or individually for each state for which `reinit = true` by calling `fmi3GetFloat*`.
+The new values of the <<state,`states`>> can be inquired with <<fmi3GetContinuousStates>> or individually for each state for which <<reinit, `reinit = true`>> by calling `fmi3GetFloat*`.
 If no element of the continuous state vector has changed its value, `valuesOfContinuousStatesChanged` must return `fmi3False`.
 _[If `fmi3True` would be returned in this case, an infinite event loop may occur.]_
 
@@ -141,8 +141,8 @@ include::../headers/fmi3FunctionTypes.h[tags=CompletedIntegratorStep]
 
 This function must be called by the environment after every completed step of the integrator provided the capability flag `completedIntegratorStepNotNeeded = false`.
 Argument `noSetFMUStatePriorToCurrentPoint == fmi3True` if `fmi3SetFMUState` will no longer be called for time instants prior to current time in this simulation run [the FMU can use this flag to flush a result buffer]. +
-The function returns `enterEventMode` to signal to the environment if the FMU shall call <<fmi3EnterEventMode>>, and it returns <<terminateSimulation>> to signal if the simulation shall be terminated.
-If `enterEventMode == fmi3False` and <<terminateSimulation,`terminateSimulation == fmi3False`>> the FMU stays in *Continuous-Time Mode* without calling <<fmi3EnterContinuousTimeMode>> again.
+The function returns `enterEventMode` to signal to the environment that the environment shall call <<fmi3EnterEventMode>>, and it returns <<terminateSimulation>> to signal if the simulation shall be terminated.
+If `enterEventMode == fmi3False` and <<terminateSimulation,`terminateSimulation == fmi3False`>> the FMU stays in *Continuous-Time Mode* without the environment having to call <<fmi3EnterContinuousTimeMode>> again.
 When the integrator step is completed and the <<state,`states`>> are modified by the integrator afterwards (for example, correction by a BDF method),
 then <<fmi3SetContinuousStates>> has to be called with the updated states before <<fmi3CompletedIntegratorStep>> is called. +
 When the integrator step is completed and one or more event indicators change sign (with respect to the previously completed integrator step), then the integrator or the environment has to determine the time instant of the sign change that is closest to the previous completed step up to a certain precision (usually a small multiple of the machine epsilon).
@@ -216,16 +216,15 @@ _Example:_ +
 
 ==== State Machine for Model Exchange [[state-machine-model-exchange]]
 
-Every implementation of the FMI must support calling sequences of the functions according to the following state chart:
+Every implementation of the FMI must support calling sequences of the functions according to the state machine in <<figure-model-exchange-state-machine>>.
 
 .Calling sequence of Model Exchange C functions in form of an UML 2.0 state machine.
 [#figure-model-exchange-state-machine]
 image::images/state-machine-model-exchange.svg[width=80%, align="center"]
 
-The objective of the start chart is to define the allowed calling sequences for functions of the FMI: Calling sequences not accepted by the state chart are not supported by the FMI.
+The objective of the state machine is to define the allowed calling sequences for functions of the FMI: Calling sequences not accepted by the state machine are not supported by the FMI.
 The behavior of an FMU is undefined for such a calling sequence.
-For example, the state chart indicates that when an FMU for Model Exchange is in state *Continuous-Time Mode*, a call to `fmi3Set{VariableType}` for a <<discrete>> <<input>> is not supported.
-The state chart is given here as UML 2.0 state machine.
+The state machine is given here as UML 2.0 state machine.
 If a transition is labelled with one or more function names (for example, `fmi3GetFloat64`, `fmi3GetUInt8`), this means that the transition is taken if any of these functions is successfully called.
 Note that the FMU can always determine in which state it is since every state is entered by a particular function call (such as <<fmi3EnterEventMode>>), or a particular return value (such as <<fmi3Fatal>>).
 
@@ -252,7 +251,7 @@ The event time of a state event may be determined if a domain change of at least
 ===== State: Event Mode
 If an event is triggered in *Continuous-Time Mode*, *Event Mode* is entered by calling <<fmi3EnterEventMode>>.
 In this mode all continuous-time and discrete-time equations are active and the unknowns at an event can be computed and retrieved.
-After an event is completely processed, <<fmi3NewDiscreteStates>> must be called and depending on the return argument, `newDiscreteStatesNeeded`, the state chart stays in *Event Mode* or switches to *Continuous-Time Mode*.
+After an event is completely processed, <<fmi3NewDiscreteStates>> must be called and depending on the return argument, `newDiscreteStatesNeeded`, the state machine stays in *Event Mode* or switches to *Continuous-Time Mode*.
 When the *Initialization Mode* is terminated with <<fmi3ExitInitializationMode>>, then *Event Mode* is directly entered, and the continuous-time and discrete-time variables at the initial time are computed based on the initial continuous-time states determined in the *Initialization Mode*.
 
 ===== State: Reconfiguration Mode
@@ -266,7 +265,7 @@ In this state, the solution at the final time of a simulation can be retrieved.
 Note that simulation backward in time is only allowed over continuous time intervals.
 As soon as an event occurrs (<<fmi3EnterEventMode>> was called), going back in time is forbidden, because <<fmi3EnterEventMode>> / <<fmi3NewDiscreteStates>> can only compute the next discrete state, not the previous one.
 
-Note that during *Initialization*, *Event*, and *Continuous-Time Mode* <<input>> variables can be set with `fmi3Set{VariableType}` and output variables can be retrieved with `fmi3Get{VariableType}` interchangeably according to the model structure defined under element `<ModelStructure>` in the XML file.
+Note that during *Initialization*, *Event*, and *Continuous-Time Mode*, <<input>> variables can be set with `fmi3Set{VariableType}` and output variables can be retrieved with `fmi3Get{VariableType}` interchangeably according to the model structure defined under element `<ModelStructure>` in the XML file.
 _[For example, if one <<output>> `y1` depends on two <<input,`inputs`>> `u1`, `u2`, then these two <<input,`inputs`>> must be set, before `y1` can be retrieved._
 _If additionally an <<output>> `y2` depends on an <<input>> `u3`, then `u3` can be set and `y2` can be retrieved afterwards._
 _As a result, artificial or `real` algebraic loops over connected FMUs in any of these three modes can be handled by using appropriate numerical algorithms.]_
@@ -297,7 +296,7 @@ For a <<outputClock>>, the environment integrates until a continuous-time event 
 Input Clocks::
 Intervall is set with the function <<fmi3SetIntervalDecimal>> or <<fmi3SetIntervalFraction>>. It is activated by the environment with the function <<fmi3SetClock>>.
 
-==== Handling of clock events
+==== Handling of Clock Events
 
 This concerns the following API calls: <<fmi3SetClock>>, <<fmi3GetClock>>, <<fmi3SetIntervalDecimal>>, <<fmi3SetIntervalFraction>>, <<fmi3GetIntervalDecimal>>, <<fmi3GetIntervalFraction>>
 
