@@ -532,15 +532,15 @@ typedef fmi3Status fmi3SetTimeTYPE(fmi3Instance instance, fmi3Float64 time);
 
 /* tag::SetContinuousStates[] */
 typedef fmi3Status fmi3SetContinuousStatesTYPE(fmi3Instance instance,
-                                               const fmi3Float64 states[],
-                                               size_t nStates);
+                                               const fmi3Float64 continuousStates[],
+                                               size_t nContinuousStates);
 /* end::SetContinuousStates[] */
 
 /* Evaluation of the model equations */
 /* tag::GetDerivatives[] */
 typedef fmi3Status fmi3GetDerivativesTYPE(fmi3Instance instance,
                                           fmi3Float64 derivatives[],
-                                          size_t nStates);
+                                          size_t nCcontinuousStates);
 /* end::GetDerivatives[] */
 
 /* tag::GetEventIndicators[] */
@@ -558,7 +558,7 @@ typedef fmi3Status fmi3GetContinuousStatesTYPE(fmi3Instance instance,
 /* tag::GetNominalsOfContinuousStates[] */
 typedef fmi3Status fmi3GetNominalsOfContinuousStatesTYPE(fmi3Instance instance,
                                                          fmi3Float64 nominals[],
-                                                         size_t nStates);
+                                                         size_t nCcontinuousStates);
 /* end::GetNominalsOfContinuousStates[] */
 
 /* tag::GetNumberOfEventIndicators[] */
@@ -568,7 +568,7 @@ typedef fmi3Status fmi3GetNumberOfEventIndicatorsTYPE(fmi3Instance instance,
 
 /* tag::GetNumberOfContinuousStates[] */
 typedef fmi3Status fmi3GetNumberOfContinuousStatesTYPE(fmi3Instance instance,
-                                                       size_t* nStates);
+                                                       size_t* nCcontinuousStates);
 /* end::GetNumberOfContinuousStates[] */
 
 /***************************************************
