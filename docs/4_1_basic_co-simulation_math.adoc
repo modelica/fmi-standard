@@ -43,7 +43,7 @@ latexmath:[\mathbf{v}_{\mathit{initial=exact}}] are variables defined with attri
 These are <<parameter,`parameters`>> and <<start>> values of other variables, such as initial values for <<state,`states`>>, state derivatives or <<output,outputs>>.
 
 |latexmath:[\mathbf{p}]
-|Parameters that are constant during simulation, with the understandding, that changing a tunable parameter restarts a new simulation.
+|Parameters that are constant during simulation (except for tunable parameter that may change at communication points.)
 The symbol without a subscript references <<parameter,`parameters`>> (variables with <<causality>> = <<parameter>>).
 Dependent <<parameter,`parameters`>> (variables with <<causality>> = <<calculatedParameter>>) are denoted as latexmath:[\mathbf{p}_{\mathit{calculated}}] and <<tunable>> <<parameter,`parameters`>> (variables with <<causality>> = <<parameter>> and <<variability>> = <<tunable>>) are denoted as latexmath:[\mathbf{p}_{\mathit{tune}}].
 
@@ -53,10 +53,10 @@ The values of these variables are defined outside of the model.
 Variables of this type are defined with attribute <<causality>> = <<input>>.
 Whether the <<input>> is a discrete-time or continuous-time variable is defined via attribute <<variability>> = <<discrete>> or <<continuous>> (see <<definition-of-model-variables>>).
 
-|latexmath:[\mathbf{u}_{i,IVA}]
-|Intermediate input variables corresponding to the input variables.
+|latexmath:[\mathbf{u}_{i, IU}(t)]
+|Intermediate input variables corresponding to the input variables for intermediate updaste ("IU").
 The values of these variables are defined outside of the model.
-latexmath:[\mathbf{u}_{i,IVA}] are functions  defined on the interval latexmath:[ [tc_i, tc_{i+1}] with latexmath:[\mathbf{u}_{i,IVA}(tc_i)=\mathbf{u}(tc_i)]. +
+latexmath:[\mathbf{u}_{i, IU}] are functions  defined on the interval latexmath:[ [tc_i, tc_{i+1} ]] with latexmath:[\mathbf{u}_{i, IU}(tc_i)=\mathbf{u}(tc_i)]. +
 With the optional flag <<recommendedIntermediateInputSmoothness>> FMU can signal to the master that best convergence rates can be achieved if the these functions are of the smoothness (latexmath:[C^{k}([ tc_i, tc_{i+1}]), that is k-time continuously differentiable.
 
 |latexmath:[\mathbf{y}(tc_{i+1})], latexmath:[\mathbf{y^{(j)}}(tc_{i+1})],
@@ -68,8 +68,8 @@ Via attribute <<variability>> = <<discrete>> or <<continuous>> it is defined whe
 Also j-th derivatives latexmath:[\mathbf{y}^{(j)}(tc_{i+1})] can be provided if supported by the FMU.
 
 
-|latexmath:[\mathbf{y}_{i, IVA}]
-|Intermdiate output variables corresponding to the ouput variables latexmath:[\mathbf{y}].
+|latexmath:[\mathbf{y}_{i, IU}(t)]
+|Intermediate output variables corresponding to the output variables latexmath:[\mathbf{y}].
 The values of these variables are computed in the FMU and they are designed to be used by the co-simulation master, for example for extrapolation
 
 |latexmath:[\mathbf{w}(tc_i)]
@@ -100,11 +100,11 @@ When the transient simulation of the coupled system through Co-Simulation is com
 
 \begin{Bmatrix}
 
-\mathbf{x}_{i+1} = \Phi_i \left( \mathbf{x}_i,  \mathbf{u}(tc_i), \mathbf{u}_{i,IVA}, \mathbf{p}_{\mathit{tune},i}, hc_i  \right)
+\mathbf{x}_{i+1} = \Phi_i \left( \mathbf{x}_i,  \mathbf{u}(tc_i), \mathbf{u}_{i,IU}, \mathbf{p}_{\mathit{tune},i}, hc_i  \right)
 
 \\
 
-\left( \left\{ \mathbf{y}^{(j)}_{i+1} \right\}_{j=0,\cdots,m_{odo}}, \mathbf{w}_{i+1}\right) = \Gamma_i \left( \mathbf{x}_i,  \mathbf{u}(tc_i), \mathbf{u}_{i, IVA}, \mathbf{p}_{\mathit{tune},i}, hc_i  \right)
+\left( \left\{ \mathbf{y}^{(j)}_{i+1} \right\}_{j=0,\cdots,m_{odo}}, \mathbf{w}_{i+1}\right) = \Gamma_i \left( \mathbf{x}_i,  \mathbf{u}(tc_i), \mathbf{u}_{i, IU}, \mathbf{p}_{\mathit{tune},i}, hc_i  \right)
 
 \end{Bmatrix}
 ++++
@@ -125,7 +125,7 @@ _If the master algorithm implements an extrapolation method of order_ latexmath:
 
 [latexmath]
 ++++
-\mathbf{u}_{i, IVA}(t)
+\mathbf{u}_{i, IU}(t)
 =
 \sum^{m_{\mathit{extra}}}_{j=0} \mathbf{C_{i, j}} \frac{(t-t_i)^j}{j!}
 ++++
@@ -159,7 +159,7 @@ Definition <<equation-basic-co-simulation-evaluations>> is consistent with the d
 
 ** Observation variables and <<calculated>> varying <<parameter,`parameters`>> latexmath:[\mathbf{w}_{i+1}], along with directional derivatives estimated at latexmath:[t = tc_{i+1}] (in case of continuous-time variables).
 
-* At intermediate times latexmath:[t\in (tc_i, tc_{i+1})] the master and slave exchange values for  latexmath:[\mathbf{u}_{i, IVA}(t)] and latexmath:[\mathbf{y}_{i, IVA}(t)].
+* At intermediate times latexmath:[t\in (tc_i, tc_{i+1})] the master and slave exchange values for  latexmath:[\mathbf{u}_{i, IU}(t)] and latexmath:[\mathbf{y}_{i, IU}(t)].
 
 
 * Initialization: The slave being a sampled-data system, its internal states (which can be either continuous-time or discrete-time) need to be initialized at latexmath:[t = tc_0].
@@ -228,7 +228,7 @@ For an output argument, calling `fmi3Get{VariableType}` on such a variable retur
 |Set continuous-time and discrete-time <<input,`inputs`>> latexmath:[\mathbf{u}_{d+c}(tc_i)]
 |`fmi3Set{VariableType}`
 
-|[blue]#latexmath:[\begin{matrix} tc_{i+1} := tc_i + hc_i \\ (\mathbf{y}_{c+d}, \mathbf{y}_c^{(j)}, \mathbf{w}_{c+d}) := \mathbf{f}_{\mathit{doStep}}(\mathbf{u}_{c+d}, \mathbf{u}_{i, IVA},  tc_i, hc_i, \mathbf{p}_{\mathit{tune}}, \mathbf{p}_{\mathit{other}})_{tc_i} \\ tc_i := tc_{i+1} \end{matrix}]# +
+|[blue]#latexmath:[\begin{matrix} tc_{i+1} := tc_i + hc_i \\ (\mathbf{y}_{c+d}, \mathbf{y}_c^{(j)}, \mathbf{w}_{c+d}) := \mathbf{f}_{\mathit{doStep}}(\mathbf{u}_{c+d}, \mathbf{u}_{i, IU},  tc_i, hc_i, \mathbf{p}_{\mathit{tune}}, \mathbf{p}_{\mathit{other}})_{tc_i} \\ tc_i := tc_{i+1} \end{matrix}]# +
 [blue]#latexmath:[\mathbf{f}_{\mathit{doStep}}] is also a function of the internal variables latexmath:[\mathbf{x}_c], latexmath:[^{\bullet}\mathbf{x}_d]#
 |`[blue]#fmi3DoStep#` +
 `[blue]#fmi3Get{VariableType}#` +
@@ -239,11 +239,11 @@ For an output argument, calling `fmi3Get{VariableType}` on such a variable retur
 
 2+|Equations during *Intermediate update mode*  in state machine
 
-|Set continuous-time  <<input,`inputs`>> latexmath:[\mathbf{u}_{c, IVA}(t)]
+|Set continuous-time  <<input,`inputs`>> latexmath:[\mathbf{u}_{c, IU}(t)]
 |`fmi3Set{VariableType}`
 
 
-| [blue]#latexmath:[\mathbf{y}_{i, IVA}(t):= \mathbf{f}_{\mathit{Intermediate}}(\mathbf{u}_{i, c+d}, \mathbf{u}_{i, IVA} ( t \in [tc_i, t) ),  t, hc_i, \mathbf{p}_{\mathit{tune}}, \mathbf{p}_{\mathit{other}})]#
+| [blue]#latexmath:[\mathbf{y}_{i, IU}(t):= \mathbf{f}_{\mathit{Intermediate}}(\mathbf{u}_{i, c+d}, \mathbf{u}_{i, IU} ( t \in [tc_i, t) ),  t, hc_i, \mathbf{p}_{\mathit{tune}}, \mathbf{p}_{\mathit{other}})]#
 |`[blue]#fmi3Get{VariableType}#`
 
 2+|*Data types*
