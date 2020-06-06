@@ -551,14 +551,14 @@ typedef fmi3Status fmi3GetEventIndicatorsTYPE(fmi3Instance instance,
 
 /* tag::GetContinuousStates[] */
 typedef fmi3Status fmi3GetContinuousStatesTYPE(fmi3Instance instance,
-                                               fmi3Float64 states[],
-                                               size_t nStates);
+                                               fmi3Float64 continuousStates[],
+                                               size_t nContinuousStates);
 /* end::GetContinuousStates[] */
 
 /* tag::GetNominalsOfContinuousStates[] */
 typedef fmi3Status fmi3GetNominalsOfContinuousStatesTYPE(fmi3Instance instance,
                                                          fmi3Float64 nominals[],
-                                                         size_t nCcontinuousStates);
+                                                         size_t nContinuousStates);
 /* end::GetNominalsOfContinuousStates[] */
 
 /* tag::GetNumberOfEventIndicators[] */
@@ -568,7 +568,7 @@ typedef fmi3Status fmi3GetNumberOfEventIndicatorsTYPE(fmi3Instance instance,
 
 /* tag::GetNumberOfContinuousStates[] */
 typedef fmi3Status fmi3GetNumberOfContinuousStatesTYPE(fmi3Instance instance,
-                                                       size_t* nCcontinuousStates);
+                                                       size_t* nContinuousStates);
 /* end::GetNumberOfContinuousStates[] */
 
 /***************************************************
