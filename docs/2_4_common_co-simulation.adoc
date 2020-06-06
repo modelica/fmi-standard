@@ -179,33 +179,22 @@ Multiple event types and also <<outputClock>> ticks or interrupts can be support
 
 ==== Intermediate Variable Access [[intermediate-variable-access]]
 
-Intermediate variable access has three main use cases:
+A Co-Simulation FMU can provide valid or temporary <<output>> variables at intermediate points between two consecutive communication points, or is able to accept new values for <<input>> variables at these intermediate points.
 
-- An FMU is able to produce valid output variables at intermediate points between two consecutive communication points.
-This is typically the result of an internal solver taking multiple integration steps between two consecutive communication points of a <<fmi3DoStep>>.
+- Intermediate <<output>> variables are typically the result of an internal solver taking multiple integration steps between two consecutive communication points of a <<fmi3DoStep>>.
 It is possible for the FMU to inform the master whether the internal solver is in a temporary state or if it has just completed an internal integration step.
 The FMU exposes intermediate output variables for the master whenever they are available.
 If the internal integration step is completed, the master can forward intermediate outputs to other FMUs, where they can be used, for e.g., for extrapolation, interpolation, filtering or asynchronous co-simulation.
 
-- Intermediate <<input>> variables for an FMU are available in the Co-Simulation master.
+- Intermediate <<input>> variables for an FMU are available from the Co-Simulation master.
 The FMU requests updated intermediate <<input>> variables every time they are required by the internal solver.
 This can be either at temporary solver states or after successful integration steps.
 
-- Intermediate <<output>> variables of the FMU can be computed for the Co-Simulation master.
-The computation requires intermediate output variables from the FMU.
-Whenever the internal solver in the FMU needs updated intermediate <<input>> variables, it provides the intermediate output variables for and requests the intermediate <<input>> variables from the master.
 
 Combinations of the above use cases are also allowed.
 
-Access to intermediate variables enables several features such as:
-
-* Advanced interpolation/extrapolation techniques _[especially enabling the same input approximation that was possible in FMI 2.0 with `fmi2SetInputDerivatives`, now evaluating the approximation polynomial in the master compared to within the FMU in FMI 2.0]_,
-
-* Asynchronous communication,
-
-* Anti-alias filtering, and
-
-* Smoothing of inputs.
+Access to intermediate variables enables advanced Co-Simulation with interpolation/extrapolation techniques (such as polynomial extrapolation, TLM Co-simulation, anti-alias filtering, smoothing of input) +
+_[Especially this enables the same input approximation that was possible in FMI 2.0 with `fmi2SetInputDerivatives`, now evaluating the approximation polynomial and not within the FMU as in FMI 2.0]_,
 
 Intermediate variable access can be activated in all Co-Simulation interface types, if both, the FMU and the master, support it.
 
@@ -224,7 +213,7 @@ If the FMU returns with <<earlyReturn,`earlyReturn == fmi3True`>> from <<fmi3DoS
 <<intermediateUpdateTime>> is also the time of intermediate steps of the internal FMU solver.
 The FMU must not call the callback function <<fmi3CallbackIntermediateUpdate>> with an <<intermediateUpdateTime>> that is smaller than the <<intermediateUpdateTime>> given in a previous call of <<fmi3CallbackIntermediateUpdate>> with `intermediateStepFinished == fmi3True`.
 
-The following two `fmi3Boolean` variables define reasons for the <<fmi3CallbackIntermediateUpdate>> call and can only be set to `fmi3True` in Hybrid Co-Simulation.
+The following two `fmi3Boolean` variables define additional reasons for the <<fmi3CallbackIntermediateUpdate>> call and can only be set to `fmi3True` in Hybrid Co-Simulation.
 
 [[eventOccurred,`eventOccurred`]]
 * When <<eventOccurred,`eventOccurred == fmi3True`>>, the master returns <<earlyReturnRequested,`earlyReturnRequested == fmi3True`>> from <<fmi3CallbackIntermediateUpdate>> and request the FMU to return early from the current <<fmi3DoStep>> and handle the event via entering *Event Mode*.
@@ -250,9 +239,7 @@ _Instead of FMUs exchanging hard-to-understand variables such as "wave variable"
 _[So the master could for example_
 
 - _use the values  obtained with `fmi3Get{VariableTypes}` with <<intermediateStepFinished, `intermediateStepFinished == fmi3True`>> to create an interpolation for the intermediate inputs of other FMUs._
-- _use this information for plotting._
-
-_]_
+- _use this information for plotting.]_
 
 [[canReturnEarly,`canReturnEarly`]]
 * When <<canReturnEarly,`canReturnEarly == fmi3True`>> the master can request the FMU to return early at the current <<intermediateUpdateTime>> time instant by returning with <<earlyReturnRequested,`earlyReturnRequested == fmi3True`>> from the callback function <<fmi3CallbackIntermediateUpdate>>.
