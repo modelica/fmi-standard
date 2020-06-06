@@ -53,12 +53,12 @@ Export-Schema UnitDefinitions 3
 Export-Schema BaseUnit 2
 Export-Schema DisplayUnit 2
 Export-Schema TypeDefinitions 2
-Export-Schema Float64 3 -schema fmi3Type.xsd
-Export-Schema Int32 3 -schema fmi3Type.xsd
-Export-Schema Boolean 3 -schema fmi3Type.xsd
-Export-Schema Binary 3 -schema fmi3Type.xsd
-Export-Schema Enumeration 3 -schema fmi3Type.xsd
-Export-Schema Clock 3 -schema fmi3Type.xsd
+Export-Schema Float64Type 3 -schema fmi3Type.xsd
+Export-Schema Int32Type 3 -schema fmi3Type.xsd
+Export-Schema BooleanType 3 -schema fmi3Type.xsd
+Export-Schema BinaryType 3 -schema fmi3Type.xsd
+Export-Schema EnumerationType 3 -schema fmi3Type.xsd
+Export-Schema ClockType 3 -schema fmi3Type.xsd
 Export-Schema LogCategories 3
 Export-Schema DefaultExperiment 1
 Export-Schema fmiTerminalsAndIcons 1 -schema fmi3TerminalsAndIcons.xsd
@@ -68,14 +68,14 @@ Export-Schema TerminalStreamMemberVariable 1 -schema fmi3TerminalsAndIcons.xsd
 Export-Schema GraphicalRepresentation 2 -schema fmi3TerminalsAndIcons.xsd
 Export-Schema CoordinateSystem 2 -schema fmi3TerminalsAndIcons.xsd
 Export-Schema Icon 2 -schema fmi3TerminalsAndIcons.xsd
-Export-Schema GraphicalRepresentation 2 -schema fmi3Terminal.xsd -outName "TerminalGraphicalRepresentation.png"
+Export-Schema TerminalGraphicalRepresentation 2 -schema fmi3Terminal.xsd
 Export-Schema ModelVariables 2
 Export-Schema fmi3VariableBase 1
-Export-Schema Float64 1 -schema fmi3Variable.xsd -outName "Variable_Float64.png"
-Export-Schema Int32 1 -schema fmi3Variable.xsd -outName "Variable_Int32.png"
-Export-Schema Boolean 1 -schema fmi3Variable.xsd -outName "Variable_Boolean.png"
-Export-Schema Binary 1 -schema fmi3Variable.xsd -outName "Variable_Binary.png"
-Export-Schema Enumeration 1 -schema fmi3Variable.xsd -outName "Variable_Enumeration.png"
+Export-Schema Float64 1 -schema fmi3Variable.xsd
+Export-Schema Int32 1 -schema fmi3Variable.xsd
+Export-Schema Boolean 1 -schema fmi3Variable.xsd
+Export-Schema Binary 1 -schema fmi3Variable.xsd
+Export-Schema Enumeration 1 -schema fmi3Variable.xsd
 Export-Schema Annotations 2
 Export-Schema ModelStructure 2
 Export-Schema ModelExchange 2
