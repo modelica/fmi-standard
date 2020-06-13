@@ -154,7 +154,36 @@ If the FMU does not support the Co-Simulation interface selected in <<fmi3Instan
 
 ==== Early Return [[early-return]]
 
-An FMU is allowed to stop the execution of <<fmi3DoStep>> and return without reaching the predefined communication time, i.e. <<currentCommunicationPoint>> `+` <<communicationStepSize>>.
+:DOSTEP: fmi3DoStep()
+:CBIU: fmi3CallbackIntermediateUpdate()
+
+//=== Improving efficiency in multi-FMU environment when asynchronous mode is used
+
+_[ In the particular context of multi-FMU architectures, significant co-simulation speed-up may be obtained if the master can avoid waiting until the end of the slowest FMU step integration._
+_If an FMU prematurely stops its current step integration computation due to an unpredictable internal event before the normal end of the step calculation, all other concurrently running FMUs may be stopped as soon as possible in order to minimize the time needed for the Co-Simulation master to resynchronize all the FMUs at the same event time._
+
+_In this context based on parallel multi-FMU calculations, <<figure-early-return>> illustrates different possibilities to synchronize FMUs at the same event time._
+
+.Different possibilities to synchronize parallel FMUs at the same event time.
+[[figure-early-return]]
+image::images/earlyReturnFigure.png[width=100%, align="center"]
+
+_Each FMU starts integration from communication point latexmath:[t_{i}] to reach the next communication point latexmath:[t_{i+1}]._
+_Assuming an unexpected internal event is detected at_ latexmath:[t^{'}_{i+1}< t_{i+1}] _during FMU~1~ integration, the master is informed of this early return._
+_So now the master would like to avoid other FMUs exceed the event time, since all FMUs should be resynchronized at the event time which will be the next new communication point._
+
+* _In the case of FMU~1~, the internal event time becomes the new_ latexmath:[t_{i+1}] _time, i.e. this is the source of the event._
+* _In the case of FMU~2~, a complete rollback from_ latexmath:[t_{i}] _to_ latexmath:[t^{'}_{i+1}] _is necessary._
+* _In the case of FMU~3~, computation is immediately interrupted and only a partial rollback is necessary to reach latexmath:[t^{'}_{i+1}] time._
+* _In the case of FMU~4~, the current step integration has been interrupted at_ latexmath:[t^{'}_{i+1}] _and no rollback is necessary._
+
+_Each ongoing FMU stops its integration either exactly at the broken time given by the master or immediately after its current intermediate step if this time is already out-of-date._
+_Afterwards, a new step integration done on the FMU returns and signals the premature stop (early-return) to the master._
+
+_Due to the early-return mechanism, the overall execution time of the simulation is reduced.]_
+
+
+A Basic Co-simulation or Hybrid Co-Simulation FMU is allowed to stop the execution of <<fmi3DoStep>> and return without reaching the predefined communication time, i.e. <<currentCommunicationPoint>> `+` <<communicationStepSize>>.
 This mechanism is called "early return".
 
 [[canReturnEarlyAfterIntermediateUpdate,`canReturnEarlyAfterIntermediateUpdate`]]
