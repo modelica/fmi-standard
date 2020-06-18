@@ -179,24 +179,33 @@ Multiple event types and also <<outputClock>> ticks or interrupts can be support
 
 ==== Intermediate Variable Access [[intermediate-variable-access]]
 
-A Co-Simulation FMU can provide valid or temporary <<output>> variables at intermediate points between two consecutive communication points, or is able to accept new values for <<input>> variables at these intermediate points.
+A Co-Simulation FMU can provide values for its <<output>> variables at intermediate points between two consecutive communication points, and is able to accept new values for <<input>> variables at these intermediate points.
+This is typically required when the FMU uses a numerical solver to integrate the FMU's internal state between communication points in <<fmi3DoStep>>.
+This numerical solver assumes that the inputs are continuous in the integration interval, dictacted by <<fmi3DoStep>>.
+In FMI 2.0 Co-simulation, the intermediate inputs are provided by the use of extrapolations.
+The intermediate variable access functions allows the FMU to receive inputs, and provide outputs, directly to the master, in those intermediate time points.
 
-- Intermediate <<output>> variables are typically the result of an internal solver taking multiple integration steps between two consecutive communication points of a <<fmi3DoStep>>.
-It is possible for the FMU to inform the master whether the internal solver is in a temporary state or if it has just completed an internal integration step.
-The FMU exposes intermediate output variables for the master whenever they are available.
-If the internal integration step is completed, the master can forward intermediate outputs to other FMUs, where they can be used, for e.g., for extrapolation, interpolation, filtering or asynchronous co-simulation.
+Due to the way numerical solvers estimate and correct the approximation error, these intermediate <<output>> values may be tentative or may be final.
+It is possible for the FMU to inform the master whether the internal solver is in a tentative state, meaning that the output values computed from that state are also tentative, or if the internal solver has successfully completed the integration step, meaning that the FMU's internal state is final, and will never be change by the normal in the current execution of <<fmi3DoStep>>.
+If the internal integration step has successfully completed, the master can forward intermediate outputs to other FMUs, where they can be used, for e.g., for extrapolation, interpolation, filtering or asynchronous co-simulation.
+For tentative output values, the master must not forward these values to other FMUs.
 
-- Intermediate <<input>> variables for an FMU are available from the Co-Simulation master.
 The FMU requests updated intermediate <<input>> values for continuous variables every time they are required by the internal solver.
-This can be either at temporary solver states or after successful integration steps.
-
+This can be either at tentative solver states or after successful integration steps.
 
 Combinations of the above use cases are also allowed.
 
 Access to intermediate variables enables advanced Co-Simulation with interpolation/extrapolation techniques (such as polynomial extrapolation, TLM co-simulation, anti-alias filtering, smoothing of input) +
-Especially this enables the same input approximation that was possible in FMI 2.0 with `fmi2SetInputDerivatives`, now evaluating the approximation polynomial and not within the FMU as in FMI 2.0,
+Moreover, this enables the same input approximation that was possible in FMI 2.0 with `fmi2SetInputDerivatives`, now evaluating the approximation polynomial and not within the FMU as in FMI 2.0.
 
-Intermediate variable access can be activated in all Co-Simulation interface types, if both, the FMU and the master, support it.
+Intermediate variable access can be activated in all Co-Simulation interface types, if the FMU and the master, support it.
+
+<<figure-intermediate-variable-access>> summarizes the above description.
+It illustrates that multiple intermediate internal solver steps, distinguishing between the final ones (with black-filled circles) and tentative ones (with white-filled circles). It distinguishes the level of trust that can be placed in the tentative outputs (with dashed arrows) and in final outputs (with solid arrows).
+
+.Overview of solver states and intermediate variable access during a communication step
+[#figure-intermediate-variable-access]
+image::images/intermediatevariableaccess.svg[width=65%, align="center"]
 
 If the Co-Simulation master signals the support for intermediate variable access and an FMU has at least one variable with <<intermediateAccess,`intermediateAccess = true`>>, the FMU can use the callback function <<fmi3CallbackIntermediateUpdate>> to communicate information back to the Co-Simulation master:
 
@@ -230,10 +239,9 @@ If this flag is `fmi3True` the master must return with <<earlyReturnRequested,`e
 * If <<intermediateVariableGetAllowed,`intermediateVariableGetAllowed == fmi3True`>>, the Co-Simulation master may collect intermediate output variables by calling `fmi3Get{VariableType}` for variables with <<intermediateAccess,`intermediateAccess = true`>>.
 
 [[intermediateStepFinished,`intermediateStepFinished`]]
-* If <<intermediateStepFinished, `intermediateStepFinished == fmi3False`>>, intermediate outputs of the FMU that the master inquires with `fmi3Get{VariableTypes}` correspond to not yet finished steps of the internal solver of the FMU, which may still change in the future, because the solver might revoke these intermediate steps. +
-_[So these outputs shall for example not be communicated to other connected FMUs.]_ +
+* If <<intermediateStepFinished, `intermediateStepFinished == fmi3False`>>, the intermediate outputs of the FMU that the master inquires with `fmi3Get{VariableTypes}` resulting from tentative interval solver states and may still change for the same <<intermediateUpdateTime>> (e.g., if the solver deems the tentative state to cause a too high approximation error, it may go back in time and try to re-estimate the state using smaller internal time steps). These outputs shall for example not be communicated to other connected FMUs.
 _[The use case for this is to let the Master do some calculations for the FMU even for unfinished solver steps._
-_This is beneficial for example for Transmission Line (TLM) co-simulation, where this helps to keep the interface clearer._
+_This is beneficial for example for Transmission Line (TLM) co-simulation, where this helps to keep the interface cleaner._
 _Instead of FMUs exchanging hard-to-understand variables such as "wave variable" and "characteristic impedance", they can exchange intuitive variables like "force" and "speed".]_
 
 * If <<intermediateStepFinished, `intermediateStepFinished == fmi3True`>>, intermediate outputs inquired by the master with `fmi3Get{VariableTypes}` correspond to accepted internal solver steps and will not change (if the master does not rollback the FMU).  +
@@ -254,18 +262,16 @@ This is only allowed if <<canReturnEarly,`canReturnEarly == fmi3True`>>.
 * `earlyReturnTime` is used to tell the FMU at what time to return early from the current <<fmi3DoStep>> (at the earliest), if the return value of <<earlyReturnRequested>> of <<fmi3CallbackIntermediateUpdate>> is `fmi3True`.
 If the <<earlyReturnTime>> is greater than the last signaled <<intermediateUpdateTime>>, the FMU may integrate up to the time instant <<earlyReturnTime>>.
 
+When providing intermediate inputs to the FMU, it is important that the master provides the same input value for the same variable, at the same <<intermediateUpdateTime>>. In other words, it is required that the calculation of inputs to the FMU be deterministic.
+This is assumed by the internal solver.
+If an input value changes for the same <<intermediateUpdateTime>>, the internal numerical solver may deem that re-estimate a state multiple times, without ever being able to decrease the approximation error.
+
+Because the FMU intermediate outputs may be trusted when <<intermediateStepFinished,`intermediateStepFinished == fmi3True`>>, the FMU is not allowed to call <<intermediateUpdate>> for a simulation time point prior to or equal to a previous call whose argument <<intermediateStepFinished,`intermediateStepFinished == fmi3True`>>.
+
 If the early return is conducted successfully by the FMU it must return with <<earlyReturn,`earlyReturn == fmi3True`>> from <<fmi3DoStep>>, indicating the current FMU time with <<lastSuccessfulTime>>.
 
 The Co-Simulation master can decide if a rollback of the FMU to reach the <<earlyReturnTime>> time is required or it may continue the simulation from <<lastSuccessfulTime>> for that FMU.
 Note that *Event Mode* is not supported in Basic Co-Simulation and Scheduled Co-Simulation.
-
-It is important to distinguish intermediate output from successful internal integration steps from intermediate outputs valid only for temporary solver states.
-<<figure-intermediate-variable-access>> shows an overview of the solver states and the intended use of intermediate variable access.
-It is not allowed to call <<intermediateUpdate>> for a simulation time point prior to or equal to a previous call with <<intermediateStepFinished,`intermediateStepFinished == fmi3True`>>.
-
-.Overview of solver states and intermediate variable access during a communication step
-[#figure-intermediate-variable-access]
-image::images/intermediatevariableaccess.svg[width=65%, align="center"]
 
 The following code example shows an implementation of <<fmi3CallbackIntermediateUpdate>> that uses intermediate variable access to record a set of variables at every internal solver step:
 
