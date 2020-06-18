@@ -891,7 +891,8 @@ The normalized string attribute `name` of the `<Terminal>` element is the instan
 The normalized string attribute `matchingRule` describes the rules for variable matching in a connection.
 As detailed in <<table-predefined-matching-rules>>, there are three predefined matching rules: plug, bus, and sequence.
 Other standards may define new matching rules.
-_[It is recommended that vendor specific rules start with `_vendorName` or `_toolName` to avoid namespace clashes.]_
+In order to avoid ambiguities and conflicts, rule names must follow the reverse domain notation of a domain that is controlled by the entity defining the semantics and content of the additional entries.
+The rule names beginning with `org.modelica` and `org.fmi-standard` are explicitly reserved for use by MAP FMI-defined layered standards.
 
 There is a sequence of terminal member variables, terminal stream member variables, nested terminals, and an optional `<TerminalGraphicalRepresentation>` element in the `<Terminal>` element.
 The member variables are the exchanged variables.
@@ -1104,7 +1105,7 @@ _[Nested terminals may have a `<TerminalGraphicalRepresentation>` element. Howev
 _[The order of painting of the `<TerminalGraphicalRepresentation>` of terminals on each level is equal to the order of appearance in the `<Terminal>` element. So graphical representations appearing first, are painted first, are behind graphical representations which appear below.]_
 
 The `Annotations` element can be used by vendors to store additional information for the graphical representation.
-_[It is suggested that Modelica tools store the Modelica annotation of the connector under the `type` `org.modelica.Modelica3Annotation` in the annotations of an element `connector`._
+_[It is suggested that Modelica tools store the Modelica annotation of the connector under the `type` `org.modelica.Modelica4Annotation` in the annotations of an element `connector`._
 _The attribute `name` of the connector element is equal to the `name` attribute of the referenced `fmi3Terminal`.]_
 
 _[If the graphical representation is used for an <<input>> or <<output>> (e.g. a `fmi3Float64` <<input>> `u`), then a `<Terminal>` has to be added to the `<Terminals>` element which has one `<TerminalMemberVariable>`.]_
@@ -1135,8 +1136,13 @@ These two options are mutually exclusive, i.e. for each `<Dimension>` element ei
 However different dimension sizes can be specified using different mechanisms and can have differing <<variability>> attributes.
 
 All initial dimension sizes (i.e. prior to any configuration or reconfiguration) must be positive integers (i.e. not zero), so that no dimension is initially vanished.
+
+_[This allows importing tools to ignore <<structuralParameter,`structural parameters`>> because that <<start>> value reflects the internal default setting of that <<structuralParameter,`structural parameter`>>._
+_The rationale for requiring positive start values for <<structuralParameter, `structural parameters`>> is that this avoids importers having to deal with vanishing dimensions if they do not want to deal with them (or even with changing sizes at all)._
+_If we allowed 0 dimension sizes for initial values, tools that do not even care about changing dimension sizes must be prepared to handle vanishing dimensions.]_
+
 Changes to dimension sizes are constrained by the `min`/`max` attributes of the referenced <<structuralParameter,`structural parameters`>>, which can be any non-negative integer, including zero.
-Specifying a minimum size of zero on a <<structuralParameter,`structural parameter`>>allows any related dimension sizes to be changed to zero in *Configuration Mode* or *Reconfiguration Mode*, thus causing the respective array size to go to zero, which leaves the respective array variable without any active elements.
+Specifying a minimum size of zero on a <<structuralParameter,`structural parameter`>> allows any related dimension sizes to be changed to zero in *Configuration Mode* or *Reconfiguration Mode*, thus causing the respective array size to go to zero, which leaves the respective array variable without any active elements.
 
 The actual dimension sizes of arrays are also constrained by the FMU platform, due to memory and addressing constraints:
 Since the API functions to access variables and their values are constrained to `size_t` individual elements, platforms with addresses of less than 64-bit width will not be able to access elements beyond their addressing limits, neither will they be able to allocate enough memory or address space to represent such arrays.
@@ -1237,7 +1243,7 @@ include::examples/structural_parameter_example.xml[tags=structuralParameter]
 
 _]_
 
-<<structuralParameter,`structural parameters`>> that are referenced in `<Dimension>` elements may have a `min` attribute with 0 but the <<start>> attribute, which is mandatory for <<structuralParameter,`structural parameters`>>, must have a value larger than 0 for <<structuralParameter,`structural parameters`>> used in `<Dimension>` elements. _[This allows importing tools to ignore <<structuralParameter,`structural parameters`>> because that <<start>> value reflects the internal default setting of that <<structuralParameter,`structural parameter`>>]_.
+<<structuralParameter,`structural parameters`>> that are referenced in `<Dimension>` elements may have a `min` attribute with 0 but the <<start>> attribute, which is mandatory for <<structuralParameter,`structural parameters`>>, must have a value larger than 0 for <<structuralParameter,`structural parameters`>> used in `<Dimension>` elements.
 
 The default of <<causality>> is <<local>>. +
 A continuous-time <<state>> or a event indicator must have <<causality>> = <<local>> or <<output>>, see also <<ModelStructure>>.
@@ -1307,9 +1313,9 @@ Examples: (a) automatic tests of FMUs are performed, and the FMU is tested by pr
 (b) For a Model Exchange FMU, the FMU might be part of an algebraic loop.
 If the <<input>> variable is iteration variable of this algebraic loop, then initialization starts with its <<start>> value.]_
 
-If <<causality>> = <<input>> the value for <<initial>> has to be set to <<exact>> and it is required to provide a <<start>> value for describing the expected initial condition of master <<clock,`clocks`>> for that FMU.
-If an <<inputClock>> has `fmi3True` as an <<start>> value the master should activate the <<clock>> the first time it enters *Event Mode*.
-The master can nevertheless choose different <<start>> values if it is not possible to fulfill the conditions in a simulation setup.
+If <<causality>> = <<input>> and <<variability>> = <<clock>>, that is, the variable is an <<inputClock>>, it is required to provide a <<start>> value for describing the expected initial condition of the <<inputClock>> for that FMU.
+If an <<inputClock>> has `fmi3True` as a <<start>> value, the environment should activate the <<clock>> the first time it enters *Event Mode*.
+The environment can nevertheless choose different <<start>> values if it is not possible to fulfill the conditions in a simulation setup.
 
 If <<causality>> = <<output>> the <<initial>> attribute value is set to <<calculated>> and no <<start>> value is provided.
 
