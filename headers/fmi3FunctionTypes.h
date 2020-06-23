@@ -84,7 +84,7 @@ typedef void (*fmi3CallbackIntermediateUpdate) (
     fmi3Float64 intermediateUpdateTime,
     fmi3Boolean eventOccurred,
     fmi3Boolean clocksTicked,
-    fmi3Boolean intermediateVariableSetAllowed,
+    fmi3Boolean intermediateVariableSetRequested,
     fmi3Boolean intermediateVariableGetAllowed,
     fmi3Boolean intermediateStepFinished,
     fmi3Boolean canReturnEarly,
