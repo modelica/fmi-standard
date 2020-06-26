@@ -3,7 +3,7 @@
 
 /*
 Standard header file to define the argument types of the
-functions of the Functional Mock-up Interface 3.0-alpha.3.
+functions of the Functional Mock-up Interface 3.0-alpha.4.
 This header file must be utilized both by the model and
 by the simulation engine.
 
