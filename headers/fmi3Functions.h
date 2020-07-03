@@ -4,7 +4,7 @@
 /*
 This header file must be utilized when compiling a FMU.
 It defines all functions of the
-     FMI 3.0-alpha.4 Model Exchange and Co-Simulation Interface.
+     FMI 3.0-alpha.5 Model Exchange and Co-Simulation Interface.
 
 In order to have unique function names even if several FMUs
 are compiled together (e.g. for embedded systems), every "real" function name
@@ -94,7 +94,7 @@ it may be set to __declspec(dllimport).
 #endif
 
 /* FMI version */
-#define fmi3Version "3.0-alpha.4"
+#define fmi3Version "3.0-alpha.5"
 
 /***************************************************
 Common Functions
