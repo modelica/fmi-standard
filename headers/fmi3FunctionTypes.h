@@ -126,21 +126,7 @@ typedef fmi3Instance fmi3InstantiateModelExchangeTYPE(
     fmi3InstanceEnvironment    instanceEnvironment,
     fmi3CallbackLogMessage     logMessage);
 
-typedef fmi3Instance fmi3InstantiateBasicCoSimulationTYPE(
-    fmi3String                     instanceName,
-    fmi3String                     instantiationToken,
-    fmi3String                     resourceLocation,
-    fmi3Boolean                    visible,
-    fmi3Boolean                    loggingOn,
-    const fmi3ValueReference       intermediateVariablesGetRequired[],
-    size_t                         nIntermediateVariablesGetRequired,
-    const fmi3ValueReference       intermediateVariablesSetRequired[],
-    size_t                         nIntermediateVariablesSetRequired,
-    fmi3InstanceEnvironment        instanceEnvironment,
-    fmi3CallbackLogMessage         logMessage,
-    fmi3CallbackIntermediateUpdate intermediateUpdate);
-
-typedef fmi3Instance fmi3InstantiateHybridCoSimulationTYPE(
+typedef fmi3Instance fmi3InstantiateCoSimulationTYPE(
     fmi3String                     instanceName,
     fmi3String                     instantiationToken,
     fmi3String                     resourceLocation,
