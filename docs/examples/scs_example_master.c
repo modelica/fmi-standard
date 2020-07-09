@@ -1,5 +1,3 @@
-// master implementation
-
 // Task scheduler
 	// every 10 ms:
 	Scheduler->ScheduleTask(Task10ms);
