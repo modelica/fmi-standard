@@ -22,7 +22,7 @@ void activateModelPartition10ms(fmi3Instance *instance, ...)
 	if (...) 
 	{
 		 // outputClock ticks
-		fmi3SetClock(6);
+		fmi3SetClock({7});
 		// inform master that output clock has ticked
 		fmi3Boolean clocksTicked = fmi3True;
 		instance->intermediateUpdate(..., clocksTicked, ...);
@@ -38,7 +38,7 @@ fmi3Clock outClockActivationState = fmi3ClockInactive;
 
 fmi3Status fmi3SetClock(fmi3ValueReference clockReference)
 {
-	if (outputClockReferences(0) == 7) outClockActivationState = fmi3ClockActive;
+	if (outputClockReferences[0] == 7) outClockActivationState = fmi3ClockActive;
 }
 
 fmi3Status fmi3GetClock(..., fmi3ValueReference outputClockReferences, 
