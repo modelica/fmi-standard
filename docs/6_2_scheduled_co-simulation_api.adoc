@@ -315,11 +315,11 @@ void Task2(void) //high priority
 
 The FMU ThreeInputClocks sketches the usage of the FMI functions. The example is given in a mix of pseudo-code and C, in order to keep it small and understandable. We consider one FMU with three model partitions. Two model partitions associated to two <<periodic>> <<inputClock,`input clocks`>> 10msClock and 50msClock (<<clock>> periods 10 ms and 50 ms) and one <<periodic,aperiodic>> <<inputClock>> AperiodicClock.
 
-During the execution of the model partition of <<inputClock,`input clock`>> 10msClock the <<inputClock,`output clock`>> outClock may tick and invoke the execution of model partition of <<periodic,aperiodic>> <<inputClock>> AperiodicClock.
+During the execution of the model partition of <<inputClock,`input clock`>> 10msClock the <<outputClock,`output clock`>> outClock may tick and invoke the execution of model partition of <<periodic,aperiodic>> <<inputClock>> AperiodicClock.
 
-The function calls <<fmi3ActivateModelPartition>> are executed in the context of preemptable tasks whose priorities are derived from the respective <<inputClock>> configurations of the FMU. In this example the execution of the task activating the model partition of <<inputClock>> AperiodicClock is waiting for the higher priority task of <<inputClock>> 10msClock to finish. Likewise the task of AperiodicClock is suspended when the higher priority task of 10msClock is scheduled again.
+The function calls <<fmi3ActivateModelPartition>> are executed in the context of preemptable tasks whose priorities are derived from the respective <<inputClock>> configurations of the FMU. In this example the execution of the task of <<inputClock>> AperiodicClock is waiting for the higher priority task of <<inputClock>> 10msClock to finish. Likewise the task of AperiodicClock is suspended when the higher priority task of 10msClock is scheduled again.
 
-The example also depicts how a task associated to an even lower prior <<inputClock>> clock 50msClock is delayed several times by higher priority tasks. Note that the `activationTime` of <<fmi3ActivateModelPartition>> is the time when the task is scheduled.
+The example also depicts how a task associated to an even lower prior <<inputClock>> clock 50msClock is delayed several times by higher priority tasks. Note that the point of time when the task was scheduled is the `activationTime` of <<fmi3ActivateModelPartition>> (...Activate...(`input clock`, `activationTime`)).
 
 .Scheduled Co-Simulation Example ThreeInputClocks
 [[figure-scs_example]]
@@ -327,11 +327,7 @@ image::images/scs_example.png[width=90%, align="center"]
 
 ===== Description Schema [[scheduled-co-simulation-schema]]
 
-The simulation master collects the information about the number and properties of <<clock,`clocks`>> supported by the FMU via analyzing the <<modelDescription.xml>> as defined in <<fmi-description-schema>>.
-
-priorities
-periods
-reference out -> in
+The simulation master collects the information about the number and properties of <<clock,`clocks`>> supported by the FMU via analyzing the <<modelDescription.xml>> as defined in <<fmi-description-schema>>. For every <<inputClock,`input clock`>> the master defines a task. The properties `period` and `priority` are defined based on the <<inputClock,`input clocks'`>> `period` and `priority`. The master can read from the <<modelDescription.xml>> that <<outputClock,`output clock`>> outClock may tick triggered by <<inputClock>> 10msClock and that <<inputClock>> AperiodicClock is triggered by outClock.
 
 [source, xml]
 ----
@@ -341,10 +337,7 @@ include::examples/scs_example_modelDescription.xml[]
 
 ===== Master Implementation
 
-Tasks to call activate
-Scheduler for periodic tasks
-Setup tasks by clocks
-Connect outClock -> input: ... intermediateUpdate -> SCheudle
+To enable the computation of a Scheduled Co-Simulation FMU a master has to provide a task scheduler. Depending on the particular configuration  the master sets up tasks for every <<inputClock,`input clock`>> (compare <<scheduled-co-simulation-schema>> above). When executed each task calls <<fmi3ActivateModelPartition>> for its respective <<inputClock,`input clock`>>. The `activationTime` is provided by the master. Periodic tasks can be scheduled on initialization of the simulation application. Aperiodic tasks are scheduled explicitly during the execution. In this example <<inputClock,`input clock`>> AperiodicClock is triggered by <<outputClock,`output clock`>> outClock thus the master ensures the task associated to AperiodicClock is scheduled when <<fmi3CallbackIntermediateUpdate>> is called by the FMU and outClock has ticked.
 
 [source, C]
 ----
@@ -353,9 +346,7 @@ include::examples/scs_example_master.c[]
 
 ===== FMU Implementation
 
-Implement ActivateM..
-Let clock outClock tick
-Reset outClock
+The FMU implements <<fmi3ActivateModelPartition>> dispatching for every <<inputClock,`input clock`>>. It lets <<outputClock,`output clock`>> outClock tick and calls <<fmi3CallbackIntermediateUpdate>>. If <<fmi3GetClock>> is called for a certain <<outputClock,`output clock`>> the <<outputClock,`output clock`>> is reset.
 
 [source, C]
 ----
