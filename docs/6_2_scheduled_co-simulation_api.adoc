@@ -313,7 +313,13 @@ void Task2(void) //high priority
 
 ==== Pseudo-Code Example for Scheduled Co-Simulation
 
-The FMU ThreeInputClocks sketches the usage of the FMI functions. The example is given in a mix of pseudo-code and C, in order to keep it small and understandable. We consider one FMU with three model partitions. Two model partitions associated to two <<periodic>> <<inputClock,`input clocks`>> (<<clock>> periods 10 ms and 50 ms) and one <<periodic,aperiodic>> <<inputClock>>.
+The FMU ThreeInputClocks sketches the usage of the FMI functions. The example is given in a mix of pseudo-code and C, in order to keep it small and understandable. We consider one FMU with three model partitions. Two model partitions associated to two <<periodic>> <<inputClock,`input clocks`>> 10msClock and 50msClock (<<clock>> periods 10 ms and 50 ms) and one <<periodic,aperiodic>> <<inputClock>> AperiodicClock.
+
+During the execution of the model partition of <<inputClock,`input clock`>> 10msClock the <<inputClock,`output clock`>> outClock may tick and invoke the execution of model partition of <<periodic,aperiodic>> <<inputClock>> AperiodicClock.
+
+The function calls <<fmi3ActivateModelPartition>> are executed in the context of preemptable tasks whose priorities are derived from the respective <<inputClock>> configurations of the FMU. In this example the execution of the task activating the model partition of <<inputClock>> AperiodicClock is waiting for the higher priority task of <<inputClock>> 10msClock to finish. Likewise the task of AperiodicClock is suspended when the higher priority task of 10msClock is scheduled again.
+
+The example also depicts how a task associated to an even lower prior <<inputClock>> clock 50msClock is delayed several times by higher priority tasks. Note that the `activationTime` of <<fmi3ActivateModelPartition>> is the time when the task is scheduled.
 
 .Scheduled Co-Simulation Example ThreeInputClocks
 [[figure-scs_example]]
@@ -321,19 +327,24 @@ image::images/scs_example.png[width=90%, align="center"]
 
 ===== Description Schema [[scheduled-co-simulation-schema]]
 
+The simulation master collects the information about the number and properties of <<clock,`clocks`>> supported by the FMU via analyzing the <<modelDescription.xml>> as defined in <<fmi-description-schema>>.
+
+priorities
+periods
+reference out -> in
+
 [source, xml]
 ----
 include::examples/scs_example_modelDescription.xml[]
 ----
 
-The simulation master collects the information about the number and properties of <<clock,`clocks`>> supported by the FMU via analyzing the <<modelDescription.xml>> as defined in section 2.2. and 4.3.
-
-Each <<clock>> that ticks outside of the FMU is activated for an FMU based on its <<clockReference>>.
-There is a direct one-to-one relation for a <<clock>> and a model partition.
-
-A Scheduled Co-Simulation FMU must have at least one <<inputClock,`input clock`>>.
 
 ===== Master Implementation
+
+Tasks to call activate... 
+Scheduler for periodic tasks
+Setup tasks by clocks
+Connect outClock -> input: ... intermediateUpdate -> SCheudle
 
 [source, C]
 ----
@@ -341,6 +352,10 @@ include::examples/scs_example_master.c[]
 ----
 
 ===== FMU Implementation
+
+Implement ActivateM..
+Let clock outClock tick
+Reset outClock
 
 [source, C]
 ----
