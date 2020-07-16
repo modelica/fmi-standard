@@ -139,7 +139,7 @@ typedef fmi3Instance fmi3InstantiateCoSimulationTYPE(
     fmi3CallbackLogMessage         logMessage,
     fmi3CallbackIntermediateUpdate intermediateUpdate);
 
-typedef fmi3Instance fmi3InstantiateScheduledCoSimulationTYPE(
+typedef fmi3Instance fmi3InstantiateScheduledExecutionTYPE(
     fmi3String                     instanceName,
     fmi3String                     instantiationToken,
     fmi3String                     resourceLocation,
