@@ -106,9 +106,8 @@ Common Functions
 
 /* Creation and destruction of FMU instances */
 #define fmi3InstantiateModelExchange         fmi3FullName(fmi3InstantiateModelExchange)
-#define fmi3InstantiateBasicCoSimulation     fmi3FullName(fmi3InstantiateBasicCoSimulation)
-#define fmi3InstantiateHybridCoSimulation    fmi3FullName(fmi3InstantiateHybridCoSimulation)
-#define fmi3InstantiateScheduledCoSimulation fmi3FullName(fmi3InstantiateScheduledCoSimulation)
+#define fmi3InstantiateCoSimulation          fmi3FullName(fmi3InstantiateCoSimulation)
+#define fmi3InstantiateScheduledExecution    fmi3FullName(fmi3InstantiateScheduledExecution)
 #define fmi3FreeInstance                     fmi3FullName(fmi3FreeInstance)
 
 /* Enter and exit initialization mode, terminate and reset */
@@ -214,9 +213,8 @@ FMI3_Export fmi3SetDebugLoggingTYPE fmi3SetDebugLogging;
 
 /* Creation and destruction of FMU instances */
 FMI3_Export fmi3InstantiateModelExchangeTYPE         fmi3InstantiateModelExchange;
-FMI3_Export fmi3InstantiateBasicCoSimulationTYPE     fmi3InstantiateBasicCoSimulation;
-FMI3_Export fmi3InstantiateHybridCoSimulationTYPE    fmi3InstantiateHybridCoSimulation;
-FMI3_Export fmi3InstantiateScheduledCoSimulationTYPE fmi3InstantiateScheduledCoSimulation;
+FMI3_Export fmi3InstantiateCoSimulationTYPE          fmi3InstantiateCoSimulation;
+FMI3_Export fmi3InstantiateScheduledExecutionTYPE    fmi3InstantiateScheduledExecution;
 FMI3_Export fmi3FreeInstanceTYPE                     fmi3FreeInstance;
 
 /* Enter and exit initialization mode, terminate and reset */

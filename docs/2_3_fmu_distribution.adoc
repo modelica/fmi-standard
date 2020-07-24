@@ -228,13 +228,13 @@ In such cases special handling is needed, for example, by providing the run-time
 ===== Dependency on Installed Tool [[dependency-on-exteranl-tool]]
 
 FMI provides the means for two kinds of implementation: `needsExecutionTool = true` and `needsExecutionTool = false`.
-In the first case a tool specific wrapper DLL/SharedObject has to be provided as the binary, in the second a compiled or source code version of the model with its solver is stored (see <<fmi-for-basic-co-simulation>> for details).
+In the first case a tool specific wrapper DLL/SharedObject has to be provided as the binary, in the second a compiled or source code version of the model with its solver is stored (see <<fmi-for-co-simulation>> for details).
 
 ===== Multiple Interface Types [[multiple-interface-types]]
 
 In an FMU multiple interface types might be present.
 If in all cases the executable part is provided as a shared library, then one of up to four libraries can be provided.
-The library names are defined in the `modelIdentifier` attribute of elements `<fmiModelDescription><ModelExchange|{Basic|Hybrid|Scheduled}CoSimulation>`:
+The library names are defined in the `modelIdentifier` attribute of elements `<fmiModelDescription><ModelExchange|CoSimulation|ScheduledExecution>`:
 
 ----
 [Example of different libraries:
@@ -242,10 +242,8 @@ The library names are defined in the `modelIdentifier` attribute of elements `<f
      x86_64-windows
         MyModel_ModelExchange.dll      // modelIdentifier of <ModelExchange> =
                                        //    "MyModel_ModelExchange"
-        MyModel_BasicCoSimulation.dll  // modelIdentifier of <BasicCoSimulation> =
-                                       //    "MyModel_BasicCoSimulation"
-        MyModel_HybridCoSimulation.dll // modelIdentifier of <HybridCoSimulation> =
-                                       //    "MyModel_HybridCoSimulation"
+        MyModel_CoSimulation.dll       // modelIdentifier of <CoSimulation> =
+                                       //    "MyModel_CoSimulation"
 ]
 ----
 
@@ -270,3 +268,16 @@ In order to avoid ambiguities and conflicts, the extra files should be provided 
 The use of subdirectories beginning with `org.modelica` and `org.fmi-standard` is explicitly reserved for use by MAP FMI-defined layered standards, i.e. other uses must not use subdirectory names beginning with these prefixes.
 It is explicitly allowed for tools and users other than the original creator of an FMU to modify, add or delete entries in the `extra/` directory without affecting the validity of the FMU in all other aspects.
 Specifically all validation or digital signature schemes used to protect the content of the FMU should take the variability of extra file content into account _[(for example by having seperate checksums or signatures for FMU core content and extra content, or not having signatures at all for extra content)]_.
+
+===== Supporting Multiple Interface Types in one FMU
+
+Exporters are encouraged to support multiple FMI interface types in one FMU, so it can be used in differently capable master implementations and for different use cases.
+To indicate support for a specific interface type, the `<fmiModelDescription>` must have the respective element present. +
+_[That improves the reusability of FMUs._
+_A common application of this multiple mode support is the reuse of FMUs for real-time and non-real-time simulations.]_ +
+The described multi-mode support is based on wrapping functionality into the <<fmi3DoStep>> function by emulating missing features of the Co-Simulation or Model Exchange interface types, the FMU has been specifically exported for. +
+_[An FMU that supports <<scheduled-execution-api,Scheduled Execution>> will in most cases also support <<co-simulation-api,Co-Simulation>>._
+_Wrapping towards other Co-Simulation interfaces can influence the simulation results._
+_Depending on the model, wrapping towards the Co-Simulation interface may result in divergent simulation results._
+_Especially <<periodic,aperiodic>> <<inputClock,`input clocks`>> can not always be sufficiently emulated in modes that do not directly support <<clock,`clocks`>>._
+_Therefore it is recommended that the FMU provides logging information to the user about the influence of the current mode on simulation results, if non-optimal modes are used by the simulation environment.]_

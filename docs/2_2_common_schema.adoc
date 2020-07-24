@@ -169,14 +169,11 @@ _[If an optional element is present and defines a list (such as `<UnitDefinition
 |`<ModelExchange>`
 |If present, the FMU is based on FMI for Model Exchange (<<fmi-for-model-exchange>>) _[(in other words, the FMU includes the model or the communication to a tool that provides the model, and the environment provides the simulation engine)]_.
 
-|`<BasicCoSimulation>`
-|If present, the FMU is based on FMI for Basic Co-Simulation (<<fmi-for-basic-co-simulation>>) _[(in other words, the FMU includes the model and the simulation engine, or a communication to a tool that provides the model and the simulation engine, and the environment provides the master algorithm to run coupled FMU Co-Simulation slaves together)]_.
+|`<CoSimulation>`
+|If present, the FMU is based on FMI for Co-Simulation (<<fmi-for-co-simulation>>).
 
-|`<HybridCoSimulation>`
-|If present, the FMU is based on FMI for Hybrid Co-Simulation (<<fmi-for-hybrid-co-simulation>>).
-
-|`<ScheduledCoSimulation>`
-|If present, the FMU is based on FMI for Scheduled Co-Simulation (<<fmi-for-scheduled-co-simulation>>).
+|`<ScheduledExecution>`
+|If present, the FMU is based on FMI for Scheduled Execution (<<fmi-for-scheduled-execution>>).
 
 |`<UnitDefinitions>`
 |A global list of unit and display unit definitions _[for example, used to convert display units into the units used in the model equations]_.
@@ -208,9 +205,9 @@ _[The calculation of derivatives of event indicators is not provided.]_.
 
 |====
 
-At least one element of `<ModelExchange>`, `<BasicCoSimulation>`, `<HybridCoSimulation>` or `<ScheduledCoSimulation>` must be present to identify the type of the FMU.
-If both elements are defined, different types of models are included in the FMU.
-The details of these elements are defined in <<ModelExchange>>, <<fmi-for-basic-co-simulation>>, <<fmi-for-hybrid-co-simulation>> or <<fmi-for-scheduled-co-simulation>>.
+At least one element of `<ModelExchange>`, `<CoSimulation>` or `<ScheduledExecution>` must be present to identify the type of the FMU.
+If multiple elements are defined, different types of models are included in the FMU.
+The details of these elements are defined in <<fmi-for-model-exchange>>, <<fmi-for-co-simulation>> or <<fmi-for-scheduled-execution>>.
 
 The XML attributes of `<fmiModelDescription>` are:
 
@@ -621,7 +618,7 @@ The type of <<clock,`clocks`>> is defined based on the mandatory attribute `cloc
 `= synchronousTime` is used, if the properties of the <<clock>> adhere to synchronous clock theory.
 
 [[communicationPoint,`communicationPoint`]]
-`= communicationPoint` <<clock,`clocks`>> define sampling points (i.e. communication points) for the variables of model partitions and are used in Hybrid Co-Simulation and FMI for Scheduled Co-Simulation.
+`= communicationPoint` <<clock,`clocks`>> define sampling points (i.e. communication points) for the variables of model partitions and are used in FMI for Co-Simulation and FMI for Scheduled Execution.
 These clocks are ignored by Model Exchange.
 
 It is not allowed to include <<clock,`clocks`>> of different `clockType` in one FMU.
@@ -1257,7 +1254,7 @@ _For example, when importing an FMU in a Modelica environment, a <<calculatedPar
 [[variability,`variability`]]
 Enumeration that defines the time dependency of the variable, in other words, it defines the time instants when a variable can change its value.
 _[The purpose of this attribute is to define when a result value needs to be inquired and to be stored._
-_For example, <<discrete>> variables change their values only at event instants (ME) or at a communication point (xCS) and it is therefore only necessary to inquire them with `fmi3Get{VariableType}` and store them at event times.]_
+_For example, <<discrete>> variables change their values only at event instants (ME) or at a communication point (CS and SE) and it is therefore only necessary to inquire them with `fmi3Get{VariableType}` and store them at event times.]_
 Allowed values of this enumeration:
 
 [[constant,`constant`]]
@@ -1267,8 +1264,8 @@ Allowed values of this enumeration:
 `= fixed`: The value of the variable is fixed after initialization, in other words, after <<fmi3ExitInitializationMode>> was called the variable value does not change anymore.
 
 [[tunable,`tunable`]]
-`= tunable`: The value of the variable is constant between external events (ME) and between communication points (xCS) due to changing variables with <<causality>> = <<parameter>> or <<input>> and <<variability>> = <<tunable>>.
-Whenever a <<parameter>> or <<input>> signal with <<variability>> = <<tunable>> changes, an event is triggered externally (ME), or the change is performed at the next communication point (xCS) and the variables with <<variability>> = <<tunable>> and <<causality>> = <<calculatedParameter>> or <<output>> must be newly computed.
+`= tunable`: The value of the variable is constant between external events (ME) and between communication points (CS and SE) due to changing variables with <<causality>> = <<parameter>> or <<input>> and <<variability>> = <<tunable>>.
+Whenever a <<parameter>> or <<input>> signal with <<variability>> = <<tunable>> changes, an event is triggered externally (ME), or the change is performed at the next communication point (CS and SE) and the variables with <<variability>> = <<tunable>> and <<causality>> = <<calculatedParameter>> or <<output>> must be newly computed.
 
 [[discrete,`discrete`]]
 `= discrete`: +
@@ -1363,7 +1360,7 @@ For scalar clock variables this attribute must not be specified or must be speci
 If this boolean attribute is `true`, the variable can be accessed during a communication step.
 Variables with <<causality>> <<parameter>> must not be marked with <<intermediateAccess,`intermediateAccess = true`>>.
 
-This attribute is only used for Basic Co-Simulation and Hybrid Co-Simulation. The default value of this attribute is `false`.
+This attribute is only used for Co-Simulation. The default value of this attribute is `false`.
 |====
 
 If <<initial>> is not present, its value is defined by <<table-definition-initial>> based on the values of <<causality>> and <<variability>>:
@@ -1601,7 +1598,7 @@ _Discussion of the combinations that are allowed_:
 
 >|_[green]#(2)#_
 |_<<tunable>> <<parameter>>_
-|_<<tunable,`Tunable`>> <<parameter>> (changing such a <<parameter>> triggers an external event (ME) or takes effect at the next communication point (xCS), and <<tunable>> <<calculatedParameter>>/<<output>>/<<local>> variables might change their values)._
+|_<<tunable,`Tunable`>> <<parameter>> (changing such a <<parameter>> triggers an external event (ME) or takes effect at the next communication point (CS and SE), and <<tunable>> <<calculatedParameter>>/<<output>>/<<local>> variables might change their values)._
 
 >|_[green]#(3)#_
 |_<<fixed>> <<dependenciesKind,`dependent`>> <<parameter>>_
@@ -1609,7 +1606,7 @@ _Discussion of the combinations that are allowed_:
 
 >|_[green]#(4)#_
 |_<<tunable>> <<dependenciesKind,`dependent`>> <<parameter>>_
-|_<<tunable,`Tunable`>> <<dependenciesKind,`dependent`>> <<parameter>> (changing a <<parameter>> triggers an external event (ME) or takes effect at the next communication point (xCS), and <<tunable>> <<dependenciesKind,`dependent`>> <<parameter,`parameters`>> and <<tunable>> <<local>> variables might change their values)._
+|_<<tunable,`Tunable`>> <<dependenciesKind,`dependent`>> <<parameter>> (changing a <<parameter>> triggers an external event (ME) or takes effect at the next communication point (CS and SE), and <<tunable>> <<dependenciesKind,`dependent`>> <<parameter,`parameters`>> and <<tunable>> <<local>> variables might change their values)._
 
 >|_[green]#(5)#_
 |_<<discrete>> <<input>>_
@@ -1697,7 +1694,7 @@ _Instead, this is a short hand notation for:_
 _Basically this means that a new simulation run is started from the previous FMU state with changed <<parameter>> values._
 _With this interpretation, changing <<parameter,`parameters`>> online is "clean", as long as these changes appear at an event instant._
 
-_FMI for Basic Co-Simulation and FMI for Hybrid Co-Simulation:_
+_FMI for Co-Simulation:_
 _Changing of <<tunable>> <<parameter,`parameters`>> is allowed before an <<fmi3DoStep>> call (so, whenever an <<input>> can be set with `fmi3Set{VariableType}`) and before <<fmi3ExitInitializationMode>> is called (that is before and during *Initialization Mode*)._
 _The FMU internally carries out event handling if necessary.]_
 
@@ -1798,7 +1795,7 @@ _[If, for example, an `<Enumeration>` is defined with `name1 = -4`, `name2 = 1`,
 The structure of the model is defined in element `<fmiModelDescription><ModelStructure>`.
 This structure is with respect to the underlying model equations, independently how these model equations are solved.
 _[For example, when exporting a model in more than one FMI format; then the model structure is identical in all cases._
-_E.g. a Basic Co-Simulation FMU has either an integrator included that solves the model equations, or the discretization formula of the integrator and the model equations are solved together ("inline integration")._
+_E.g. a Co-Simulation FMU has either an integrator included that solves the model equations, or the discretization formula of the integrator and the model equations are solved together ("inline integration")._
 _In all cases the model has the same continuous-time <<state,`states`>>._
 _In the case of a Model-Exchange FMU, the internal implementation is a discrete-time system, but from the outside this is still a continuous-time model that is solved with an integration method.]_
 
@@ -1806,9 +1803,9 @@ The required part defines an ordering of the <<output,`outputs`>>, the (exposed)
 The ordering of the <<input,`inputs`>> should be performed in this case according to the ordering in `<ModelVariables>`.]_
 A Model Exchange FMU must expose all <<derivative,`derivatives`>> of its continuous-time <<state,`states`>> in elements `<ModelStructure><Derivative>` and must expose all event indicators in elements `<EventIndicator>`.
 A Co-Simulation FMU does not need to expose these state derivatives and event indicators.
-_[If a Basic Co-Simulation FMU exposes its state derivatives, they are usually not utilized for the co-simulation, but, for example, to linearize the FMU at a communication point.]_
+_[If a Co-Simulation FMU exposes its state derivatives, they are usually not utilized for the co-simulation, but, for example, to linearize the FMU at a communication point.]_
 
-The optional part defines in which way <<derivative,`derivatives`>>, <<output,`outputs`>>, and initial unknowns, depend on <<input,`inputs`>>, and continuous-time <<state,`states`>>, at the current super-dense time instant (ME) or at the current communication point (xCS).
+The optional part defines in which way <<derivative,`derivatives`>>, <<output,`outputs`>>, and initial unknowns, depend on <<input,`inputs`>>, and continuous-time <<state,`states`>>, at the current super-dense time instant (ME) or at the current communication point (CS and SE).
 _[The listed <<dependencies>> declare the dependencies between whole (multi-dimensional-)variables and not individual elements of the variables.]_
 _[A simulation environment can utilize this information to improve the efficiency, for example, when connecting FMUs together, or when computing the partial derivative of the <<derivative,`derivatives`>> with respect to the <<state,`states`>> in the simulation engine.]_
 
@@ -1835,7 +1832,7 @@ _[Note that all <<output>> variables are listed here, especially <<discrete>> an
 _The ordering of the variables in this list is defined by the exporting tool._
 _Usually, it is best to order according to the declaration order in the source model, since then the `<Output>` list does not change if the declaration order of <<output,`outputs`>> in the source model is not changed._
 _This is for example, important for linearization, in order that the interpretation of the output vector does not change for a re-exported FMU.]_
-Attribute <<dependencies>> defines the dependencies of the <<output,`outputs`>> from the knowns at the current super-dense time instant in Event and in *Continuous-Time Mode* (ME) and at the current communication point (xCS).
+Attribute <<dependencies>> defines the dependencies of the <<output,`outputs`>> from the knowns at the current super-dense time instant in Event and in *Continuous-Time Mode* (ME) and at the current communication point (CS and SE).
 Beside the knowns, the <<output,`outputs`>> also depend on the freeze variables (= variables which cannot be changed in the current mode) but these freeze variables are not listed as <<dependencies>>.
 The functional dependency is defined as (dependencies of variables that are fixed in Event and *Continuous-Time Mode* and at communication points are not shown): +
 latexmath:[{(\mathbf{y}_c, \mathbf{y}_d) := \mathbf{f}_{\mathit{output}}(\mathbf{x}_c, \mathbf{u}_c, \mathbf{u}_d, t, \mathbf{p}_{\mathit{tune}})}]
@@ -1856,7 +1853,7 @@ _[This is the default._
 _If an FMU supports more than Model Exchange , then the `<Derivative>` elements might be present, since it is needed for Model Exchange._
 _If the above flag is set to `false` for the Co-Simulation cases, then the `<Derivative>` elements are ignored for Co-Simulation._
 _If "inline integration" is used for a co-simulation slave, then the model still has continuous-time <<state,`states`>> and just a special solver is used (internally the implementation results in a discrete-time system, but from the outside, it is still a continuous-time system).]_ +
-Attribute <<dependencies>> defines the dependencies of the state derivatives from the knowns at the current super-dense time instant in Event and in *Continuous-Time Mode* (ME) and at the current communication point (xCS).
+Attribute <<dependencies>> defines the dependencies of the state derivatives from the knowns at the current super-dense time instant in Event and in *Continuous-Time Mode* (ME) and at the current communication point (CS and SE).
 Beside the knowns the derivatives also depend on the freeze variables (= variables which cannot be changed in the current mode) but these freeze variables are not listed as <<dependencies>>.
 The functional dependency is defined as (dependencies of variables that are fixed in Event and *Continuous-Time Mode* and at communication points are not shown): +
 latexmath:[{\dot{\mathbf{x}_c} := \mathbf{f}_{\mathit{der}}(\mathbf{x}_c, \mathbf{u}_c, \mathbf{u}_d, t, \mathbf{p}_{\mathit{tune}})}]
@@ -1871,7 +1868,7 @@ This list consists of all variables with
 
 - <<causality>> = <<calculatedParameter>> and
 
-- all continuous-time <<state,`states`>> and all state derivatives (defined with elements `<ModelStructure><Derivative>`) with <<initial>> = <<approx>> or <<calculated>> _[if a Basic Co-Simulation FMU does not define the `<ModelStructure><Derivative>` elements, (3) cannot be present]_.
+- all continuous-time <<state,`states`>> and all state derivatives (defined with elements `<ModelStructure><Derivative>`) with <<initial>> = <<approx>> or <<calculated>> _[if a Co-Simulation FMU does not define the `<ModelStructure><Derivative>` elements, (3) cannot be present]_.
 
 The resulting list is not allowed to have duplicates (for example, if a <<state>> is also an <<output>>, it is included only once in the list). +
 Attribute <<dependencies>> defines the dependencies of the unknowns from the knowns in *Initialization Mode* at the initial time.
@@ -1935,7 +1932,7 @@ Optional attribute defining the dependencies of the unknown latexmath:[{v_{\math
 If not present, it must be assumed that the unknown depends on all knowns.
 If present as empty list, the unknown depends on none of the knowns.
 Otherwise the unknown depends on the knowns defined by the given value references. +
-Knowns latexmath:[{\mathbf{v}_{\mathit{known}}}] in *Event Mode* and *Continuous-Time Mode* (ME) and at communication points (xCS) for `<Output>` and `<Derivative>` elements:
+Knowns latexmath:[{\mathbf{v}_{\mathit{known}}}] in *Event Mode* and *Continuous-Time Mode* (ME) and at communication points (CS and SE) for `<Output>` and `<Derivative>` elements:
 
 - inputs (variables with <<causality>> = <<input>>)
 
@@ -1972,13 +1969,13 @@ Only for floating point type unknowns latexmath:[{v_{\mathit{unknown}}}]:
 
 `=` <<constant>>: constant factor, latexmath:[{c \cdot v_{\mathit{known},i}}] where latexmath:[{c}] is an expression that is evaluated before <<fmi3EnterInitializationMode>> is called.
 
-Only for floating point type unknowns latexmath:[{v_{\mathit{unknown}}}] in Event and *Continuous-Time Mode* (ME) and at communication points (xCS), and not for <<InitialUnknown>> for *Initialization Mode*:
+Only for floating point type unknowns latexmath:[{v_{\mathit{unknown}}}] in Event and *Continuous-Time Mode* (ME) and at communication points (CS and SE), and not for <<InitialUnknown>> for *Initialization Mode*:
 
 `=` <<fixed>>: fixed factor, latexmath:[{p \cdot v_{\mathit{known},i}}] where latexmath:[{p}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called.
 
-`=` <<tunable>>: tunable factor, latexmath:[{p \cdot v_{\mathit{known},i}}] where latexmath:[{p}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called and in *Event Mode* due to an external event (ME) or at a communication point (xCS)
+`=` <<tunable>>: tunable factor, latexmath:[{p \cdot v_{\mathit{known},i}}] where latexmath:[{p}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called and in *Event Mode* due to an external event (ME) or at a communication point (CS and SE)
 
-`=` <<discrete>>: discrete factor, latexmath:[{d \cdot v_{\mathit{known},i}}] where latexmath:[{d}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called and in *Event Mode* due to an external or internal event or at a communication point (xCS).
+`=` <<discrete>>: discrete factor, latexmath:[{d \cdot v_{\mathit{known},i}}] where latexmath:[{d}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called and in *Event Mode* due to an external or internal event or at a communication point (CS and SE).
 |====
 
 _[Example 1:_
@@ -2101,7 +2098,7 @@ _Examples:_
 - _If a state derivative `der_x` is a function of a <<parameter>> p (so of a <<start>> value of a variable with <<causality>> = <<parameter>> and <<variability>> = <<fixed>>), and the FMU does not support an iteration over `p` during *Initialization Mode* (for example, to iterate over p such that the state derivative `der_x` is zero), then the <<dependencies>> list of `der_x` should not include `p`._
 _If an FMU is imported in an environment and such an iteration is set up, then the tool can figure out that the resulting algebraic system of equations is structurally singular and therefore can reject such a definition._
 
-- _For Basic Co-Simulation FMUs, it is common that no algebraic loops over the <<input>> / <<output>> variables nor over <<start>> values is supported._
+- _For Co-Simulation FMUs, it is common that no algebraic loops over the <<input>> / <<output>> variables nor over <<start>> values is supported._
 _In such a case, all <<dependencies>> lists for <<output>> variables under the <<InitialUnknown>> element should be defined as empty lists defining that the setting of <<input,`inputs`>> and/or of <<start>> values does not influence the <<output,`outputs`>>._
 _As a result, it is not possible to formulate algebraic loops of connected FMUs during *Initialization Mode*.]_
 

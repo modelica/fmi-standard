@@ -1,15 +1,15 @@
-=== Description Schema [[basic-co-simulation-schema]]
+=== Description Schema [[co-simulation-schema]]
 
 This is defined in <<fmi-description-schema>>.
 Additionally, the Co-Simulation specific element `Implementation` is defined in the next section.
 
-==== Basic Co-Simulation FMU
+==== Co-Simulation FMU
 
-If the XML file defines an FMU for Basic Co-Simulation, element `BasicCoSimulation` must be present.
+If the XML file defines an FMU for Co-Simulation, element `CoSimulation` must be present.
 It is defined as:
 
 [[recommendedIntermediateInputSmoothness,`recommendedIntermediateInputSmoothness`]]
-image::images/schema/BasicCoSimulation.png[width=80%, align="center"]
+image::images/schema/CoSimulation.png[width=80%, align="center"]
 
 These attributes have the following meaning (all attributes are optional with exception of `modelIdentifier`):
 
@@ -26,7 +26,7 @@ See also <<header-files-and-naming-of-functions>>.
 
 |`needsExecutionTool`
 |If `true`, a tool is needed to execute the model.
-The FMU just contains the communication to this tool (see <<figure-co-simulation-with-tool-coupling>>).
+The FMU just contains the communication to this tool.
 _[Typically, this information is only utilized for information purposes._
 _For example, a Co-Simulation master can inform the user that a tool has to be available on the computer where the slave is instantiated._
 _The name of the tool can be taken from the attribute `generationTool` in `<fmiModelDescription>`.]_
@@ -75,19 +75,58 @@ _[If for example the FMU uses internally a variable step BDF solver of order 4, 
 |The fixed internal step size of the FMU (optional).
 _[This information can be used by the co-simulation master to synchronize the communication interval with the internal step size of the FMU._
 _The co-simulation master should calculate the communication points by multiplying (`number_of_steps * step_size`) instead of repeatedly incrementing (`time += step_size`) to avoid the accumulation of numerical errors.]_
+
+|`hasEventMode`
+|If `true` the FMU supports `fmi3EnterEventMode` and `fmi3ExitEventMode`.
+Even if this flag is `true`, the co-simulation master can chose to delegate event handling to the FMU by calling <<fmi3InstantiateCoSimulation>> with `eventModeRequired == fmi3False`.
+If `eventModeRequired == fmi3True`, the co-simulation master will have to actively trigger event handling in the FMU using `fmi3EnterEventMode` and `fmi3ExitEventMode`.
+Calling <<fmi3InstantiateCoSimulation>> with `eventModeRequired == fmi3True` when the flag `hasEventMode = false` must raise an error from the FMU during instantiation.
+_[As with other optional features, these functions have to be present regardless of this flag._
+_The co-simulation master is informed this way if calling these functions triggers event handling functionalities._
 |====
 
 Note that if `needsExecutionTool = true`, then it is required that the original tool is available to be executed during co-simulation.
 If `needsExecutionTool = false`, the slave is completely contained inside the FMU in source code or binary format (DLL/SharedObject).
 
+=== Clocks in Co-Simulation [[clocks-in-co-simulation]]
+
+The Co-Simulation master collects the information about the number and properties of <<clock,`clocks`>> supported by the FMU by analyzing the <<modelDescription.xml>>, see <<clock-type-definition>>.
+
+The definition of <<clock,`clocks`>> is optional.
+
+Each <<inputClock>> that ticks outside of the FMU, is activated for an FMU based on their <<valueReference>>.
+<<outputClock,`Output clocks`>> inside of an FMU signal their activation based on their <<valueReference>>`.
+
+_[If <<dependencies>> (`fmi3Unknown`) are defined in the `<ModelStructure>` section of the <<modelDescription.xml>>, it is recommended to define such <<dependencies>> only within a model partition of a model (i.e. between variables that are assigned to the same <<clock>>).]_
+
+If <<dependencies>> are defined for variables across model partitions, such variables can not be assigned to a <<clock>> via <<clockReference>>.
+
+For FMI for Co-Simulation, variables that are assigned to a model partition of the model based on <<clockReference>> are not necessarily `clocked`.
+Such variables can be continuous-time or discrete-time variables if the <<clock>> is of `clockType = communicationPoint`.
+
+=== Examples
+
 ==== Example XML Description File (with Early Return) [[xml-example-co-simulation]]
 
 The <<xml-example-fmimodeldescription-cosimulation>> below is the same as shown in <<xml-example-model-exchange>> for a Model Exchange FMU.
-The only differences are the replacement of the element `<ModelExchange>` with the element `<BasicCoSimulation>` (with additional attributes),  and the removal of <<local>> variables, which are associated with continuous <<state,`states`>> and their <<derivative,`derivatives`>> and presence of the capability flags <<canHandleVariableCommunicationStepSize>> and <<canReturnEarlyAfterIntermediateUpdate>> with value `true`.
+The only differences are the replacement of the element `<ModelExchange>` with the element `<CoSimulation>` (with additional attributes),  and the removal of <<local>> variables, which are associated with continuous <<state,`states`>> and their <<derivative,`derivatives`>> and presence of the capability flags <<canHandleVariableCommunicationStepSize>> and <<canReturnEarlyAfterIntermediateUpdate>> with value `true`.
 
 .Example fmiModelDescription
 [#xml-example-fmimodeldescription-cosimulation]
 [source, xml]
 ----
 include::examples/co_simulation_early_return.xml[]
+----
+
+==== Example XML Description File (with Clocks) [[xml-example-clocked-co-simulation]]
+
+// TODO: Add example and rewrite paragraph
+
+The example below is the same one as shown in <<xml-example-co-simulation>> for a Co-Simulation FMU.
+The only differences are, that the element `<fmiModelDescription><CoSimulation>` is present and <<clock,`clocks`>> are defined in the <<modelDescription.xml>>.
+The XML file may have the following content:
+
+[source, xml]
+----
+//include::examples/co_simulation_clocked_cosimulation.xml[]
 ----
