@@ -31,7 +31,7 @@ The licenses text can be found in the https://raw.githubusercontent.com/modelica
 
 == Introduction
 
-=== Intend of this document
+=== Intend of this Document
 
 Automotive CAN is a bus technology that has been applied successfully over many years by all automotive OEMs world wide.
 Virtualizing electronic control units (ECUs) and then simulating multiple such vECUs requires connecting them using a virtual version of the bus technology.
@@ -41,10 +41,99 @@ This document describes how to use standard description formats for CAN bus topo
 vECUs following this standard can then easily be connected in importing tools because the bus description files declare which signals have what properties and belong to what messages in which of the potentially multiple buses connected to each vECUs.
 
 This document only deals with classic CAN, not CAN-FD.
-Signal properties will be extracted from the bus description files and it is assumed that exporters and importers have the same understanding and interpretation of the description files.
-This document does not address potential open points of these description formats, it is assumed that such ambiguities will be handled elsewhere.
+Signal and message properties will be extracted from the bus description files and it is assumed that exporters and importers have the same understanding and interpretation of the description files.
+Such signal properties are, for example: signal scaling, message timing and trigger conditions, packaging of signals in messages, unit definitions.
+This document does not address potential open points of these description formats, it is assumed that such ambiguities will be handled elsewhere (e.g. message timing in the DBC format).
 
-=== Rough outline of the approach
+=== Rough Outline of the Approach
 
-The bus description files will be placed into the `/extra/org.modelica.fmi.layered_CAN` folder 
+The bus description files will be placed into the `/extra/org.modelica.fmi.layered_CAN` folder.
 
+CAN signals will be input or output variables with physical interpretation (units and numeric values).
+There will be one terminal type for each CAN message with the name `BusName::MessageName` and it will group input or output variables with their corresponding signal names `BusName::MessageName::SignalName`.
+All variables of one terminal must be either input or output depending on the message being received or sent.
+This naming schema will create unique variable names as required by the FMI standard.
+Each CAN message `BusName::MessageName` has its own dedicated clock, the name is `BusName::MessageName:::Clock` and it will be part of the terminal of the CAN message it belongs to.
+All variables belonging to a CAN message are clocked variables _[The output/input clock is active when a message is sent/received.]_.
+Signal variables are generally of type `fmiFloat64`, except if conversion to physical requires other data types, e.g. `fmi3Int64`.
+
+All CAN message terminals will be wrapped into a CAN bus terminal they belong to.
+The CAN bus terminal will also specify which node(s) are wrapped inside this FMU.
+If an FMU specifies nodes that are both senders and receivers of a message, the receiver role will be removed from the FMU interface to allow the CAN signals to have a unique role as output.
+_[The FMI standard requires a variable to be either input or output.]_
+
+=== Comments about this Approach
+
+_[This approach simplifies interaction with plant models and is intentionally kept simple._
+_Forcing the variables into a naming schema will allow simpler connection of FMUs with other simulation artefacts not aware of this layered standard._
+_The naming schema proposed here is already in use with MCD tools when measuring CAN and other bus types._
+_Later versions of this layered standard may add raw signals and/or raw messages as binary types.]_
+
+== Details
+
+=== Bus Description Files
+
+FMI 3.0 introduces an `/extra` folder in its `zip` structure.
+The CAN description files will be placed under the reverse domain name controled by the MAP FMI: `/extra/org.modelica.fmi.layered_CAN`.
+Both DBC and ARXML files are allowed.
+The root name of the description files shall be used as bus identifier in the CAN bus terminal type and are case sensitive.
+
+Multiple files can be specified, each one defining one bus architecture used by the FMU.
+This standard does not support composing one CAN bus architecture from multiple description files.
+
+It is recommended to use ARXML files if possible, because the DBC standard lacks some key properties that have later been added using non-standard extenions with many dialects in use.
+
+=== Terminal Definitions
+
+==== CAN Bus Terminal
+
+Each bus connected to the FMU must be described by a CAN bus terminal named `CAN::BusName` in `icons/terminalsAndIcons.xml` as a `<Terminal>` element of `<fmiTerminalsAndIcons><Terminals>` that wraps all message terminals.
+The CAN bus name must match the root name of the CAN description file, e.g. `Powertrain`, if the file is `/extra/org.modelica.fmi.layered_CAN/Powertrain.dbc`.
+
+// TODO: EXAMPLE here
+
+Attribute definitions::
+ * `terminalKind` must be set to `CAN_bus`.
+ * `matchingRule` must be set to `bus`.
+ * `name` is the CAN bus name, e.g. `Powertrain`, see example and constaints above.
+
+Element definitions::
+ * There must be no `<TerminalMemberVariable>` element.
+ * There must be no `<TerminalStreamMemberVariable>` element.
+ * There must be one `<Terminal>` element per CAN bus message described in the description file.
+ 
+Annotation element::
+ * In the annotation elements, there will be an `<Annotation>` element defining which node or nodes of the CAN bus description file are wrapped inside the FMU.
+ 
+If the combination of nodes specified for this FMU turns a message and its signals into both input and output because sending and receiving nodes are specified, only the sending (output) role will be defined in the FMU interface.
+Receiving messages must then be handled internal to the FMU.
+ 
+// TODO: how would that work in an annotation?
+ 
+// TODO: do we need to define what the graphical represenation looks like? Or should we not allow it?
+ 
+==== CAN Message Terminal
+
+Each CAN message described in the description file must be an element of its corresponding CAN bus terminal (see `<Terminal>` element of CAN bus terminal).
+
+Attribute definitions::
+ * `terminalKind` must be set to `CAN_message`.
+ * `matchingRule` must be set to `bus`.
+ * `name` must match the message name of the CAN bus description file in `/extra/org.modelica.fmi.layered_CAN`, prefixed with the CAN bus name and `::`.
+
+Element definitions::
+ * There must be no `<TerminalStreamMemberVariable>` element.
+ * There must be no `<Terminal>` element.
+ * There must be one `<TerminalMemberVariable>` per CAN signal of this CAN message and a clock describing when this message is sent.
+   All `<TerminalMemberVariables>` must have the same type of either input or output, including the clock.
+
+==== CAN Signal Variables
+
+Each CAN signal must be listed as `<TerminalMemberVariable>` of its corresponding CAN message terminal.
+
+Attribute definitions::
+ * `variableName` refers to the input or output variable name of the FMU and to enforce uniqueness is built as follows: `BusName::MessageName::SignalName`.
+ * `memberName` is the `SignalName` as given in the bus description file.
+ * `variableKind` is always `CAN_signal_physical`.
+
+In case multiplexed signals are present in a message: all signals are present, but only the active signal according to the multiplex switch signal contains a valid value, all inactive values must be ignored _[those values could even be outside their specified min-max range without faul]_. 
