@@ -51,11 +51,13 @@ For a scalar <<clock>> variable this must be 0; for array <<clock>> variables th
 Using the element index 0 means all elements of the <<clock>> variable.
 (Note: If an array has more than one dimension the indices are serialized in the same order as defined for values).
 
-- `fmi3Float64 activationTime`: value of the <<independent>> variable of the assigned <<inputClock>> tick time latexmath:[t_i] _[typically:  simulation (i.e. virtual) time]_ (which is known to the Co-Simulation master).
+- `fmi3Float64 activationTime`: value of the <<independent>> variable of the assigned <<inputClock>> tick time latexmath:[t_i] _[typically: simulation (i.e. virtual) time]_ (which is known to the Co-Simulation master).
 
 Scheduling of <<fmi3ActivateModelPartition>> calls for each FMU is done by the simulation master.
 Calls are based on ticks of <<periodic>> or <<periodic,aperiodic>> <<inputClock,`input clocks`>>.
-These <<inputClock>> ticks can be based on <<clock>> ticks from FMU external sources (e.g. <<outputClock,`output clocks`>> of other FMUs) or other external <<clock,`clocks`>>/events/interrupts assigned via the simulation master configuration (such external events can be based on a potentially unpredictable process or can be just simulation time based events e.g. the planned communication point). The <<inputClock>> ticks can also be based on <<outputClock,`output clock`>> ticks of the same FMU. Refer to <<math-scheduled-execution>> and <<clock-types-for-evaluation-of-clocked-model-partitions>>.
+These <<inputClock>> ticks can be based on <<clock>> ticks from FMU external sources (e.g. <<outputClock,`output clocks`>> of other FMUs) or other external <<clock,`clocks`>>/events/interrupts assigned via the simulation master configuration (such external events can be based on a potentially unpredictable process or can be just simulation time based events e.g. the planned communication point).
+The <<inputClock>> ticks can also be based on <<outputClock,`output clock`>> ticks of the same FMU.
+Refer to <<math-scheduled-execution>> and <<clock-types-for-evaluation-of-clocked-model-partitions>>.
 The <<fmi3ActivateModelPartition>> function is not called for <<outputClock,`output clocks`>> of an FMU.
 
 Note that this is a different timing concept compared to <<fmi3DoStep>> calls.
@@ -73,7 +75,9 @@ This section summarizes the available states and the allowed function calls in t
 [#figure-scheduled-execution-state-machine]
 image::images/state-machine-scheduled-execution.svg[width=80%, align="center"]
 
-If the master intends to enter the state *Terminated* he ensures that all tasks related to model partitions of the FMU have ended. Hence if in states *Clock Activation Mode*, *Intermediate Update Mode*, or *Reconfiguration Mode* a function returns <<fmi3Fatal>> the master may prematurely end all tasks related to the computation of model partitions of this FMU. If in these states a function returns <<fmi3Discard>> or <<fmi3Error>> the master may wait until all other tasks of the model partitions of this FMU have ended, but new tasks must not be started.
+If the master intends to enter the state *Terminated* it must ensure that all tasks related to model partitions of the FMU have ended.
+Hence if in states *Clock Activation Mode*, *Intermediate Update Mode*, or *Reconfiguration Mode* a function returns <<fmi3Fatal>> the master may prematurely end all tasks related to the computation of model partitions of this FMU.
+If in these states a function returns <<fmi3Discard>> or <<fmi3Error>> the master may wait until all other tasks of the model partitions of this FMU have ended, but new tasks must not be started.
 
 In Scheduled Execution the following functions must not be called: <<fmi3DoStep>>, <<fmi3NewDiscreteStates>>, <<fmi3SetClock>>, <<fmi3SetIntervalDecimal>>, <<fmi3SetIntervalFraction>>, <<fmi3EnterEventMode>>, <<fmi3EnterStepMode>> including all functions that are specific to the Model Exchange interface.
 
@@ -81,7 +85,8 @@ The states *Configuration Mode*, *Instantiated*, *Initialization Mode*, and *Ter
 
 ===== State: FMU State Setable
 
-In all states of this super state it is allowed to call <<fmi3GetFMUState>>, `fmi3SetFMUState`, `fmi3FreeFMUState`, <<fmi3SerializedFMUStateSize>>, <<fmi3SerializeFMUState>>, <<fmi3DeSerializeFMUState>>, <<fmi3Reset>>, <<fmi3GetVersion>>, `fmi3SetDebugLogging` and <<fmi3FreeInstance>>. If any function returns with <<fmi3Fatal>> the FMU enters the state *Terminated*.
+In all states of this super state it is allowed to call <<fmi3GetFMUState>>, `fmi3SetFMUState`, `fmi3FreeFMUState`, <<fmi3SerializedFMUStateSize>>, <<fmi3SerializeFMUState>>, <<fmi3DeSerializeFMUState>>, <<fmi3Reset>>, <<fmi3GetVersion>>, `fmi3SetDebugLogging` and <<fmi3FreeInstance>>.
+If any function returns with <<fmi3Fatal>> the FMU enters the state *Terminated*.
 
 ===== State: Under Evaluation
 
@@ -103,7 +108,7 @@ In this state the master can create multiple concurrent tasks related to an FMU 
 Allowed Function Calls::
 
 <<fmi3ActivateModelPartition>>::
-It is recommended to call `fmi3Set{VariableType}` and `fmi3Get{VariableType}` in the same task as <<fmi3ActivateModelPartition>> for setting and retrieving variable values associated to the same <<clock>> activation.
+It is recommended to call `fmi3Set{VariableType}` and `fmi3Get{VariableType}` in the same task as <<fmi3ActivateModelPartition>> for setting and retrieving variable values associated with the same <<clock>> activation.
 
 <<get-and-set-variable-values,`fmi3Set{VariableType}`>>::
 This function can be called before the start of the computation of a model partition.
@@ -111,7 +116,8 @@ This function can be called before the start of the computation of a model parti
 <<get-and-set-variable-values,`fmi3Get{VariableType}>>`, `fmi3GetOutputDerivatives`, <<fmi3GetDirectionalDerivative>>::
 These functions can be called after the end of the computation of a model partition.
 
-For <<get-and-set-variable-values,`fmi3Set{VariableType}`>> <<get-and-set-variable-values,`fmi3Get{VariableType}>>`, `fmi3GetOutputDerivatives` and <<fmi3GetDirectionalDerivative>> it is not allowed to access variables associated to clocks other than the model partition's <<inputClock>>. The restrictions related to variable <<causality>> and <<variability>> defined for *Step Mode* in <<fmi-for-co-simulation,`Co-Simulation`>> apply.
+For <<get-and-set-variable-values,`fmi3Set{VariableType}`>> <<get-and-set-variable-values,`fmi3Get{VariableType}>>`, `fmi3GetOutputDerivatives` and <<fmi3GetDirectionalDerivative>> it is not allowed to access variables associated to clocks other than the model partition's <<inputClock>>.
+The restrictions related to variable <<causality>> and <<variability>> defined for *Step Mode* in <<fmi-for-co-simulation,`Co-Simulation`>> apply.
 
 It is not allowed to call `fmi3Get{VariableType}` functions after `fmi3Set{VariableType}` functions without an <<fmi3ActivateModelPartition>> call in between.
 
@@ -122,7 +128,7 @@ _Example:_
 [cols="3,4",options="header"]
 |====
 |_Correct calling sequence for a model partition_
-|_Not allowed calling sequence_
+|_Illegal calling sequence_
 
 |_fmi3Set{VariableType} on inputs_ +
 fmi3ActivateModelPartition +
@@ -166,7 +172,9 @@ Additionally to the generally forbidden functions in Scheduled Execution as list
 
 ===== State: Intermediate Update Mode
 
-The FMU transports activation states of <<outputClock,`output clocks`>> to the master by calling <<fmi3CallbackIntermediateUpdate>> and providing <<fmi3GetClock>>. The master provides the implementation of <<fmi3CallbackIntermediateUpdate>>. If the master detects that an <<outputClock,`output clocks`>> ticked and this <<outputClock,`output clock`>> is configured to <<triggeredBy,`trigger`>> an <<inputClock,`input clock`>> the master schedules a task associated to this <<inputClock,`input clock`>>.
+The FMU transports activation states of <<outputClock,`output clocks`>> to the master by calling <<fmi3CallbackIntermediateUpdate>> and providing <<fmi3GetClock>>.
+The master provides the implementation of <<fmi3CallbackIntermediateUpdate>>.
+If the master detects that an <<outputClock,`output clocks`>> ticked and this <<outputClock,`output clock`>> is configured to <<triggeredBy,`trigger`>> an <<inputClock,`input clock`>> the master schedules a task associated to this <<inputClock,`input clock`>>.
 
 The FMU enters this state by calling <<fmi3CallbackIntermediateUpdate>>  within <<fmi3ActivateModelPartition>> and leaves the state towards state *Clock Activation Mode* if the function returns <<fmi3OK>> or <<fmi3Warning>>.
 If the function returns <<fmi3Error>> the FMU enters state *Terminated*.
@@ -176,8 +184,8 @@ Forbidden Function Calls::
 The same functions which are not allowed to be called in *Clock Activation Mode* must not be called in this state. Additionally the following functions must not be called <<fmi3ActivateModelPartition>>, <<fmi3EnterConfigurationMode>>, <<fmi3Terminate>>.
 
 Allowed Function Calls::
-For an <<outputClock>> only the first call of `fmi3GetClock` for a specific activation of this <<clock>> signals `fmi3True`.
-The FMU sets the reported activation state immediately back to `fmi3False` for the following `fmi3GetClock` calls for that <<clock>> (in the same or other model partitions of the FMU) until this <<outputClock>> is internally activated again.
+For an <<outputClock>> only the first call of `fmi3GetClock` for a specific activation of this <<clock>> signals `fmi3ClockActive`.
+The FMU sets the reported activation state immediately back to `fmi3ClockInactive` for the following `fmi3GetClock` calls for that <<clock>> (in the same or other model partitions of the FMU) until this <<outputClock>> is internally activated again.
 The master can call `fmi3Set{VariableType}` and `fmi3Get{VariableType}` during the callback for variables associated to a <<outputClock>> that is active during this callback.
 Also intermediate variable access is allowed as defined in <<state-intermediate-update-mode-co-simulation>>
 
