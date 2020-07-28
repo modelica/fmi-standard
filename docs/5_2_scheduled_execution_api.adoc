@@ -158,7 +158,7 @@ These functions can not be called concurrently for model partitions of an FMU bu
 If these functions are called while a model partition of an FMU is currently active or preempted, the FMU changes its state after the computation of all model partitions of this FMU has ended.
 
 <<fmi3GetFMUState>>, <<fmi3SetFMUState>>, <<fmi3FreeFMUState>>,<<fmi3SerializedFMUStateSize>>, <<fmi3SerializeFMUState>>, <<fmi3DeSerializeFMUState>>::
-Can be called if no other task related to the computation of model partitions of this FMU is currently active or preempted and the prerequisites defined for these functions in Co-Simulation are fulfilled.
+These functions can be called if no other task related to the computation of model partitions of this FMU is currently active or preempted and the prerequisites defined for these functions in Co-Simulation are fulfilled.
 Thus these functions can not be called concurrently for model partitions of an FMU but only for the whole FMU instance.
 
 Forbidden Function Calls::
@@ -166,22 +166,22 @@ Additionally to the generally forbidden functions in Scheduled Execution as list
 
 ===== State: Intermediate Update Mode
 
-In this state the master can retrieve information from the FMU between communication points.
-Functions called in this state must not return <<fmi3Discard>>.
+The FMU transports activation states of <<outputClock,`output clocks`>> to the master by calling <<fmi3CallbackIntermediateUpdate>> and providing <<fmi3GetClock>>. The master provides the implementation of <<fmi3CallbackIntermediateUpdate>>. If the master detects that an <<outputClock,`output clocks`>> ticked and this <<outputClock,`output clock`>> is configured to <<triggeredBy,`trigger`>> an <<inputClock,`input clock`>> the master schedules a task associated to this <<inputClock,`input clock`>>.
 
 The FMU enters this state by calling <<fmi3CallbackIntermediateUpdate>>  within <<fmi3ActivateModelPartition>> and leaves the state towards state *Clock Activation Mode* if the function returns <<fmi3OK>> or <<fmi3Warning>>.
 If the function returns <<fmi3Error>> the FMU enters state *Terminated*.
 If the function returns <<fmi3Fatal>> the FMU enters the terminal state.
 
-
 Forbidden Function Calls::
 The same functions which are not allowed to be called in *Clock Activation Mode* must not be called in this state. Additionally the following functions must not be called <<fmi3ActivateModelPartition>>, <<fmi3EnterConfigurationMode>>, <<fmi3Terminate>>.
 
 Allowed Function Calls::
-For a <<outputClock>> only the first call of `fmi3GetClock` for a specific activation of this <<clock>> signals `fmi3True`.
+For an <<outputClock>> only the first call of `fmi3GetClock` for a specific activation of this <<clock>> signals `fmi3True`.
 The FMU sets the reported activation state immediately back to `fmi3False` for the following `fmi3GetClock` calls for that <<clock>> (in the same or other model partitions of the FMU) until this <<outputClock>> is internally activated again.
 The master can call `fmi3Set{VariableType}` and `fmi3Get{VariableType}` during the callback for variables associated to a <<outputClock>> that is active during this callback.
 Also intermediate variable access is allowed as defined in <<state-intermediate-update-mode-co-simulation>>
+
+Functions called in this state must not return <<fmi3Discard>>.
 
 _[Based on the FMI standard it cannot be determined which part of the code of an FMU has called the callback function <<fmi3CallbackIntermediateUpdate>>._
 _This is especially the case for Scheduled Execution where multiple model partitions can be active at the same time._
