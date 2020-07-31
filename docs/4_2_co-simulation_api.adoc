@@ -223,10 +223,10 @@ include::../headers/fmi3FunctionTypes.h[tags=DoStep]
 ----
 
 [[currentCommunicationPoint,`currentCommunicationPoint`]]
-* `currentCommunicationPoint` is the current communication point of the master (latexmath:[tc_i]) with the unit of the <<independent>> variable and
+* `currentCommunicationPoint` is the current communication point of the master (latexmath:[t_i]) with the unit of the <<independent>> variable and
 
 [[communicationStepSize,`communicationStepSize`]]
-* `communicationStepSize` is the communication step size (latexmath:[hc_i]) with the unit of the <<independent>> variable. `comunicationStepSize` must be latexmath:[> 0.0].
+* `communicationStepSize` is the communication step size (latexmath:[h_i]) with the unit of the <<independent>> variable. `comunicationStepSize` must be latexmath:[> 0.0].
 
 [[noSetFMUStatePriorToCurrentPoint,`noSetFMUStatePriorToCurrentPoint`]]
 * `noSetFMUStatePriorToCurrentPoint == fmi3True` if `fmi3SetFMUState` will no longer be called for time instants prior to <<currentCommunicationPoint>> in this simulation run. _[The slave can use this flag to flush a result buffer]_
@@ -240,23 +240,23 @@ This is not due to an error, but a natural limit to the simulation time has been
 [[lastSuccessfulTime,`lastSuccessfulTime`]]
 * `lastSuccessfulTime` represents the internal time of the FMU when <<fmi3DoStep>> returns.
 
-The slave is expected to compute until time latexmath:[tc_{i+1} = tc_i + hc_i], or <<lastSuccessfulTime>> `=` <<currentCommunicationPoint>> `+` <<communicationStepSize>>.
+The slave is expected to compute until time latexmath:[t_{i+1} = t_i + h_i], or <<lastSuccessfulTime>> `=` <<currentCommunicationPoint>> `+` <<communicationStepSize>>.
 
 This is especially interesting, if <<fmi3DoStep>> returns with <<earlyReturn,`earlyReturn == fmi3True`>>.
-In this case, the step did not compute until latexmath:[tc_{i+1}], but stopped computation error free until <<lastSuccessfulTime>>.
+In this case, the step did not compute until latexmath:[t_{i+1}], but stopped computation error free until <<lastSuccessfulTime>>.
 However, even when the FMU returns from <<fmi3DoStep>> with <<fmi3OK>>, it is allowed that <<lastSuccessfulTime>> deviates from the expected <<currentCommunicationPoint>> `+` <<communicationStepSize>>.
 _[An example is a fixed-step integrator inside the FMU that cannot possibly stop at exactly the requested time._
 _Advanced Co-Simulation master algorithms might be able to take this information into account._
 _It is even possible that the <<lastSuccessfulTime>> is still equal to <<currentCommunicationPoint>> when <<earlyReturn,`earlyReturn == fmi3True`>> is returned (contrary to the possibly expected <<fmi3Discard>>) to indicate a changed internal state of the FMU, e.g. steps in super-dense time.]_
 
-_[The calling environment defines the communication points and <<fmi3DoStep>> must synchronize to these points by always integrating exactly to latexmath:[tc_i + hc_i]._
+_[The calling environment defines the communication points and <<fmi3DoStep>> must synchronize to these points by always integrating exactly to latexmath:[t_i + h_i]._
 _It is up to <<fmi3DoStep>> how to achieve this.]_
 
 At the first call to <<fmi3DoStep>> after <<fmi3ExitInitializationMode>> was called <<currentCommunicationPoint>> must be equal to `startTime` as set with <<fmi3EnterInitializationMode>>.
 
 _[Formally, argument <<currentCommunicationPoint>> is not needed._
 _It is present in order to handle a mismatch between the master and the FMU state of the slave: The <<currentCommunicationPoint>> and the FMU state of the slaves defined by former_ <<fmi3DoStep>> _or_ `fmi3SetFMUState` _calls have to be consistent with respect to each other._
-_For example, if the slave does not use the update formula for the <<independent>> variable as required above,_ latexmath:[tc_{i+1} = tc_i + hc_i] _(using argument_ latexmath:[tc_i] = <<currentCommunicationPoint>> _of_ <<fmi3DoStep>>) _but uses internally an own update formula, such as_ latexmath:[tc_{s,i+1} = tc_{s,i} + hc_{s,i}] _then the slave could use as time increment_ latexmath:[\text{hc}_{s,i} := (tc_i - tc_{s,i}) + hc_i] _(instead of_ latexmath:[\text{hc}_{s,i} := hc_i] _) to avoid a mismatch between the master time_ latexmath:[tc_{i+1}] _and the slave internal time_ latexmath:[tc_{s,i+1}] _for large i.]_
+_For example, if the slave does not use the update formula for the <<independent>> variable as required above,_ latexmath:[t_{i+1} = t_i + h_i] _(using argument_ latexmath:[t_i] = <<currentCommunicationPoint>> _of_ <<fmi3DoStep>>) _but uses internally an own update formula, such as_ latexmath:[t_{s,i+1} = t_{s,i} + h_{s,i}] _then the slave could use as time increment_ latexmath:[\text{h}_{s,i} := (t_i - t_{s,i}) + h_i] _(instead of_ latexmath:[\text{h}_{s,i} := h_i] _) to avoid a mismatch between the master time_ latexmath:[t_{i+1}] _and the slave internal time_ latexmath:[t_{s,i+1}] _for large i.]_
 
 It depends on the capabilities of the FMU which argument constellations and calling sequences are allowed (see <<fmi-for-co-simulation>>).
 
