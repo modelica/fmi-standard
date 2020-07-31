@@ -5,20 +5,20 @@ This section contains a formal mathematical model of Co-Simulation FMUs.
 
 _[The following fundamental assumptions are made:_
 
-_The slave simulators are seen by the master simulator as purely sampled-data systems, with the exception, that the master can provide input data of a defined level of smoothness (with the flag <<recommendedIntermediateInputSmoothness>>) within a communication interval via the intermediate variable access mechanism (see <<intermediate-variable-access>>)._
+_The slave simulators are seen by the master simulator as purely sampled-data systems, with the exception, that the master can provide input data of a defined level of smoothness (with the flag <<recommendedIntermediateInputSmoothness>>) within a communication interval via the intermediate update mechanism (see <<intermediate-update>>)._
 
 _Such a sampled-data system consists typically of a hybrid ODE that is integrated between communication points (known as "sampled access to time continuous systems") where internal events may occur and be handled, but events are not visible from the outside of the FMU._
 
 _Co-Simulation FMUs can also be used for real sampled-data systems (so a sampled discrete controller; the <<input,`inputs`>> and <<output,`outputs`>> could be of type `<Float{32|64}>`, `<[U]Int{8|16|32|64}>`, `<Boolean>`, `<String>`, `<Clock>` or `<Enumeration>` with <<variability>> = <<discrete>>.)_
 _However, in FMI 3.0, Co-Simulation (CS) and Scheduled Execution (SE) may likely be more suitable for this use-case._ +
-_And - at least without using intermediate variable access (see <<intermediate-variable-access>>), which is untypical for sampled data systms - with Co-Simulation there will always be a communication step delay for information going "through the FMU", so there cannot be an immediate reaction as in Co-Simulation. (see <<fmi-for-co-simulation>>_
+_And - at least without using intermediate update (see <<intermediate-update>>), which is untypical for sampled data systems - with Co-Simulation there will always be a communication step delay for information going "through the FMU", so there cannot be an immediate reaction as in Co-Simulation (see <<fmi-for-co-simulation>>)._
 _]_
 
 The communication between the master and a slave takes place at
 
 - a discrete set of time instants, called communication points, where input variables may change in non-smooth or even non-continuous way.
 
-- intermediate time instances, where the master may get and set variables using <<intermediate-variable-access>>.
+- intermediate time instances, where the master may get and set variables using <<intermediate-update>>.
 
 An FMI Co-Simulation model is described by the following variables:
 
@@ -53,10 +53,10 @@ The values of these variables are defined outside of the model.
 Variables of this type are defined with attribute <<causality>> = <<input>>.
 Whether the <<input>> is a discrete-time or continuous-time variable is defined via attribute <<variability>> = <<discrete>> or <<continuous>> (see <<definition-of-model-variables>>).
 
-|latexmath:[\mathbf{u}_{i, IVA}(t)]
-|Intermediate input variables corresponding to the input variables for intermediate variable access ("IVA").
+|latexmath:[\mathbf{u}_{i, IU}(t)]
+|Intermediate input variables corresponding to the input variables for intermediate update ("IU").
 The values of these variables are defined outside of the model.
-latexmath:[\mathbf{u}_{i, IVA}] are functions defined on the interval latexmath:[ [tc_i, tc_{i+1}] ] with latexmath:[\mathbf{u}_{i, IVA}(tc_i)=\mathbf{u}(tc_i)]. +
+latexmath:[\mathbf{u}_{i, IU}] are functions defined on the interval latexmath:[ [tc_i, tc_{i+1}] ] with latexmath:[\mathbf{u}_{i, IU}(tc_i)=\mathbf{u}(tc_i)]. +
 With the optional flag <<recommendedIntermediateInputSmoothness>> FMU can signal to the master that best convergence rates can be achieved if the these functions are of the smoothness latexmath:[C^{k}\left( \left[ tc_i, tc_{i+1}\right\] \right) ], that is k-time continuously differentiable, with latexmath:[C^{0}] meaning continuous.
 
 |latexmath:[\mathbf{y}(tc_{i+1})], latexmath:[\mathbf{y^{(j)}}(tc_{i+1})],
@@ -68,7 +68,7 @@ Via attribute <<variability>> = <<discrete>> or <<continuous>> it is defined whe
 Also j-th derivatives latexmath:[\mathbf{y}^{(j)}(tc_{i+1})] can be provided if supported by the FMU.
 
 
-|latexmath:[\mathbf{y}_{i, IVA}(t)]
+|latexmath:[\mathbf{y}_{i, IU}(t)]
 |Intermediate output variables corresponding to the output variables latexmath:[\mathbf{y}].
 The values of these variables are computed in the FMU and they are designed to be used by the co-simulation master, for example for extrapolation
 
@@ -100,11 +100,11 @@ When the transient simulation of the coupled system through Co-Simulation is com
 
 \begin{Bmatrix}
 
-\mathbf{x}_{i+1} = \Phi_i \left( \mathbf{x}_i,  \mathbf{u}(tc_i), \mathbf{u}_{i,IVA}, \mathbf{p}_{\mathit{tune},i}, hc_i  \right)
+\mathbf{x}_{i+1} = \Phi_i \left( \mathbf{x}_i,  \mathbf{u}(tc_i), \mathbf{u}_{i,IU}, \mathbf{p}_{\mathit{tune},i}, hc_i  \right)
 
 \\
 
-\left( \left\{ \mathbf{y}^{(j)}_{i+1} \right\}_{j=0,\cdots,m_{odo}}, \mathbf{w}_{i+1}\right) = \Gamma_i \left( \mathbf{x}_i,  \mathbf{u}(tc_i), \mathbf{u}_{i, IVA}, \mathbf{p}_{\mathit{tune},i}, hc_i  \right)
+\left( \left\{ \mathbf{y}^{(j)}_{i+1} \right\}_{j=0,\cdots,m_{odo}}, \mathbf{w}_{i+1}\right) = \Gamma_i \left( \mathbf{x}_i,  \mathbf{u}(tc_i), \mathbf{u}_{i, IU}, \mathbf{p}_{\mathit{tune},i}, hc_i  \right)
 
 \end{Bmatrix}
 ++++
@@ -125,7 +125,7 @@ _If the master algorithm implements an extrapolation method of order_ latexmath:
 
 [latexmath]
 ++++
-\mathbf{u}_{i, IVA}(t)
+\mathbf{u}_{i, IU}(t)
 =
 \sum^{m_{\mathit{extra}}}_{j=0} \mathbf{C_{i, j}} \frac{(t-tc_i)^j}{j!}
 ++++
@@ -159,7 +159,7 @@ Definition <<equation-co-simulation-evaluations>> is consistent with the definit
 
 ** Observation variables and <<calculated>> varying <<parameter,`parameters`>> latexmath:[\mathbf{w}_{i+1}], along with directional derivatives estimated at latexmath:[t = tc_{i+1}] (in case of continuous-time variables).
 
-* At intermediate times latexmath:[t\in (tc_i, tc_{i+1})] the master and slave exchange values for latexmath:[\mathbf{u}_{i, IVA}(t)] and latexmath:[\mathbf{y}_{i, IVA}(t)].
+* At intermediate times latexmath:[t\in (tc_i, tc_{i+1})] the master and slave exchange values for latexmath:[\mathbf{u}_{i, IU}(t)] and latexmath:[\mathbf{y}_{i, IU}(t)].
 
 * Initialization: The slave being a sampled-data system, its internal states (which can be either continuous-time or discrete-time) need to be initialized at latexmath:[t = tc_0].
 This is performed through an auxiliary function _[this relationship is defined in the XML file under elements `<ModelStructure><InitialUnknown>`]_:
@@ -227,7 +227,7 @@ For an output argument, calling `fmi3Get{VariableType}` on such a variable retur
 |Set continuous-time and discrete-time <<input,`inputs`>> latexmath:[\mathbf{u}_{d+c}(tc_i)]
 |`fmi3Set{VariableType}`
 
-|[blue]#latexmath:[\begin{matrix} tc_{i+1} := tc_i + hc_i \\ (\mathbf{y}_{c+d}, \mathbf{y}_c^{(j)}, \mathbf{w}_{c+d}) := \mathbf{f}_{\mathit{doStep}}(\mathbf{u}_{c+d}, \mathbf{u}_{i, IVA},  tc_i, hc_i, \mathbf{p}_{\mathit{tune}}, \mathbf{p}_{\mathit{other}})_{tc_i} \\ tc_i := tc_{i+1} \end{matrix}]# +
+|[blue]#latexmath:[\begin{matrix} tc_{i+1} := tc_i + hc_i \\ (\mathbf{y}_{c+d}, \mathbf{y}_c^{(j)}, \mathbf{w}_{c+d}) := \mathbf{f}_{\mathit{doStep}}(\mathbf{u}_{c+d}, \mathbf{u}_{i, IU},  tc_i, hc_i, \mathbf{p}_{\mathit{tune}}, \mathbf{p}_{\mathit{other}})_{tc_i} \\ tc_i := tc_{i+1} \end{matrix}]# +
 [blue]#latexmath:[\mathbf{f}_{\mathit{doStep}}] is also a function of the internal variables latexmath:[\mathbf{x}_c], latexmath:[^{\bullet}\mathbf{x}_d]#
 |`[blue]#fmi3DoStep#` +
 `[blue]#fmi3Get{VariableType}#` +
@@ -238,11 +238,11 @@ For an output argument, calling `fmi3Get{VariableType}` on such a variable retur
 
 2+|Equations during *Intermediate update mode* in state machine
 
-|Set continuous-time  <<input,`inputs`>> latexmath:[\mathbf{u}_{c, IVA}(t)]
+|Set continuous-time  <<input,`inputs`>> latexmath:[\mathbf{u}_{c, IU}(t)]
 |`fmi3Set{VariableType}`
 
 
-| [blue]#latexmath:[\mathbf{y}_{i, IVA}(t):= \mathbf{f}_{\mathit{Intermediate}}(\mathbf{u}_{i, c+d}, \mathbf{u}_{i, IVA} ( t \in [tc_i, t) ),  t, hc_i, \mathbf{p}_{\mathit{tune}}, \mathbf{p}_{\mathit{other}})]#
+| [blue]#latexmath:[\mathbf{y}_{i, IU}(t):= \mathbf{f}_{\mathit{Intermediate}}(\mathbf{u}_{i, c+d}, \mathbf{u}_{i, IU} ( t \in [tc_i, t) ),  t, hc_i, \mathbf{p}_{\mathit{tune}}, \mathbf{p}_{\mathit{other}})]#
 |`[blue]#fmi3Get{VariableType}#`
 
 2+|*Data types*
