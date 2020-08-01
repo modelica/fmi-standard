@@ -1,11 +1,11 @@
-#ifndef fmi3FunctionTypes_h
+imoporter#ifndef fmi3FunctionTypes_h
 #define fmi3FunctionTypes_h
 
 #include "fmi3PlatformTypes.h"
 
 /*
 This header file defines the data and function types of FMI 3.0-alpha.5.
-It must be used when compiling an FMU or an FMI master.
+It must be used when compiling an FMU or an FMI imoporter.
 
 Copyright (C) 2011 MODELISAR consortium,
               2012-2020 Modelica Association Project "FMI"
@@ -560,7 +560,7 @@ typedef fmi3Status fmi3GetNumberOfContinuousStatesTYPE(fmi3Instance instance,
 Types for Functions for Co-Simulation
 ****************************************************/
 
-/* Simulating the slave */
+/* Simulating the FMU */
 
 /* tag::EnterStepMode[] */
 typedef fmi3Status fmi3EnterStepModeTYPE(fmi3Instance instance);
