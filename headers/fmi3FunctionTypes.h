@@ -1,11 +1,11 @@
-imoporter#ifndef fmi3FunctionTypes_h
+#ifndef fmi3FunctionTypes_h
 #define fmi3FunctionTypes_h
 
 #include "fmi3PlatformTypes.h"
 
 /*
 This header file defines the data and function types of FMI 3.0-alpha.5.
-It must be used when compiling an FMU or an FMI imoporter.
+It must be used when compiling an FMU or an FMI importer.
 
 Copyright (C) 2011 MODELISAR consortium,
               2012-2020 Modelica Association Project "FMI"
