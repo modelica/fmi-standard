@@ -1,6 +1,6 @@
 === Application Programming Interface [[co-simulation-api]]
 
-This section contains the interface description to access the input/output data and status information of a Co-Simulation slave from a C program.
+This section contains the interface description to access the input/output data and status information of a Co-Simulation FMU from a C program.
 
 ==== Early Return [[early-return]]
 
@@ -198,11 +198,11 @@ If multiple derivatives of a variable shall be retrieved, provide a list of them
 <<fmi3GetOutputDerivatives>>::
 Retrieves the n-th <<derivative>> of <<output>> values.
 Restrictions on using the function are the same as for the `fmi3Get{VariableType}` function.
-The returned <<output,`outputs`>> correspond to the current slave time.
+The returned <<output,`outputs`>> correspond to the current time of the FMU.
 E.g. after a successful call to <<fmi3DoStep>> the returned values are related to the end of the communication step.
 
 To allow interpolation/approximation of the floating point output variables between communication steps by the co-simulation algorithm, the <<derivative,`derivatives`>> of the <<output,`outputs`>> with respect to time can be read.
-Whether the slave is able to provide the <<derivative,`derivatives`>> of <<output,`output`>> is given by the unsigned integer capability flag `maxOutputDerivativeOrder`.
+Whether the FMU is able to provide the <<derivative,`derivatives`>> of <<output,`output`>> is given by the unsigned integer capability flag `maxOutputDerivativeOrder`.
 It delivers the maximum order of the <<output>> <<derivative, `derivatives`>>.
 If the actual order is lower (because the order of integration algorithm is low), the retrieved value is 0.
 
@@ -211,7 +211,7 @@ _[ Example:_ +
 _Assuming an FMU has outputs latexmath:[y_1][2*3] with value reference 1, latexmath:[y_2] with value reference 2, latexmath:[ y_3][2] value reference 3, latexmath:[y_4] with value reference 4 and `maxOutputDerivativeOrder`=2._ +
 _With `valueReferences`= [1, 1, 3, 3, 4, 4], and `orders`= [1, 2, 1, 2, 1, 2], <<fmi3GetOutputDerivatives>> will provide first and second time derivatives of the outputs y1, y3, y4, which in `values` are serialized in the following way:_
 _((array serialization of latexmath:[\dot y_1]), (array serialization of latexmath:[\ddot y_1]), (array serialization of latexmath:[\dot y_3]), (array serialization of latexmath:[\ddot y_3]), latexmath:[\dot y_4], latexmath:[\ddot y_4])_ +
-_If the internal polynomial is of order 1 and the co-simulation algorithm inquires the second <<derivative>> of an <<output>>, the slave will return zero.]_
+_If the internal polynomial is of order 1 and the co-simulation algorithm inquires the second <<derivative>> of an <<output>>, the FMU will return zero.]_
 
 ==== Computation in Co-Simulation Interface Types
 
@@ -230,7 +230,7 @@ include::../headers/fmi3FunctionTypes.h[tags=DoStep]
 * `communicationStepSize` is the communication step size (latexmath:[h_i]) with the unit of the <<independent>> variable. `comunicationStepSize` must be latexmath:[> 0.0].
 
 [[noSetFMUStatePriorToCurrentPoint,`noSetFMUStatePriorToCurrentPoint`]]
-* `noSetFMUStatePriorToCurrentPoint == fmi3True` if `fmi3SetFMUState` will no longer be called for time instants prior to <<currentCommunicationPoint>> in this simulation run. _[The slave can use this flag to flush a result buffer]_
+* `noSetFMUStatePriorToCurrentPoint == fmi3True` if `fmi3SetFMUState` will no longer be called for time instants prior to <<currentCommunicationPoint>> in this simulation run. _[The FMU can use this flag to flush a result buffer]_
 
 * `terminate` signals to the co-simulation algorithm that the FMU requests the end of the simulation for internal reasons.
 This is not due to an error, but a natural limit to the simulation time has been reached inside the FMU.
@@ -241,7 +241,7 @@ This is not due to an error, but a natural limit to the simulation time has been
 [[lastSuccessfulTime,`lastSuccessfulTime`]]
 * `lastSuccessfulTime` represents the internal time of the FMU when <<fmi3DoStep>> returns.
 
-The slave is expected to compute until time latexmath:[t_{i+1} = t_i + h_i], or <<lastSuccessfulTime>> `=` <<currentCommunicationPoint>> `+` <<communicationStepSize>>.
+The FMU is expected to compute until time latexmath:[t_{i+1} = t_i + h_i], or <<lastSuccessfulTime>> `=` <<currentCommunicationPoint>> `+` <<communicationStepSize>>.
 
 This is especially interesting, if <<fmi3DoStep>> returns with <<earlyReturn,`earlyReturn == fmi3True`>>.
 In this case, the step did not compute until latexmath:[t_{i+1}], but stopped computation error free until <<lastSuccessfulTime>>.
@@ -256,8 +256,8 @@ _It is up to <<fmi3DoStep>> how to achieve this.]_
 At the first call to <<fmi3DoStep>> after <<fmi3ExitInitializationMode>> was called <<currentCommunicationPoint>> must be equal to `startTime` as set with <<fmi3EnterInitializationMode>>.
 
 _[Formally, argument <<currentCommunicationPoint>> is not needed._
-_It is present in order to handle a mismatch between the co-simulation algorithm and the FMU state of the slave: The <<currentCommunicationPoint>> and the FMU state of the slaves defined by former_ <<fmi3DoStep>> _or_ `fmi3SetFMUState` _calls have to be consistent with respect to each other._
-_For example, if the slave does not use the update formula for the <<independent>> variable as required above,_ latexmath:[t_{i+1} = t_i + h_i] _(using argument_ latexmath:[t_i] = <<currentCommunicationPoint>> _of_ <<fmi3DoStep>>) _but uses internally an own update formula, such as_ latexmath:[t_{s,i+1} = t_{s,i} + h_{s,i}] _then the slave could use as time increment_ latexmath:[\text{h}_{s,i} := (t_i - t_{s,i}) + h_i] _(instead of_ latexmath:[\text{h}_{s,i} := h_i] _) to avoid a mismatch between the co-simulation algorithm time_ latexmath:[t_{i+1}] _and the FMU internal time_ latexmath:[t_{s,i+1}] _for large i.]_
+_It is present in order to handle a mismatch between the co-simulation algorithm and the state of the FMU: The <<currentCommunicationPoint>> and the state of the FMU defined by former_ <<fmi3DoStep>> _or_ `fmi3SetFMUState` _calls have to be consistent with respect to each other._
+_For example, if the FMU does not use the update formula for the <<independent>> variable as required above,_ latexmath:[t_{i+1} = t_i + h_i] _(using argument_ latexmath:[t_i] = <<currentCommunicationPoint>> _of_ <<fmi3DoStep>>) _but uses internally an own update formula, such as_ latexmath:[t_{s,i+1} = t_{s,i} + h_{s,i}] _then the FMU could use as time increment_ latexmath:[\text{h}_{s,i} := (t_i - t_{s,i}) + h_i] _(instead of_ latexmath:[\text{h}_{s,i} := h_i] _) to avoid a mismatch between the co-simulation algorithm time_ latexmath:[t_{i+1}] _and the FMU internal time_ latexmath:[t_{s,i+1}] _for large i.]_
 
 It depends on the capabilities of the FMU which argument constellations and calling sequences are allowed (see <<fmi-for-co-simulation>>).
 
@@ -604,12 +604,12 @@ Forbidden Function Calls::
 ==== Code Example for Co-Simulation
 
 In the following example, the usage of the FMI functions is sketched in order to clarify the typical calling sequence of the functions in a simulation environment.
-We consider two slaves, where both have one <<continuous>> floating point <<input>> and one <<continuous>> floating point <<output>> which are connected in the following way:
+We consider two FMUs, where both have one <<continuous>> floating point <<input>> and one <<continuous>> floating point <<output>> which are connected in the following way:
 
-.Connection graph of the slaves.
+.Connection graph of FMUs.
 image::images/co-simulation-connection-of-slaves.svg[width=30%, align="center"]
 
-We assume no algebraic dependency between input and <<output>> of each slave.
+We assume no algebraic dependency between input and <<output>> of each FMU.
 The code demonstrates the simplest co-simulation algorithm as shown in <<math-co-simulation>>:
 
 - Constant communication step size.
