@@ -219,8 +219,8 @@ _For production environments warnings should be treated like errors unless they 
 The call was not successful and the FMU is in the same state as before the call.
 The output argument values are not defined, but the computation can continue.
 When debug logging is enabled (`loggingOn == fmi3True`) the function <<logMessage>> was called by the FMU.
-Advanced master implementations can try alternative approaches to drive the simulation by calling the function with different arguments or calling another function.
-Otherwise the master has to treat this return code like <<fmi3Error>> and has to terminate the simulation.
+Advanced simulation algorithms can try alternative approaches to drive the simulation by calling the function with different arguments or calling another function.
+Otherwise the simulation algorithm has to treat this return code like <<fmi3Error>> and has to terminate the simulation.
 
 [[fmi3Error,`fmi3Error`]]
 `fmi3Error`::
@@ -321,16 +321,16 @@ If `loggingOn == fmi3True`, the FMU enables a vendor defined set of `<LogCategor
 This set should typically contain categories for messages that explain execution errors, like <<fmi3Discard>>, <<fmi3Error>> and <<fmi3Fatal>>.
 The function <<fmi3SetDebugLogging>> gives more detailed control about required `<LogCategories>` (see <<definition-of-log-categories>>).
 
-* If `eventModeRequired == fmi3True` the master handles events, otherwise `fmi3EnterEventMode` must not not be called.
+* If `eventModeRequired == fmi3True` the simulation algorithm can handle events, otherwise `fmi3EnterEventMode` must not be called.
 The flag may only be `fmi3True`, if `hasEventMode == true`, otherwise the FMU must raise an error.
 
 * `instanceEnvironment` is a pointer that can be passed to the <<fmi3CallbackIntermediateUpdate>> function in order that the simulation environment can provide an efficient way to identify the slave that called <<fmi3CallbackIntermediateUpdate>>.
 
 [[requiredIntermediateVariables,`requiredIntermediateVariables`]]
-* `requiredIntermediateVariables` is an array of the value references of all <<input>> variables that the master intends to set and all <<output>> variables it intends to get during intermediate updates.
-This set may be empty (<<nRequiredIntermediateVariables>> == 0) when the master does not intend to use intermediate variable access.
+* `requiredIntermediateVariables` is an array of the value references of all <<input>> variables that the simulation algorithm intends to set and all <<output>> variables it intends to get during intermediate updates.
+This set may be empty (<<nRequiredIntermediateVariables>> == 0) when the simulation algorithm does not intend to use intermediate variable access.
 All variables referenced in this set must be marked with <<intermediateAccess,`intermediateAccess="true"`>> in the model description.
-Only the variables in <<requiredIntermediateVariables>> may be accessed by the master using `fmi3Set{VariableType}` and `fmi3Get{VariableType}` during <<fmi3CallbackIntermediateUpdate>> callbacks.
+Only the variables in <<requiredIntermediateVariables>> may be accessed by the simulation algorithm using `fmi3Set{VariableType}` and `fmi3Get{VariableType}` during <<fmi3CallbackIntermediateUpdate>> callbacks.
 
 [[nRequiredIntermediateVariables,`nRequiredIntermediateVariables`]]
 * `nRequiredIntermediateVariables` gives the number of entries in <<requiredIntermediateVariables>>.
@@ -388,7 +388,7 @@ include::../headers/fmi3FunctionTypes.h[tags=CallbackPreemptionLock]
 
 To provide more options to secure the model or controller code inside the FMU, against unwanted preemption, these callback functions are defined.
 They can be used to prevent preemption for certain code parts enclosed by `lockPreemption` and `unlockPreemption` in Scheduled Execution.
-Even if the Co-Simulation master does not support preemption, at least an empty implementation of these callback functions must be provided to allow the reuse of code for different modes together with an efficient preemption.
+Even if the co-simulation algorithm does not support preemption, at least an empty implementation of these callback functions must be provided to allow the reuse of code for different modes together with an efficient preemption.
 _[This is included to avoid having to check in the model or controller code if the function pointers are null pointers. A function call to a void-void function with an immediate return is hardly any overhead.]_
 
 [[fmi3FreeInstance,`fmi3FreeInstance`]]
@@ -592,7 +592,7 @@ In Co-Simulation, time advances in (possibly variable) steps negotiated between 
 The importer calls <<fmi3DoStep>> with the <<currentCommunicationPoint>> and a target <<communicationStepSize>> (required to be larger than 0.0).
 During this <<fmi3DoStep>>, both importer and FMU might encounter events that will reduce the <<communicationStepSize>> (potentially even down to 0.0).
 With the mechanisms of the callback <<fmi3CallbackIntermediateUpdate>> and/or <<earlyReturn>>, both importer and FMU can determine if such a step-size reduction is required.
-The output argument <<lastSuccessfulTime>> of <<fmi3DoStep>> allows the FMU to signal the master its current internal time.
+The output argument <<lastSuccessfulTime>> of <<fmi3DoStep>> allows the FMU to signal the importer its current internal time.
 
 In Scheduled Execution, time has a more discrete form.
 The scheduler of the importer activates specific tasks according to the time of the importer.
@@ -740,7 +740,7 @@ It is defined as a rational number based on `intervalCounter` and `resolution` v
 |===
 
 The interval latexmath:[\Delta T] and latexmath:[t_{\mathit{offset}}] must be defined for <<periodic>> <<clock,`clocks`>> in the XML file.
-In case of <<periodic>> <<inputClock,`input clocks`>> these values are the start interval values if they are not given by the simulation master.
+In case of <<periodic>> <<inputClock,`input clocks`>> these values are the start interval values if they are not given by the simulation algorithm.
 _[This information can be used for emulating <<periodic>> <<inputClock,`input clocks`>> in the Co-Simulation interface types.]_.
 
 A <<clock>> is <<strict,strictly>> <<periodic>> if latexmath:[\Delta T] is fixed for an FMU and cannot be changed.
@@ -759,7 +759,7 @@ _[For <<periodic>> <<clock,`clocks`>> it is recommended to derive the priorities
 
 _[The clock priorities are local to an FMU.
 It is not possible for an FMU exporting tool to know in advance the priorities of other FMUs that will be connected to an FMU in a simulation setup.
-It is the task of the simulation master to derive a computational order for the computation of two or more distinct FMUs based on the local FMU clock priorities and input-output relationships of connected FMUs.]_
+It is the task of the simulation algorithm to derive a computational order for the computation of two or more distinct FMUs based on the local FMU clock priorities and input-output relationships of connected FMUs.]_
 
 _[For real-time computation use cases (e.g., in Scheduled Execution), the priority information is used also for task preemption configurations.
 It is therefore important to restrict the number of distinct priority levels for an FMU to available priority levels on the target platform and/or to avoid unnecessary computational overhead.
@@ -915,7 +915,7 @@ The FMU state copy can be set as actual FMU state, in order to continue the simu
 
 _[Examples for using this feature:_
 
-_For variable step-size control of co-simulation master algorithms (get the FMU state for every accepted communication step; if the follow-up step is not accepted, restart co-simulation from this FMU state)._
+_For variable step-size control of co-simulation algorithms (get the FMU state for every accepted communication step; if the follow-up step is not accepted, restart co-simulation from this FMU state)._
 
 _For nonlinear Kalman filters (get the FMU state just before initialization; in every sample period, set new continuous states from the Kalman filter algorithm based on measured values; integrate to the next sample instant and inquire the predicted continuous states that are used in the Kalman filter algorithm as basis to set new continuous states)._
 
