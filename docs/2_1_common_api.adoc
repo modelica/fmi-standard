@@ -580,6 +580,27 @@ For Co-Simulation FMUs, additional functions are defined in <<transfer-of-input-
 
 The value of a variable may only be accessed with the respective `fmi3Get/Set{VariableType}` for its type.
 
+==== Advancing Time [[advancing-time]]
+
+This section highlights the differences of the concept of time (in general the independent variable) for the three different FMI types, ME, CS and SE.
+
+In Model Exchange, time is under the sole control of the importer and its integration algorithm.
+The model itself receives the current time to be used in its computation with <<fmi3SetTime>>.
+In fact, time is not necessarily advancing linearly as solvers might need to find zero-crossing points or the importer uses the Model Exchange FMU to find points of optimal control.
+
+In Co-Simulation, time advances in (possibly variable) steps negotiated between the co-simulation algorithm of the importer and the FMU.
+The importer calls <<fmi3DoStep>> with the <<currentCommunicationPoint>> and a target <<communicationStepSize>> (required to be larger than 0.0).
+During this <<fmi3DoStep>>, both importer and FMU might encounter events that will reduce the <<communicationStepSize>> (potentially even down to 0.0).
+With the mechanisms of the callback <<fmi3CallbackIntermediateUpdate>> and/or <<earlyReturn>>, both importer and FMU can determine if such a step-size reduction is required.
+The output argument <<lastSuccessfulTime>> of <<fmi3DoStep>> allows the FMU to signal the master its current internal time.
+
+In Scheduled Execution, time has a more discrete form.
+The scheduler of the importer activates specific tasks according to the time of the importer.
+The time itself is communicated to the FMU as <<activationTime>> argument of <<fmi3ActivateModelPartition>>.
+
+Depending on the instantiated FMI type, the importer is restricted in what functions it is allowed to call in order to drive the simulation.
+The following chapters will focus on what mechanisms are relevant for the interface type at hand, without trying to constantly declare which functions not to use because they belong to the other interface type mechanisms.
+
 ==== Operation on Clocks [[operation-on-clocks]]
 
 In the following section the operations on <<clock,`clocks`>> are described.
@@ -823,7 +844,7 @@ If `values[i] == fmi3ClockActive` the <<clock>> is currently active, otherwise t
 
 * `nValues` provides the number of values in the `values` vector, which is only equal to `nValueReferences` if all <<valueReference>>pass:[s] point to scalar clock variables.
 
-It is allowed to call this function within the callback function `fmi3IntermediateUpdate`.
+It is allowed to call this function within the callback function <<fmi3CallbackIntermediateUpdate>>.
 It is required for an FMU to directly internally set back the activation <<state>> of an output <<clock,clock[i]>> to `fmi3ClockInactive`, if the function <<fmi3GetClock>> is called for a <<clock,`clock[i]`>> and the interface is Scheduled Execution.
 _[This is required to allow preemption.]_
 
