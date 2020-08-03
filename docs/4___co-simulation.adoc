@@ -4,9 +4,9 @@ This chapter defines the Functional Mock-up Interface (FMI) for the coupling of 
 It is designed both for coupling with subsystem models, which have been exported by their simulator together with its solver as runnable code, and for coupling of simulation tools on a single machine or as part of a distributed co-simulation.
 
 Co-simulation exploits the modular structure of coupled problems in all stages of the simulation process beginning with the separate model setup and preprocessing for the individual subsystems in different simulation tools (which can be powerful simulators as well as simple C programs).
-During time integration, the simulation is again performed independently for all subsystems restricting the data exchange between subsystems to discrete communication points latexmath:[tc_i].
+During time integration, the simulation is again performed independently for all subsystems restricting the data exchange between subsystems to discrete communication points latexmath:[t_i].
 For simulator coupling, also the visualization and post-processing of simulation data is done individually for each subsystem in its own native simulation tool.
-In different contexts, the communication points latexmath:[tc_i], the communication steps latexmath:[tc_i \rightarrow tc_{i+1}] and the communication step sizes latexmath:[hc_i := tc_{i+1} - tc_i] are also known as sampling points (synchronization points), macro steps and sampling rates, respectively.
+In different contexts, the communication points latexmath:[t_i], the communication steps latexmath:[t_i \rightarrow t_{i+1}] and the communication step sizes latexmath:[h_i := t_{i+1} - t_i] are also known as sampling points (synchronization points), macro steps and sampling rates, respectively.
 The term "communication point" in FMI for Co-Simulation refers to the communication between subsystems in a co-simulation environment and should not be mixed with the output points for saving simulation results to file.
 
 FMI for Co-Simulation provides an interface standard for the solution of time-dependent coupled systems consisting of subsystems that are continuous in time (model components that are described by non-stationary differential equations) or time-discrete (model components that are described by difference equations such as discrete controllers).
@@ -18,65 +18,65 @@ image::images/co-simulation-data-flow.svg[width=80%, align="center"]
 
 For co-simulation, two basic groups of functions have to be implemented:
 
-. functions for the data exchange between subsystems
+. functions for the data exchange between FMUs
 
-. functions to synchronize the simulation of all subsystems and to proceed in communication steps latexmath:[tc_i \rightarrow tc_{i+1}] from initial time latexmath:[tc_0 := t_{\mathit{start}}] to end time latexmath:[tc_N := t_{\mathit{stop}}]
+. functions to synchronize the simulation of all FMUs and to proceed in communication steps latexmath:[t_i \rightarrow t_{i+1}] from initial time latexmath:[t_0 := t_{\mathit{start}}] to end time latexmath:[t_N := t_{\mathit{stop}}]
 
 // TODO: Add "A Co-sim interface..."
-In FMI for Co-Simulation, both groups of functions are implemented in one software component, the Co-Simulation master.
-The data exchange between the subsystems (slaves) is handled via the master only.
-There is no direct communication between the slaves.
-The master functionality can be implemented by a special software tool (a separate simulation backplane) or by one of the involved simulation tools.
+In FMI for Co-Simulation, both groups of functions are implemented in one software component, the co-simulation algorithm.
+The data exchange between the FMUs is handled via the co-simulation algorithm only.
+There is no direct communication between the FMUs.
+The co-simulation functionality can be implemented by a special software tool (a separate simulation backplane) or by one of the involved simulation tools.
 In its most general form, the coupled system may be simulated in nested co-simulation environments and FMI for Co-Simulation applies to each level of the hierarchy.
 
 // TODO: Add "A Co-sim interface..."
-FMI for Co-Simulation defines interface routines for the communication between the master and all slaves (subsystems) in a co-simulation environment.
-The most common master algorithm stops at each communication point latexmath:[tc_i] the simulation (time integration) of all slaves, collects the outputs latexmath:[y(tc_i)] from all subsystems, determines the subsystem inputs latexmath:[u(tc_i)], distributes these subsystem inputs to the slaves and continues the (co-)simulation with the next communication step latexmath:[tc_i \rightarrow tc_{i+1} = tc_i + hc] with fixed communication step size latexmath:[hc].
-In each slave, an appropriate solver is used to integrate one of the subsystems for a given communication step latexmath:[tc_i \rightarrow tc_{i+1}].
-The most simple co-simulation algorithms approximate the (unknown) subsystem inputs latexmath:[u(t), (t > tc_i))] by frozen data latexmath:[u(tc_i)] for latexmath:[tc_i \leq t < tc_{i+1}].
-FMI for Co-Simulation supports this classical brute force approach as well as more sophisticated master algorithms.
-FMI for Co-Simulation is designed to support a very general class of master algorithms but it does not define the master algorithm itself.
+FMI for Co-Simulation defines interface routines for the communication between the importer and all FMUs in a co-simulation environment.
+The most common co-simulation algorithms stop at each communication point latexmath:[t_i] the simulation (time integration) of all FMUs, collects the outputs latexmath:[y(t_i)] from all FMUs, determines the FMU inputs latexmath:[u(t_i)], distributes these FMU inputs and continues the (co-)simulation with the next communication step latexmath:[t_i \rightarrow t_{i+1} = t_i + h] with fixed communication step size latexmath:[h].
+In each FMU, an appropriate solver is used to integrate its subsystem for a given communication step latexmath:[t_i \rightarrow t_{i+1}].
+The simplest co-simulation algorithms approximate the (unknown) FMU inputs latexmath:[u(t), (t > t_i))] by constant data latexmath:[u(t_i)] for latexmath:[t_i \leq t < t_{i+1}].
+FMI for Co-Simulation supports this classical brute force approach as well as more sophisticated simulation algorithms.
+FMI for Co-Simulation is designed to support a very general class of simulation algorithms but it does not define simulation algorithms itself.
 
 
-The ability of slaves to support more sophisticated master algorithms is characterized by a set of capability flags inside the XML description of the slave (see <<fmi-for-co-simulation>>).
+The ability of FMUs to support more sophisticated simulation algorithms is characterized by a set of capability flags inside the XML description of the FMU (see <<fmi-for-co-simulation>>).
 Typical examples are:
 
-- the ability to handle variable communication step sizes latexmath:[hc_i],
+- the ability to handle variable communication step sizes latexmath:[h_i],
 
-- the ability to repeat a rejected communication step latexmath:[tc_i \rightarrow tc_{i+1}] with reduced communication step size,
+- the ability to repeat a rejected communication step latexmath:[t_i \rightarrow t_{i+1}] with reduced communication step size,
 
 - the ability to provide <<derivative,`derivatives`>> of <<output,`outputs`>> w.r.t. time, to allow input approximation (<<transfer-of-input-output-and-parameters>>),
 
 - or the ability to provide Jacobians.
 
-FMI for Co-Simulation is restricted to slaves with the following properties:
+FMI for Co-Simulation is restricted to FMUs with the following properties:
 
 . All calculated values are time-dependent functions within an a priori defined time interval latexmath:[t_{\mathit{start}} \leq t \leq t_{\mathit{stop}}] (provided `stopTimeDefined == fmi3True` when calling <<fmi3EnterInitializationMode>>).
 
 . All simulations are carried out with increasing time in general.
 The current time latexmath:[t] is running step by step from latexmath:[t_{\mathit{start}}] to latexmath:[t_{\mathit{stop}}].
-The algorithm of the slave may have the property to be able to repeat the simulation of parts of latexmath:[[t_{\mathit{start}}, t_{\mathit{stop}}]] or the whole time interval latexmath:[[t_{\mathit{start}}, t_{\mathit{stop}}]].
+The algorithm of the FMU may have the property to be able to repeat the simulation of parts of latexmath:[[t_{\mathit{start}}, t_{\mathit{stop}}]] or the whole time interval latexmath:[[t_{\mathit{start}}, t_{\mathit{stop}}]].
 
-. The slave can be given a time value latexmath:[tc_i, t_{\mathit{start}} \leq tc_i \leq t_{\mathit{stop}}].
+. The FMU can be given a time value latexmath:[t_i, t_{\mathit{start}} \leq t_i \leq t_{\mathit{stop}}].
 
-. The slave is able to interrupt the simulation when latexmath:[tc_i] is reached.
+. The FMU is able to interrupt the simulation when latexmath:[t_i] is reached.
 
-. During the interrupted simulation, the slave (and its individual solver) can receive values for <<input,`inputs`>> latexmath:[u(tc_i)] and send values of outputs latexmath:[y(tc_i)].
+. During the interrupted simulation, the FMU (and its individual solver) can receive values for <<input,`inputs`>> latexmath:[u(t_i)] and send values of outputs latexmath:[y(t_i)].
 
-. Whenever the simulation in a slave is interrupted, a new time value latexmath:[tc_{i+1}, tc_i \leq tc_{i+1} \leq t_{\mathit{stop}}], can be given to simulate the time subinterval latexmath:[tc_i < t \leq tc_{i+1}]
+. Whenever the simulation in a FMU is interrupted, a new time value latexmath:[t_{i+1}, t_i \leq t_{i+1} \leq t_{\mathit{stop}}], can be given to simulate the time subinterval latexmath:[t_i < t \leq t_{i+1}]
 
-. The subinterval length latexmath:[hc_i] is the communication step size of the latexmath:[i^{th}] communication step, latexmath:[hc_i = tc_{i+1} - tc_i].
+. The subinterval length latexmath:[h_i] is the communication step size of the latexmath:[i^{th}] communication step, latexmath:[h_i = t_{i+1} - t_i].
 
-The communication step size initiated by the master has to be greater than zero.
+The communication step size initiated by the co-simulation algorithm has to be greater than zero.
 
-FMI for Co-Simulation allows a Co-Simulation flow which starts with instantiation and initialization (all slaves are prepared for computation, the communication links are established), followed by simulation (the slaves are forced to simulate a communication step), and finishes with shutdown.
-The details of the flow are given in the state machine of the calling sequences from master to slave, for each co-simulation interface (see <<state-machine-co-simulation>>, and <<state-machine-scheduled-execution>>).
+FMI for Co-Simulation allows a co-simulation flow which starts with instantiation and initialization (all FMUs are prepared for computation, the communication links are established), followed by simulation (the FMUs are forced to simulate a communication step), and finishes with shutdown.
+The details of the flow are given in the state machine of the calling sequences from co-simulation algorithm to FMU, for each co-simulation interface (see <<state-machine-co-simulation>>, and <<state-machine-scheduled-execution>>).
 
-The asynchronous mode for FMUs known from FMI 2.0 has been removed since this mode was not supported by tools and it can be suitably replaced by Co-Simulation master implementations that control the asynchronous computation of FMUs via separate tasks/threads created for each FMU.
+The asynchronous mode for FMUs known from FMI 2.0 has been removed since this mode was not supported by tools and it can be suitably replaced by Co-Simulation implementations that control the asynchronous computation of FMUs via separate tasks/threads created for each FMU.
 
 The <<co-simulation-api,Co-Simulation>> interface provides functionalities to control and observe the ticking of <<clock,clocks>>.
 For FMI for Co-Simulation, the ticking of a clock is interpreted as an activity of the associated model partition.
-During simulation, the Co-Simulation master updates and manages values of inputs and outputs of FMUs and further models at communication points for each model partition.
+During simulation, the co-simulation algorithm updates and manages values of inputs and outputs of FMUs and further models at communication points for each model partition.
 The ratio between communication points created for a model partition and time can be seen as a model rate.
 In that sense multiple model partitions of a model define multiple model rates in a model.
 
@@ -86,11 +86,11 @@ Both <<outputClock,`output clocks`>> and <<inputClock,`input clocks`>> are suppo
 In order to handle <<inputClock,`input`>> and <<outputClock,`output clocks`>> in Co-Simulation, a new *Event Mode* has been introduced.
 
 The concept and the way <<inputClock,`input`>> and <<outputClock,`output clocks`>> are handled are very similar in Model Exchange and Co-Simulation.
-In order to handle <<inputClock,`input clocks`>>, the Co-Simulation master schedules <<inputClock,`input clocks`>> and adjusts the communication steps in such a way that <<inputClock>> ticks become communication points.
+In order to handle <<inputClock,`input clocks`>>, the co-simulation algorithm schedules <<inputClock,`input clocks`>> and adjusts the communication steps in such a way that <<inputClock>> ticks become communication points.
 At these communication points, the FMU is pushed to the *Event Mode* and <<inputClock,`input clocks`>> are handled.
 
-<<outputClock,`Output clocks`>>, on the other hand, are detected by the FMU.
-The FMU detects an <<outputClock>> and informs the master by invoking a callback in which the event time and the event type is communicated to the master.
+<<outputClock,`Output clocks`>>, on the other hand, communicate events detected by the FMU.
+The FMU detects an <<outputClock>> and informs the co-simulation algorithm by invoking a callback in which the event time and the event type is communicated.
 Then FMU stops the current Co-Simulation step and returns back from <<fmi3DoStep>>.
 Then the FMU is pushed to the *Event Mode* and the event is handled.
 Note that, since output events time instants are not known in advance, at output event time instants, new communication steps are created.

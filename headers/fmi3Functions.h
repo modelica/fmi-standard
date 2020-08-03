@@ -196,7 +196,7 @@ Functions for Model Exchange
 Functions for Co-Simulation
 ****************************************************/
 
-/* Simulating the slave */
+/* Simulating the FMU */
 #define fmi3EnterStepMode            fmi3FullName(fmi3EnterStepMode)
 #define fmi3GetOutputDerivatives     fmi3FullName(fmi3GetOutputDerivatives)
 #define fmi3DoStep                   fmi3FullName(fmi3DoStep)
@@ -303,7 +303,7 @@ FMI3_Export fmi3GetNumberOfContinuousStatesTYPE   fmi3GetNumberOfContinuousState
 Functions for Co-Simulation
 ****************************************************/
 
-/* Simulating the slave */
+/* Simulating the FMU */
 FMI3_Export fmi3EnterStepModeTYPE          fmi3EnterStepMode;
 FMI3_Export fmi3GetOutputDerivativesTYPE   fmi3GetOutputDerivatives;
 FMI3_Export fmi3ActivateModelPartitionTYPE fmi3ActivateModelPartition;
