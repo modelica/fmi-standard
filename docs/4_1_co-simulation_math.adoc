@@ -4,21 +4,20 @@
 This section contains a formal mathematical model of Co-Simulation FMUs.
 
 _[The following fundamental assumptions are made:_
-
-_The FMUs are seen by the simulation algorithm as purely sampled-data systems, with the exception, that the simulation algorithm can provide input data of a defined level of smoothness (with the flag <<recommendedIntermediateInputSmoothness>>) within a communication interval via the intermediate variable access mechanism (see <<intermediate-variable-access>>)._
+_The FMUs are seen by the co-simulation algorithm as purely sampled-data systems, with the exception, that the simulation algorithm can provide input data of a defined level of smoothness (with the flag <<recommendedIntermediateInputSmoothness>>) within a communication interval via the intermediate update mechanism (see <<intermediate-update>>)._
 
 _Such a sampled-data system consists typically of a hybrid ODE that is integrated between communication points (known as "sampled access to time continuous systems") where internal events may occur and be handled, but events are not visible from the outside of the FMU._
 
 _Co-Simulation FMUs can also be used for real sampled-data systems (so a sampled discrete controller; the <<input,`inputs`>> and <<output,`outputs`>> could be of type `<Float{32|64}>`, `<[U]Int{8|16|32|64}>`, `<Boolean>`, `<String>`, `<Clock>` or `<Enumeration>` with <<variability>> = <<discrete>>.)_
 _However, in FMI 3.0, Co-Simulation (CS) and Scheduled Execution (SE) may likely be more suitable for this use-case._ +
-_And - at least without using intermediate variable access (see <<intermediate-variable-access>>), which is untypical for sampled data systms - with Co-Simulation there will always be a communication step delay for information going "through the FMU", so there cannot be an immediate reaction as in Co-Simulation. (see <<fmi-for-co-simulation>>_
+_And - at least without using intermediate update (see <<intermediate-update>>), which is untypical for sampled data systems - with Co-Simulation there will always be a communication step delay for information going "through the FMU", so there cannot be an immediate reaction as in Co-Simulation (see <<fmi-for-co-simulation>>)._
 _]_
 
 The communication between the importer and a FMU takes place at
 
 - a discrete set of time instants, called communication points, where input variables may change in non-smooth or even non-continuous way.
 
-- intermediate time instances, where the simulation algorithm may get and set variables using <<intermediate-variable-access>>.
+- intermediate time instances, where the simulation algorithm may get and set variables using <<intermediate-update>>.
 
 An FMI Co-Simulation model is described by the following variables:
 
@@ -53,7 +52,7 @@ The values of these variables are defined outside of the model.
 Variables of this type are defined with attribute <<causality>> = <<input>>.
 Whether the <<input>> is a discrete-time or continuous-time variable is defined via attribute <<variability>> = <<discrete>> or <<continuous>> (see <<definition-of-model-variables>>). +
 If no event happens at the communication point latexmath:[tc_i], <<continuous>> input variables latexmath:[\mathbf{u}(tc_{i+1}] must be consistent with the values of the smooth functions latexmath:[\mathbf{u}_{i, IU}], that is latexmath:[\mathbf{u}_{i, IU}(tc_{i+1})= \mathbf{u}(tc_i)].
-It is also recommended but not mandatory that the function defined by the continuation of latexmath:[\mathbf{u}_{i, IU}] with latexmath:[\mathbf{u}_{i+1, IU}] be of smoothness latexmath:[C^{k}([tc_i, tc_{i+2}])]  with the optional flag <<recommendedIntermediateInputSmoothness>> of value latexmath:[k]. +
+It is also recommended but not mandatory that the function defined by the continuation of latexmath:[\mathbf{u}_{i, IU}] with latexmath:[\mathbf{u}_{i+1, IU}] be of smoothness latexmath:[C^{k}([tc_i, tc_{i+2}\])]  with the optional flag <<recommendedIntermediateInputSmoothness>> of value latexmath:[k]. +
 _[This can increase simulation speed for higher order multi-step solvers that in this case do not have to reset even at communication points.]_ +
 If an event happens at the communication point, <<continuous>> input variables may change discontinuously.
 
@@ -62,7 +61,7 @@ If an event happens at the communication point, <<continuous>> input variables m
 The values of these variables are defined outside of the model.
 
 latexmath:[\mathbf{u}_{i, IU}] are functions defined on the interval latexmath:[ [t_i, t_{i+1}] ] with latexmath:[\mathbf{u}_{i, IU}(t_i)=\mathbf{u}(t_i)]. +
-With the optional flag <<recommendedIntermediateInputSmoothness>> with value latexmath:[k] the FMU can signal to the co-simulation algorithm that best convergence rates can be achieved if the these functions are of the smoothness (latexmath:[C^{k}([ t_i, t_{i+1}]), that is k-time continuously differentiable, with latexmath:[C^{0}] meaning continuous.
+With the optional flag <<recommendedIntermediateInputSmoothness>> with value latexmath:[k] FMUs can signal to the co-simulation algorithm that best convergence rates can be achieved if the functions are of the smoothness latexmath:[C^{k}([t_i, t_{i+1}\])], that is k-time continuously differentiable, with latexmath:[C^{0}] meaning continuous.
 
 |latexmath:[\mathbf{y}(t_{i+1})], latexmath:[\mathbf{y^{(j)}}(t_{i+1})],
 |Output variables latexmath:[\mathbf{y}(t_{i+1})].
@@ -132,7 +131,7 @@ _If the simulation algorithm implements an extrapolation method of order_ latexm
 ++++
 \mathbf{u}_{i, IU}(t)
 =
-\sum^{m_{\mathit{extra}}}_{j=0} \mathbf{C_{i, j}} \frac{(t-t_i)^j}{j!}
+\sum^{m_{\mathit{extra}}}_{j=0} \mathbf{C_{i, j}} \frac{(t-tc_i)^j}{j!}
 ++++
 _where_ latexmath:[\mathbf{C}_{i, j}] _are coefficients that can be equal to output derivatives of a connected FMU to realize a Taylor polynomial._
 
