@@ -5,7 +5,7 @@ This section contains a formal mathematical model of Co-Simulation FMUs.
 
 _[The following fundamental assumptions are made:_
 
-_The slave simulators are seen by the master simulator as purely sampled-data systems, with the exception, that the master can provide input data of a defined level of smoothness (with the flag <<recommendedIntermediateInputSmoothness>>) within a communication interval via the intermediate variable access mechanism (see <<intermediate-variable-access>>)._
+_The FMUs are seen by the simulation algorithm as purely sampled-data systems, with the exception, that the simulation algorithm can provide input data of a defined level of smoothness (with the flag <<recommendedIntermediateInputSmoothness>>) within a communication interval via the intermediate variable access mechanism (see <<intermediate-variable-access>>)._
 
 _Such a sampled-data system consists typically of a hybrid ODE that is integrated between communication points (known as "sampled access to time continuous systems") where internal events may occur and be handled, but events are not visible from the outside of the FMU._
 
@@ -14,11 +14,11 @@ _However, in FMI 3.0, Co-Simulation (CS) and Scheduled Execution (SE) may likely
 _And - at least without using intermediate variable access (see <<intermediate-variable-access>>), which is untypical for sampled data systms - with Co-Simulation there will always be a communication step delay for information going "through the FMU", so there cannot be an immediate reaction as in Co-Simulation. (see <<fmi-for-co-simulation>>_
 _]_
 
-The communication between the master and a slave takes place at
+The communication between the importer and a FMU takes place at
 
 - a discrete set of time instants, called communication points, where input variables may change in non-smooth or even non-continuous way.
 
-- intermediate time instances, where the master may get and set variables using <<intermediate-variable-access>>.
+- intermediate time instances, where the simulation algorithm may get and set variables using <<intermediate-variable-access>>.
 
 An FMI Co-Simulation model is described by the following variables:
 
@@ -32,7 +32,7 @@ An FMI Co-Simulation model is described by the following variables:
 (Variable defined with <<causality>> = <<independent>>). +
 The i-th communication point is denoted as latexmath:[t = t_i] +
 The communication step size is denoted as latexmath:[h_i = t_{i+1} - t_i] +
-Intermediate time points are denoted as latexmath:[t \in (t_i, t_{i+1})] where the FMU exchanges information with the master. +
+Intermediate time points are denoted as latexmath:[t \in (t_i, t_{i+1})] where the FMU exchanges information with the simulation algorithm. +
 An early return at time  latexmath:[t^*_{i+1} \in (t_i, t_{i+1})]  corresponds to a redefinition of latexmath:[h^*_i = t^*_{i+1} - t_{i}] and latexmath:[h_i] to a smaller value during the current timestep.
 
 |latexmath:[\mathbf{v}]
@@ -62,7 +62,7 @@ If an event happens at the communication point, <<continuous>> input variables m
 The values of these variables are defined outside of the model.
 
 latexmath:[\mathbf{u}_{i, IU}] are functions defined on the interval latexmath:[ [t_i, t_{i+1}] ] with latexmath:[\mathbf{u}_{i, IU}(t_i)=\mathbf{u}(t_i)]. +
-With the optional flag <<recommendedIntermediateInputSmoothness>> with value latexmath:[k] the FMU can signal to the master that best convergence rates can be achieved if the these functions are of the smoothness (latexmath:[C^{k}([ t_i, t_{i+1}]), that is k-time continuously differentiable, with latexmath:[C^{0}] meaning continuous.
+With the optional flag <<recommendedIntermediateInputSmoothness>> with value latexmath:[k] the FMU can signal to the co-simulation algorithm that best convergence rates can be achieved if the these functions are of the smoothness (latexmath:[C^{k}([ t_i, t_{i+1}]), that is k-time continuously differentiable, with latexmath:[C^{0}] meaning continuous.
 
 |latexmath:[\mathbf{y}(t_{i+1})], latexmath:[\mathbf{y^{(j)}}(t_{i+1})],
 |Output variables latexmath:[\mathbf{y}(t_{i+1})].
@@ -75,7 +75,7 @@ Also j-th derivatives latexmath:[\mathbf{y}^{(j)}(t_{i+1})] can be provided if s
 
 |latexmath:[\mathbf{y}_{i, IU}(t)]
 |Intermediate output variables corresponding to the output variables latexmath:[\mathbf{y}].
-The values of these variables are computed in the FMU and they are designed to be used by the co-simulation master, for example for extrapolation
+The values of these variables are computed in the FMU and they are designed to be used by the co-simulation algorithm, for example for extrapolation.
 
 |latexmath:[\mathbf{w}(t_i)]
 |Local variables of the FMU that cannot be used for FMU connections.
@@ -117,7 +117,7 @@ When the transient simulation of the coupled system through Co-Simulation is com
 where latexmath:[\mathbf{\Phi}_i] and latexmath:[\mathbf{\Gamma}_i] define the system behavior for the time interval latexmath:[t_i \leq t < t_{i+1}],
 with latexmath:[t_i = t_0 + \sum_{k=0}^{i-1}h_k].
 
-_[For the part of the Co-Simulation slave that is based on an ODE, a differential equation is solved between communication points:_
+_[For the part of the Co-Simulation FMU that is based on an ODE, a differential equation is solved between communication points:_
 
 [latexmath]
 ++++
@@ -125,7 +125,7 @@ _[For the part of the Co-Simulation slave that is based on an ODE, a differentia
 \mathbf{p}_{\mathit{tune}} \right)
 ++++
 
-_If the master algorithm implements an extrapolation method of order_ latexmath:[m_{extra}] _, it can provide intermediate inputs of the form:_
+_If the simulation algorithm implements an extrapolation method of order_ latexmath:[m_{extra}] _, it can provide intermediate inputs of the form:_
 
 
 [latexmath]
@@ -152,34 +152,34 @@ _]_
 
 Definition <<equation-co-simulation-evaluations>> is consistent with the definition of co-simulation by <<KS00>>.
 
-* At the communication points, the master provides generalized inputs to the slave:
+* At the communication points, the simulation algorithm provides generalized inputs to the FMU:
 
-** The current <<input>> variables latexmath:[\mathbf{u}_i] of the subsystem (in other words, the <<input>> variables of the model contained in the slave simulator, in the sense of system-level simulation).
+** The current <<input>> variables latexmath:[\mathbf{u}_i] of the FMU (in other words, the <<input>> variables of the model represented by the FMU, in the sense of system-level simulation).
 
 ** Varying <<parameter,`parameters`>> latexmath:[\mathbf{p}_{\mathit{tune},i}], also known as <<tunable>> <<parameter,`parameters`>>.
 
-* The slave provides generalized outputs to the master, which are:
+* The FMU provides generalized outputs to the simulation algorithm, which are:
 
-** The current output variables latexmath:[\mathbf{y}_{i+1}^{(0)}]of the subsystem (same remark as above), along with some of their successive <<derivative,`derivatives`>> latexmath:[\left\{ \mathbf{y}_{i+1}^{(j)} \right\}_{j=1,\cdots,m_{odo}}](in case of continuous-time variables).
+** The current output variables latexmath:[\mathbf{y}_{i+1}^{(0)}] of the FMU (same remark as above), along with some of their successive <<derivative,`derivatives`>> latexmath:[\left\{ \mathbf{y}_{i+1}^{(j)} \right\}_{j=1,\cdots,m_{odo}}] (in case of continuous-time variables).
 
 ** Observation variables and <<calculated>> varying <<parameter,`parameters`>> latexmath:[\mathbf{w}_{i+1}], along with directional derivatives estimated at latexmath:[t = t_{i+1}] (in case of continuous-time variables).
 
-* At intermediate times latexmath:[t\in (t_i, t_{i+1})] the master and slave exchange values for latexmath:[\mathbf{u}_{i, IU}(t)] and latexmath:[\mathbf{y}_{i, IU}(t)].
+* At intermediate times latexmath:[t\in (t_i, t_{i+1})] the simulation algorithm and the FMU exchange values for latexmath:[\mathbf{u}_{i, IU}(t)] and latexmath:[\mathbf{y}_{i, IU}(t)].
 
-* Initialization: The slave being a sampled-data system, its internal states (which can be either continuous-time or discrete-time) need to be initialized at latexmath:[t = t_0].
+* Initialization: The FMU being a sampled-data system, its internal states (which can be either continuous-time or discrete-time) need to be initialized at latexmath:[t = t_0].
 This is performed through an auxiliary function _[this relationship is defined in the XML file under elements `<ModelStructure><InitialUnknown>`]_:
 
 Computing the solution of an FMI Co-Simulation model means to split the solution process in two phases and in every phase different equations and solution methods are utilized.
 The phases can be categorized according to the following modes:
 
 ==== Initialization Mode
-This mode is used to compute at the start time latexmath:[t_0] initial values for internal variables of the Co-Simulation slave, especially for continuous-time <<state,`states`>>, latexmath:[\mathbf{x}_d(t_0)], and for the previous discrete-time <<state,`states`>>, latexmath:[^{\bullet}\mathbf{x}_d(t_0)], by utilizing extra equations not present in the other mode _[for example, equations to set all <<derivative,`derivatives`>> to zero, that is, to initialize in steady-state]_.
-If the slave is connected in loops with other models, iterations over the FMU equations are possible.
+This mode is used to compute at the start time latexmath:[t_0] initial values for internal variables of the Co-Simulation FMU, especially for continuous-time <<state,`states`>>, latexmath:[\mathbf{x}_d(t_0)], and for the previous discrete-time <<state,`states`>>, latexmath:[^{\bullet}\mathbf{x}_d(t_0)], by utilizing extra equations not present in the other mode _[for example, equations to set all <<derivative,`derivatives`>> to zero, that is, to initialize in steady-state]_.
+If the FMU is connected in loops with other models, iterations over the FMU equations are possible.
 Algebraic equations are solved in this mode.
 
 ==== Step Mode
 This mode is used to compute the values of all continuous-time and discrete-time variables at communication points by numerically solving ordinary differential, algebraic and discrete equations.
-If the slave is connected in loops with other models, no iterations over the FMU equations are possible for a given communication point.
+If the FMU is connected in loops with other models, no iterations over the FMU equations are possible for a given communication point.
 
 _[Note that for a Co-Simulation FMU, no super-dense time description is used at communication points.]_
 
