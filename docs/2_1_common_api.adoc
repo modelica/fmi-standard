@@ -267,6 +267,11 @@ image::images/state-machines-common-states.svg[width=80%, align="center"]
 
 The description of the super state *FMU State Setable* generally describes functions that deal with instantiation, destruction and logging of FMUs.
 
+This state is entered when any of the following functions is called: <<fmi3InstantiateModelExchange>>, <<fmi3InstantiateCoSimulation>> and <<fmi3InstantiateScheduledExecution>>.
+The state is left by either calling <<fmi3FreeInstance>> or when any of the functions called during *FMU State Setable* returns <<fmi3Fatal>>.
+
+Allowed Function Calls::
+
 In all states of this super state it is allowed to call <<fmi3GetFMUState>>, `fmi3SetFMUState`, `fmi3FreeFMUState`, <<fmi3SerializedFMUStateSize>>, <<fmi3SerializeFMUState>>, <<fmi3DeSerializeFMUState>>, <<fmi3Reset>>, <<fmi3GetVersion>>, `fmi3SetDebugLogging` and <<fmi3FreeInstance>>.
 
 [[fmi3Instantiate,`fmi3InstantiateXXX`]]
@@ -433,10 +438,12 @@ Depending on the generating modeling environment, none, some or all allowed valu
 
 This section documents functions that deal with configuration, initialization, termination, and resetting of an FMU.
 
+This super state is entered by the FMU when <<fmi3Instantiate>> was called and returned successfully.
 If any function called in super state *Under Evaluation* returns <<fmi3Error>>, the FMU enters state *Terminated*.
 
-This super state is entered by the FMU when <<fmi3Instantiate>> is called.
+Allowed Function Calls::
 
+<<fmi3EnterConfigurationMode>>::
 [[fmi3EnterConfigurationMode,`fmi3EnterConfigurationMode`]]
 [source, C]
 ----
@@ -445,6 +452,7 @@ include::../headers/fmi3FunctionTypes.h[tags=EnterConfigurationMode]
 
 Informs the FMU to enter the *Configuration Mode* or *Reconfiguration Mode*.
 
+<<fmi3ExitConfigurationMode>>::
 [[fmi3ExitConfigurationMode,`fmi3ExitConfigurationMode`]]
 [source, C]
 ----
@@ -453,6 +461,7 @@ include::../headers/fmi3FunctionTypes.h[tags=ExitConfigurationMode]
 
 Informs the FMU to exit the *Configuration Mode* or *Reconfiguration Mode*.
 
+<<fmi3EnterInitializationMode>>::
 [[fmi3EnterInitializationMode,`fmi3EnterInitializationMode`]]
 [source, C]
 ----
@@ -486,6 +495,7 @@ If `stopTimeDefined == fmi3False`, then no final value of the <<independent>> va
 +
 _[If the <<independent>> variable is `time`, `stopTime` is the stop time of the simulation.]_
 
+<<fmi3ExitInitializationMode>>::
 [[fmi3ExitInitializationMode,`fmi3ExitInitializationMode`]]
 [source, C]
 ----
@@ -495,6 +505,7 @@ include::../headers/fmi3FunctionTypes.h[tags=ExitInitializationMode]
 Informs the FMU to exit *Initialization Mode*.
 This function switches off all initialization equations, and the FMU enters *Event Mode* for Model Exchange, *Step Mode* for Co-Simulation and *Clock Activation Mode* for Scheduled Execution.
 
+<<fmi3Terminate>>::
 [[fmi3Terminate,`fmi3Terminate`]]
 [source, C]
 ----
@@ -505,6 +516,7 @@ Informs the FMU that the simulation run is terminated.
 After calling this function, the final values of all variables can be inquired with the `fmi3Get{VariableType}` functions.
 It is not allowed to call this function after one of the functions returned with a status flag of <<fmi3Error>> or <<fmi3Fatal>>.
 
+<<fmi3Reset>>::
 [[fmi3Reset,`fmi3Reset`]]
 [source, C]
 ----
@@ -519,11 +531,18 @@ Before starting a new run <<fmi3EnterInitializationMode>> has to be called.
 ====== State: Instantiated [[Instantiated]]
 
 In this state the FMU can do one-time initializations and allocate memory.
+This state is entered after <<fmi3Instantiate>> returned successfully.
+
  <<start>> and guess values (variables that have <<initial>> = <<exact>> or <<approx>>) can be set and all variables with <<variability>> latexmath:[\neq] <<constant>> can be set.
 This does not include inputs as they do not have an <<initial>> attribute.
 
 Allowed Function Calls::
-<<fmi3EnterInitializationMode>>, <fmi3EnterConfigurationMode>>
+
+<<fmi3EnterInitializationMode>>::
+Change state of FMU to *Initialization Mode*.
+
+<<fmi3EnterConfigurationMode>>::
+Change state of FMU to *Configuration Mode*.
 
 `fmi3Set{VariableType}`::
 For variables with <<variability>> latexmath:[\neq] <<constant>> and for which <<initial>> = <<exact>> or <<approx>>.
@@ -536,12 +555,14 @@ This state is entered from state *Instantiated* by calling <<fmi3EnterConfigurat
 <<fmi3EnterConfigurationMode>> can only be called if the FMU contains at least one <<structuralParameter,`structural parameter`>>
 
 Allowed Function Calls::
-<<fmi3ExitConfigurationMode>>
+
+<<fmi3ExitConfigurationMode>>::
+With this function call, the FMU is returned to state *Instantiated*.
 
 `fmi3Set{VariableType}`::
 Only for variables with <<causality>> = <<structuralParameter>> and <<variability>> = <<fixed>> or <<variability>> = <<tunable>>.
 
-====== State: Reconfiguration Mode [[state-reconfiguration-mode-co-simulation]]
+====== State: Reconfiguration Mode [[ReconfigurationMode]]
 
 In this state <<structuralParameter,`structural parameters`>> with <<variability>> = <<tunable>> can be changed.
 This state is entered from state *Event Mode* (ME), *Step Mode* (CS) or *Clock Activation Mode* (SE) by calling <<fmi3EnterConfigurationMode>>.
@@ -564,7 +585,12 @@ The variables that can be retrieved by `fmi3Get{VariableType}` calls are (1) def
 Variables with <<initial>> = <<exact>> and <<variability>> latexmath:[\neq] <<constant>>, as well as variables with <<causality>> = <<input>> can be set.
 
 Allowed Function Calls::
-<<fmi3ExitInitializationMode>>, <<fmi3GetDirectionalDerivative>>
+
+<<fmi3ExitInitializationMode>>::[[fmi3ExitInitializationMode]]
+This function call changes the state of the FMU to the start state of the super state *Initialized* which is either *Continuous-Time Mode* (ME), *Step Mode* (CS) or *Clock Activation Mode* (SE).
+
+<<fmi3GetDirectionalDerivative>>::
+See <<fmi3GetDirectionalDerivative>>.
 
 `fmi3Set{VariableType}`::
 For variables with:
@@ -577,11 +603,9 @@ For variables with <<causality>> = <<output>> or continuous-time <<state,`states
 
 ====== Super State: Initialized [[Initialized]]
 
-This super state is entered by the FMU when `fmi3ExitInitializatoinMode` is called.
+This super state is entered by the FMU when <<fmi3ExitInitializationMode>> is called.
 If the function <<fmi3Terminate>> is called, the FMU enters state *Terminated* from all states of this super state.
-
-The FMU enters state *Terminated* only after all other tasks related to the computation of model partitions of this FMU have ended.
-After <<fmi3Terminate>> has been called no new tasks can be started (e.g. related to <<outputClock>> ticks) and all other function calls for this FMU must return <<fmi3Error>> until the state *Terminated* is reached.
+If any function returns <<fmi3Error>> in *Initialized*, the FMU switches to state *Terminated*.
 
 The states of this super state differ between the FMI types and will be described in detail in their respective chapters (except *Reconfiguration Mode*).
 
@@ -592,6 +616,9 @@ Allowed Function Calls::
 `fmi3Get{VariableType}`, <<fmi3GetDirectionalDerivative>>, <<fmi3GetOutputDerivatives>>
 
 ===== State: Intermediate Update Mode [[IntermediateUpdateMode]]
+
+The FMU enters this state when the FMU calls <<fmi3CallbackIntermediateUpdate>> in state *Step Mode* (CS) or in state *Clock Activation Mode* (SE).
+When the callback function returns, the FMU returns to *Step Mode* (CS) or to *Clock Activation Mode* (SE).
 
 In this state the co-simulation algorithm can retrieve information from the FMU between communication points.
 This state is only available in Co-Simulation and Scheduled Execution.

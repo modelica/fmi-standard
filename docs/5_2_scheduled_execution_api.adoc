@@ -81,11 +81,18 @@ Hence if in states *Clock Activation Mode*, *Intermediate Update Mode*, or *Reco
 If in these states a function returns <<fmi3Discard>> or <<fmi3Error>> the simulation algorithm may wait until all other tasks of the model partitions of this FMU have ended, but new tasks must not be started.
 
 Each state of the state machine corresponds to a certain phase of a simulation.
-Common states are defined in <<state-machine-and-common-states>>, such as <<Instantiated,*Instantiated*>>, <<ConfigurationMode,*Configuration Mode*>> and <<InitializationMode,*Initialization Mode*>>.
+Common states are defined in <<state-machine-and-common-states>>, such as super states <<FMUStateSetable,*FMU State Setable*>>, <<UnderEvaluation,*Under Evaluation*>> and  <<Initialized,*Initialized*>>, states <<Instantiated,*Instantiated*>>, <<ConfigurationMode,*Configuration Mode*>>, <<ReconfigurationMode,*Reconfiguration Mode*>>, <<InitializationMode,*Initialization Mode*>>, <<Terminated,*Terminated*>> and <<IntermediateUpdateMode,*Intermediate Update Mode*>>.
+
+===== Super State: Initialized [[Initialized-SE]]
+
+Special to Scheduled Execution, the following additional constrains apply to the state *Initialized* (see <<Initialized>>).
+The FMU enters state *Terminated* only after all other tasks related to the computation of model partitions of this FMU have ended.
+After <<fmi3Terminate>> has been called no new tasks can be started (e.g. related to <<outputClock>> ticks) and all other function calls for this FMU must return <<fmi3Error>> until the state *Terminated* is reached.
 
 ===== State: Clock Activation Mode
 
 The FMU enters this state when the simulation algorithm calls <<fmi3ExitInitializationMode>> in state *Initialization Mode* or <<fmi3ExitConfigurationMode>> in state *Reconfiguration Mode*.
+
 In this state the simulation algorithm can create multiple concurrent tasks related to an FMU and in each task the simulation algorithm can activate one or multiple <<inputClock,`input clocks`>> of an FMU based on the defined <<clock>> properties via a <<fmi3ActivateModelPartition>> call for each <<clock>>.
 
 Allowed Function Calls::
@@ -152,6 +159,9 @@ Thus these functions can not be called concurrently for model partitions of an F
 
 ===== State: Intermediate Update Mode
 
+The FMU enters this state when the FMU calls <<fmi3CallbackIntermediateUpdate>> in state *Clock Activation Mode*.
+When the callback function returns, the FMU returns to *Clock Activation Mode*.
+
 Here only special remarks w.r.t. *Intermediate Update Mode* in Scheduled Execution are made.
 For the general mechanism see <<IntermediateUpdateMode>>.
 
@@ -160,6 +170,8 @@ The simulation algorithm provides the implementation of <<fmi3CallbackIntermedia
 If the simulation algorithm detects that an <<outputClock,`output clocks`>> ticked and this <<outputClock,`output clock`>> is configured to <<triggeredBy,`trigger`>> an <<inputClock,`input clock`>> the simulation algorithm schedules a task associated to this <<inputClock,`input clock`>>.
 
 Allowed Function Calls::
+
+<<fmi3GetClock>>::
 For an <<outputClock>> only the first call of `fmi3GetClock` for a specific activation of this <<clock>> signals `fmi3ClockActive`.
 The FMU sets the reported activation state immediately back to `fmi3ClockInactive` for the following `fmi3GetClock` calls for that <<clock>> (in the same or other model partitions of the FMU) until this <<outputClock>> is internally activated again.
 The simulation algorithm can call `fmi3Set{VariableType}` and `fmi3Get{VariableType}` during the callback for variables associated to an <<outputClock>> that is active during this callback.
