@@ -98,7 +98,7 @@ Depending on the connection with other FMUs, the environment shall
 ** call <<fmi3Terminate>>, if <<terminateSimulation,`terminateSimulation == fmi3True`>> is returned by at least one FMU,
 ** call <<fmi3EnterContinuousTimeMode>> if all FMUs return `newDiscreteStatesNeeded == fmi3False`, and
 ** stay in *Event Mode* otherwise.
-When the FMU is terminated, it is assumed that an appropriate message is printed by the <<logMessage>> function (see <<creation-destruction-and-logging>>) to explain the reason for the termination.
+When the FMU is terminated, it is assumed that an appropriate message is printed by the <<logMessage>> function (see <<FMUStateSetable>>) to explain the reason for the termination.
 
 [[terminateSimulation,`terminateSimulation`]]
 * If output argument `terminateSimulation == fmi3True`, the FMU can signal it needs to terminate the simulation by calling <<fmi3Terminate>>.
@@ -215,6 +215,14 @@ _[Typically, the nominal values of the continuous <<state,`states`>> are used to
 _Example:_ +
 `absoluteTolerance[i] = 0.01 * tolerance * nominals[i];` _]_
 
+Note that simulation backward in time is only allowed over continuous time intervals.
+As soon as an event occurrs (<<fmi3EnterEventMode>> was called), going back in time is forbidden, because <<fmi3EnterEventMode>> / <<fmi3NewDiscreteStates>> can only compute the next discrete state, not the previous one.
+
+Note that during *Initialization*, *Event Mode*, and *Continuous-Time Mode*, <<input>> variables can be set with `fmi3Set{VariableType}` and output variables can be retrieved with `fmi3Get{VariableType}` interchangeably according to the model structure defined under element `<ModelStructure>` in the XML file.
+_[For example, if one <<output>> `y1` depends on two <<input,`inputs`>> `u1`, `u2`, then these two <<input,`inputs`>> must be set, before `y1` can be retrieved._
+_If additionally an <<output>> `y2` depends on an <<input>> `u3`, then `u3` can be set and `y2` can be retrieved afterwards._
+_As a result, artificial or `real` algebraic loops over connected FMUs in any of these three modes can be handled by using appropriate numerical algorithms.]_
+
 ==== State Machine for Model Exchange [[state-machine-model-exchange]]
 
 Every implementation of the FMI must support calling sequences of the functions according to the state machine in <<figure-model-exchange-state-machine>>.
@@ -230,24 +238,9 @@ If a transition is labelled with one or more function names (for example, `fmi3G
 Note that the FMU can always determine in which state it is since every state is entered by a particular function call (such as <<fmi3EnterEventMode>>), or a particular return value (such as <<fmi3Fatal>>).
 
 The transition conditions `external event`, <<time event>>, and <<state event>> are defined in <<math-model-exchange>>.
-Each state of the state machine corresponds to a certain phase of a simulation as follows:
 
-===== State: Instantiated
-In this state, <<start>> and guess values (= variables that have <<initial>> = <<exact>> or <<approx>>) set and <<variability>> latexmath:[\neq] <<constant>> can be set, this does not include inputs as they do not have an <<initial>> attribute.
-
-===== State: Configuration Mode
-In this state <<structuralParameter,`structural parameters`>> with <<variability>> = <<fixed>> or <<variability>> = <<tunable>> can be changed.
-This state is entered from state *Instantiated* by calling <<fmi3EnterConfigurationMode>> and left back to *Instantiated* by calling <<fmi3ExitConfigurationMode>>.
-<<fmi3EnterConfigurationMode>> can only be called if the FMU contains at least one <<structuralParameter,`structural parameter`>>
-
-===== State: Initialization Mode
-In this state, equations are active to determine all continuous-time states, as well as all <<output,`outputs`>> (and optionally other variables exposed by the exporting tool).
-The variables that can be retrieved by `fmi3Get{VariableType}` calls are (1) defined in the XML file as elements `<ModelStructure><InitialUnknown>` and (2) variables with <<causality>> = <<output>>.
-Variables with <<initial>> = <<exact>> and <<variability>> latexmath:[\neq] <<constant>>, as well as variables with <<causality>> = <<input>> can be set.
-
-===== State: Continuous-Time Mode
-In this state, the continuous-time model equations are active and integrator steps are performed.
-The event time of a <<state event>> may be determined if a domain change of at least one event indicator is detected at the end of a completed integrator step.
+Each state of the state machine corresponds to a certain phase of a simulation.
+Common states are defined in <<state-machine-and-common-states>>, such as <<Instantiated,*Instantiated*>>, <<ConfigurationMode,*Configuration Mode*>> and <<InitializationMode,*Initialization Mode*>>.
 
 ===== State: Event Mode
 If an event is triggered in *Continuous-Time Mode*, *Event Mode* is entered by calling <<fmi3EnterEventMode>>.
@@ -255,21 +248,9 @@ In this mode all continuous-time and discrete-time equations are active and the 
 After an event is completely processed, <<fmi3NewDiscreteStates>> must be called and depending on the return argument, `newDiscreteStatesNeeded`, the state machine stays in *Event Mode* or switches to *Continuous-Time Mode*.
 When the *Initialization Mode* is terminated with <<fmi3ExitInitializationMode>>, then *Event Mode* is directly entered, and the continuous-time and discrete-time variables at the initial time are computed based on the initial continuous-time states determined in the *Initialization Mode*.
 
-===== State: Reconfiguration Mode
-In this state <<structuralParameter,`structural parameters`>> with <<variability>> = <<tunable>> can be changed.
-This state is entered from state *Event Mode* by calling <<fmi3EnterConfigurationMode>> and left back to *Event Mode* by calling <<fmi3ExitConfigurationMode>>.
-<<fmi3EnterConfigurationMode>> can only be called if the FMU contains at least one <<structuralParameter,`structural parameter`>>.
-
-===== State: Terminated
-In this state, the solution at the final time of a simulation can be retrieved.
-
-Note that simulation backward in time is only allowed over continuous time intervals.
-As soon as an event occurrs (<<fmi3EnterEventMode>> was called), going back in time is forbidden, because <<fmi3EnterEventMode>> / <<fmi3NewDiscreteStates>> can only compute the next discrete state, not the previous one.
-
-Note that during *Initialization*, *Event*, and *Continuous-Time Mode*, <<input>> variables can be set with `fmi3Set{VariableType}` and output variables can be retrieved with `fmi3Get{VariableType}` interchangeably according to the model structure defined under element `<ModelStructure>` in the XML file.
-_[For example, if one <<output>> `y1` depends on two <<input,`inputs`>> `u1`, `u2`, then these two <<input,`inputs`>> must be set, before `y1` can be retrieved._
-_If additionally an <<output>> `y2` depends on an <<input>> `u3`, then `u3` can be set and `y2` can be retrieved afterwards._
-_As a result, artificial or `real` algebraic loops over connected FMUs in any of these three modes can be handled by using appropriate numerical algorithms.]_
+===== State: Continuous-Time Mode
+In this state, the continuous-time model equations are active and integrator steps are performed.
+The event time of a <<state event>> may be determined if a domain change of at least one event indicator is detected at the end of a completed integrator step.
 
 ==== Code Example
 
