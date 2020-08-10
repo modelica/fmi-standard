@@ -336,16 +336,10 @@ include::examples/se_example_modelDescription.xml[]
 
 ===== Master Implementation
 
-To enable the computation of a Scheduled Co-Simulation FMU a master has to provide a task scheduler. Depending on the particular configuration  the master sets up tasks for every <<inputClock,`input clock`>> (compare <<scheduled-execution-schema>> above). When executed each task calls <<fmi3ActivateModelPartition>> for its respective <<inputClock,`input clock`>>. The `activationTime` is provided by the master. Periodic tasks can be scheduled on initialization of the simulation application. Aperiodic tasks are scheduled explicitly during the execution. In this example <<inputClock,`input clock`>> AperiodicClock is triggered by <<outputClock,`output clock`>> outClock thus the master ensures the task associated to AperiodicClock is scheduled when <<fmi3CallbackIntermediateUpdate>> is called by the FMU and outClock has ticked.
+To enable the computation of a Scheduled Co-Simulation FMU a master has to provide a task scheduler. Depending on the particular configuration  the master sets up tasks for every <<inputClock,`input clock`>> (compare <<scheduled-execution-schema>> above). When executed each task calls <<fmi3ActivateModelPartition>> for its respective <<inputClock,`input clock`>>. The `activationTime` is provided by the master. Periodic tasks can be scheduled on initialization of the simulation application. Aperiodic tasks are scheduled explicitly during the execution.
 
 [source, C]
 ----
-// Task scheduler
-	// every 10 ms:
-	Scheduler->ScheduleTask(Task10ms);
-	// every 50ms:
-	Scheduler->ScheduleTask(Task50ms);
-
 Task10ms.Execute()
 {
 	// Set inputs with valueReference 0 and 1 associated to clockIndex 5
@@ -372,7 +366,12 @@ Task50ms.Execute()
 	// call for 50msClock tick (clockIndex 8)
 	fmi3ActivateModelPartition(s, 8, 0, Task50ms.ActivationTime);
 };
+----
 
+In this example <<inputClock,`input clock`>> AperiodicClock is triggered by <<outputClock,`output clock`>> outClock thus the master ensures the task associated to AperiodicClock is scheduled when <<fmi3CallbackIntermediateUpdate>> is called by the FMU and outClock has ticked.
+
+[source, C]
+----
 void CallbackIntermediateUpdate(..., fmi3Boolean clocksTicked, ...)
 {
 	fmi3ValueReference outputClockReferences = {7};	
@@ -392,7 +391,7 @@ void CallbackIntermediateUpdate(..., fmi3Boolean clocksTicked, ...)
 
 ===== FMU Implementation
 
-The FMU implements <<fmi3ActivateModelPartition>> dispatching for every <<inputClock,`input clock`>>. It lets <<outputClock,`output clock`>> outClock tick and calls <<fmi3CallbackIntermediateUpdate>>. If <<fmi3GetClock>> is called for a certain <<outputClock,`output clock`>> the <<outputClock,`output clock`>> is reset.
+The FMU implements <<fmi3ActivateModelPartition>> dispatching for every <<inputClock,`input clock`>> so the code might look like this:
 
 [source, C]
 ----
@@ -413,7 +412,12 @@ fmi3Status fmi3ActivateModelPartition(fmi3Instance *instance,
 		...
     }
 }
+----
 
+In the context of the task beeing executed every 10 ms the FMU lets <<outputClock,`output clock`>> outClock tick and calls <<fmi3CallbackIntermediateUpdate>>.
+
+[source, C]
+----
 void activateModelPartition10ms(fmi3Instance *instance, ...) 
 {
 	...
@@ -423,14 +427,10 @@ void activateModelPartition10ms(fmi3Instance *instance, ...)
 		fmi3SetClock({7});
 		// inform master that output clock has ticked
 		fmi3Boolean clocksTicked = fmi3True;
-		instance->intermediateUpdate(..., clocksTicked, ...);
+		instance->fmi3CallbackIntermediateUpdate(..., clocksTicked, ...);
 	}
 	...
 }
-
-void activateModelPartitionAperiodic(...) {...}
-
-void activateModelPartition50ms(...)  {...}
 
 fmi3Clock outClockActivationState = fmi3ClockInactive; 
 
@@ -438,7 +438,12 @@ fmi3Status fmi3SetClock(fmi3ValueReference clockReference)
 {
 	if (outputClockReferences[0] == 7) outClockActivationState = fmi3ClockActive;
 }
+----
 
+If <<fmi3GetClock>> is called for a certain <<outputClock,`output clock`>> the <<outputClock,`output clock`>> is reset.
+
+[source, C]
+----
 fmi3Status fmi3GetClock(..., fmi3ValueReference outputClockReferences, 
 	fmi3Clock *clocksActivationState, ...)
 {
@@ -449,4 +454,3 @@ fmi3Status fmi3GetClock(..., fmi3ValueReference outputClockReferences,
 	}
 }
 ----
-
