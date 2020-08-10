@@ -18,14 +18,14 @@ _In this context based on parallel multi-FMU calculations, <<figure-early-return
 [[figure-early-return]]
 image::images/earlyReturnFigure.png[width=100%, align="center"]
 
-_Each FMU starts integration from communication point latexmath:[t_{i}] to reach the next communication point latexmath:[t_{i+1}]._
-_Assuming an unexpected internal event is detected at_ latexmath:[t^{'}_{i+1}< t_{i+1}] _during FMU~1~ integration, the co-simulation algorithm is informed of this early return._
-_Now the co-simulation algorithm would like to avoid other FMUs exceed the event time, since all FMUs should be resynchronized at the event time which will be the next new communication point._
+_Each FMU starts integration from communication point_ latexmath:[t_{i}] _to reach the next communication point_ latexmath:[t_{i+1}] _._
+_Assuming an unexpected internal event is detected at_ latexmath:[t^{'}_{i+1}< t_{i+1}] _inside FMU~1~ , the FMU immediately informs the co-simulation algorithm and asks for an early return._
+_Since all FMUs should be resynchronized at the event time which will be the next new communication point, the co-simulation algorithm would like to avoid other FMUs exceed the event time._
 
-* _In the case of FMU~1~, the internal event time becomes the new_ latexmath:[t_{i+1}] _time, i.e. this is the source of the event._
-* _In the case of FMU~2~, a complete rollback from_ latexmath:[t_{i}] _to_ latexmath:[t^{'}_{i+1}] _is necessary._
-* _In the case of FMU~3~, computation is immediately interrupted and only a partial rollback is necessary to reach latexmath:[t^{'}_{i+1}] time._
-* _In the case of FMU~4~, the current step integration has been interrupted at_ latexmath:[t^{'}_{i+1}] _and no rollback is necessary._
+* _In the case of FMU~1~, the FMU waits to get pushed into the event mode to handle the event at_ latexmath:[t^{'}_{i+1}] _._
+* _In the case of FMU~2~, since this FMU has already reached_ latexmath:[t_{i+1}] _, a complete rollback and a new co-simulation from_ latexmath:[t_{i}] _to_ latexmath:[t^{'}_{i+1}] _is necessary._
+* _In the case of FMU~3~, computation is immediately interrupted and only a partial rollback is necessary to reach_ latexmath:[t^{'}_{i+1}] _time._
+* _In the case of FMU~4~, the master immediately requests FMU~4~ an early return at_ latexmath:[t^{'}{i+1}] _and the current integration step will been interrupted at_ latexmath:[t^{'}{i+1}] _and no rollback is necessary for FMU~4~._
 
 _Each ongoing FMU stops its integration either exactly at the interrupt time given by the co-simulation algorithm or immediately after its current intermediate step if this time is already out-of-date._
 _Afterwards, a new step integration done on the FMU returns and signals the premature stop (early-return) to the co-simulation algorithm._
@@ -324,6 +324,13 @@ All other output arguments of <<fmi3NewDiscreteStates>> are undefined and have n
 
 In *Event Mode* it is allowed to call `fmi3Get{VariableType}` after <<fmi3NewDiscreteStates>> has been called and it is allowed to call `fmi3Set{VariableType}` before calling <<fmi3NewDiscreteStates>>.
 The FMU leaves *Event Mode* when the co-simulation algorithm calls <<fmi3EnterStepMode>>.
+
+The following pseudo-code example shows an implementation of <<fmi3CallbackIntermediateUpdate>> that uses <<earlyReturn>>, <<earlyReturnRequested>> and <<earlyReturnTime>> to handle events inside the FMU:
+
+[source, c]
+----
+include::Reference-FMUs/examples/cs_early_return.c[tag=EventEarlyReturn]
+----
 
 ==== Co-Simulation with Clock Support [[api-clocked-co-simulation]]
 
