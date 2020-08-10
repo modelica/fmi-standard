@@ -2,10 +2,8 @@
 #define fmi3PlatformTypes_h
 
 /*
-Standard header file to define the argument types of the
-functions of the Functional Mock-up Interface 3.0-alpha.3.
-This header file must be utilized both by the model and
-by the simulation engine.
+This header file defines the data types of FMI 3.0-alpha.5.
+It must be used by both FMU and FMI master.
 
 Copyright (C) 2008-2011 MODELISAR consortium,
               2012-2020 Modelica Association Project "FMI"
@@ -70,7 +68,7 @@ typedef         int32_t fmi3Int32;    /* 32-bit signed integer */
 typedef        uint32_t fmi3UInt32;   /* 32-bit unsigned integer */
 typedef         int64_t fmi3Int64;    /* 64-bit signed integer */
 typedef        uint64_t fmi3UInt64;   /* 64-bit unsigned integer */
-typedef             int fmi3Boolean;  /* Data type to be used with fmi3True and fmi3False */
+typedef            char fmi3Boolean;  /* Data type to be used with fmi3True and fmi3False */
 typedef            char fmi3Char;     /* Data type for one character */
 typedef const fmi3Char* fmi3String;   /* Data type for character strings
                                          ('\0' terminated, UTF-8 encoded) */

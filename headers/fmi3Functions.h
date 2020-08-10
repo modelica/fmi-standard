@@ -2,9 +2,8 @@
 #define fmi3Functions_h
 
 /*
-This header file must be utilized when compiling a FMU.
-It defines all functions of the
-     FMI 3.0-alpha.3 Model Exchange and Co-Simulation Interface.
+This header file declares the functions of FMI 3.0-alpha.5.
+It must be used when compiling an FMU.
 
 In order to have unique function names even if several FMUs
 are compiled together (e.g. for embedded systems), every "real" function name
@@ -94,7 +93,7 @@ it may be set to __declspec(dllimport).
 #endif
 
 /* FMI version */
-#define fmi3Version "3.0-alpha.3"
+#define fmi3Version "3.0-alpha.5"
 
 /***************************************************
 Common Functions
@@ -197,7 +196,7 @@ Functions for Model Exchange
 Functions for Co-Simulation
 ****************************************************/
 
-/* Simulating the slave */
+/* Simulating the FMU */
 #define fmi3EnterStepMode            fmi3FullName(fmi3EnterStepMode)
 #define fmi3GetOutputDerivatives     fmi3FullName(fmi3GetOutputDerivatives)
 #define fmi3DoStep                   fmi3FullName(fmi3DoStep)
@@ -304,7 +303,7 @@ FMI3_Export fmi3GetNumberOfContinuousStatesTYPE   fmi3GetNumberOfContinuousState
 Functions for Co-Simulation
 ****************************************************/
 
-/* Simulating the slave */
+/* Simulating the FMU */
 FMI3_Export fmi3EnterStepModeTYPE          fmi3EnterStepMode;
 FMI3_Export fmi3GetOutputDerivativesTYPE   fmi3GetOutputDerivatives;
 FMI3_Export fmi3ActivateModelPartitionTYPE fmi3ActivateModelPartition;

@@ -9,7 +9,7 @@ Also, the FMU might consist of discrete-time equations only, for example, descri
 
 The <<independent>> variable latexmath:[t \in \mathbb{T}] _[typically: time]_ is a tuple latexmath:[t = (t_R,t_I)], where latexmath:[t_R \in \mathbb{R},\ t_{I} \in \mathbb{N} = \{0, 1, 2, \ldots\}].
 The real part latexmath:[t_R] of this tuple is the <<independent>> variable of the FMU for describing the continuous-time behavior of the model between events.
-In this phase latexmath:[t_I = 0].
+During continuous-time integration latexmath:[t_I = 0].
 The integer part latexmath:[t_I] of this tuple is a counter to enumerate (and therefore distinguish) the events at the same continuous-time instant latexmath:[t_R].
 This time definition is also called "super-dense time" in literature, see, for example, <<LZ07>>.
 An ordering is defined on latexmath:[\mathbb{\text{T}}] that leads to the notation in <<table-model-exchange-math-notation>>.
@@ -106,13 +106,13 @@ _This means to call <<fmi3EnterEventMode>> on B.]_ +
 +
 All the following events are internal events:
 
-. At a predefined time instant latexmath:[t_i=(T_{\mathit{next}}(t_{i-1}, 0)] that was defined at the previous event instant latexmath:[t_{i-1}] by the FMU.
+. At a predefined time instant latexmath:[t_i=T_{\mathit{next}}(t_{i-1}, 0)] that was defined at the previous event instant latexmath:[t_{i-1}] by the FMU.
 Such an event is called <<time event>>.
 
 . At a time instant, where an event indicator latexmath:[z_j(t)] changes its domain from latexmath:[z_j > 0] to latexmath:[z_j \leq 0] or from latexmath:[z_j \leq 0] to latexmath:[z_j > 0] (see <<figure-events>>).
-More precisely: An event latexmath:[t = t_i] occurs at the smallest time instant "min t" with latexmath:[t>t_{i-1}] where "latexmath:[(z_j(t)>0) \neq (z_j(t_{i-1}) >0)]".
+More precisely: An event latexmath:[t = t_i] occurs at the smallest time instant latexmath:[t] with latexmath:[t>t_{i-1}] where latexmath:[(z_j(t)>0) \neq (z_j(t_{i-1}) >0)].
 Such an event is called <<state event>>.
-_[This definition is slightly different from the standard definition of <<state event,`state events`>>: "_ latexmath:[z_j(t) \cdot z_j(t_{i-1}) \leq 0] _"._
+_[This definition is slightly different from the standard definition of <<state event,`state events`>>: _ latexmath:[z_j(t) \cdot z_j(t_{i-1}) \leq 0] _._
 _This often used definition has the severe drawback that_ latexmath:[z_j(t_{i-1}) \neq 0] _is required in order to be well-defined and this condition cannot be guaranteed.]._
 All event indicators are piecewise continuous and are collected together in one vector of floating point numbers latexmath:[\mathbf{z(t)}]. +
 
@@ -184,15 +184,15 @@ Discrete <<state,`states`>> are not visible in the interface of an FMU and are o
 In reality, a discrete <<state>> is part of the <<output,`outputs`>> latexmath:[\mathbf{y}] or the <<local>> variables latexmath:[\mathbf{w}] of an FMU.
 
 |latexmath:[T_{\mathit{next}}(t_{i})]
-|At initialization or at an event instant, an FMU can define the next time instant latexmath:[T_{\mathit{next}}], at which the next event occurs (see also the definition of events above).
-Every event removes automatically a previous definition of latexmath:[T_{\mathit{next}}], and it must be explicitly defined again, if a previously defined latexmath:[T_{\mathit{next}}] was not triggered at the current event instant.
+|At initialization or at an event instant, an FMU can define the next time instant latexmath:[T_{\mathit{next}}], at which the next time event occurs (see also the definition of events above).
+Every event removes automatically a previous definition of latexmath:[T_{\mathit{next}}], and it must be explicitly defined again, event if a previously defined latexmath:[T_{\mathit{next}}] was not triggered at the current event instant.
 
 |latexmath:[\mathbf{r}(t_i)]
-|A vector of Boolean variables with latexmath:[r_{i} := z_{i} > 0].
+|A vector of Boolean variables with latexmath:[r_{j} := z_{j} > 0].
 When entering *Continuous-Time Mode* all relations reported via the event indicators latexmath:[\mathbf{z}] are fixed and during this mode these relations are replaced by latexmath:[\mathbf{r}].
-Only during *Initialization Mode* or *Event Mode* the domains latexmath:[z_{i} > 0] can be changed.
+Only during *Initialization Mode* or *Event Mode* the domains latexmath:[z_{j} > 0] can be changed.
 For notational convenience, latexmath:[\mathbf{r} := \mathbf{z} > 0] is an abbreviation for latexmath:[\mathbf{r}:=\{z_1>0, z_2>0, \ldots \}].
-_[For more details, see "Remark 3" below.]_
+_[For more details, see <<Remark3,Remark 3>> below.]_
 |====
 
 ==== Computation Modes [[computation-modes-model-exchange]]
@@ -421,6 +421,7 @@ _This is unproblematic, as long as no algebraic loops occur._
 _FMUs of this type can therefore not be used in real algebraic loops if the involved variables depend on a discrete-time <<state>>._
 _This restriction is communicated to the environment of the FMU by the `ScalarVariable` definition of the corresponding <<input>> with flag <<canHandleMultipleSetPerTimeInstant>> `= false` (so an <<input>> with this flag is not allowed to be called in an algebraic loop)._
 
+[[Remark3]]
 _Remark 3 - Event Indicators / Freezing Relations:_
 
 _In <<table-math-model-exchange>>, vector_ latexmath:[\mathbf{r}] _is used to collect all relations together that are utilized in the event indicators_ latexmath:[\mathbf{z}] _._
@@ -483,7 +484,7 @@ After calling <<fmi3ExitInitializationMode>>, the FMU is implicitly in *Event Mo
 If these variables are present in an algebraic loop, iteration can be used to compute them.
 Once finalized, <<fmi3NewDiscreteStates>> must be called, and depending on the value of the return argument, the FMU either continues the event iteration at the initial time instant or switches to *Continuous-Time Mode*. +
 After switching to *Continuous-Time Mode*, the integration is started.
-Basically, in this phase the <<derivative,`derivatives`>> of the continuous <<state,`states`>> are computed.
+Basically, during *Continuous-Time Mode*, the <<derivative,`derivatives`>> of the continuous <<state,`states`>> are computed.
 If FMUs and/or submodels are connected together, then the <<input,`inputs`>> of these models are the <<output,`outputs`>> of other models, and therefore, the corresponding FMU outputs must be computed.
 Whenever result values shall be stored, usually at output points defined before the start of the simulation, the `fmi3Get{VariableType}` function with respect to the desired variables must be called. +
 Continuous integration is stopped at an event instant.
