@@ -189,15 +189,6 @@ These definitions are used in the XML element `<ModelVariables>`.
 |`<ModelVariables>`
 |The central FMU data structure defining all variables of the FMU that are visible/accessible via the FMU functions.
 
-|`<ModelStructure>`
-|Defines the structure of the model.
-Especially, the ordered lists of <<output,`outputs`>>, continuous-time <<state,`states`>>, initial unknowns (the unknowns during *Initialization Mode*) and the event indicators are defined here.
-For more details on `<ModelStructure>`, see <<ModelStructure>>.
-Furthermore, the dependency of the unknowns from the knowns can be optionally defined for <<output,`outputs`>>, continuous-time <<state,`states`>> and initial unknowns.
-_[This information can be, for example, used to compute efficiently a sparse Jacobian for simulation, or to utilize the <<input>> / <<output>> dependency in order to detect that in some cases there are actually no algebraic loops when connecting FMUs together]_.
-Dependencies for event indicators are not provided.
-_[The calculation of derivatives of event indicators is not provided.]_.
-
 |`<Annotations>`
 |Optional annotations for the top-level element.
 
@@ -1206,11 +1197,13 @@ These parameters can be changed independently, unlike <<calculatedParameter,calc
 
 [[output,`output`]]
 `= output`: The variable value can be used by another FMU.
-The algebraic relationship to the <<input,`inputs`>> is defined via the <<dependencies>> attribute of `<fmiModelDescription><ModelStructure><Output>`.
-[[outputClock,`outputClock`]] If <<variability>> = <<clock>> the variable defines an <<outputClock,`output clock`>> that is controlled  by the FMU..
+The algebraic relationship to the <<input,`inputs`>> is defined via the <<dependencies>> attribute of the <<output>> variables.
+
+[[outputClock,`outputClock`]]
+If <<variability>> = <<clock>> the variable defines an <<outputClock,`output clock`>> that is controlled by the FMU.
 
 [[local,`local`]]
-`= local`: Local variable that is calculated from other variables or is a continuous-time <<state>> or an event indicator (see <<ModelStructure>>).
+`= local`: Local variable that is calculated from other variables or is a continuous-time <<state>> or an event indicator (see <<model-structure>>).
 It is not allowed to use the variable value in another model or FMU.
 
 [[independent,`independent`]]
@@ -1241,7 +1234,7 @@ _]_
 <<structuralParameter,`structural parameters`>> that are referenced in `<Dimension>` elements may have a `min` attribute with 0 but the <<start>> attribute, which is mandatory for <<structuralParameter,`structural parameters`>>, must have a value larger than 0 for <<structuralParameter,`structural parameters`>> used in `<Dimension>` elements.
 
 The default of <<causality>> is <<local>>. +
-A continuous-time <<state>> or a event indicator must have <<causality>> = <<local>> or <<output>>, see also <<ModelStructure>>.
+A continuous-time <<state>> or a event indicator must have <<causality>> = <<local>> or <<output>>, see also <<model-structure>>.
 
 _[<<causality>> = <<calculatedParameter>> and <<causality>> = <<local>> with <<variability>> = <<fixed>> or <<tunable>> are similar._
 _The difference is that a <<calculatedParameter>> can be used in another model or FMU, whereas a <<local>> variable cannot._
@@ -1283,8 +1276,6 @@ Changes to <<continuous>> variables during <<intermediateUpdate>> and normal com
 `= clock`: Only a variable of type `<Clock>` can have this variability.
 
 The default is <<continuous>> for variables of type `<Float32>` and `<Float64>`, and <<discrete>> for all other types.
-
-_[Note that the information about continuous <<state,`states`>> is defined with elements `<ModelStructure><Derivative>`.]_
 
 |`initial`
 |
@@ -1784,8 +1775,7 @@ If present, this variable is the derivative of variable with value reference `de
 _[For example, if there are 10 variables and `derivative = 3` for variable 8, then variable 8 is the derivative of variable 3 with respect to the <<independent>> variable (usually time)._
 _This information might be especially used if an <<input>> or an <<output>> is the derivative of another <<input>> or <<output>>, or to define the <<state,`states`>>.]_
 
-The <<state>> <<derivative,`derivatives`>> of an FMU are listed as elements `<ModelStructure><Derivative>`.
-All variables listed in this element must have attribute `derivative` (in order that the continuous-time <<state,`states`>> are uniquely defined).
+All continuous state variables must have a corresponding variables with attribute `derivative` in order that the continuous <<state,`states`>> are uniquely defined.
 
 |`reinit`
 |[[reinit,`reinit`]]
@@ -1801,10 +1791,13 @@ The `min/max` definitions are information from the FMU to the environment defini
 _[If, for example, an `<Enumeration>` is defined with `name1 = -4`, `name2 = 1`, `name3 = 5`, `name4 = 11` and `min = -2`, `max = 5`, then only `name2` and `name3` are allowed.]_
 |====
 
-==== Definition of the Model Structure [[ModelStructure]]
+==== Definition of the Model Structure [[model-structure]]
 
 The structure of the model is described by the <<dependencies>> and <<dependenciesKind>> attributes of the model variables.
 This structure is with respect to the underlying model equations, independently how these model equations are solved.
+_[This information can, for example, be used to compute efficiently a sparse Jacobian for simulation, or to utilize the <<input>> / <<output>> dependency in order to detect that in some cases there are actually no algebraic loops when connecting FMUs together.]_
+Dependencies for event indicators are not provided.
+_[The calculation of derivatives of event indicators is not provided.]_
 _[For example, when exporting a model in more than one FMI type; then the model structure is identical in all cases._
 _E.g. a Co-Simulation FMU has either an integrator included that solves the model equations, or the discretization formula of the integrator and the model equations are solved together ("inline integration")._
 _In all cases the model has the same continuous-time <<state,`states`>>._
@@ -1824,7 +1817,7 @@ _[A simulation environment can utilize this information to improve the efficienc
 The model structure is described by the variables detailed in <<table-model-structure-elements>>.
 The symbols of the mathematical equations describing the dependency are defined in <<math-model-exchange>>.
 
-.ModelStructure elements.
+.Model structure elements.
 [#table-model-structure-elements]
 [cols="1,5",options="header"]
 |====

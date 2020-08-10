@@ -582,7 +582,7 @@ Only for variables with <<causality>> = <<structuralParameter>> and <<variabilit
 This mode is used by the simulation algorithm to compute consistent initial conditions for overall system.
 Equations are active to determine the initial FMU state, as well as all <<output,`outputs`>> (and optionally other variables exposed by the exporting tool).
 Artificial or real algebraic loops over connected FMUs in *Initialization Mode* may be handled by using appropriate numerical algorithms.
-The variables that can be retrieved by `fmi3Get{VariableType}` calls are (1) defined in the XML file as elements `<ModelStructure><InitialUnknown>` and (2) variables with <<causality>> = <<output>>.
+The variables that can be retrieved by `fmi3Get{VariableType}` calls are (1) defined in the XML file as <<initial-unknown,initial unknowns>> and (2) variables with <<causality>> = <<output>>.
 Variables with <<initial>> = <<exact>> and <<variability>> latexmath:[\neq] <<constant>>, as well as variables with <<causality>> = <<input>> can be set.
 
 Allowed Function Calls::
@@ -783,7 +783,7 @@ A discrete-time <<state>> variable can be from any type (e.g., `fmi3Float64` or 
 A clocked partition is not executed during *Initialization Mode*, but it is executed the first time at its first <<clock>> tick.
 The associated <<clock>> of the model partition is synchronous to its discrete-time <<state,`states`>>.
 
-Discrete-time <<state,`states`>> are listed in the `<ModelStructure>`.
+Discrete-time <<state,`states`>> are listed in the <<model-structure,model structure>>.
 They can have initial values defined by xml-attributes <<initial>> and <<start>>, or the initial values are computed internally as a function of the parameters.
 
 There are two kinds of evaluation modes:
@@ -1072,18 +1072,18 @@ where
 
 * latexmath:[\mathbf{v}_{\mathit{unknonwn}}] is the vector of unknown floating point variables computed in the actual state:
 
-** *Initialization Mode*: The exposed unknowns listed as elements `<ModelStructure><InitialUnknown>` that have a floating point type.
+** *Initialization Mode*: The <<initial-unknown,initial unknowns>> that have a floating point type.
 
-** *Continuous-Time Mode* (Model Exchange): The continuous-time outputs and state derivatives (= the variables listed as elements `<ModelStructure><Output>` with a floating point type and <<variability>> = <<continuous>> and the variables listed as elements `<ModelStructure><Derivative>`).
+** *Continuous-Time Mode* (Model Exchange): The continuous-time outputs and state derivatives (= the variables with a floating point type, <<causality>> = <<output>>, and <<variability>> = <<continuous>> and the <<derivative,derivatives>>).
 
-** *Event Mode* (Model Exchange): The same variables as in the *Continuous-Time Mode* and additionally variables listed as elements `<ModelStructure><Output>` with a floating point type and <<variability>> = <<discrete>>.
+** *Event Mode* (Model Exchange): The same variables as in the *Continuous-Time Mode* and additionally variables with a floating point type, <<causality>> = <<output>>, and <<variability>> = <<discrete>>.
 
-** *Step Mode* (Co-Simulation): The variables listed as elements `<ModelStructure><Output>` with a floating point type and <<variability>> = <<continuous>> or <<discrete>>.
-Each state derivative variable listed as elements `<ModelStructure><Derivative>`, if present.
+** *Step Mode* (Co-Simulation): The variables with a floating point type, <<causality>> = <<output>>, and <<variability>> = <<continuous>> or <<discrete>>.
+Each state derivative variable with attribute <<derivative>>.
 
 * latexmath:[\mathbf{v}_{\mathit{known}}] is the vector of known floating point <<input>> variables of function *h* that changes its value in the actual state.
 
-Details are given in the description of element <<dependencies>> in <<ModelStructure>>.
+Details are given in the description of the <<model-structure,model structure>>.
 _[For example continuous-time <<input,`inputs`>> in *Continuous-Time Mode*._
 _A directional derivative with respect to the independent variable can be computed.]._
 
@@ -1201,7 +1201,7 @@ include::Reference-FMUs/examples/jacobian.c[tags=GetJacobian]
 
 _If the sparsity of a matrix shall be taken into account, then the matrix can be constructed in the following way:_
 
-. _The incidence information of the matrix (whether an element is zero or not zero) is extracted from the XML file from element `<ModelStructure>`._
+. _The incidence information of the matrix (whether an element is zero or not zero) is extracted from the <<model-structure,model structure>>._
 
 . _A so called graph coloring algorithm is employed to determine the columns of the matrix that can be computed by one call of `fmi3GetDirectionalDerivative`._
 _Efficient graph coloring algorithms are freely available, such as library https://cscapes.cs.purdue.edu/coloringpage/[ColPack] written in C/C++ (LGPL), or the routines by <<CGM84>>._
@@ -1313,8 +1313,7 @@ include::../headers/fmi3FunctionTypes.h[tags=GetNumberOfEventIndicators]
 
 This function returns the number of event indicators.
 The dependency of the number of event indicators on <<structuralParameter,`structural parameters`>> is implicitly given in the <<modelDescription.xml>> file.
-_[All event indicator variables are listed as elements `<EventIndicator>` in `<ModelStructure>`._
-_If the event indicator variable is an array variable and the `<Dimension>` element maps to a dependent variable, then this dependent variable is a dependency for the number of event indicators.]_
+_[If the event indicator variable is an array variable and the `<Dimension>` element maps to a dependent variable, then this dependent variable is a dependency for the number of event indicators.]_
 If all <<structuralParameter,`structural parameters`>> are unchanged then this dependency information can be used to calculate the initial number of states just using information given in the XML file without the need to call this C-API function.
 
 * Argument `nEventIndicators` points to the `size_t` variable that will receive the number of event indicators.
@@ -1330,8 +1329,7 @@ include::../headers/fmi3FunctionTypes.h[tags=GetNumberOfContinuousStates]
 
 This function returns the number of <<state,`continuous states`>>.
 The dependency of the number of states on <<structuralParameter,`structural parameters`>> is implicitly given in the <<modelDescription.xml>> file.
-_[All state derivative variables are listed as elements `<Derivative>` in `<ModelStructure>`._
-_Each state derivative variable maps to the corresponding state variable by the `derivative` attribute._
+_[Each state derivative variable points to the corresponding continuous state variable with its <<derivative>> attribute._
 _If the state variable is an array variable and the `<Dimension>` element maps to a dependent variable, then this dependent variable is a dependency for the number of states.]_
 If all <<structuralParameter,`structural parameters`>> are unchanged then this dependency information can be used to calculate the initial number of states just using information given in the XML file without the need to call this C-API function.
 
