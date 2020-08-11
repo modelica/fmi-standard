@@ -936,22 +936,33 @@ The `<TerminalMemberVariable>` is defined as:
 
 image::images/schema/TerminalMemberVariable.png[width=70%, pdfwidth=50%, align="center"]
 
-The normalized string `variableKind` is used to provide general information about the variable.
-This information defines how the connection of this variable has to be implemented (e.g. Kirchhoff's current law or common signal flow).
+The normalized string `variableName` is used to identify the terminal member variable in the element `<ModelVariables>`.
+The information about minimum, maximum, and nominal values is available in there.
+One variable can be part of several terminals.
 
 If the `matchingRule` `plug` and `bus` are used, then the normalized string `memberName` is used for member variable matching. So the `memberName` attribute is required for `plug` and `bus` and it has to be unique for a terminal. The `memberName` is not required for `matchingRule` `sequence`.
 
-The normalized string `variableName` is used to identify the terminal member variable in the element `<ModelVariables>`. The information about minimum, maximum, and nominal values is available in there.
+The normalized string `variableKind` is used to provide general information about the variable.
+This information defines how the connection of this variable has to be implemented (e.g. Kirchhoff's current law or common signal flow).
 
-====== Terminal Graphical Representations
+The predefined `variableKind` are:
+[cols="1,3",options="header"]
+|====
+|`variableKind`
+|Description
 
-The `<TerminalGraphicalRepresentation>` is defined as:
+[[signal,`signal`]]
+|`signal`
+|The values in connected terminals are intended to be equal.
+Restricted to <<input>> and <<output>>, <<parameter>> and <<calculatedParameter>>.
+_[Example: Signal flow, parameter propagation, equality checks]_
 
-image::images/schema/TerminalGraphicalRepresentation.png[width=70%, pdfwidth=50%, align="center"]
-
-// TODO finish describing TerminalGraphicalRepresentation and other elements of Terminals
-
-One variable can be part of several terminals.
+[[inoutflow,`inflow/outflow`]]
+|`inflow` / `outflow`
+|Variables which fulfill Kirchhoff's current law.
+Restricted to <<input>> and <<output>>, <<parameter>> and <<calculatedParameter>>.
+_[Example: Electric current]_
+|====
 
 _[The suggested variable naming scheme for the structured naming convention is <ModelVariable name> = <terminalName>.<memberName>._
 
@@ -976,62 +987,6 @@ _The `matchingRule` refers to the `<TerminalMemberVariable>` on the same level o
 _There is no special handling of <<derivative,`derivatives`>>._
 _If a <<derivative>> is a terminal member variable then it is considered as normal member variable._
 _However, if a <<derivative>> of a terminal member variable is not terminal member, then this <<derivative>> information may be used by an importing tool.]_
-
-The predefined variable kinds are:
-[cols="1,3",options="header"]
-|====
-|`variableKind`
-|Description
-
-[[signal,`signal`]]
-|`signal`
-|The values in connected terminals are intended to be equal.
-Restricted to <<input>> and <<output>>, <<parameter>> and <<calculatedParameter>>.
-_[Example: Signal flow, parameter propagation, equality checks]_
-
-[[inoutflow,`inflow/outflow`]]
-|`inflow` / `outflow`
-|Variables which fulfill Kirchhoff's current law.
-Restricted to <<input>> and <<output>>, <<parameter>> and <<calculatedParameter>>.
-_[Example: Electric current]_
-|====
-
-====== General Remark on Signal [[GeneralRemarkOnSignal]]
-
-_[The signal `variableKind` can be applied for different use cases._
-_The first use case is a signal flow from an <<output>> of one FMU to an <<input>> of another FMU. The <<output>> value has to be forwarded to the <<input>>._
-
-_The signal flow can cause algebraic loops._
-_If variables in connected terminals have the <<causality>> <<output>>, then an importing tool may iterate an undefined <<input>> of an FMU to ensure that the connected output values are equal._
-
-_Another use case is the parameter propagation._
-_If a variable in both connected terminals has the <<causality>> <<parameter>>, then an importing tool could ask the user for the value of one of those <<parameter,`parameters`>> only, and propagate this value to the other FMU._
-_If only one of the variables has <<causality>> <<parameter>>, and the other is a <<constant>> <<output>> or <<calculatedParameter>>, then the importing tool could also propagate the <<parameter>> value without presenting a parameter to the user._
-_One example of use would be the name of a substance flowing through a pipe._
-_If the fluid flows from one pipe FMU to another, the substance should be the same._
-_This substance name could be propagated over several FMUs._
-
-_Finally the `variableKind` `signal` can be applied to implement compatibility checks._
-_If for example the <<variability>> of the variables in connected terminals are <<constant>>, then the importing tool can implement an equality assertion._
-_This is also possible with <<calculated>> <<parameter,`parameters`>>._
-_One example of use would be the cross sectional flow area in pipes which is calculated from geometry parameters._
-_A change in the cross sectional flow area is relevant for the momentum equation, and therefore the connection has to be deemed incompatible if these variables are present and unequal.]_
-
-====== General Remark on Inflow and Outflow
-
-_[Flow variables have a direction and must fulfill a zero sum constraint i.e. the sum of all flow variables connected together must be zero (Kirchhoff's current law)._
-_In addition because different tools might have different direction definitions both, `inflow` and `outflow` are available as `variableKind`._
-_For variables with `inflow` a positive value means that the flow is inwards, and for `outflow` a positive value means that the flow is outwards._
-_For the sake of simplicity in the following latexmath:[\dot{m}_i] denotes an inflowing quantity:_
-
-_latexmath:[0 = \sum{\dot{m}_i}]_
-
-_[Connecting a single <<output>> `outflow` to a single <<input>> `inflow`, or vice versa automatically fulfills the flow constraint, while connecting two single signals of the same flow type requires a negation of the signal._
-
-`inflow` _and_ `outflow` _is only used as a sign convention for scalar flow quantities which obey Kirchhoff's current law (sum up to zero)._
-_Other, nonscalar, quantities which also sum up to zero, like a mechanical force in 3D space according to D'Alembert's principle, are not covered by this sign convention._
-_This is the case since Kirchhoff's current law only holds for scalars where a sign convention is sufficient._
-_Other definitions are beyond the scope of this terminal specification and need clear definition in other specifications on top of this.]_
 
 ====== Terminal Stream Member Variable
 
@@ -1079,20 +1034,23 @@ _In Modelica the inStream variable is not directly visible, the value can only b
 _It is suggested that Modelica tools exporting an FMU derive the member name for the inStream variable according to the scheme "<outStream name>_inStream"._
 _E.g. if the outStream name is "h_outflow" then the inStream name should be "h_outflow_inStream".]_
 
-====== Graphical Representation of Terminals
+====== Terminal Graphical Representation
+
+The `<TerminalGraphicalRepresentation>` is defined as:
 
 image::images/schema/TerminalGraphicalRepresentation.png[width=75%, pdfwidth=60%, align="center"]
 
 The `iconBaseName` attribute is mandatory.
 This attribute defines the base name of the image file as a relative URI according to RFC 3986.
 The base URI that this relative URI is resolved against is the URI of the `icons/terminalsAndIcons.xml` file in the FMU ZIP archive.
-Implementations are only REQUIRED to support relative URIs, excluding relative URIs that move beyond the baseURI (i.e. go "up" a level via ..).
-Implementations are NOT REQUIRED to support any absolute URIs and any specific URI schemes.
+Implementations are required to support relative URIs, excluding relative URIs that move beyond the baseURI (i.e. go "up" a level via ..).
+Implementations are not required to support any absolute URIs and any specific URI schemes.
 The PNG file with the extension '.png' has to be provided. An additional SVG file with extension '.svg' is optional.
 
 _[Note that this specification is functionally equivalent to looking up image sources from the icons folder of the FMU ZIP archive after dot removal from the path as per section 5.2.4 of RFC 3986.]_
 
-The default connection stroke size and color can be provided, to define the intended connection line layout in the importing tool. The stroke size is given relative to the coordinate system extent.
+The `defaultConnectionStrokeSize` and `defaultConnectionColor` can be provided to define the intended connection line layout in the importing tool.
+The stroke size is given relative to the coordinate system extent.
 The stroke color is given in RGB values from 0 to 255. E.g.: `255 255 0`.
 
 _[Nested terminals may have a `<TerminalGraphicalRepresentation>` element. However, if and how nested terminals are displayed, is up to the importing tool.]_
@@ -1104,6 +1062,43 @@ _[It is suggested that Modelica tools store the Modelica annotation of the conne
 _The attribute `name` of the connector element is equal to the `name` attribute of the referenced `fmi3Terminal`.]_
 
 _[If the graphical representation is used for an <<input>> or <<output>> (e.g. a `fmi3Float64` <<input>> `u`), then a `<Terminal>` has to be added to the `<Terminals>` element which has one `<TerminalMemberVariable>`.]_
+
+====== General Remark on Signal [[GeneralRemarkOnSignal]]
+
+_[The signal `variableKind` can be applied for different use cases._
+_The first use case is a signal flow from an <<output>> of one FMU to an <<input>> of another FMU. The <<output>> value has to be forwarded to the <<input>>._
+
+_The signal flow can cause algebraic loops._
+_If variables in connected terminals have the <<causality>> <<output>>, then an importing tool may iterate an undefined <<input>> of an FMU to ensure that the connected output values are equal._
+
+_Another use case is the parameter propagation._
+_If a variable in both connected terminals has the <<causality>> <<parameter>>, then an importing tool could ask the user for the value of one of those <<parameter,`parameters`>> only, and propagate this value to the other FMU._
+_If only one of the variables has <<causality>> <<parameter>>, and the other is a <<constant>> <<output>> or <<calculatedParameter>>, then the importing tool could also propagate the <<parameter>> value without presenting a parameter to the user._
+_One example of use would be the name of a substance flowing through a pipe._
+_If the fluid flows from one pipe FMU to another, the substance should be the same._
+_This substance name could be propagated over several FMUs._
+
+_Finally the `variableKind` `signal` can be applied to implement compatibility checks._
+_If for example the <<variability>> of the variables in connected terminals are <<constant>>, then the importing tool can implement an equality assertion._
+_This is also possible with <<calculated>> <<parameter,`parameters`>>._
+_One example of use would be the cross sectional flow area in pipes which is calculated from geometry parameters._
+_A change in the cross sectional flow area is relevant for the momentum equation, and therefore the connection has to be deemed incompatible if these variables are present and unequal.]_
+
+====== General Remark on Inflow and Outflow
+
+_[Flow variables have a direction and must fulfill a zero sum constraint i.e. the sum of all flow variables connected together must be zero (Kirchhoff's current law)._
+_In addition because different tools might have different direction definitions both, `inflow` and `outflow` are available as `variableKind`._
+_For variables with `inflow` a positive value means that the flow is inwards, and for `outflow` a positive value means that the flow is outwards._
+_For the sake of simplicity in the following latexmath:[\dot{m}_i] denotes an inflowing quantity:_
+
+_latexmath:[0 = \sum{\dot{m}_i}]_
+
+_[Connecting a single <<output>> `outflow` to a single <<input>> `inflow`, or vice versa automatically fulfills the flow constraint, while connecting two single signals of the same flow type requires a negation of the signal._
+
+`inflow` _and_ `outflow` _is only used as a sign convention for scalar flow quantities which obey Kirchhoff's current law (sum up to zero)._
+_Other, nonscalar, quantities which also sum up to zero, like a mechanical force in 3D space according to D'Alembert's principle, are not covered by this sign convention._
+_This is the case since Kirchhoff's current law only holds for scalars where a sign convention is sufficient._
+_Other definitions are beyond the scope of this terminal specification and need clear definition in other specifications on top of this.]_
 
 ==== Definition of Model Variables [[definition-of-model-variables]]
 
