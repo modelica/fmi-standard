@@ -72,7 +72,7 @@ Consecutive calls to <<fmi3ActivateModelPartition>> for a <<clockReference>> and
 
 This section summarizes the available states and the allowed function calls in the respective states.
 
-.Calling sequence of Scheduled Execution C functions in form of a UML 2.0 state machine.
+.Calling sequence of Scheduled Execution C functions.
 [#figure-scheduled-execution-state-machine]
 image::images/state-machine-scheduled-execution.svg[width=80%, align="center"]
 
@@ -80,30 +80,19 @@ If the simulation algorithm intends to enter the state *Terminated* it must ensu
 Hence if in states *Clock Activation Mode*, *Intermediate Update Mode*, or *Reconfiguration Mode* a function returns <<fmi3Fatal>> the simulation algorithm may prematurely end all tasks related to the computation of model partitions of this FMU.
 If in these states a function returns <<fmi3Discard>> or <<fmi3Error>> the simulation algorithm may wait until all other tasks of the model partitions of this FMU have ended, but new tasks must not be started.
 
-In Scheduled Execution the following functions must not be called: <<fmi3SetTime>>, <<fmi3SetContinuousStates>>, <<fmi3DoStep>>, <<fmi3NewDiscreteStates>>, <<fmi3SetClock>>, <<fmi3SetIntervalDecimal>>, <<fmi3SetIntervalFraction>>, <<fmi3EnterEventMode>>, <<fmi3EnterStepMode>> including all functions that are specific to the Model Exchange interface.
+Each state of the state machine corresponds to a certain phase of a simulation.
+Common states are defined in <<state-machine-and-common-states>>, such as super states <<FMUStateSetable,*FMU State Setable*>>, <<UnderEvaluation,*Under Evaluation*>> and  <<Initialized,*Initialized*>>, states <<Instantiated,*Instantiated*>>, <<ConfigurationMode,*Configuration Mode*>>, <<ReconfigurationMode,*Reconfiguration Mode*>>, <<InitializationMode,*Initialization Mode*>>, <<Terminated,*Terminated*>> and <<IntermediateUpdateMode,*Intermediate Update Mode*>>.
 
-The states *Configuration Mode*, *Instantiated*, *Initialization Mode*, and *Terminated* are handled in the same way as in Co-Simulation, with the exception that the generally not allowed functions of Scheduled Execution must not be called.
+===== Super State: Initialized [[Initialized-SE]]
 
-===== State: FMU State Setable
-
-In all states of this super state it is allowed to call <<fmi3GetFMUState>>, `fmi3SetFMUState`, `fmi3FreeFMUState`, <<fmi3SerializedFMUStateSize>>, <<fmi3SerializeFMUState>>, <<fmi3DeSerializeFMUState>>, <<fmi3Reset>>, <<fmi3GetVersion>>, `fmi3SetDebugLogging` and <<fmi3FreeInstance>>.
-If any function returns with <<fmi3Fatal>> the FMU enters the state *Terminated*.
-
-===== State: Under Evaluation
-
-This super state is entered by the FMU when <<fmi3Instantiate>> is called.
-If any function returns <<fmi3Error>> or <<fmi3Discard>> the FMU enters state *Terminated*.
-
-===== State: Initialized
-
-This super state is entered by the FMU when `fmi3ExitInitializatoinMode` is called.
-If the function <<fmi3Terminate>> is called, the FMU enters state *Terminated* from all states of this super state.
+Special to Scheduled Execution, the following additional constrains apply to the state *Initialized* (see <<Initialized>>).
 The FMU enters state *Terminated* only after all other tasks related to the computation of model partitions of this FMU have ended.
 After <<fmi3Terminate>> has been called no new tasks can be started (e.g. related to <<outputClock>> ticks) and all other function calls for this FMU must return <<fmi3Error>> until the state *Terminated* is reached.
 
 ===== State: Clock Activation Mode
 
 The FMU enters this state when the simulation algorithm calls <<fmi3ExitInitializationMode>> in state *Initialization Mode* or <<fmi3ExitConfigurationMode>> in state *Reconfiguration Mode*.
+
 In this state the simulation algorithm can create multiple concurrent tasks related to an FMU and in each task the simulation algorithm can activate one or multiple <<inputClock,`input clocks`>> of an FMU based on the defined <<clock>> properties via a <<fmi3ActivateModelPartition>> call for each <<clock>>.
 
 Allowed Function Calls::
@@ -168,45 +157,28 @@ If these functions are called while a model partition of an FMU is currently act
 These functions can be called if no other task related to the computation of model partitions of this FMU is currently active or preempted and the prerequisites defined for these functions in Co-Simulation are fulfilled.
 Thus these functions can not be called concurrently for model partitions of an FMU but only for the whole FMU instance.
 
-Forbidden Function Calls::
-Additionally to the generally forbidden functions in Scheduled Execution as listed above, the following functions must not be called in this state: <<fmi3ExitConfigurationMode>>, <<fmi3Instantiate>>, <<fmi3EnterInitializationMode>>, <<fmi3ExitInitializationMode>>.
-
 ===== State: Intermediate Update Mode
+
+The FMU enters this state when the FMU calls <<fmi3CallbackIntermediateUpdate>> in state *Clock Activation Mode*.
+When the callback function returns, the FMU returns to *Clock Activation Mode*.
+
+Here only special remarks w.r.t. *Intermediate Update Mode* in Scheduled Execution are made.
+For the general mechanism see <<IntermediateUpdateMode>>.
 
 The FMU transports activation states of <<outputClock,`output clocks`>> to the simulation algorithm by calling <<fmi3CallbackIntermediateUpdate>> and providing <<fmi3GetClock>>.
 The simulation algorithm provides the implementation of <<fmi3CallbackIntermediateUpdate>>.
 If the simulation algorithm detects that an <<outputClock,`output clocks`>> ticked and this <<outputClock,`output clock`>> is configured to <<triggeredBy,`trigger`>> an <<inputClock,`input clock`>> the simulation algorithm schedules a task associated to this <<inputClock,`input clock`>>.
 
-The FMU enters this state by calling <<fmi3CallbackIntermediateUpdate>>  within <<fmi3ActivateModelPartition>> and leaves the state towards state *Clock Activation Mode* if the function returns <<fmi3OK>> or <<fmi3Warning>>.
-If the function returns <<fmi3Error>> the FMU enters state *Terminated*.
-If the function returns <<fmi3Fatal>> the FMU enters the terminal state.
-
-Forbidden Function Calls::
-The same functions which are not allowed to be called in *Clock Activation Mode* must not be called in this state. Additionally the following functions must not be called <<fmi3ActivateModelPartition>>, <<fmi3EnterConfigurationMode>>, <<fmi3Terminate>>.
-
 Allowed Function Calls::
+
+<<fmi3GetClock>>::
 For an <<outputClock>> only the first call of `fmi3GetClock` for a specific activation of this <<clock>> signals `fmi3ClockActive`.
 The FMU sets the reported activation state immediately back to `fmi3ClockInactive` for the following `fmi3GetClock` calls for that <<clock>> (in the same or other model partitions of the FMU) until this <<outputClock>> is internally activated again.
-The simulation algorithm can call `fmi3Set{VariableType}` and `fmi3Get{VariableType}` during the callback for variables associated to a <<outputClock>> that is active during this callback.
-Also intermediate update is allowed as defined in <<state-intermediate-update-mode-co-simulation>>
-
-Functions called in this state must not return <<fmi3Discard>>.
+The simulation algorithm can call `fmi3Set{VariableType}` and `fmi3Get{VariableType}` during the callback for variables associated to an <<outputClock>> that is active during this callback.
 
 _[Based on the FMI standard it cannot be determined which part of the code of an FMU has called the callback function <<fmi3CallbackIntermediateUpdate>>._
 _This is especially the case for Scheduled Execution where multiple model partitions can be active at the same time._
 _This causes no issues since all function call prerequisites are connected to the activation state of <<clock,`clocks`>>, <<modelDescription.xml>> information and additionally available information from <<fmi3CallbackIntermediateUpdate>>]_
-
-===== State: Reconfiguration Mode
-
-In this state <<structuralParameter,`structural parameters`>> with <<variability>> = <<tunable>> can be changed.
-This state is entered from state *Clock Activation Mode* by calling <<fmi3EnterConfigurationMode>> and left back to *Clock Activation Mode* by calling <<fmi3ExitConfigurationMode>>.
-
-Allowed Function Calls::
-- <<fmi3ExitConfigurationMode>>
-- `fmi3Set{VariableType}`: Only for variables with <<causality>> = <<structuralParameter>> and <<variability>> = <<tunable>>.
-
-Forbidden Function Calls::
-Additionally to the generally forbidden functions in Scheduled Execution listed above the following functions must not be called in this state: <<fmi3EnterConfigurationMode>>, <<fmi3Instantiate>>, <<fmi3EnterInitializationMode>>, <<fmi3ExitInitializationMode>>, <<fmi3ActivateModelPartition>>, <<fmi3GetDirectionalDerivative>>, `fmi3GetOutputDerivatives`, `fmi3Get{VariableType}`.
 
 ==== Preemption Support [[preemption-support]]
 

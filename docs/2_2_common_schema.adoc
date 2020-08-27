@@ -120,8 +120,6 @@ _[Note that the definition of an encoding scheme is a prerequisite in order for 
 _Furthermore, note the FMI calling interface requires that strings are encoded in UTF-8._
 _Since the XML files are also required to be encoded in UTF-8, string variables need not to be transformed when reading from the XML files in to C string variables.]._
 
-The special values `NaN`, `+INF`, `-INF` for variables values are not allowed in the FMI XML files.
-
 _[Note that child information items, such as elements in a sequence are ordered lists according to document order, whereas attribute information items are unordered sets (see http://www.w3.org/TR/XML-infoset/#infoitem.element)._
 _The FMI schema is based on ordered lists in a sequence and therefore parsing must preserve this order._
 _For example, the information stored in `<ModelVariables><Derivative>` is only correct if this property is fulfilled.]_
@@ -688,7 +686,7 @@ Element `<fmiModelDescription><LogCategories>` is defined as:
 
 image::images/schema/LogCategories.png[width=80%, align="center"]
 
-`<LogCategories>` defines an unordered set of category strings that can be utilized to define the log output via function <<logMessage>>, see <<creation-destruction-and-logging>>.
+`<LogCategories>` defines an unordered set of category strings that can be utilized to define the log output via function <<logMessage>>, see <<FMUStateSetable>>.
 A tool is free to use any `normalizedString` for a category value.
 The `name` attribute of `<Category>` must be unique with respect to all other elements of the `<LogCategories>` list.
 
@@ -936,20 +934,34 @@ The `<TerminalMemberVariable>` is defined as:
 
 image::images/schema/TerminalMemberVariable.png[width=70%, pdfwidth=50%, align="center"]
 
-The normalized string `variableKind` is used to provide general information about the variable.
-This information defines how the connection of this variable has to be implemented (e.g. Kirchhoff's current law or common signal flow).
+The normalized string `variableName` is used to identify the terminal member variable in the element `<ModelVariables>`.
+The information about minimum, maximum, and nominal values is available in there.
+
+One variable can be part of several terminals.
 
 If the `matchingRule` `plug` and `bus` are used, then the normalized string `memberName` is used for member variable matching. So the `memberName` attribute is required for `plug` and `bus` and it has to be unique for a terminal. The `memberName` is not required for `matchingRule` `sequence`.
 
-The normalized string `variableName` is used to identify the terminal member variable in the element `<ModelVariables>`. The information about minimum, maximum, and nominal values is available in there.
+The normalized string `variableKind` is used to provide general information about the variable.
+This information defines how the connection of this variable has to be implemented (e.g. Kirchhoff's current law or common signal flow).
 
-====== Terminal Graphical Representations
+The predefined `variableKind` are:
+[cols="1,3",options="header"]
+|====
+|`variableKind`
+|Description
 
-The `<TerminalGraphicalRepresentation>` is defined as:
+[[signal,`signal`]]
+|`signal`
+|The values in connected terminals are intended to be equal.
+Restricted to <<input>> and <<output>>, <<parameter>> and <<calculatedParameter>>.
+_[Example: Signal flow, parameter propagation, equality checks]_
 
-image::images/schema/TerminalGraphicalRepresentation.png[width=70%, pdfwidth=50%, align="center"]
-
-One variable can be part of several terminals.
+[[inoutflow,`inflow/outflow`]]
+|`inflow` / `outflow`
+|Variables which fulfill Kirchhoff's current law.
+Restricted to <<input>> and <<output>>, <<parameter>> and <<calculatedParameter>>.
+_[Example: Electric current]_
+|====
 
 _[The suggested variable naming scheme for the structured naming convention is <ModelVariable name> = <terminalName>.<memberName>._
 
@@ -974,62 +986,6 @@ _The `matchingRule` refers to the `<TerminalMemberVariable>` on the same level o
 _There is no special handling of <<derivative,`derivatives`>>._
 _If a <<derivative>> is a terminal member variable then it is considered as normal member variable._
 _However, if a <<derivative>> of a terminal member variable is not terminal member, then this <<derivative>> information may be used by an importing tool.]_
-
-The predefined variable kinds are:
-[cols="1,3",options="header"]
-|====
-|`variableKind`
-|Description
-
-[[signal,`signal`]]
-|`signal`
-|The values in connected terminals are intended to be equal.
-Restricted to <<input>> and <<output>>, <<parameter>> and <<calculatedParameter>>.
-_[Example: Signal flow, parameter propagation, equality checks]_
-
-[[inoutflow,`inflow/outflow`]]
-|`inflow` / `outflow`
-|Variables which fulfill Kirchhoff's current law.
-Restricted to <<input>> and <<output>>, <<parameter>> and <<calculatedParameter>>.
-_[Example: Electric current]_
-|====
-
-====== General Remark on Signal [[GeneralRemarkOnSignal]]
-
-_[The signal `variableKind` can be applied for different use cases._
-_The first use case is a signal flow from an <<output>> of one FMU to an <<input>> of another FMU. The <<output>> value has to be forwarded to the <<input>>._
-
-_The signal flow can cause algebraic loops._
-_If variables in connected terminals have the <<causality>> <<output>>, then an importing tool may iterate an undefined <<input>> of an FMU to ensure that the connected output values are equal._
-
-_Another use case is the parameter propagation._
-_If a variable in both connected terminals has the <<causality>> <<parameter>>, then an importing tool could ask the user for the value of one of those <<parameter,`parameters`>> only, and propagate this value to the other FMU._
-_If only one of the variables has <<causality>> <<parameter>>, and the other is a <<constant>> <<output>> or <<calculatedParameter>>, then the importing tool could also propagate the <<parameter>> value without presenting a parameter to the user._
-_One example of use would be the name of a substance flowing through a pipe._
-_If the fluid flows from one pipe FMU to another, the substance should be the same._
-_This substance name could be propagated over several FMUs._
-
-_Finally the `variableKind` `signal` can be applied to implement compatibility checks._
-_If for example the <<variability>> of the variables in connected terminals are <<constant>>, then the importing tool can implement an equality assertion._
-_This is also possible with <<calculated>> <<parameter,`parameters`>>._
-_One example of use would be the cross sectional flow area in pipes which is calculated from geometry parameters._
-_A change in the cross sectional flow area is relevant for the momentum equation, and therefore the connection has to be deemed incompatible if these variables are present and unequal.]_
-
-====== General Remark on Inflow and Outflow
-
-_[Flow variables have a direction and must fulfill a zero sum constraint i.e. the sum of all flow variables connected together must be zero (Kirchhoff's current law)._
-_In addition because different tools might have different direction definitions both, `inflow` and `outflow` are available as `variableKind`._
-_For variables with `inflow` a positive value means that the flow is inwards, and for `outflow` a positive value means that the flow is outwards._
-_For the sake of simplicity in the following latexmath:[\dot{m}_i] denotes an inflowing quantity:_
-
-_latexmath:[0 = \sum{\dot{m}_i}]_
-
-_[Connecting a single <<output>> `outflow` to a single <<input>> `inflow`, or vice versa automatically fulfills the flow constraint, while connecting two single signals of the same flow type requires a negation of the signal._
-
-`inflow` _and_ `outflow` _is only used as a sign convention for scalar flow quantities which obey Kirchhoff's current law (sum up to zero)._
-_Other, nonscalar, quantities which also sum up to zero, like a mechanical force in 3D space according to D'Alembert's principle, are not covered by this sign convention._
-_This is the case since Kirchhoff's current law only holds for scalars where a sign convention is sufficient._
-_Other definitions are beyond the scope of this terminal specification and need clear definition in other specifications on top of this.]_
 
 ====== Terminal Stream Member Variable
 
@@ -1077,20 +1033,23 @@ _In Modelica the inStream variable is not directly visible, the value can only b
 _It is suggested that Modelica tools exporting an FMU derive the member name for the inStream variable according to the scheme "<outStream name>_inStream"._
 _E.g. if the outStream name is "h_outflow" then the inStream name should be "h_outflow_inStream".]_
 
-====== Graphical Representation of Terminals
+====== Terminal Graphical Representation
+
+The `<TerminalGraphicalRepresentation>` is defined as:
 
 image::images/schema/TerminalGraphicalRepresentation.png[width=75%, pdfwidth=60%, align="center"]
 
 The `iconBaseName` attribute is mandatory.
 This attribute defines the base name of the image file as a relative URI according to RFC 3986.
 The base URI that this relative URI is resolved against is the URI of the `icons/terminalsAndIcons.xml` file in the FMU ZIP archive.
-Implementations are only REQUIRED to support relative URIs, excluding relative URIs that move beyond the baseURI (i.e. go "up" a level via ..).
-Implementations are NOT REQUIRED to support any absolute URIs and any specific URI schemes.
+Implementations are required to support relative URIs, excluding relative URIs that move beyond the baseURI (i.e. go "up" a level via ..).
+Implementations are not required to support any absolute URIs and any specific URI schemes.
 The PNG file with the extension '.png' has to be provided. An additional SVG file with extension '.svg' is optional.
 
 _[Note that this specification is functionally equivalent to looking up image sources from the icons folder of the FMU ZIP archive after dot removal from the path as per section 5.2.4 of RFC 3986.]_
 
-The default connection stroke size and color can be provided, to define the intended connection line layout in the importing tool. The stroke size is given relative to the coordinate system extent.
+The `defaultConnectionStrokeSize` and `defaultConnectionColor` can be provided to define the intended connection line layout in the importing tool.
+The stroke size is given relative to the coordinate system extent.
 The stroke color is given in RGB values from 0 to 255. E.g.: `255 255 0`.
 
 _[Nested terminals may have a `<TerminalGraphicalRepresentation>` element. However, if and how nested terminals are displayed, is up to the importing tool.]_
@@ -1102,6 +1061,43 @@ _[It is suggested that Modelica tools store the Modelica annotation of the conne
 _The attribute `name` of the connector element is equal to the `name` attribute of the referenced `fmi3Terminal`.]_
 
 _[If the graphical representation is used for an <<input>> or <<output>> (e.g. a `fmi3Float64` <<input>> `u`), then a `<Terminal>` has to be added to the `<Terminals>` element which has one `<TerminalMemberVariable>`.]_
+
+====== General Remark on Signal [[GeneralRemarkOnSignal]]
+
+_[The signal `variableKind` can be applied for different use cases._
+_The first use case is a signal flow from an <<output>> of one FMU to an <<input>> of another FMU. The <<output>> value has to be forwarded to the <<input>>._
+
+_The signal flow can cause algebraic loops._
+_If variables in connected terminals have the <<causality>> <<output>>, then an importing tool may iterate an undefined <<input>> of an FMU to ensure that the connected output values are equal._
+
+_Another use case is the parameter propagation._
+_If a variable in both connected terminals has the <<causality>> <<parameter>>, then an importing tool could ask the user for the value of one of those <<parameter,`parameters`>> only, and propagate this value to the other FMU._
+_If only one of the variables has <<causality>> <<parameter>>, and the other is a <<constant>> <<output>> or <<calculatedParameter>>, then the importing tool could also propagate the <<parameter>> value without presenting a parameter to the user._
+_One example of use would be the name of a substance flowing through a pipe._
+_If the fluid flows from one pipe FMU to another, the substance should be the same._
+_This substance name could be propagated over several FMUs._
+
+_Finally the `variableKind` `signal` can be applied to implement compatibility checks._
+_If for example the <<variability>> of the variables in connected terminals are <<constant>>, then the importing tool can implement an equality assertion._
+_This is also possible with <<calculated>> <<parameter,`parameters`>>._
+_One example of use would be the cross sectional flow area in pipes which is calculated from geometry parameters._
+_A change in the cross sectional flow area is relevant for the momentum equation, and therefore the connection has to be deemed incompatible if these variables are present and unequal.]_
+
+====== General Remark on Inflow and Outflow
+
+_[Flow variables have a direction and must fulfill a zero sum constraint i.e. the sum of all flow variables connected together must be zero (Kirchhoff's current law)._
+_In addition because different tools might have different direction definitions both, `inflow` and `outflow` are available as `variableKind`._
+_For variables with `inflow` a positive value means that the flow is inwards, and for `outflow` a positive value means that the flow is outwards._
+_For the sake of simplicity in the following latexmath:[\dot{m}_i] denotes an inflowing quantity:_
+
+_latexmath:[0 = \sum{\dot{m}_i}]_
+
+_[Connecting a single <<output>> `outflow` to a single <<input>> `inflow`, or vice versa automatically fulfills the flow constraint, while connecting two single signals of the same flow type requires a negation of the signal._
+
+`inflow` _and_ `outflow` _is only used as a sign convention for scalar flow quantities which obey Kirchhoff's current law (sum up to zero)._
+_Other, nonscalar, quantities which also sum up to zero, like a mechanical force in 3D space according to D'Alembert's principle, are not covered by this sign convention._
+_This is the case since Kirchhoff's current law only holds for scalars where a sign convention is sufficient._
+_Other definitions are beyond the scope of this terminal specification and need clear definition in other specifications on top of this.]_
 
 ==== Definition of Model Variables [[definition-of-model-variables]]
 
@@ -1201,11 +1197,13 @@ These parameters can be changed independently, unlike <<calculatedParameter,calc
 [[input,`input`]]
 `= input`: The variable value can be provided from another FMU.
 [[inputClock,`inputClock`]] If <<variability>> = <<clock>> the variable defines an <<inputClock, `input clock`>> that is controlled by the importer.
+An <<inputClock, `input clock`>> can be left unconnected, can be connected to an <<outputClock,`output clock`>>, or the importer generates the clock signal.
 
 [[output,`output`]]
 `= output`: The variable value can be used by another FMU.
 The algebraic relationship to the <<input,`inputs`>> is defined via the <<dependencies>> attribute of `<fmiModelDescription><ModelStructure><Output>`.
-[[outputClock,`outputClock`]] If <<variability>> = <<clock>> the variable defines an <<outputClock,`output clock`>> that is controlled  by the FMU..
+[[outputClock,`outputClock`]] If <<variability>> = <<clock>> the variable defines an <<outputClock,`output clock`>> that is controlled by the FMU.
+An <<outputClock,`output clock`>> can be left unconnected or can be connected to an <<inputClock, `input clock`>>, usually of another FMU.
 
 [[local,`local`]]
 `= local`: Local variable that is calculated from other variables or is a continuous-time <<state>> or an event indicator (see <<ModelStructure>>).
@@ -1362,223 +1360,174 @@ Variables with <<causality>> <<parameter>> must not be marked with <<intermediat
 This attribute is only used for Co-Simulation. The default value of this attribute is `false`.
 |====
 
-If <<initial>> is not present, its value is defined by <<table-definition-initial>> based on the values of <<causality>> and <<variability>>:
+If <<initial>> is not present, its value is defined by <<table-definition-initial>> based on the values of <<causality>> and <<variability>> (default [.underline]#underlined#):
 
 .Definition of <<initial>>.
 [#table-definition-initial]
-[cols="1,1,1,1,1,1,1,1,1,1"]
+[cols="1,1,1,1,1,1,1,1,1"]
 |====
-3.2+|
+2.2+|
 7+^|<<causality>>
-^|<<structuralParameter>>
+^|<<structuralParameter,`structural Parameter`>>
 ^|<<parameter>>
-^|<<calculatedParameter>>
-^|<<input>>
-^|<<output>>
-^|<<local>>
-^|<<independent>>
-
-.7+^|<<variability>>
-.3+^|data
-^|<<constant>>
-^|[green]#(A) or --#
-^|[red]#--#
-^|[red]#--#
-^|[red]#--#
-^|[green]#(A)#
-^|[green]#(A)#
-^|[red]#--#
-
-^|<<fixed>>
-^|[green]#(A)#
-^|[green]#(A)#
-^|[maroon]#(B)#
-^|[red]#--#
-^|[red]#--#
-^|[maroon]#(B)#
-^|[red]#--#
-
-^|<<tunable>>
-^|[green]#(A)#
-^|[green]#(A)#
-^|[maroon]#(B)#
-^|[red]#--#
-^|[red]#--#
-^|[maroon]#(B)#
-^|[red]#--#
-
-.2+^|signals
-^|<<discrete>>
-^|[red]#--#
-^|[red]#--#
-^|[red]#--#
-^|[aqua]#(D)#
-^|\(C)
-^|\(C)
-^|[red]#--#
-
-^|<<continuous>>
-^|[red]#--#
-^|[red]#--#
-^|[red]#--#
-^|[aqua]#(D)#
-^|\(C)
-^|\(C)
-^|[purple]#(E)#
-
-1+^|<<clock,`clocks`>>
-^|<<clock>>
-^|[red]#--#
-^|[red]#--#
-^|[red]#--#
-^|[brown]#(F)#
-^|[brown]#(G)#
-^|[red]#--#
-^|[red]#--#
-|====
-
-with
-
-[cols="1,3,3", width=50%, align="center"]
-|====
-|
-2+^|<<initial>>
-|
-^|default
-^|possible values
-
-|[green]#(A)#
-|[green]#exact#
-|[green]#exact#
-
-|[maroon]#(B)#
-|[maroon]#calculated#
-|[maroon]#approx,# +
- [maroon]#calculated#
-
-|\(C)
-|<<calculated>>
-|<<exact>>, +
-<<approx>>, +
-<<calculated>>
-
-|[aqua]#(D)#
-|[aqua]#---#
-|[aqua]#---#
-
-|[purple]#(E)#
-|[purple]#---#
-|[purple]#---#
-
-|[brown]#(F)#
-|[brown]#exact#
-|[brown]#exact#
-
-|[brown]#(G)#
-|[brown]#calculated#
-|[brown]#calculated#
-|====
-
-_[Note: (1) If <<causality>> = <<independent>>, it is neither allowed to define a value for <<initial>> nor a value for start._
-_(2) If <<causality>> = <<input>>, it is not allowed to define a value for <<initial>> and a value for <<start>> must be defined._
-_(3) If \(C) and <<initial>> = <<exact>>, then the variable is explicitly defined by its <<start>> value in *Initialization Mode* (so directly after calling <<fmi3ExitInitializationMode>>, the value of the variable is either the <<start>> value stored in a variable element `<XXX start=YYY/>` or the value provided by `fmi3Set{VariableType}`, if this function was called on this variable).]_
-
-<<table-allowed-variability-causality-combinations>> shows the combinations of <<variability>>/<<causality>> settings that are allowed.
-
-.Allowed combinations of <<variability>>/<<causality>>.
-[[table-allowed-variability-causality-combinations]]
-[cols="1,1,1,1,1,1,1,1,1,1"]
-|====
-3.2+|
-7+^|<<causality>>
-^|<<structuralParameter>>
-^|<<parameter>>
-^|<<calculatedParameter>>
+^|<<calculatedParameter,`calculated Parameter`>>
 ^|<<input>>
 ^|<<output>>
 ^|<<local>>
 ^|<<independent>>
 
 .6+^|<<variability>>
-.3+^|data
-^|<<constant>>
-^|[red]#--#
-^|[red]#-- (a)#
-^|[red]#-- (a)#
-^|[red]#-- (a)#
-^|[green]#(7)#
-^|[green]#(10)#
-^|[red]#-- (c)#
+^|<<constant>> data
+^|[.underline]#exact#, --
+^|--
+^|--
+^|--
+^|[.underline]#exact#
+^|[.underline]#exact#
+^|--
 
-^|<<fixed>>
-^|[green]#(16)#
-^|[green]#(1)#
-^|[green]#(3)#
-^|[red]#-- (d)#
-^|[red]#-- (e)#
-^|[green]#(11)#
-^|[red]#-- (c)#
+^|<<fixed>> data
+^|[.underline]#exact#
+^|[.underline]#exact#
+^|[.underline]#calculated#, approx
+^|--
+^|--
+^|[.underline]#calculated#, approx
+^|--
 
-^|<<tunable>>
-^|[green]#(17)#
-^|[green]#(2)#
-^|[green]#(4)#
-^|[red]#-- (d)#
-^|[red]#-- (e)#
-^|[green]#(12)#
-^|[red]#-- (c)#
+^|<<tunable>> data
+^|[.underline]#exact#
+^|[.underline]#exact#
+^|[.underline]#calculated#, approx
+^|--
+^|--
+^|[.underline]#calculated#, approx
+^|--
 
-.2+^|signals
-^|<<discrete>>
-^|[red]#-- (b)#
-^|[red]#-- (b)#
-^|[red]#-- (b)#
-^|[green]#(5)#
-^|[green]#(8)#
-^|[green]#(13)#
-^|[red]#--(c)#
+^|<<discrete>> signals
+^|--
+^|--
+^|--
+^|--
+^|[.underline]#calculated#, exact, approx
+^|[.underline]#calculated#, exact, approx
+^|--
 
-^|<<continuous>>
-^|[red]#-- (b)#
-^|[red]#-- (b)#
-^|[red]#-- (b)#
-^|[green]#(6)#
-^|[green]#(9)#
-^|[green]#(14)#
-^|[green]#(15)#
+^|<<continuous>> signals
+^|--
+^|--
+^|--
+^|--
+^|[.underline]#calculated#, exact, approx
+^|[.underline]#calculated#, exact, approx
+^|--
 
-.1+^|clocks
-^|<<clock>>
-^|[red]#--#
-^|[red]#--#
-^|[red]#--#
-^|[red]#(18)#
-^|[red]#(18)#
-^|[red]#--#
-^|[red]#--#
+^|<<clock,`clocks`>>
+^|--
+^|--
+^|--
+^|[.underline]#exact#
+^|[.underline]#calculated#
+^|--
+^|--
+|====
+
+_[Note: For local and output signals and <<initial>> = <<exact>>, then the variable is explicitly set in *Initialization Mode*._
+_The value of the variable is either the <<start>> value stored in a variable element `<XXX start=YYY/>` or the value set with `fmi3Set{VariableType}` during *Initialization Mode*.]_
+
+<<table-allowed-variability-causality-combinations>> shows the combinations of <<variability>>/<<causality>> settings that are allowed.
+
+.Allowed combinations of <<variability>>/<<causality>>.
+[[table-allowed-variability-causality-combinations]]
+[cols="1,1,1,1,1,1,1,1,1"]
+|====
+2.2+|
+7+^|<<causality>>
+^|<<structuralParameter,`structural Parameter`>>
+^|<<parameter>>
+^|<<calculatedParameter,`calculated Parameter`>>
+^|<<input>>
+^|<<output>>
+^|<<local>>
+^|<<independent>>
+
+.6+^|<<variability>>
+^|<<constant>> data
+^|--
+^|-- (a)
+^|-- (a)
+^|-- (a)
+^|(7)
+^|(10)
+^|-- (c)
+
+^|<<fixed>> data
+^|(16)
+^|(1)
+^|(3)
+^|-- (d)
+^|-- (e)
+^|(11)
+^|-- (c)
+
+^|<<tunable>> data
+^|(17)
+^|(2)
+^|(4)
+^|-- (d)
+^|-- (e)
+^|(12)
+^|-- (c)
+
+^|<<discrete>> signals
+^|-- (b)
+^|-- (b)
+^|-- (b)
+^|(5)
+^|(8)
+^|(13)
+^|--(c)
+
+^|<<continuous>> signals
+^|-- (b)
+^|-- (b)
+^|-- (b)
+^|(6)
+^|(9)
+^|(14)
+^|(15)
+
+^|<<clock,`clocks`>>
+^|--
+^|--
+^|--
+^|(18)
+^|(18)
+^|--
+^|--
 |====
 
 _[Discussion of the combinations that are not allowed:_
 
-[cols="1,10"]
+[cols="1,10", options="header"]
 |====
 |
 |_Explanation why this combination is not allowed_
 
-^|_[red]#(a)#_
+^|_(a)_
 |_The combinations <<constant>> / <<parameter>>, <<constant>> / <<calculatedParameter>> and <<constant>> / <<input>> do not make sense, since <<parameter,`parameters`>> and <<input,`inputs`>> are set from the environment, whereas a constant has always a value._
 
-^|_[red]#(b)#_
-|_The combinations <<discrete>> / <<structuralParameter>>, <<discrete>> / <<parameter>>, <<discrete>> / <<calculatedParameter>> , <<continuous>> / <<structuralParameter>>, <<continuous>> / <<parameter>> and <<continuous>> / <<calculatedParameter>> do not make sense, since <<causality>> = <<structuralParameter>>, <<causality>> = <<parameter>> and <<calculatedParameter>> define variables that do not depend on time, whereas <<discrete>> and <<continuous>> define variables where the values can change during simulation._
+^|_(b)_
+|_The combinations <<discrete>> / <<structuralParameter>>, <<discrete>> / <<parameter>>, <<discrete>> / <<calculatedParameter>> , <<continuous>> / <<structuralParameter>>, <<continuous>> / <<parameter>> and <<continuous>> / <<calculatedParameter>> do not make sense, since <<causality>> = <<structuralParameter>>, <<causality>> = <<parameter>> and <<causality>> = <<calculatedParameter>> define variables that do not depend on time, whereas <<discrete>> and <<continuous>> define variables where the values can change during simulation._
 
-^|_[red]#(c)#_
+^|_(c)_
 |_For an <<independent>> variable only <<variability>> = <<continuous>> makes sense._
 
-^|_[red]#(d)#_
+^|_(d)_
 |_A <<fixed>> or <<tunable>> <<input>> has exactly the same properties as a <<fixed>> or <<tunable>> <<parameter>>._
 _For simplicity, only <<fixed>> and <<tunable>> <<parameter,`parameters`>> shall be defined._
 
-^|_[red]#(e)#_
+^|_(e)_
 |_A <<fixed>> or <<tunable>> <<output>> has exactly the same properties as a <<fixed>> or <<tunable>> <<calculatedParameter>>._
 _For simplicity, only <<fixed>> and <<tunable>> <<calculatedParameter,`calculatedParameters`>> shall be defined._
 |====
@@ -1591,82 +1540,82 @@ _Discussion of the combinations that are allowed_:
 |_Setting_
 |_Example_
 
->|_[green]#(1)#_
+>|_(1)_
 |_<<fixed>> <<parameter>>_
 |_Non-<<tunable>> <<parameter>>_
 
->|_[green]#(2)#_
+>|_(2)_
 |_<<tunable>> <<parameter>>_
 |_<<tunable,`Tunable`>> <<parameter>> (changing such a <<parameter>> triggers an external event (ME) or takes effect at the next communication point (CS and SE), and <<tunable>> <<calculatedParameter>>/<<output>>/<<local>> variables might change their values)._
 
->|_[green]#(3)#_
+>|_(3)_
 |_<<fixed>> <<dependenciesKind,`dependent`>> <<parameter>>_
 |_Non-<<tunable>> <<dependenciesKind,`dependent`>> <<parameter>> (variable that is computed directly or indirectly from constants or <<parameter,`parameters`>>)._
 
->|_[green]#(4)#_
+>|_(4)_
 |_<<tunable>> <<dependenciesKind,`dependent`>> <<parameter>>_
 |_<<tunable,`Tunable`>> <<dependenciesKind,`dependent`>> <<parameter>> (changing a <<parameter>> triggers an external event (ME) or takes effect at the next communication point (CS and SE), and <<tunable>> <<dependenciesKind,`dependent`>> <<parameter,`parameters`>> and <<tunable>> <<local>> variables might change their values)._
 
->|_[green]#(5)#_
+>|_(5)_
 |_<<discrete>> <<input>>_
 |_<<discrete,`Discrete`>> <<input>> variable from another model._
 
->|_[green]#(6)#_
+>|_(6)_
 |_<<continuous>> <<input>>_
 |_<<continuous,`Continuous`>> <<input>> variable from another model._
 
->|_[green]#(7)#_
+>|_(7)_
 |_<<constant>> <<output>>_
 |_Variable where the value never changes and that can be used in another model._
 
->|_[green]#(8)#_
+>|_(8)_
 |_<<discrete>> <<output>>_
 |_<<discrete,`Discrete`>> variable that is computed in the FMU._
 _Can be used in another model._
 
->|_[green]#(9)#_
+>|_(9)_
 |_<<continuous>> <<output>>_
 |_<<continuous,`Continuous`>> variable that is computed in the FMU and can be used in another model._
 
->|_[green]#(10)#_
+>|_(10)_
 |_<<constant>> <<local>>_
 |_Variable where the value never changes._
 _Cannot be used in another model._
 
->|_[green]#(11)#_
+>|_(11)_
 |_<<fixed>> <<local>>_
 |_Local variable that depends on <<fixed>> <<parameter,`parameters`>> only and is computed in the FMU._
 _Cannot be used in another model._
 _After initialization, the value of this <<local>> variable cannot change._
 
->|_[green]#(12)#_
+>|_(12)_
 |_<<tunable>> <<local>>_
 |_Local variable that depends on <<tunable>> <<parameter,`parameters`>> only and is computed in the FMU._
 _Cannot be used in another model._
 _The value of this <<local>> variable can only change during initialization and at event instants, provided a <<tunable>> <<parameter>> was changed._
 
->|_[green]#(13)#_
+>|_(13)_
 |_<<discrete>> <<local>>_
 |_<<discrete,`Discrete`>> variable that is computed in the FMU and cannot be used in another model._
 
->|_[green]#(14)#_
+>|_(14)_
 |_<<continuous>> <<local>>_
 |_<<continuous,`Continous`>> variable that is computed in the FMU and cannot be used in another model._
 
->|_[green]#(15)#_
+>|_(15)_
 |_<<continuous>> <<independent>>_
 |_All variables are a function of the continuous-time variable marked as <<independent>>._
 _Usually, this is `time`._
 
->|_[green]#(16)#_
+>|_(16)_
 |_<<fixed>> <<structuralParameter>>_
 |_<<parameter,`Parameter`>> used in  `<Dimension>` element;  can be changed before initialization in *Configuration Mode*._
 
->|_[green]#(17)#_
+>|_(17)_
 |_<<tunable>> <<structuralParameter>>_
 |_<<parameter,`Parameter`>> used in  `<Dimension>` element;  can be changed before initialization in *Configuration Mode* and in *Reconfiguration Mode*._
 
->|_[green]#(18)#_
+>|_(18)_
 |_<<clock>>_
 |_Variable that defines a <<clock>>_
 |====
@@ -1927,6 +1876,8 @@ Knowns latexmath:[{\mathbf{v}_{\mathit{known}}}] in *Event Mode* and *Continuous
 - <<independent>> variable (usually time; <<causality>> = <<independent>>).
 
 _[<<parameter,`parameters`>> and <<tunable>> <<parameter,`parameters`>> must not be listed as knowns in this mode. This may change in a future FMI version which implies the possibility to calculate derivatives with respect to parameters.]_
+
+_[If an <<outputClock,`output clock`>> depends on an <<inputClock,`input clock`>>, then clock ticks of the <<inputClock,`input clock`>> in *Event Mode* may create <<outputClock,`output clock`>> ticks during this event handling.]_
 
 `Knowns` latexmath:[{\mathbf{v}_{\mathit{known}}}] in *Initialization Mode* (for elements <<InitialUnknown>>):
 
