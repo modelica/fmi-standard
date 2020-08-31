@@ -616,8 +616,7 @@ The type of <<clock,`clocks`>> is defined based on the mandatory attribute `cloc
 `= synchronousTime` is used, if the properties of the <<clock>> adhere to synchronous clock theory.
 
 [[communicationPoint,`communicationPoint`]]
-`= communicationPoint` <<clock,`clocks`>> define communication points for the variables of model partitions and are used in FMI for Co-Simulation and FMI for Scheduled Execution.
-These clocks are ignored by Model Exchange.
+`= communicationPoint` <<clock,`clocks`>> define sampling points (i.e. communication points) for the variables of model partitions.
 
 It is not allowed to include <<clock,`clocks`>> of different `clockType` in one FMU.
 `clockType` is a required attribute.
@@ -1258,15 +1257,16 @@ Allowed values of this enumeration:
 `= fixed`: The value of the variable is fixed after initialization, in other words, after <<fmi3ExitInitializationMode>> was called the variable value does not change anymore.
 
 [[tunable,`tunable`]]
-`= tunable`: The value of the variable is constant between external events (ME) and between communication points (CS and SE) due to changing variables with <<causality>> = <<parameter>> or <<input>> and <<variability>> = <<tunable>>.
-Whenever a <<parameter>> or <<input>> signal with <<variability>> = <<tunable>> changes, an event is triggered externally (ME), or the change is performed at the next communication point (CS and SE) and the variables with <<variability>> = <<tunable>> and <<causality>> = <<calculatedParameter>> or <<output>> must be newly computed.
+`= tunable`: The value of the variable is constant between external events (ME) and between communication points (CS and SE) due to changing variables with <<causality>> = <<parameter>> and <<variability>> = <<tunable>>.
+Whenever a <<parameter>> with <<variability>> = <<tunable>> changes, an event is triggered externally (ME or CS if events are supported), or the change is performed at the next communication point (CS and SE) and the variables with <<variability>> = <<tunable>> and <<causality>> = <<calculatedParameter>> or <<output>> must be newly computed.
+_[<<tunable>> <<input,inputs>> are not allowed, see <<table-allowed-variability-causality-combinations>>.]_
 
 [[discrete,`discrete`]]
 `= discrete`: +
 Model Exchange: The value of the variable is constant between external and internal events (= <<time event,`time`>>, <<state event,`state`>>, <<step event,`step events`>> defined implicitly in the FMU). +
 Co-Simulation: By convention, the variable is from a real sampled data system and its value is only changed at communication points (including event handling).
 During <<intermediateUpdate>>, <<discrete>> variables are not allowed to change.
-_[If the simulation algorithm notices a change in a discrete variable during <<intermediateUpdate>>, the simulation algorithm will delay the change, raise an event with early return and during the communication point it can change the <<discrete>> variable, followed by event handling.]_
+_[If the simulation algorithm notices a change in a discrete variable during <<intermediateUpdate>>, the simulation algorithm will delay the change, raise an event with <<earlyReturnRequested,`earlyReturnRequested == fmi3True`>> and during the communication point it can change the <<discrete>> variable, followed by event handling.]_
 
 [[continuous,`continuous`]]
 `= continuous`: Only a variable of `type == fmi3GetFloat32` or `type == fmi3GetFloat64` can be <<continuous>>. +
@@ -1341,7 +1341,7 @@ It is not possible to associate more than one <<clock>> to a variable.
 
 If the <<clock>> referenced by <<clockReference>> is a communication point clock (<<clockType>> = <<communicationPoint>>) the variable is not necessarily `clocked` in the sense of synchronous time clock theory. Such variables can also be continuous-time or discrete-time variables.
 
-If <<causality>> = <<output>> and <<variability>> = <<clock>> the <<outputClock>> tick event can occur only in the model partition that is related to the referenced <<inputClock>>, i.e. the <<outputClock,`output clock's`>> value (active/inactive) can only change in this model partition.
+If <<causality>> = <<output>> and <<variability>> = <<clock>> the <<outputClock>> tick event can occur only in the model partition that is related to the referenced <<inputClock>>, i.e. the <<outputClock,`output clock`>> value (active/inactive) can only change in this model partition.
 
 
 |`clockElementIndex`
@@ -1428,7 +1428,7 @@ If <<initial>> is not present, its value is defined by <<table-definition-initia
 ^|--
 ^|[.underline]#exact#
 ^|[.underline]#calculated#
-^|--
+^|[.underline]#calculated#
 ^|--
 |====
 
@@ -1503,7 +1503,7 @@ _The value of the variable is either the <<start>> value stored in a variable el
 ^|--
 ^|(18)
 ^|(18)
-^|--
+^|(19)
 ^|--
 |====
 
@@ -1617,7 +1617,11 @@ _Usually, this is `time`._
 
 >|_(18)_
 |_<<clock>>_
-|_Variable that defines a <<clock>>_
+|_Variable that defines a <<clock>>._
+
+>|_(19)_
+|_<<clock>>_
+|_Variable that defines a <<clock>> that is computed in the FMU and cannot be used in another model._
 |====
 
 _How to treat <<tunable>> variables:_
@@ -2134,6 +2138,14 @@ robot.arm1.centerOfMass[2]
 robot.arm1.centerOfMass[3]
 ----
 
+_[For example, a controller might receive 3 rpm sensors mapped to the following variables:_
+
+----
+transmission.rpms[0]
+transmission.rpms[1]
+transmission.rpms[2]
+----
+
 _For example, a table `T[4,3,2]` (first dimension 4 entries, second dimension 3 entries, third dimension 2 entries) is mapped to the following variables:_
 
 ----
@@ -2152,3 +2164,7 @@ _]_
 
 It might be that not all elements of an array are present.
 If they are present, they are given in consecutive order in the XML file.
+
+The `variableNamingConvention` `structured` does not define if arrays are 0-based or 1-based.
+
+_[FMI 3.0 introduces arrays of variables to improve handling of arrays.]_

@@ -523,7 +523,7 @@ typedef fmi3Status fmi3SetContinuousStatesTYPE(fmi3Instance instance,
 /* tag::GetDerivatives[] */
 typedef fmi3Status fmi3GetDerivativesTYPE(fmi3Instance instance,
                                           fmi3Float64 derivatives[],
-                                          size_t nCcontinuousStates);
+                                          size_t nContinuousStates);
 /* end::GetDerivatives[] */
 
 /* tag::GetEventIndicators[] */
