@@ -223,14 +223,55 @@ _[Example: In <<figure-connected-fmus>> two different types of connected FMUs ar
 
 .Calling sequences for FMUs that are connected in a loop.
 [#figure-connected-fmus]
-image::images/ArtificialAlgebraicLoop.svg[width=80%, align="center"]
+image::images/ArtificialAlgebraicLoops.svg[width=80%, align="center"]
 
-_In the upper diagram, FMU1 and FMU2 are connected in such a way that by an appropriate sequence of `fmi3Set{VariableType}` and `fmi3Get{VariableType}` calls, the FMU variables can be computed._
-_In the lower diagram, FMU3 and FMU4 are connected in such a way that a real algebraic loop is present._
+_In the left diagram, FMU1 and FMU2 are connected in such a way that by an appropriate sequence of `fmi3Set{VariableType}` and `fmi3Get{VariableType}` calls, the FMU variables can be computed with the following call sequence:_
+
+[source, C]
+----
+fmi3Instance FMI1, FMI2;
+fmi3ValueReference vr_FMU1_u, vr_FMU1_y, vr_FMU2_u1, vr_FMU2_u2, vr_FMU2_y1, vr_FMU2_y2;
+fmi3Float64 s=0.1, FMU2_y1, FMU1_y, FMU2_y2;
+
+...
+
+fmi3SetFloat64(FMU2, &vr_FMU2_u1, 1, &s,        1);
+fmi3GetFloat64(FMU2, &vr_FMU2_y1, 1, &FMU2_y1,  1);
+fmi3SetFloat64(FMU1, &vr_FMU1_u,  1, &FMU2_y1,  1);
+fmi3GetFloat64(FMU1, &vr_FMU1_y,  1, &FMU1_y,   1);
+fmi3SetFloat64(FMU2, &vr_FMU2_u2, 1, &FMU1_y,   1);
+fmi3GetFloat64(FMU2, &vr_FMU2_y1, 1, &FMU2_y2,  1);
+...
+----
+
+
+_In the right diagram, FMU3 and FMU4 are connected in such a way that a real algebraic loop is present._
 _This loop might be solved iteratively with a Newton method._
-_In every iteration the iteration variable latexmath:[u_4] is provided by the solver, and via the shown sequence of `fmi3Set{VariableType}` and `fmi3Get{VariableType}` calls, the residue is computed and is provided back to the solver._
-_Based on the residue a new value of latexmath:[u_4] is provided._
-_The iteration is terminated when the residue is close to zero._
+_In every iteration the iteration variable latexmath:[u_4] is provided by the solver, and via the shown sequence of `fmi3Set{VariableType}` and `fmi3Get{VariableType}` calls, the residual is computed and is provided back to the solver._
+_Based on the residual a new value of latexmath:[u_4] is provided._
+_The iteration is terminated when the residual is close to zero._
+
+[source, C]
+----
+fmi3Instance FMI1, FMI2;
+fmi3ValueReference vr_FMU3_u, vr_FMU3_y, vr_FMU4_u, vr_FMU4_y;
+fmi3Float64 s, FMU3_y, FMU4_y, residual;
+bool converged;
+
+// Newton iteration
+while (!converged)
+{
+  // input s[0] calculated by the solver
+  ...
+  fmi3SetFloat64(FMU2, &vr_FMU4_u, 1, &s,   1);
+  fmi3GetFloat64(FMU2, &vr_FMU4_y, 1, &FMU4_y,  1);
+  fmi3SetFloat64(FMU1, &vr_FMU3_u, 1, &FMU4_y,  1);
+  fmi3GetFloat64(FMU1, &vr_FMU3_y, 1, &FMU3_y,  1);
+  residual=s-FMU3_y; // provided to the solver
+}
+
+----
+
 _These types of artifical or real algebraic loops can occur in all the different modes, such as *Initialization Mode*, *Event Mode*, and *Continuous-Time Mode*._
 _Since different variables are computed in every mode and the causality of variable computation can be different in *Initialization Mode* as with respect to the other two modes, it might be necessary to solve different kinds of loops in the different modes.]_
 
