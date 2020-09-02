@@ -82,8 +82,6 @@ typedef void  (*fmi3CallbackLogMessage)     (fmi3InstanceEnvironment instanceEnv
 typedef void (*fmi3CallbackIntermediateUpdate) (
     fmi3InstanceEnvironment instanceEnvironment,
     fmi3Float64 intermediateUpdateTime,
-    fmi3Boolean eventOccurred,
-    fmi3Boolean clocksTicked,
     fmi3Boolean intermediateVariableSetRequested,
     fmi3Boolean intermediateVariableGetAllowed,
     fmi3Boolean intermediateStepFinished,
@@ -525,7 +523,7 @@ typedef fmi3Status fmi3SetContinuousStatesTYPE(fmi3Instance instance,
 /* tag::GetDerivatives[] */
 typedef fmi3Status fmi3GetDerivativesTYPE(fmi3Instance instance,
                                           fmi3Float64 derivatives[],
-                                          size_t nCcontinuousStates);
+                                          size_t nContinuousStates);
 /* end::GetDerivatives[] */
 
 /* tag::GetEventIndicators[] */
@@ -580,6 +578,8 @@ typedef fmi3Status fmi3DoStepTYPE(fmi3Instance instance,
                                   fmi3Float64 currentCommunicationPoint,
                                   fmi3Float64 communicationStepSize,
                                   fmi3Boolean noSetFMUStatePriorToCurrentPoint,
+                                  fmi3Boolean* eventOccurred,
+                                  fmi3Boolean* clocksTicked,
                                   fmi3Boolean* terminate,
                                   fmi3Boolean* earlyReturn,
                                   fmi3Float64* lastSuccessfulTime);
