@@ -620,14 +620,9 @@ Allowed Function Calls::
 
 ===== State: Intermediate Update Mode [[IntermediateUpdateMode]]
 
-The FMU enters this state when the FMU calls <<fmi3CallbackIntermediateUpdate>> in state *Step Mode* (CS) or in state *Clock Activation Mode* (SE).
-When the callback function returns, the FMU returns to *Step Mode* (CS) or to *Clock Activation Mode* (SE).
-
-In this state the co-simulation algorithm can retrieve information from the FMU between communication points.
 This state is only available in Co-Simulation and Scheduled Execution.
-Functions called in this state must not return <<fmi3Discard>>.
 
-The FMU enters this state by calling <<fmi3CallbackIntermediateUpdate>> within <<fmi3DoStep>> (CS) or <<fmi3ActivateModelPartition>> (SE) and leaves the state towards state *Step Mode* (CS) or *Clock Activation Mode* (SE) if the function returns <<fmi3OK>> or <<fmi3Warning>>.
+The FMU enters this state by calling <<fmi3CallbackIntermediateUpdate>> within *Step Mode* (CS) or *Clock Activation Mode* (SE) and leaves the state towards state *Step Mode* (CS) or *Clock Activation Mode* (SE) if the function returns <<fmi3OK>> or <<fmi3Warning>>.
 If the function returns <<fmi3Error>> the FMU enters state *Terminated*.
 If the function returns <<fmi3Fatal>> the FMU enters the terminal state.
 
@@ -719,8 +714,6 @@ Set <<parameter,`parameters`>>, <<input,`inputs`>>, and <<start>> values, and re
 All strings passed as arguments to `fmi3SetString`, as well as all binary values passed as arguments to `fmi3SetBinary`, must be copied inside these functions, because there is no guarantee of the lifetime of strings or binary values, when these functions return.
 
 Note, <<fmi3Discard,`fmi3Status == fmi3Discard`>> is possible for the `fmi3Set{VariableType}` functions.
-
-For Co-Simulation FMUs, additional functions are defined in <<transfer-of-input-output-and-parameters>> to set and inquire <<derivative,`derivatives`>> of variables with respect to time in order to allow interpolation.
 
 The value of a variable may only be accessed with the respective `fmi3Get/Set{VariableType}` for its type.
 
@@ -1013,29 +1006,34 @@ If the <<clock,`clocks`>> are aperiodic, the interval has to be inquired at ever
 
 The following table summarizes the use of the API functions by the environment for different kinds of <<clock,`clocks`>>:
 
-[cols="1,2,3"]
+[cols="2,2,2,2"]
 |===
 |API function
 |<<outputClock,`Output clock`>>
 |<<inputClock,`Input clock`>>
+|<<localClock,`Local clock`>>
 
 |`fmi3GetClock`
-|Call during *Event Mode* or *Intermediate Update Mode*
-|Call during *Event Mode*
+|Call during *Event Mode* and *Intermediate Update Mode*.
+|Not allowed
+|Call during *Event Mode* and *Intermediate Update Mode*.
 
 |`fmi3SetClock`
-|Call only if recomputations of clock state are needed during *Event Mode*.
+|Not allowed
 |Call after entering *Event Mode*.
 Repeated calls if recomputations of clock state are needed during *Event Mode*.
+|Not allowed
 
 |`fmi3GetIntervalDecimal` `fmi3GetIntervalFraction`
-|Call during *Event Mode*
-|Call during *Event Mode*
+|Call during *Event Mode*.
+|Not allowed
+|Call during *Event Mode*.
 
 |`fmi3SetIntervalDecimal` `fmi3SetIntervalFraction`
-|Don't call.
+|Not allowed
 |Call after first <<clock>> activation.
 (only for <<periodic>> <<clock,`clocks`>>)
+|Not allowed
 |===
 
 //TODO-API: check if addition (only for periodic clocks) is correct
@@ -1146,10 +1144,7 @@ where
 Each state derivative variable listed as elements `<ModelStructure><Derivative>`, if present.
 
 * latexmath:[\mathbf{v}_{\mathit{known}}] is the vector of known floating point <<input>> variables of function *h* that changes its value in the actual state.
-
-Details are given in the description of element <<dependencies>> in <<ModelStructure>>.
-_[For example continuous-time <<input,`inputs`>> in *Continuous-Time Mode*._
-_A directional derivative with respect to the independent variable can be computed.]._
+Details about which variables are in latexmath:[\mathbf{v}_{\mathit{known}}] are given in the description of element <<dependencies>> in <<ModelStructure>>.
 
 * latexmath:[{\mathbf{v}_{\mathit{rest}}}] is the set of <<input>> variables of function *h* that either changes its value in the actual state but are non-floating point variables, or do not change their values in this state, but change their values in other states _[for example, discrete-time <<input,`inputs`>> in *Continuous-Time Mode*]_.
 
