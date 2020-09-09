@@ -1,8 +1,11 @@
 from lxml import etree
 import os
 
+pwd = os.path.dirname(__file__)
+pwd = os.path.dirname(pwd)
+
 print("Parsing fmiModelDescription schema")
-schema = etree.XMLSchema(file='schema/fmi3ModelDescription.xsd')
+schema = etree.XMLSchema(file=os.path.join(pwd, 'schema', 'fmi3ModelDescription.xsd'))
 parser = etree.XMLParser(schema=schema)
 
 xml_files = [
@@ -20,10 +23,10 @@ xml_files = [
 
 for xml_file in xml_files:
     print("Parsing %s" % xml_file)
-    etree.parse(os.path.join('docs', 'examples', xml_file), parser)
+    etree.parse(os.path.join(pwd, 'docs', 'examples', xml_file), parser)
 
 print("Parsing fmiBuildDescription schema")
-schema = etree.XMLSchema(file='schema/fmi3BuildDescription.xsd')
+schema = etree.XMLSchema(file=os.path.join(pwd, 'schema', 'fmi3BuildDescription.xsd'))
 parser = etree.XMLParser(schema=schema)
 
 xml_files = [
@@ -33,15 +36,15 @@ xml_files = [
 
 for xml_file in xml_files:
     print("Parsing %s" % xml_file)
-    etree.parse(os.path.join('docs', 'examples', xml_file), parser)
+    etree.parse(os.path.join(pwd, 'docs', 'examples', xml_file), parser)
 
 print("Parsing fmiTerminalsAndIcons schema")
-schema = etree.XMLSchema(file='schema/fmi3TerminalsAndIcons.xsd')
+schema = etree.XMLSchema(file=os.path.join(pwd, 'schema', 'fmi3TerminalsAndIcons.xsd'))
 parser = etree.XMLParser(schema=schema)
 
-xml_files = [
-]
+# TODO: parse "Terminals and Icons" examples
+xml_files = []
 
 for xml_file in xml_files:
     print("Parsing %s" % xml_file)
-    etree.parse(os.path.join('docs', 'examples', xml_file), parser)
+    etree.parse(os.path.join(pwd, 'docs', 'examples', xml_file), parser)
