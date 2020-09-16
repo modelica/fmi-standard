@@ -58,6 +58,7 @@ There will be one terminal type for each CAN message with the name `BusName::Mes
 All variables of one terminal must be either input or output depending on the message being received or sent.
 This naming schema will create unique variable names as required by the FMI standard.
 Each CAN message `BusName::MessageName` has its own dedicated clock, the name is `BusName::MessageName_CLOCK` and it will be part of the terminal of the CAN message it belongs to.
+Optionally, it is allowed to also send the message data as `fmi3Binary` variable `BusName::MessageName_DATA`.
 All variables belonging to a CAN message are clocked variables _[The output/input clock is active when a message is sent/received.]_.
 Signal variables are generally of type `fmiFloat64`, except if conversion to physical requires other data types, e.g. `fmi3Int64`, or escapes numeric interpretation and is given the `fmi3Binary` type.
 
@@ -74,8 +75,8 @@ _[The FMI standard requires a variable to be either input or output.]_
 _[Splitting messages into signals to be transported as FMI variables cuts the communication stack at the top level (AUTOSAR: Virtual Function Bus)._
 _This is largely functionally equivalent to cutting below the communication stack where 64-bit messages are sent._
 _Given the presence of the ARXML or DBC description formats, one can translate one cut layer into the other._
-_Later versions of this layered standard may add raw signals and/or raw messages as binary types for cutting below the communication stack without costly transformation._
-_The approach chosen here simplifies interaction with plant models and is intentionally kept simple._
+_Primarily exchanging signals as chosen here simplifies interaction with plant models and is intentionally kept simple._
+_Optionally, the message data can be transported as well for each CAN message to eliminate the need for reconstruction of the message data from the signal values allowing for use cases that focus on the Basic Software._
 _Forcing the variables into a naming schema will allow simpler connection of FMUs with other simulation artifacts not aware of this layered standard._
 _The naming schema proposed here is already in use with MCD tools when measuring CAN and other bus types.]_
 
@@ -135,9 +136,9 @@ Element definitions::
  * There must be no `<Terminal>` element.
  * There must be one `<TerminalMemberVariable>` per CAN signal of this CAN message.
  * There must be one `<TerminalMemberVariable>` for the clock referenced by all CAN signals of this message with their `clockReference` attribute.
- * Optionally, there can be an additional `<TerminalMemberVariable>` element referencing a variable of type `fmi3Binary` that contains the binary representation of the CAN message.
-   If one output CAN message has such a binary representation of the message, all output CAN messages must have such a binary representation.
-   Any of the input CAN messages may have such a binary representation of the message.
+ * Optionally, there can be an additional `<TerminalMemberVariable>` element referencing a variable of type `fmi3Binary` that contains the binary representation of the CAN message data.
+   If one output CAN message has such a binary representation of the message data, all output CAN messages must have such a binary representation of the data.
+   Any of the input CAN messages may have such a binary representation of the message data.
 
 All `<TerminalMemberVariables>` must have the same type of either input or output, including the clock.
 
@@ -157,11 +158,17 @@ In case multiplexed signals are present in a message: all signals are present, b
 
 In order to use FMU input and output variables as transport layer for CAN buses, aperiodic clock variables are used.
 Such a clock is activated by the sender to indicate the transmission of the corresponding CAN message.
+Each CAN message `BusName::MessageName` has its own dedicated clock variable `BusName::MessageName_CLOCK`.
 All clocked variables triggered by this clock belonging to the same CAN message are then valid and can be read by the recipients of this CAN messages.
 The value of the clocked variable must be a message counter modulus 1024.
 
 _[Using a message counter allows recipients to detect dropped messages._
 _These clocks must be aperiodic clocks to allow for non-ideal bus communication patterns.]_
+
+==== CAN Message Data
+
+There can be an optional `fmi3Binary` variable representing the CAN message data.
+For CAN message `BusName::MessageName` the name of the CAN message data variable is `BusName::MessageName_CLOCK` a
 
 === Known Limitations of this Standard
 
