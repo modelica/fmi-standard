@@ -61,6 +61,9 @@ Each CAN message `BusName::MessageName` has its own dedicated clock, the name is
 All variables belonging to a CAN message are clocked variables _[The output/input clock is active when a message is sent/received.]_.
 Signal variables are generally of type `fmiFloat64`, except if conversion to physical requires other data types, e.g. `fmi3Int64`, or escapes numeric interpretation and is given a binary type.
 
+_[For example, XCP over CAN or UDS over CAN will use all 64 bits in the CAN message payload, often defining a single "signal"._
+_While one could call this an `fmi3UInt64`, a numeric interpretation is clearly not intended and should use `fmi3Binary` instead.]_
+
 All CAN message terminals will be wrapped into the CAN bus terminal they belong to.
 The CAN bus terminal will also specify which node(s) are wrapped inside this FMU.
 If an FMU specifies nodes that are both senders and receivers of a message, the receiver role will be removed from the FMU interface to allow the CAN signals to have a unique role as output.
@@ -102,7 +105,7 @@ The CAN bus name must match the root name of the CAN description file, e.g. `Pow
 Attribute definitions::
  * `terminalKind` must be set to `CAN_bus`.
  * `matchingRule` must be set to `bus`.
- * `name` is the CAN bus name, e.g. `Powertrain`, see example and constaints above.
+ * `name` is the CAN bus name, e.g. `Powertrain`, see example and constraints above.
 
 Element definitions::
  * There must be no `<TerminalMemberVariable>` element.
@@ -146,20 +149,30 @@ In case multiplexed signals are present in a message: all signals are present, b
 
 ==== CAN Message Clocks
 
-In order to use FMU input and output variables as transport layer for CAN buses, clock variables are introduced.
-When such clock is active the transmission of a CAN messages is indicated.
+In order to use FMU input and output variables as transport layer for CAN buses, aperiodic clock variables are used.
+Such a clock is activated by the sender to indicate the transmission of the corresponding CAN message.
 All clocked variables triggered by this clock belonging to the same CAN message are then valid and can be read by the recipients of this CAN messages.
 The value of the clocked variable must be a message counter modulus 1024.
 
-_[Using a message counter allows recipients to detect dropped messages.]_
+_[Using a message counter allows recipients to detect dropped messages._
+_These clocks must be aperiodic clocks to allow for non-ideal bus communication patterns.]_
 
 === Known Limitations of this Standard
 
 This layered standard maps the CAN bus protocol onto co-simulation variables as transport layer simulating in many ways an ideal CAN bus.
-Such an ideal CAN bus differ from physical CAN buses in the following ways:
+Such an ideal CAN bus differs from physical CAN buses in the following ways:
 
- * Bus message arbitration: CAN messages are sent according to priority (determined by Frame_ID) on wire. Here all message are transmitted at the same time without delay.
- * Bus congestion/bandwidth: too many CAN messages for the bandwidth of the bus. Here the CAN bus has infinite capacity.
- * Protocol functions of higher levels: i.e. CAN Request for retransmit is a specific protocol function. Here such specialties must be handled by the first layer inside the FMU.
- * Incoming buffer overflow: when an ECU receives more messages than its buffer can hold. Here the FMU will receive all messages, regardless of buffer size.
- * Bus transmission errors: electrical errors which cause failed message transmission. Here no such transmission errors can occur, unless explicitly added into the simulation.
+ * Bus message arbitration: CAN messages are sent according to priority (determined by Frame_ID) on wire.
+   Here all message are transmitted at the same time without delay.
+
+ * Bus congestion/bandwidth: too many CAN messages for the bandwidth of the bus.
+   Here the CAN bus has infinite capacity.
+
+ * Protocol functions of higher levels: i.e. CAN request for retransmit is a specific protocol function.
+   Here such specialties must be handled by the first layer inside the FMU.
+
+ * Incoming buffer overflow: when an ECU receives more messages than its buffer can hold.
+   Here the FMU will receive all messages, regardless of buffer size.
+
+ * Bus transmission errors: electrical errors which cause failed message transmission.
+   Here no such transmission errors can occur, unless explicitly added into the simulation.
