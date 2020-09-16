@@ -59,7 +59,7 @@ All variables of one terminal must be either input or output depending on the me
 This naming schema will create unique variable names as required by the FMI standard.
 Each CAN message `BusName::MessageName` has its own dedicated clock, the name is `BusName::MessageName_CLOCK` and it will be part of the terminal of the CAN message it belongs to.
 All variables belonging to a CAN message are clocked variables _[The output/input clock is active when a message is sent/received.]_.
-Signal variables are generally of type `fmiFloat64`, except if conversion to physical requires other data types, e.g. `fmi3Int64`, or escapes numeric interpretation and is given a binary type.
+Signal variables are generally of type `fmiFloat64`, except if conversion to physical requires other data types, e.g. `fmi3Int64`, or escapes numeric interpretation and is given the `fmi3Binary` type.
 
 _[For example, XCP over CAN or UDS over CAN will use all 64 bits in the CAN message payload, often defining a single "signal"._
 _While one could call this an `fmi3UInt64`, a numeric interpretation is clearly not intended and should use `fmi3Binary` instead.]_
@@ -76,7 +76,7 @@ _This is largely functionally equivalent to cutting below the communication stac
 _Given the presence of the ARXML or DBC description formats, one can translate one cut layer into the other._
 _Later versions of this layered standard may add raw signals and/or raw messages as binary types for cutting below the communication stack without costly transformation._
 _The approach chosen here simplifies interaction with plant models and is intentionally kept simple._
-_Forcing the variables into a naming schema will allow simpler connection of FMUs with other simulation artefacts not aware of this layered standard._
+_Forcing the variables into a naming schema will allow simpler connection of FMUs with other simulation artifacts not aware of this layered standard._
 _The naming schema proposed here is already in use with MCD tools when measuring CAN and other bus types.]_
 
 == Details
@@ -91,7 +91,7 @@ The root name of the description files shall be used as bus identifier in the CA
 Multiple files can be specified, each one defining one bus architecture used by the FMU.
 This standard does not support composing one CAN bus architecture from multiple description files.
 
-It is recommended to use ARXML files if possible, because the DBC standard lacks some key properties that have later been added using non-standard extenions with many dialects in use.
+It is recommended to use ARXML files if possible, because the DBC standard lacks some key properties that have later been added using non-standard extensions with many dialects in use.
 
 === Terminal Definitions
 
@@ -130,11 +130,13 @@ Attribute definitions::
  * `matchingRule` must be set to `bus`.
  * `name` must match the message name of the CAN bus description file in `/extra/org.modelica.fmi.layered_CAN`, prefixed with the CAN bus name and `::`.
 
-Element definitions::
- * There must be no `<TerminalStreamMemberVariable>` element.
- * There must be no `<Terminal>` element.
- * There must be one `<TerminalMemberVariable>` per CAN signal of this CAN message and a clock describing when this message is sent.
-   All `<TerminalMemberVariables>` must have the same type of either input or output, including the clock.
+ Element definitions::
+  * There must be no `<TerminalStreamMemberVariable>` element.
+  * There must be no `<Terminal>` element.
+  * There must be one `<TerminalMemberVariable>` per CAN signal of this CAN message.
+  * There must be one `<TerminalMemberVariable>` for the clock referenced by all CAN signals of this message with their `clockReference` attribute.
+
+All `<TerminalMemberVariables>` must have the same type of either input or output, including the clock.
 
 ==== CAN Signal Variables
 
@@ -143,7 +145,8 @@ Each CAN signal must be listed as `<TerminalMemberVariable>` of its correspondin
 Attribute definitions::
  * `variableName` refers to the input or output variable name of the FMU and to enforce uniqueness is built as follows: `BusName::MessageName::SignalName`.
  * `memberName` is the `SignalName` as given in the bus description file.
- * `variableKind` is always `CAN_signal_physical`.
+ * `variableKind` is `CAN_signal_physical` for all variables that represent physical (numeric) variables.
+   For variables of type `fmi3Binary` the `variableKind` is set to `CAN_signal_binary`.
 
 In case multiplexed signals are present in a message: all signals are present, but only the active signal according to the multiplex switch signal contains a valid value, all inactive values must be ignored _[those values could even be outside their specified min-max range without fault]_.
 
