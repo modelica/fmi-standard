@@ -27,7 +27,7 @@ The only difference is that an early return has no meaning in this mode and no a
 All internal events that shall be handled by the simulation algorithm are signaled via <<fmi3CallbackIntermediateUpdate>>.
 _[In this mode it is recommended to restrict such updates by the FMU to <<outputClock>> ticks for reducing the computational load in real-time simulations.]_
 
-==== Computation in Scheduled Execution
+==== Scheduled Execution and Clocks
 
 If this mode is set, the simulation algorithm has to directly control the time of computation of model partitions associated to <<inputClock,`input clocks`>>.
 The activation states of <<outputClock,`output clocks`>> are transported via <<fmi3CallbackIntermediateUpdate>> and <<fmi3GetClock>>.
@@ -157,7 +157,7 @@ If these functions are called while a model partition of an FMU is currently act
 These functions can be called if no other task related to the computation of model partitions of this FMU is currently active or preempted and the prerequisites defined for these functions in Co-Simulation are fulfilled.
 Thus these functions can not be called concurrently for model partitions of an FMU but only for the whole FMU instance.
 
-===== State: Intermediate Update Mode
+===== State: Intermediate Update Mode [[IntermediateUpdateModeSE]]
 
 The FMU enters this state when the FMU calls <<fmi3CallbackIntermediateUpdate>> in state *Clock Activation Mode*.
 When the callback function returns, the FMU returns to *Clock Activation Mode*.
@@ -171,10 +171,17 @@ If the simulation algorithm detects that an <<outputClock,`output clocks`>> tick
 
 Allowed Function Calls::
 
+Additionally to the functions listed in <<IntermediateUpdateMode>>, SE allows calling the following functions (in ME and CS, the following functions can be called in *Event Mode*):
+
 <<fmi3GetClock>>::
 For an <<outputClock>> only the first call of `fmi3GetClock` for a specific activation of this <<clock>> signals `fmi3ClockActive`.
 The FMU sets the reported activation state immediately back to `fmi3ClockInactive` for the following `fmi3GetClock` calls for that <<clock>> (in the same or other model partitions of the FMU) until this <<outputClock>> is internally activated again.
 The simulation algorithm can call `fmi3Set{VariableType}` and `fmi3Get{VariableType}` during the callback for variables associated to an <<outputClock>> that is active during this callback.
+
+<<fmi3GetIntervalDecimal>> & <<fmi3GetIntervalFraction>>::
+For <<outputClock,`output clocks`>> and <<localClock,`local clocks`>> it is allowed to call these functions during *Intermediate Update Mode*.
+These functions can be called only at the first activation of <<periodic>> <<outputClock,`output clocks`>>.
+For <<periodic,`aperiodic`>> <<outputClock,`output clocks`>>, these functions must be called at every activation _[to inquire when triggered <<inputClock,`input clocks`>> must tick]_.
 
 _[Based on the FMI standard it cannot be determined which part of the code of an FMU has called the callback function <<fmi3CallbackIntermediateUpdate>>._
 _This is especially the case for Scheduled Execution where multiple model partitions can be active at the same time._
@@ -215,7 +222,7 @@ Arbitrary evaluation order is possible for model partitions of the same priority
 
 _[If multiple tasks are needed to be scheduled for computation at a certain time instant a simulation algorithm must schedule a task of a higher priority always before a task of a lower priority]_
 
-<<input,`Input`>> <<clock>> ticks (see <<variants-of-clocks>>):
+<<input,`Input`>> <<clock>> ticks (see <<inputClockVariant>>):
 
 - (<<strict>>) <<periodic>> (period can be predefined by FMU or be defined by simulation algorithm, depending on XML information)
 - <<periodic,aperiodic>> (based on external possibly unpredictable events or on an <<outputClock>> of the same FMU)
