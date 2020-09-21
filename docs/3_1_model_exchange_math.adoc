@@ -210,11 +210,6 @@ All discrete-time variables are fixed during this phase and the corresponding di
 This mode is used to compute new values for all continuous-time variables, as well as for all discrete-time variables that are activated at the current event instant latexmath:[t], given the values of the variables from the previous instant latexmath:[{}^{\bullet}t].
 This is performed by solving algebraic equations consisting of all continuous-time and all active discrete-time equations.
 
-_[In FMI 2.0, there is no mechanism that the FMU can provide the information whether a discrete-time variable is active or is not active (is not computed) at an event instant.
-With clocked variables, FMI 3.0 helps the environment to determine, which variables are newly computed by the FMU.]_
-
-_[TODO: something seems to be missing here]_
-
 ==== Model Evaluations, Dependencies, and Call Sequence
 
 When connecting FMUs together, loop structures can occur that lead to particular difficulties because linear or non-linear algebraic systems of equations in floating point variables but also in Boolean or Integer variables might be present.
@@ -452,10 +447,9 @@ _Examples:_
 Synchronous systems::
 _A synchronous system, such as Lucid Synchrone <<PZ06>> or Modelica 3.3 <<MLS12>>, is called periodically, and at every sample instant the discrete-time equations are evaluated exactly once._
 _An FMU of this type should be implemented in FMI 3.0 with <<clock,`clocks`>>._
-_However, just like in FMI 2.0, it could in principle also be implemented by activating the model equations only at the first event iteration and returning always `newDiscreteStatesNeeded == fmi3False` from <<fmi3NewDiscreteStates>>._
-_Furthermore, the discrete-time <<state,`states`>> are not updated by <<fmi3NewDiscreteStates>>, but as first action before the discrete-time equations are evaluated, in order that_ latexmath:[^{\bullet}\mathbf{x}_d] _(= value at the previous clock tick) and_ latexmath:[\mathbf{x}_d] _(value at the latest <<clock>> tick) have reasonable values between clock ticks._
 
-_[TODO: these clock ticks were mentioned in FMI2.0 already, is it consistent with FMI3.0 clocks?]
+_However, just like in FMI 2.0, it could in principle also be implemented by activating the model equations only at the first event iteration and returning always `newDiscreteStatesNeeded == fmi3False` from <<fmi3NewDiscreteStates>>._
+_Furthermore, the discrete-time <<state,`states`>> are not updated by <<fmi3NewDiscreteStates>>, but as first action before the discrete-time equations are evaluated, in order that_ latexmath:[^{\bullet}\mathbf{x}_d] _(= value at the previous Lucid Synchrone/Modelica 3.3 clock tick) and_ latexmath:[\mathbf{x}_d] _(value at the latest Lucid Synchrone/Modelica 3.3 clock tick) have reasonable values between Lucid Synchrone/Modelica 3.3 clock ticks._
 
 State machines with one memory location for a state::
 _In such a system there is only one memory location for a discrete-time <<state>> and not two, and therefore a discrete-time <<state>> is updated in the statement where it is assigned (and not in <<fmi3NewDiscreteStates>>)._
@@ -533,19 +527,15 @@ Whenever result values shall be stored, usually at output points defined before 
 Continuous integration is stopped at an event instant.
 An event instant is determined by a <<time event,`time`>>, <<state event,`state`>> or <<step event>>, or by an external event triggered by the environment.
 
-_[TODO: no clock events??? should there even be input clock event, output clock events?]_
-
 In order to determine a <<state event>>, the event indicators *z* have to be inquired at every completed integrator step.
 Once the event indicators signal a change of their domain, an iteration over time is performed between the previous and the actual completed integrator step, in order to determine the time instant of the domain change up to a certain precision. +
 After an event is triggered, the FMU needs to be switched to *Event Mode*.
 In this mode, systems of equations over connected FMUs might be solved (similarily as in *Continuous-Time Mode*).
 Once convergence is reached, <<fmi3NewDiscreteStates>> must be called to increment super-dense time (and conceptually update the discrete-time <<state,`states`>> defined internally in the FMU by latexmath:[^{\bullet}\mathbf{x}_d := \mathbf{x}_d]).
-Depending on the discrete-time model, a new event iteration might be needed (for example, because the FMU describes internally a state machine
-and transitions are still able to fire
+Depending on the discrete-time model, a new event iteration might be needed.
 
-_[TODO: what does fire mean???]
+_[For example, an FMU implements a state machine that forces an internal state transitions to occur, when new <<input>> values are available.]_
 
-, but new <<input,`inputs`>> shall be taken into account). +
 The function calls in <<table-math-model-exchange>> describe precisely which input arguments are needed to compute the desired output argument(s).
 There is no 1:1 mapping of these mathematical functions to C functions.
 Instead, all input arguments are set with `fmi3Set{VariableType}` C function calls, and then the result argument(s) can be determined with the C functions defined in the right column of <<table-math-model-exchange>>.
