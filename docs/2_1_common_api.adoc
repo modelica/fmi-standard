@@ -764,7 +764,9 @@ Consider the system in <<figure-synchronous-clock-example>>, adapted from the Mo
 This is implicit in the equations.
 
 - The timing of the sample induces an event indicator that forces the importer to execute the controller and plant at the times at which the sensor wants to sample.
-_[TODO: How could this be done with a zero crossing function? Wouldn't this be simple with a time-event?]_
+_[TODO: How could this be done with a zero crossing function? Wouldn't this be simple with a time-event?
+Claudio: use time event instead.
+]_
 
 - latexmath:[Previous(xd)] means the value of latexmath:[xd] computed at the previous sample.
 
@@ -772,7 +774,10 @@ _[TODO: How could this be done with a zero crossing function? Wouldn't this be s
 
 - The importer
 
-_[TODO: The elements of the example are not FMUs. Hence we cannot talk about an importer]_
+_[TODO: The elements of the example are not FMUs. Hence we cannot talk about an importer.
+Claudio: rewrite this sentence to make it clear that the plant is evolving continuously.]_
+
+_[TODO: All of this should be non normative.]_
 
 may execute both controller and plant FMUs at times other than sample times as part of the time integration of the plant.
 In this case, the controller must produce the zero order hold value latexmath:[u].
@@ -780,6 +785,8 @@ In this case, the controller must produce the zero order hold value latexmath:[u
 .Sample scenario showcasing use of <<SynchronousClocks,Synchronous Clocks>>.
 [[figure-synchronous-clock-example]]
 image::images/synchronous-clock-example.svg[width=80%, align="center"]
+
+_[TODO: Improve the example to provide more motivation. Maybe look for one in the synchronous clock text.]_
 
 Now suppose the above architecture is realized with ME FMUs as illustrated in <<figure-synchronous-clock-scenario>>.
 Since there's no guarantee that the equations in Ctrl, Actuator, and Sensor FMUs will be invoked exactly at the times that coincide with the sampling times of the Sensor FMU (recall that it is the importer that picks the time advancement, based on the needs of the different FMUs), the Ctrl, Actuator, and Sensor FMUs need to be configured with the same sample rate.
@@ -834,7 +841,12 @@ x_j=\begin{cases}
 y_j=g_j(x_{j-1},u_j,t_j);
 ++++
 
-_[TODO: shouldn't this be:]_
+_[TODO: shouldn't this be:
+Claudio: rewrite this to make it clearer: the distinction between these two are just local vars and outputs. 
+Claudio: Also relate to the previous example.
+Claudio: Also change the modelica sentence.
+Claudio: Make it clear that clocks are just a way to implement numerically sound event having across different FMUs.
+]_
 [latexmath]
 ++++
 y_j=g_j(x_{j},u_j,t_j);
@@ -893,7 +905,7 @@ y_j=g_j(x_{j-1},u_j,t_j)
 where:
 
 * latexmath:[x] denotes the variables that are associated with the model partition.
-These are the variables that _[TODO:might?]_ change their value when the model partition is evaluated. Each variable in latexmath:[x] is associated with one, and only one, model partition.
+These are the variables that are computed when the model partition is evaluated. Each variable in latexmath:[x] is associated with one, and only one, model partition.
 Multiple model partitions, when evaluated, may read the value of a single variable, but only one will change it.
 
 * latexmath:[u_j] denotes the variables that are read, but not changed, when the model partition is evaluated.
@@ -928,7 +940,7 @@ A common number of different priority levels is, e.g., 100 (0 to 99), as defined
 ===== Output Clocks [[outputClockVariant]]
 
 An <<outputClock>> is a general <<clock>> that ticks when a time-, state- or step-event occurs in the continuous-model partition of the FMU (for <<CommunicationPointClocks,Communication Point Clocks>> these <<outputClock>> tick events can occur in all model partitions) and are identified based on their <<valueReference>>.
-The events can be <<periodic>> or <<periodic,aperiodic>>.
+The clock can be <<periodic>> or <<periodic,aperiodic>>.
 
 _[TODO: "tick events" used but never defined]_
 
@@ -946,26 +958,27 @@ _Example:_
 _]_
 
 
-_[TODO: local clocks should be introduced here too, they are just used afterwards]_
+_[TODO: local clocks should be introduced here too, they are just used afterwards.
+Issue 1172 will address the definition of local variables (including local clocks).
+Then we can introduce a section here on local clocks.
+]_
 
 ===== Input Clocks [[inputClockVariant]]
 
 An <<inputClock>> is a <<periodic>> or <<periodic,aperiodic>> <<clock>> that is defined by a <<clock>> outside of the FMU.
-Its interval is initialized by the environment.
-An <<inputClock,input clocks>> must be independent to all other input clocks. _[TODO: what does that mean?]
+I.e., only when the <<clock>> is activated by the environment of the FMU, then the FMU is informed that the <<clock>> ticks at this time instant.
+An <<inputClock,input clocks>> must be independent to all other input clocks. 
+_[TODO: what does that mean?]
 If dependent clocks exist, they can be exposed as <<local>> or <<output>> clocks.
 
-_[Inside of the FMU it is not known in advance when this <<clock>> ticks._
-_Instead, only when the <<clock>> is activated by the environment of the FMU, then the FMU is informed that the <<clock>> ticks at this time instant._
-_Example:_
-_A clocked PI controller can be defined as an FMU and the input and output signal of the controller can be defined to be on the same <<inputClock>>._
-_In such a case, the environment deduces the <<clock>> ticks from the components that are connected to the PI controller (e.g. a component connected to the input, or to the output may define the relevant <<clock>>).]_
-
-_[TODO: Do we need this non-normative text at all?]_
+_[
+TODO: 
+Claudio: Explain why we have periodic clocks: because of the numerical problems.
+]_
 
 ===== Clock Unions [[clock-relationships-for-communication-point-clocks]]
 
-It is possible to define a dependency from an <<outputClock>> to an <<inputClock>> of the same FMU using the <<triggeredBy>> attribute of <<inputClock>> variables.
+It is possible for an <<inputClock>> to depend on an <<outputClock>> of the same FMU using the <<triggeredBy>> attribute of <<inputClock>> variables.
 An <<outputClock,`output clock`>> and the associated <<inputClock,`input clocks`>> define a clocks union to indicate that the <<outputClock>> triggers the associated <<inputClock, `input clocks`>> at the same time instant.
 It is only meaningful to combine an <<outputClock,`output clock`>> with an <<periodic,aperiodic>> <<inputClock>>.
 It is possible to define multiple unions of <<clock,`clocks`>>.
@@ -973,7 +986,12 @@ An <<inputClock,`input clock`>> may be contained in at most one clock union _[na
 An <<outputClock,`output clock`>> can be part of multiple clock unions.
 
 Clock unions are needed to allow for an external scheduler to achieve an optimal control of model partitions and are applicable to both <<SynchronousClocks,Synchronous Clocks>> and <<CommunicationPointClocks,Communication Point Clocks>> and therefore apply to ME, CS and SE.
-_[TODO: ??? model partitions only belong to Communication point clocks, how can this be true??]_
+_[TODO: ??? model partitions only belong to Communication point clocks, how can this be true??
+Claudio: 
+- the FMU needs a mechanism to tell the importer that the FMU needs to go into event iteration when its own output clock ticks. It's just a mechanism for the FMU to use its own output clocks as an input clock without having to rely on the master.
+- The importer need to trigger explicitly that input clock (refer to input clock section) after the output clock ticks.
+- Replace table by "Only aperiodic input clocks can be part of a union.".
+]_
 _[TODO: Does the importer have to activate the corresponding input clocks???]_
 
 The following table lists which <<inputClock>> variants can be combined with which <<outputClock>> variants:
@@ -995,7 +1013,9 @@ The following table lists which <<inputClock>> variants can be combined with whi
 [#ExampleUseCase]
 image::images/example_usecase.png[]
 
-_[TODO: This example is given here out of context. Shouldn't this be at SE? The text of of the figure should be normal text and. What is a Heider model?]
+_[TODO: This example is given here out of context. Shouldn't this be at SE? The text of of the figure should be normal text and. What is a Heider model?
+Claudio: remove it.
+]
 
 ===== Dependent Output Clocks
 
