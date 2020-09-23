@@ -344,14 +344,14 @@ The flag may only be `fmi3True`, if `hasEventMode == true`, otherwise the FMU mu
 [[requiredIntermediateVariables,`requiredIntermediateVariables`]]
 * `requiredIntermediateVariables` is an array of the value references of all <<input>> variables that the simulation algorithm intends to set and all <<output>> variables it intends to get during intermediate updates.
 This set may be empty (<<nRequiredIntermediateVariables>> == 0) when the simulation algorithm does not intend to use intermediate update.
-All variables referenced in this set must be marked with the attribute <<intermediateUpdateAttr,`intermediateUpdate = "true"`>> in the model description.
+All variables referenced in this set must be marked with the attribute <<intermediateUpdate,`intermediateUpdate = "true"`>> in the model description.
 Only the variables in <<requiredIntermediateVariables>> may be accessed by the simulation algorithm using `fmi3Set{VariableType}` and `fmi3Get{VariableType}` during <<fmi3CallbackIntermediateUpdate>> callbacks.
 
 [[nRequiredIntermediateVariables,`nRequiredIntermediateVariables`]]
 * `nRequiredIntermediateVariables` gives the number of entries in <<requiredIntermediateVariables>>.
 If <<nRequiredIntermediateVariables>> is zero <<requiredIntermediateVariables>> is not defined.
 
-The arguments <<logMessage>>, <<intermediateUpdate>>, <<lockUnlockPreemption,`lockPreemption`>>, and <<lockUnlockPreemption,`unlockPreemption`>>, are function pointers provided by the simulation environment to be used by the FMU.
+The arguments <<logMessage>>, <<intermediateUpdate>>, <<preemption-support,`lockPreemption`>>, and <<preemption-support,`unlockPreemption`>>, are function pointers provided by the simulation environment to be used by the FMU.
 It is not allowed to change these functions between <<fmi3Instantiate>> and <<fmi3Terminate>> calls.
 Additionally, a pointer to the environment is provided (`instanceEnvironment`) that needs to be passed to all of the callback functions, in order that those functions can utilize data from the environment, such as mapping a <<valueReference>> to a string, or assigning memory to a certain FMU instance.
 
@@ -388,23 +388,13 @@ If the character `pass:[#]` shall be included in the message, it has to be prefi
 
 _[Example: The message `\#1365# must be larger than zero (used in IO channel ##4)` might be changed by the <<logMessage>> function to `body.m must be larger than zero (used in IO channel #4)` if `body.m` is the name of the variable with value reference 1365.]_
 
-[[intermediateUpdate,`intermediateUpdate`]]
 Callback function `intermediateUpdate`::
 
 See <<fmi3CallbackIntermediateUpdate>> for details.
 
-[[lockUnlockPreemption,`lockUnlockPreemption`]]
 Callback function `lockPreemption` and `unlockPreemption`::
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=CallbackPreemptionLock]
-----
 
-To provide more options to secure the model or controller code inside the FMU, against unwanted preemption, these callback functions are defined.
-They can be used to prevent preemption for certain code parts enclosed by `lockPreemption` and `unlockPreemption` in Scheduled Execution.
-Even if the co-simulation algorithm does not support preemption, at least an empty implementation of these callback functions must be provided to allow the reuse of code for different modes together with an efficient preemption.
-_[This is included to avoid having to check in the model or controller code if the function pointers are null pointers._
-_A function call to a void-void function with an immediate return is hardly any overhead.]_
+See <<preemption-support>> for details.
 
 Functions <<fmi3GetFMUState>>, <<fmi3SetFMUState>>, <<fmi3FreeFMUState>>::
 See <<get-set-fmu-state>> for details on getting and setting FMU states that allow rollback and other advanced simulation algorithms.
@@ -634,11 +624,11 @@ Allowed Function Calls::
 
 Function `fmi3Get{VariableType}`::
 If <<intermediateVariableGetAllowed,`intermediateVariableGetAllowed == fmi3True`>>, the value of intermediate variables can be retrieved.
-Intermediate variables are variables that are marked with attribute <<intermediateUpdateAttr,`intermediateUpdate = true`>> in the <<modelDescription.xml>> and have been included in the <<requiredIntermediateVariables>> argument to <<fmi3Instantiate>>.
+Intermediate variables are variables that are marked with attribute <<intermediateUpdate,`intermediateUpdate = true`>> in the <<modelDescription.xml>> and have been included in the <<requiredIntermediateVariables>> argument to <<fmi3Instantiate>>.
 
 Function `fmi3Set{VariableType}`::
 If <<intermediateVariableSetRequested,`intermediateVariableSetRequested == fmi3True`>>, the value of intermediate, continuous variables should be set.
-Intermediate variables are variables that are marked with attribute <<intermediateUpdateAttr,`intermediateUpdate = true`>> in the <<modelDescription.xml>> and have been included in the <<requiredIntermediateVariables>> argument to <<fmi3Instantiate>>.
+Intermediate variables are variables that are marked with attribute <<intermediateUpdate,`intermediateUpdate = true`>> in the <<modelDescription.xml>> and have been included in the <<requiredIntermediateVariables>> argument to <<fmi3Instantiate>>.
 
 There is a defined order of calling these functions: first all `fmi3Get{VariableType}` calls must be performed, then `fmi3Set{VariableType}` may be called. +
 _[This is analogous to the calling sequence of of_ `fmi3Get{VariableType}` _and_ `fmi3Set{VariableType}` _calls at communication points.]_
