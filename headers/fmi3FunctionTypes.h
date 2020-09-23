@@ -131,7 +131,7 @@ typedef fmi3Instance fmi3InstantiateCoSimulationTYPE(
     fmi3String                     resourceLocation,
     fmi3Boolean                    visible,
     fmi3Boolean                    loggingOn,
-    fmi3Boolean                    eventModeRequired,
+    fmi3Boolean                    eventModeUsed,
     const fmi3ValueReference       requiredIntermediateVariables[],
     size_t                         nRequiredIntermediateVariables,
     fmi3InstanceEnvironment        instanceEnvironment,
