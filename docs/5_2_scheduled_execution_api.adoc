@@ -111,7 +111,7 @@ The restrictions related to variable <<causality>> and <<variability>> defined f
 
 It is not allowed to call `fmi3Get{VariableType}` functions after `fmi3Set{VariableType}` functions without an <<fmi3ActivateModelPartition>> call in between.
 
-_[The reason is to avoid different interpretations of the caching, since contrary to <<fmi-for-model-exchange, `FMI for Model Exchange`>>, <<fmi3ActivateModelPartition>> will perform the actual calculation instead of `fmi3Get{VariableType}`, and therefore, dummy algebraic loops at communication points cannot be handled by an appropriate sequence of `fmi3Get{VariableType}` and, `fmi3Set{VariableType}` calls as for Model Exchange._
+_[The reason is to avoid different interpretations of the caching, since contrary to <<fmi-for-model-exchange, `FMI for Model Exchange`>>, <<fmi3ActivateModelPartition>> will perform the actual calculation instead of `fmi3Get{VariableType}`, and therefore, dummy algebraic loops at communication points cannot be handled by an appropriate sequence of `fmi3Get{VariableType}` and `fmi3Set{VariableType}` calls as for Model Exchange._
 
 _Example:_
 
@@ -232,25 +232,24 @@ It nevertheless has to secure its code against concurrent evaluation _[not again
 Mostly this is required for internal inter-model-partition communication and in general for the joint use of global variables within the FMU.
 The exporting tool has to consider external events i.e. interrupts (if <<input>> <<periodic,aperiodic>> <<clock,`clocks`>> are defined) and the influences of computing speed, so the exact preemption occurrence points cannot be foreseen (within the given priority and period restrictions).
 
-To provide more options to secure the code against unwanted preemption new callback functions are defined that can be used to prevent preemption for certain code parts.
-The preemption lock has to be actively locked and unlocked in the FMU's code.
-Such locks should be used with care and only for securing very short code parts that cannot be secured otherwise.
+To guard certain code parts against preemption they must be enclosed with the callback functions `lockPreemption` and `unlockPreemption`.
 
-A lock can be created and released to prevent preemption of that task (i.e. model partition):
+_[Such locks should be used with care and only for securing very short code parts that cannot be secured otherwise.]_
 
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tag=CallbackPreemptionLock]
 ----
 
-Even if the simulation algorithm does not support preemption and Scheduled Execution, at least an empty implementation of these callback functions is required.
+Even if the scheduler does not support preemption, at least an empty implementation of these callback functions must be provided to allow the reuse of code for different modes together with an efficient preemption.
+_[This avoids checks for null function pointers._
+_A function call to a void-void function with an immediate return is hardly any overhead.]_
 
 Example for the use of `fmi3CallbackLockPreemption` and `fmi3CallbackUnlockPreemption` callback functions in the FMU code:
 
 [source, C]
 ----
 Int16 DataBuffer[3];   // global buffer
-
 
 void Task1(void) //low priority
 {
