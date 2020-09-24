@@ -626,7 +626,7 @@ It is not allowed to include <<clock,`clocks`>> of different `clockType` in one 
 [[triggeredBy,`triggeredBy`]]
 The optional attribute <<triggeredBy>> is used to define a tick relationship from an <<outputClock>> to an <<periodic,aperiodic>> <<inputClock>> (see <<clock-relationships-for-communication-point-clocks>>).
 
-Only <<clock,`clocks`>> with <<causality>> = <<input>> and <<clockType>> = <<communicationPoint>> can have this attribute.
+Only <<clock,`clocks`>> with <<causality>> = <<input>> can have this attribute.
 It is not allowed to combine <<outputClock,`output clocks`>> with <<periodic>> or <<strict>> <<periodic>> <<inputClock,`input clocks`>> based on <<triggeredBy>>.
 
 
@@ -659,19 +659,26 @@ If the optional attribute `strict` is set to `false` another interval or offset 
 The FMU exporter is not allowed to set `strict` to `true` if `periodic = false`.
 
 |`intervalCounter`, `shiftCounter`, `resolution`
-|The interval of <<output>> or <<input>> <<periodic>> <<clock,`clocks`>> is a rational number defined with unsignedLong valued `intervalCounter` and `resolution`:
+|The interval of <<output>> or <<input>> <<periodic>> <<clock,`clocks`>> is a rational number defined with unsignedLong valued `intervalCounter` and `resolution` attributes:
 
 `interval = intervalCounter / resolution`.
 
-The initial tick of <<periodic>> <<clock,`clocks`>> may be delayed by defining a `shiftCounter` (default value 0). This results in the actual
+The initial tick of <<periodic>> <<clock,`clocks`>> may be delayed by an offset.
+The offset can be defined by the `unsignedLong` valued `shiftCounter` attribute (default value 0).
 
-`offset = interval * shiftCounter / resolution`.
+This results in the actual
+
+`offset = shiftCounter / resolution`.
+
+The time `t` of the `n`th activation of a periodic clock is therefore computed as
+
+`t = (shiftCounter + n * intervalCounter) / resolution`.
 
 More information about clock intervals:
  <<periodic-clock-ticks>>.
 
 The attributes `intervalCounter`, `shiftCounter` and `resolution` are interval <<start>> values for <<periodic>> <<clock,`clocks`>> and must not be used together with <<periodic,aperiodic>> <<clock,`clocks`>>.
-If `strict = true` it is required to provide values for `intervalCounter`, `shiftCounter` and `resolution`.
+If `strict = true` it is required to provide values for `intervalCounter` and `resolution`.
 
 `intervalCounter` and `resolution` have no default value.
 |====
@@ -1205,9 +1212,24 @@ The algebraic relationship to the <<input,`inputs`>> is defined via the <<depend
 An <<outputClock,`output clock`>> can be left unconnected or can be connected to an <<inputClock, `input clock`>>, usually of another FMU (for exceptions see <<triggeredBy>>).
 
 [[local,`local`]]
-`= local`: Local variable that is calculated from other variables or is a continuous-time <<state>> or an event indicator (see <<ModelStructure>>).
-Local variable values must not be used in another model or FMU. +
-[[localClock,`local clock`]] If <<variability>> = <<clock>> the variable defines a <<localClock,`local clock`>> computed by the FMU..
+`= local`: Local variables are: +
+
+* continuous-time <<state,`states`>> and their `Derivative`pass:[s], `ClockedState`pass:[s], `EventIndicator`pass:[s] or `InitialUnknown`pass:[s].
+These variables are listed in the `<fmiModelDescription><ModelStructure>`. +
+* [[localClock,`local clock`]] internal, intermediate variables or local clocks which can be read for debugging purposes and are not listed in the `<fmiModelDescription><ModelStructure>`.
+
+Setting of local variables: +
+
+* In *Initialization Mode* and before, local variables need to be set if they do have start values or are listed as `InitialUnknown`.
+
+* In super state *Initialized*, `fmi3Set{VariableType}` must not be called on any of the local variables.
+Only in Model Exchange, continuous <<state,`states`>> can be set with <<fmi3SetContinuousStates>>.
+Local variable values must not be used as input to another model or FMU.
+
+_[Continuous-time <<state,`states`>> and their `Derivative`pass:[s], `ClockedState`pass:[s], `EventIndicator`pass:[s] or `InitialUnknown`pass:[s] are listed as local variables to give them properties like name and unit for debugging purposes and a value reference to be listed in <fmiModelDescription><ModelStructure>.]_
+
+_[TODO: add ClockedState elements to ModelStructure.]_
+_[TODO: rename Derivative to StateDerivative to differentiate between derivatives of states and general derivatives of any other variable.]_
 
 [[independent,`independent`]]
 `= independent`: The independent variable (usually `time` _[but could also be, for example, `angle`]_).
@@ -1274,7 +1296,8 @@ _[If the simulation algorithm notices a change in a discrete variable during <<i
 Model Exchange: No restrictions on value changes. +
 Co-Simulation: By convention, the variable is part of a differential equation. +
 Changes to <<continuous>> variables are only considered discrete during event handling.
-Changes to <<continuous>> variables during <<intermediateUpdate>> and normal communication points (communication points without event handling) are considered continuous.
+Changes to <<continuous>> variables during <<intermediateUpdate>> and normal communication points (communication points without event handling) are considered continuous. +
+_[In the case of Co-Simulation without events, detecting discrete changes to continuous input variables (for instance to reset the integration algorithm) requires heuristics.]_
 
 [[clock,`clock`]]
 `= clock`: Only a variable of type `<Clock>` can have this variability.
@@ -1319,13 +1342,11 @@ If `fmi3Set{VariableType}` is not called on a variable with <<causality>> = <<in
 |`canHandleMultipleSetPerTimeInstant`
 |
 [[canHandleMultipleSetPerTimeInstant,`canHandleMultipleSetPerTimeInstant`]]
-Only useful for Model Exchange FMUs, if only a Co-Simulation FMU, this attribute must not be present.
-If Model Exchange and Co-Simulation are combined in one FMU, this attribute is ignored for Co-Simulation: +
 Only for variables with <<variability>> = <<input>> : +
 If not present, the default value is assumed to be `true`.
 If `canHandleMultipleSetPerTimeInstant = false`, then only one `fmi3Set{VariableType}` call is allowed at one super-dense time instant (model evaluation) on this variable.
 That is, this <<input>> is not allowed to appear in a (real) algebraic loop requiring multiple calls of `fmi3Set{VariableType}` on this variable _[for example, due to a Newton iteration]_. +
-_[This flag must be set by FMUs where (internal) discrete-time <<state,`states`>> are directly updated when assigned (xd := f(xd) instead of xd = f(previous(xd)), and at least one <<output>> depends on this <<input>> and on discrete <<state,`states`>>._ +
+_[This flag must be set to `false` for variables where (internal) discrete-time states are directly updated when assigned (xd := f(xd) instead of xd = f(previous(xd)), and at least one <<output>> depends on this <<input>> and on discrete-time states._ +
 _It is strongly recommended that such an FMU checks the fulfillment of the requirement by itself during run-time, because an environment might not be able to check it; usually, there is a generic mechanism to import an FMU in an environment, but the mechanism to connect FMUs together is unrelated to the import mechanism._
 _For example, there is no mechanism in the Modelica language to formulate connection restrictions for C functions (the FMU) called in a Modelica model.]_
 
@@ -1342,21 +1363,20 @@ It is not possible to associate more than one <<clock>> to a variable.
 
 If the <<clock>> referenced by <<clockReference>> is a <<CommunicationPointClocks,Communication Point Clock>> (<<clockType>> = <<communicationPoint>>) the variable is not necessarily `clocked` in the sense of synchronous time clock theory. Such variables can also be continuous-time or discrete-time variables.
 
-If <<causality>> = <<output>> and <<variability>> = <<clock>> the <<outputClock>> tick event can occur only in the model partition that is related to the referenced <<inputClock>>, i.e. the <<outputClock,`output clock`>> value (active/inactive) can only change in this model partition.
-
+If <<causality>> = <<output>> and <<variability>> = <<clock>> the <<outputClock>> activation can occur only in the model partition that is related to the referenced <<inputClock>>, i.e. the <<outputClock,`output clock`>> value (active/inactive) can only change in this model partition.
 
 |`clockElementIndex`
 |
 [[clockElementIndex,`clockElementIndex`]]
-The optional attribute <<clockElementIndex>> is used in conjuction with the <<clockReference>> attribute to define the element index of the <<clock,`clocks`>> this variable is assigned to for array clock variables.
+The optional attribute <<clockElementIndex>> is used in conjunction with the <<clockReference>> attribute to define the element index of the <<clock,`clocks`>> this variable is assigned to for array clock variables.
 The element index is the 1-based index of the element (with serialization of indices for multi-dimensional arrays in the usual row-major order).
 For scalar clock variables this attribute must not be specified or must be specified as 0.
 
 |`intermediateUpdate`
 |
-[[intermediateUpdateAttr,`intermediateUpdate`]]
+[[intermediateUpdate,`intermediateUpdate`]]
 If this boolean attribute is `true`, the variable can be accessed during a communication step.
-Variables with <<causality>> <<parameter>> must not be marked with <<intermediateUpdateAttr,`intermediateUpdate = true`>>.
+Variables with <<causality>> <<parameter>> must not be marked with <<intermediateUpdate,`intermediateUpdate = true`>>.
 
 This attribute is only used for Co-Simulation. The default value of this attribute is `false`.
 |====
