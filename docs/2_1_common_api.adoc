@@ -854,39 +854,45 @@ The term <<clock>> is used for both <<clock>> types.
 
 ===== Synchronous Clocks [[SynchronousClocks]]
 
-The main use case of the <<SynchronousClocks,Synchronous Clocks>> is to represent sampled data systems.
+The main use case of synchronous clocks is to facilitate the simulation of systems with:
 
-Consider the system in <<figure-synchronous-clock-example>>, adapted from the Modelica specification:
+- different components whose behavior is triggered at different times by events, and
 
-- The controller samples the non-linear plant at some rate, and the plant is continuously affected by the actuator values between samples.
+- the components that trigger the events are different than the components handling those events.
 
-- The controller equations are executed synchronously whenever there is a new sample latexmath:[y_d].
-This is implicit in the equations.
-
-- The timing of the sample induces an event indicator that forces the importer to execute the controller and plant at the times at which the sensor wants to sample.
-_[TODO: How could this be done with a zero crossing function? Wouldn't this be simple with a time-event?
-Claudio: use time event instead.
-]_
-
-- latexmath:[Previous(xd)] means the value of latexmath:[xd] computed at the previous sample.
-
-- latexmath:[y] is a continuous variable, and latexmath:[u] is piecewise constant.
-
-- The importer
-
-_[TODO: The elements of the example are not FMUs. Hence we cannot talk about an importer.
-Claudio: rewrite this sentence to make it clear that the plant is evolving continuously.]_
-
-_[TODO: All of this should be non normative.]_
-
-may execute both controller and plant FMUs at times other than sample times as part of the time integration of the plant.
-In this case, the controller must produce the zero order hold value latexmath:[u].
-
-.Sample scenario showcasing use of <<SynchronousClocks,Synchronous Clocks>>.
+.Sample scenario showcasing use of synchronous clocks.
 [[figure-synchronous-clock-example]]
 image::images/synchronous-clock-example.svg[width=80%, align="center"]
 
-_[TODO: Improve the example to provide more motivation. Maybe look for one in the synchronous clock text.]_
+Consider the system in <<figure-synchronous-clock-example>>:
+
+- The controller samples the plant at some rate latexmath:[r], and the plant is continuously affected by the actuator values between samples.
+
+- A supervisor adapts the controller behavior when some criteria on latexmath:[u] is met.
+
+- When there is a new sample of latexmath:[x], the equations in blue have to be executed synchronously (i.e., at the exact same time).
+
+- Similarly, when the supervisor decides to update the controller behavior, the equations in purple have to be executed synchronously.
+
+- latexmath:[previous(u_r)] means the value of latexmath:[u_r] computed at the previous sample by the controller.
+
+_[TODO: All of this should be non normative.]_
+
+.Example plot of the scenario introduced in <<figure-synchronous-clock-example>>.
+[[figure-synchronous-clock-example-plot]]
+image::images/synchronous-clock-example-plot.svg[width=30%, align="center"]
+
+<<figure-synchronous-clock-example-plot>> illustrates a potential behavior of this example.
+Note that it is the supervisor that decides when to adapt the behavior of the controller, but the controller has to be executed when that happens.
+Also note that the change in controller behavior should only be reflected on its output when the next sample of the plant is done.
+
+.Realization of the system in <<figure-synchronous-clock-example>> using FMUs.
+[[figure-synchronous-clock-scenario]]
+image::images/synchronous-clock-scenario.svg[width=80%, align="center"]
+
+In order to understand the problem that synchronous clocks are trying to solve, it helps to try to implement the above system with FMI 2.0 Model Exchange FMUs.
+Such implementation is illustrated in <<figure-synchronous-clock-scenario>>.
+
 
 Now suppose the above architecture is realized with ME FMUs as illustrated in <<figure-synchronous-clock-scenario>>.
 Since there's no guarantee that the equations in Ctrl, Actuator, and Sensor FMUs will be invoked exactly at the times that coincide with the sampling times of the Sensor FMU (recall that it is the importer that picks the time advancement, based on the needs of the different FMUs), the Ctrl, Actuator, and Sensor FMUs need to be configured with the same sample rate.
@@ -899,9 +905,7 @@ There are two problems associated with this approach:
 
 These are the problems that <<SynchronousClocks,Synchronous Clocks>> solve.
 
-.Realization of the system in <<figure-synchronous-clock-example>> using ME FMUs.
-[[figure-synchronous-clock-scenario]]
-image::images/synchronous-clock-scenario.svg[width=80%, align="center"]
+
 
 The idea of clock comes naturally if we consider that the controller will sample the plant according to some frequency that depends on the frequency of the clock generator of the controller's microprocessor.
 It is easy then to describe the controller execution as happening every 100-th processor clock tick.
