@@ -892,20 +892,11 @@ image::images/synchronous-clock-scenario.svg[width=80%, align="center"]
 
 In order to understand the problem that synchronous clocks are trying to solve, it helps to try to implement the above system with FMI 2.0 Model Exchange FMUs.
 Such implementation is illustrated in <<figure-synchronous-clock-scenario>>.
+In this implementation, time and state events can be used to mimic the behavior in <<figure-synchronous-clock-example-plot>> with the Sensor FMU or Supervisor FMU driving the simulation into event mode when the events happen.
 
+However, this approach is error-prone for more complex controller architectures: imagine there is another FMU, called SafetyFMU, sampling latexmath:[x_r] at a rate latexmath:[\frac{r}{2}]. Now SafetyFMU is driven into event mode but does not know whether it's because of the time event it scheduled, or because of the time event that Sensor FMU scheduled (the two event times may differ due to floating point precision), and so it does not know exactly when to update the sampled variable.
 
-Now suppose the above architecture is realized with ME FMUs as illustrated in <<figure-synchronous-clock-scenario>>.
-Since there's no guarantee that the equations in Ctrl, Actuator, and Sensor FMUs will be invoked exactly at the times that coincide with the sampling times of the Sensor FMU (recall that it is the importer that picks the time advancement, based on the needs of the different FMUs), the Ctrl, Actuator, and Sensor FMUs need to be configured with the same sample rate.
-_[TODO: Why do all 3 need to be configured with the same sample rate? Wouldn't the event in the sensor trigger input events?]_
-There are two problems associated with this approach:
-
-- It is error-prone for more complex controller architectures; and
-
-- it represents time and the sample rate as real numbers and there are numerical difficulties in guaranteeing that all three FMUs will execute exactly at the same wall-clock time.
-
-These are the problems that <<SynchronousClocks,Synchronous Clocks>> solve.
-
-
+This is the problem that <<SynchronousClocks,Synchronous Clocks>> solve.
 
 The idea of clock comes naturally if we consider that the controller will sample the plant according to some frequency that depends on the frequency of the clock generator of the controller's microprocessor.
 It is easy then to describe the controller execution as happening every 100-th processor clock tick.
