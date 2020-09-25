@@ -847,7 +847,8 @@ This is only allowed if <<canReturnEarly,`canReturnEarly == fmi3True`>>.
 * `earlyReturnTime` is used to tell the FMU at what time to return early from the current <<fmi3DoStep>> (at the earliest), if the return value of <<earlyReturnRequested>> of <<fmi3CallbackIntermediateUpdate>> is `fmi3True`.
 If the <<earlyReturnTime>> is greater than the last signaled <<intermediateUpdateTime>>, the FMU may integrate up to the time instant <<earlyReturnTime>>.
 
-When providing intermediate inputs to the FMU, it is important that the co-simulation algorithm provides the same input value for the same variable, at the same <<intermediateUpdateTime>>. In other words, it is required that the calculation of inputs to the FMU be deterministic.
+When providing intermediate inputs to the FMU, it is important that the co-simulation algorithm provides the same input value for the same variable, at the same <<intermediateUpdateTime>>.
+In other words, it is required that the calculation of inputs to the FMU be deterministic.
 This is assumed by the internal solver.
 If an input value changes for the same <<intermediateUpdateTime>>, the internal numerical solver may deem that re-estimate a state multiple times, without ever being able to decrease the approximation error.
 
@@ -938,10 +939,12 @@ _[In order to understand the problem that synchronous clocks are trying to solve
 Such implementation is illustrated in <<figure-synchronous-clock-scenario>>.
 In this implementation, time and state events can be used to mimic the behavior in <<figure-synchronous-clock-example-plot>> with the Sensor FMU or Supervisor FMU driving the simulation into event mode when the events happen.]_
 
-_[However, this approach poses a big problem: since both Ctrl and Sensor FMUs have time events to sample with frequency latexmath:[x], it is unclear how the importer will guarantee that the two are going to executed in the same event mode. Due to floating point precision, it can happen that the importer takes both FMUs into event mode, but only one knows that it is entering event mode because it has to sample the signal. It makes it unclear which equations should be executed.]_
+_[However, this approach poses a big problem: since both Ctrl and Sensor FMUs have time events to sample with frequency latexmath:[x], it is unclear how the importer will guarantee that the two are going to executed in the same event mode._
+_Due to floating point precision, it can happen that the importer takes both FMUs into event mode, but only one knows that it is entering event mode because it has to sample the signal._
+_It makes it unclear which equations should be executed.]_
 
-_[This is the problem that synchronous clocks solve.
-Getting back to the example in <<figure-synchronous-clock-scenario>>, by making Ctrl and Sensor share a clock, it will be clear which FMU is triggering the event, and it is easier for them to be executed at the same exact time.]_
+_[This is the problem that synchronous clocks solve._
+_Getting back to the example in <<figure-synchronous-clock-scenario>>, by making Ctrl and Sensor share a clock, it will be clear which FMU is triggering the event, and it is easier for them to be executed at the same exact time.]_
 
 .Realization of the system in <<figure-synchronous-clock-example>> using synchronous clocks.
 [[figure-synchronous-clock-scenario-clocked]]
@@ -954,7 +957,9 @@ This way, the importer knows that when the Ctrl clock latexmath:[r] ticks, then 
 
 _[In general:_
 
-- _The ticking of an output clock is determined by the FMU that declares it. So in <<figure-synchronous-clock-scenario-clocked>>, the Supervisor FMU determines the ticking of latexmath:[s] and Ctrl FMU determines the ticking of latexmath:[r]. The FMU Ctrl declared both an input clock and an outut clock, and the Sensor and Actuator FMUs both declare an input clock._
+- _The ticking of an output clock is determined by the FMU that declares it._
+_So in <<figure-synchronous-clock-scenario-clocked>>, the Supervisor FMU determines the ticking of latexmath:[s] and Ctrl FMU determines the ticking of latexmath:[r]._
+_The FMU Ctrl declared both an input clock and an outut clock, and the Sensor and Actuator FMUs both declare an input clock._
 
 - _The ticking of an input clock is signaled by the importer, which in turn will find the source that determines the ticking of such clock.]_
 
@@ -1039,7 +1044,8 @@ y_j=g_j(x_{j-1},u_j,t_j)
 where:
 
 * latexmath:[x] denotes the variables that are associated with the model partition.
-These are the variables that are computed when the model partition is evaluated. Each variable in latexmath:[x] is associated with one, and only one, model partition.
+These are the variables that are computed when the model partition is evaluated.
+Each variable in latexmath:[x] is associated with one, and only one, model partition.
 Multiple model partitions, when evaluated, may read the value of a single variable, but only one will change it.
 
 * latexmath:[u_j] denotes the variables that are read, but not changed, when the model partition is evaluated.
@@ -1120,7 +1126,8 @@ An <<outputClock,`output clock`>> can be part of multiple clock unions.
 Clock unions are needed to allow for an external scheduler to achieve an optimal control of model partitions and are applicable to both <<SynchronousClocks,Synchronous Clocks>> and <<CommunicationPointClocks,Communication Point Clocks>> and therefore apply to ME, CS and SE.
 _[TODO: ??? model partitions only belong to Communication point clocks, how can this be true??
 Claudio:
-- the FMU needs a mechanism to tell the importer that the FMU needs to go into event iteration when its own output clock ticks. It's just a mechanism for the FMU to use its own output clocks as an input clock without having to rely on the master.
+- the FMU needs a mechanism to tell the importer that the FMU needs to go into event iteration when its own output clock ticks.
+  It's just a mechanism for the FMU to use its own output clocks as an input clock without having to rely on the master.
 - The importer need to trigger explicitly that input clock (refer to input clock section) after the output clock ticks.
 - Replace table by "Only aperiodic input clocks can be part of a union.".
 ]_
@@ -1145,7 +1152,9 @@ The following table lists which <<inputClock>> variants can be combined with whi
 [#ExampleUseCase]
 image::images/example_usecase.png[]
 
-_[TODO: This example is given here out of context. Shouldn't this be at SE? The text of of the figure should be normal text and. What is a Heider model?
+_[TODO: This example is given here out of context.
+Shouldn't this be at SE? The text of of the figure should be normal text and.
+What is a Heider model?
 Claudio: remove it.
 ]
 
@@ -1196,7 +1205,8 @@ _[This information can be used for emulating <<periodic>> <<inputClock,`input cl
 
 _[TODO: shouldn't we use constant and fixed like for other variable variabilities (strictly periodic = constant periodic; periodic = fixed periodic; aperiodic = tunable periodic! TorstenBlochwitz will start an issue to collect use cases to clarify clock use.)_
 _Does the importer have to call fmi3SetInterval for aperiodic clocks at each clock tick if the clock should tick with the same interval? Or will there be only one clock tick per fmi3SetInterval call?
-FMI Design meeting: remark that set interval functions are informative to design model based controllers. The environment is the one that will tick.
+FMI Design meeting: remark that set interval functions are informative to design model based controllers.
+The environment is the one that will tick.
 ]_
 
 A <<clock>> is <<strict,strictly>> <<periodic>> if latexmath:[\Delta T] is fixed for an FMU and cannot be changed.
@@ -1262,7 +1272,8 @@ It is required for an FMU to directly internally set back the activation <<state
 _[This is required to allow preemption.]_
 
 _[TODO: WHAT?_
-_Separate issue to discuss needs of preemption. Link to example._
+_Separate issue to discuss needs of preemption._
+_Link to example._
 _This is necessary but nor sufficient requirement for preemption._
 _Pick better name for the Getting to show that the clock is auto-reset._
 _]_
