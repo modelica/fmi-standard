@@ -283,24 +283,23 @@ The state machine in <<figure-co-simulation-state-machine>> defines the supporte
 image::images/state-machine-co-simulation.svg[width=80%, align="center"]
 
 Each state of the state machine corresponds to a certain phase of a simulation.
-Common states are defined in <<state-machine-and-common-states>>, such as super states <<FMUStateSetable,*FMU State Setable*>>, <<UnderEvaluation,*Under Evaluation*>> and  <<Initialized,*Initialized*>>, states <<Instantiated,*Instantiated*>>, <<ConfigurationMode,*Configuration Mode*>>, <<ReconfigurationMode,*Reconfiguration Mode*>>, <<InitializationMode,*Initialization Mode*>>, <<Terminated,*Terminated*>> and <<IntermediateUpdateMode,*Intermediate Update Mode*>>.
+Common states are defined in <<state-machine-and-common-states>>, such as super states <<FMUStateSetable,*FMU State Setable*>> and  <<Initialized,*Initialized*>>, states <<Instantiated,*Instantiated*>>, <<ConfigurationMode,*Configuration Mode*>>, <<ReconfigurationMode,*Reconfiguration Mode*>>, <<InitializationMode,*Initialization Mode*>>, <<Terminated,*Terminated*>> and <<IntermediateUpdateMode,*Intermediate Update Mode*>>.
 
 ===== State: Step Mode [[state-step-mode-co-simulation]]
 
 This state is used by the co-simulation algorithm to progress simulation time.
 
 Allowed Function Calls::
-<<fmi3GetDirectionalDerivative>>, <<fmi3GetOutputDerivatives>>, `fmi3Get{VariableType}`, <<fmi3Terminate>>
 
-<<fmi3EnterConfigurationMode>>::
-With this function call the *Reconfiguration Mode* is entered.
+Function <<fmi3EnterConfigurationMode>>::
+Changes state to *Reconfiguration Mode*.
 This function must not be called if the FMU contains no <<tunable>> <<structuralParameter,`structural parameters`>> (i.e. with <<causality>>= <<structuralParameter>> and <<variability>> = <<tunable>>).
 
-<<fmi3EnterEventMode>>::
-With this function call the *Event Mode* is entered.
-This function must not be called, if the co-simulation algorithm signaled `eventModeUsed = fmi3False` during instantiation.
+Function <<fmi3EnterEventMode>>::
+Changes state to *Event Mode*.
+This function must not be called, if <<fmi3InstantiateCoSimulation>> signaled `eventModeUsed = fmi3False`, which implies that the capability flag `hasEventMode = true`.
 
-<<fmi3DoStep>>::
+Function <<fmi3DoStep>>::
 Within <<fmi3DoStep>> the FMU may call <<fmi3CallbackIntermediateUpdate>>
 * If the function returns with <<fmi3OK>> or <<fmi3Warning>> the FMU stays in this state.
 * The co-simulation algorithm must call <<fmi3DoStep>> with <<communicationStepSize, `communicationStepSize > 0.0`>>.
@@ -308,7 +307,7 @@ Within <<fmi3DoStep>> the FMU may call <<fmi3CallbackIntermediateUpdate>>
 * The FMU may return immediately from <<fmi3DoStep>> with <<lastSuccessfulTime,`lastSuccessfulTime == currentCommunicationPoint`>> if an event was detected immediately at the <<currentCommunicationPoint>>.
 Such an event might be caused by the change of an input during the communication point, or may be pending after the initialization.
 
-`fmi3Set{VariableType}`::
+Function `fmi3Set{VariableType}`::
 For variables with:
 * <<causality>> = <<input>>, or
 * <<causality>> = <<parameter>> and <<variability>> = <<tunable>>
@@ -340,39 +339,6 @@ _fmi3DoStep_ +
 _fmi3Get{VariableType} on outputs_ +
 |====
 _]_
-
-===== State: Event Mode
-
-The co-simulation algorithm and the FMU enter this state when the co-simulation algorithm calls <<fmi3EnterEventMode>> in state *Step Mode*, in order to handle discrete events and <<clock>> ticks.
-If the co-simulation algorithm signals `eventModeUsed == fmi3False` during instantiation, the co-simulation algorithm is not allowed to call <<fmi3EnterEventMode>>.
-
-Allowed Function Calls::
-<<fmi3Terminate>>::
-Upon return of <<fmi3NewDiscreteStates>>, if <<terminateSimulation,`terminateSimulation == fmi3True`>>, the co-simulation algorithm should finish the Co-Simulation by calling `fmi3Terminate` on all FMU instances.
-
-<<fmi3NewDiscreteStates>>::
-In order to handle discrete events <<fmi3NewDiscreteStates>> is called.
-When the output argument `newDiscreteStatesNeeded == fmi3True`, the FMU should stay in *Event Mode* and another call to <<fmi3NewDiscreteStates>> is required.
-
-<<fmi3EnterStepMode>>::
-Once all events are handled and `newDiscreteStatesNeeded == fmi3False`, the FMU should be pushed to *Step Mode* by calling <<fmi3EnterStepMode>>, unless it requests to terminate the Co-Simulation by setting  <<terminateSimulation,`terminateSimulation`> to `fmi3True`.
-In this case, a new step can be started from the current communication point time.
-
-<<fmi3GetClock>>::
-The status of <<outputClock,`output clocks`>> and <<localClock,`local clocks`>> can be inquired by this function during *Event Mode* and *Intermediate Update Mode*.
-
-<<fmi3SetClock>>::
-For <<inputClock,`input clocks`>>, <<fmi3SetClock>> is called after entering *Event Mode* to set the activation status of <<clock,`clocks`>>.
-This function can be called several times, only if re-computations of clock state are needed during *Event Mode*.
-
-<<fmi3GetIntervalDecimal>> & <<fmi3GetIntervalFraction>>::
-For <<outputClock,`output clocks`>> and <<localClock,`local clocks`>> it is allowed to call these functions during *Event Mode* and *Intermediate Update Mode*.
-These functions can be called only at the first activation of <<periodic>> <<outputClock,`output clocks`>>.
-For <<periodic,`aperiodic`>> <<outputClock,`output clocks`>>, these functions must be called at every activation _[to inquire when triggered <<inputClock,`input clocks`>> must tick]_.
-
-<<fmi3SetIntervalDecimal>> & <<fmi3SetIntervalFraction>>::
-These functions can be called only at the first activation of <<periodic>> <<inputClock,`input clocks`>>.
-These functions can be called for every activation of <<periodic,`aperiodic`>> <<inputClock,`input clocks`>>.
 
 ==== Code Example for Co-Simulation
 
