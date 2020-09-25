@@ -94,11 +94,6 @@ The FMU is in *Event Mode*.
 If the super-dense time before a call to <<fmi3NewDiscreteStates>> was latexmath:[(t_R,t_I)], then the time instant after the call is latexmath:[(t_R,t_{I + 1})]. +
 
 * If output argument `newDiscreteStatesNeeded == fmi3True`, the FMU should stay in *Event Mode*, and the FMU requires to set new inputs to the FMU (`fmi3Set{VariableType}` on <<input,`inputs`>>) to compute and get the <<output,`outputs`>> (`fmi3Get{VariableType}` on <<output,`outputs`>>) and to call <<fmi3NewDiscreteStates>> again.
-Depending on the connection with other FMUs, the environment shall
-** call <<fmi3Terminate>>, if <<terminateSimulation,`terminateSimulation == fmi3True`>> is returned by at least one FMU,
-** call <<fmi3EnterContinuousTimeMode>> if all FMUs return `newDiscreteStatesNeeded == fmi3False`, and
-** stay in *Event Mode* otherwise.
-When the FMU is terminated, it is assumed that an appropriate message is printed by the <<logMessage>> function (see <<FMUStateSetable>>) to explain the reason for the termination.
 
 [[terminateSimulation,`terminateSimulation`]]
 * If output argument `terminateSimulation == fmi3True`, the FMU signals it needs to terminate the simulation.
@@ -118,6 +113,16 @@ _[If `fmi3True` would be returned in this case, an infinite event loop may occur
 [[nextEventTime,`nextEventTime`]]
 * argument <<nextEventTime>>, and shall call <<fmi3EnterEventMode>> at this time instant.
 If integration is stopped before <<nextEventTime>>, for example, due to a <<state event>>, the definition of <<nextEventTime>> becomes obsolete.
+
+Where there are multiple connected FMUs, the environment shall
+
+* call <<fmi3Terminate>>, if <<terminateSimulation,`terminateSimulation == fmi3True`>> is returned by at least one FMU,
+
+* call <<fmi3EnterContinuousTimeMode>> if all FMUs return `newDiscreteStatesNeeded == fmi3False`, and
+
+* stay in *Event Mode* otherwise.
+
+When the FMU is terminated, it is assumed that an appropriate message is printed by the <<logMessage>> function (see <<FMUStateSetable>>) to explain the reason for the termination.
 
 [[fmi3CompletedIntegratorStep,`fmi3CompletedIntegratorStep`]]
 [source, C]
@@ -224,7 +229,7 @@ The state machine is given here as UML 2.0 state machine.
 If a transition is labelled with one or more function names (for example, <<fmi3EnterEventMode>>, <<fmi3EnterContinuousTimeMode>>), this means that the transition is taken if any of these functions is successfully called.
 Note that the FMU can always determine in which state it is since every state is entered by a particular function call (such as <<fmi3EnterEventMode>>), or a particular return value (such as <<fmi3Fatal>>).
 
-The transition conditions <<external event>>, <<time event>>, and <<state event>> are defined in <<math-model-exchange>>.
+The transition conditions <<time event>>, and <<state event>> are defined in <<math-model-exchange>>.
 
 Each state of the state machine corresponds to a certain phase of a simulation.
 Common states are defined in <<state-machine-and-common-states>>, such as super states <<FMUStateSetable,*FMU State Setable*>> and  <<Initialized,*Initialized*>>, states <<Instantiated,*Instantiated*>>, <<ConfigurationMode,*Configuration Mode*>>, <<ReconfigurationMode,*Reconfiguration Mode*>>, <<InitializationMode,*Initialization Mode*>>, and <<Terminated,*Terminated*>>.
