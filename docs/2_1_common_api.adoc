@@ -268,6 +268,7 @@ The description of the super state *FMU State Setable* generally describes funct
 
 This state is entered when any of the following functions is called: <<fmi3InstantiateModelExchange>>, <<fmi3InstantiateCoSimulation>> and <<fmi3InstantiateScheduledExecution>>.
 The state is left by either calling <<fmi3FreeInstance>> or when any of the functions called during *FMU State Setable* returns <<fmi3Fatal>>.
+If any function called in super state *FMU State Setable* returns <<fmi3Error>>, the FMU enters state *Terminated*.
 
 Allowed Function Calls::
 
@@ -402,6 +403,11 @@ See <<get-set-fmu-state>> for details on getting and setting FMU states that all
 Functions <<fmi3SerializedFMUStateSize>>, <<fmi3SerializeFMUState>>, <<fmi3DeSerializeFMUState>>::
 See <<fmi3SerializedFMUStateSize>> for details on serializing and de-serializing a state returned by <<fmi3GetFMUState>>.
 
+Functions <<<<get-and-set-variable-values,`fmi3Get{VariableType}`>>::
+See <<get-and-set-variable-values>> for the general mechanism to get variable values.
+_[Getting variable might trigger computations._
+_If *Terminated* is entered because of an `fmi3Error` return value, retrieved values should only be used for debugging purposes.]_
+
 [[fmi3Reset,`fmi3Reset`]]
 Function `fmi3Reset`::
 [source, C]
@@ -439,7 +445,7 @@ Function `fmi3Terminate`::
 include::../headers/fmi3FunctionTypes.h[tags=Terminate]
 ----
 
-Informs the FMU that the simulation run is terminated.
+Changes state to *Terminated*.
 After calling this function, the final values of all variables can be inquired with the `fmi3Get{VariableType}` functions.
 It is not allowed to call this function after one of the functions returned with a status flag of <<fmi3Error>> or <<fmi3Fatal>>.
 
@@ -453,10 +459,10 @@ include::../headers/fmi3FunctionTypes.h[tags=FreeInstance]
 Disposes the given instance, unloads the loaded model, and frees all the allocated memory and other resources that have been allocated by the functions of the FMU interface.
 If a null pointer is provided for argument `instance`, the function call is ignored (does not have an effect).
 
-===== Super State: Under Evaluation [[UnderEvaluation]]
+====== State: Instantiated [[Instantiated]]
 
-This super state is entered by the FMU when <<fmi3Instantiate>> was called and returned successfully.
-If any function called in super state *Under Evaluation* returns <<fmi3Error>>, the FMU enters state *Terminated*.
+In this state the FMU can do one-time initializations and allocate memory.
+This state is entered after <<fmi3Instantiate>> returned successfully.
 
 Allowed Function Calls::
 
@@ -467,16 +473,7 @@ Function `fmi3EnterConfigurationMode`::
 include::../headers/fmi3FunctionTypes.h[tags=EnterConfigurationMode]
 ----
 
-Informs the FMU to enter the *Configuration Mode* or *Reconfiguration Mode*.
-
-[[fmi3ExitConfigurationMode,`fmi3ExitConfigurationMode`]]
-Function `fmi3ExitConfigurationMode`::
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=ExitConfigurationMode]
-----
-
-Informs the FMU to exit the *Configuration Mode* or *Reconfiguration Mode*.
+Changes state to *Configuration Mode*.
 
 [[fmi3EnterInitializationMode,`fmi3EnterInitializationMode`]]
 Function `fmi3EnterInitializationMode`::
@@ -485,9 +482,7 @@ Function `fmi3EnterInitializationMode`::
 include::../headers/fmi3FunctionTypes.h[tags=EnterInitializationMode]
 ----
 
-Informs the FMU to enter *Initialization Mode*.
-Before calling this function, all variables with attribute <<initial>> = <<exact>> or <<approx>> can be set with the `fmi3Set{VariableType}` functions (the variable attributes are defined in the Model Description File, see <<definition-of-model-variables>>).
-Setting other variables is not allowed.
+Changes state to *Initialization Mode*.
 
 * `toleranceDefined` and `tolerance` depend on the interface type:
 
@@ -510,61 +505,10 @@ _If the <<independent>> variable is `time`, `startTime` is the starting time of 
 If the environment tries to compute past `stopTime`, the FMU has to return <<fmi3Error,`fmi3Status == fmi3Error`>>.
 If `stopTimeDefined == fmi3False`, then no final value of the <<independent>> variable is defined and argument `stopTime` is meaningless.
 
-[[fmi3ExitInitializationMode,`fmi3ExitInitializationMode`]]
-Function `fmi3ExitInitializationMode`::
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=ExitInitializationMode]
-----
-
-Informs the FMU to exit *Initialization Mode*.
-This function switches off all initialization equations, and the FMU enters *Event Mode* for Model Exchange, *Step Mode* for Co-Simulation and *Clock Activation Mode* for Scheduled Execution.
-
-====== State: Instantiated [[Instantiated]]
-
-In this state the FMU can do one-time initializations and allocate memory.
-This state is entered after <<fmi3Instantiate>> returned successfully.
-
-Allowed Function Calls::
-
-Function <<fmi3EnterInitializationMode>>::
-Change state of FMU to *Initialization Mode*.
-
-Function <<fmi3EnterConfigurationMode>>::
-Change state of FMU to *Configuration Mode*.
-
 Function `fmi3Set{VariableType}`::
-For variables with <<variability>> latexmath:[\neq] <<constant>> and for which <<initial>> = <<exact>> or <<approx>>.
+
+This function can be called for variables with <<variability>> latexmath:[\neq] <<constant>> and with <<initial>> = <<exact>> or <<approx>>.
 The intention is to set <<start>> and guess values for these variables.
-
-====== State: Configuration Mode [[ConfigurationMode]]
-
-In this state <<structuralParameter,`structural parameters`>> with <<variability>> = <<fixed>> or <<variability>> = <<tunable>> can be changed.
-No other variables can be changed during *Configuration Mode*.
-This state is entered from state *Instantiated* by calling <<fmi3EnterConfigurationMode>> and left back to *Instantiated* by calling <<fmi3ExitConfigurationMode>>.
-<<fmi3EnterConfigurationMode>> can only be called if the FMU contains at least one <<structuralParameter,`structural parameter`>>
-
-Allowed Function Calls::
-
-Function <<fmi3ExitConfigurationMode>>::
-With this function call, the FMU is returned to state *Instantiated*.
-
-Function `fmi3Set{VariableType}`::
-Only for variables with <<causality>> = <<structuralParameter>> and <<variability>> = <<fixed>> or <<variability>> = <<tunable>>.
-
-====== State: Reconfiguration Mode [[ReconfigurationMode]]
-
-This state is entered from state *Event Mode* (ME), *Step Mode* (CS) or *Clock Activation Mode* (SE) by calling <<fmi3EnterConfigurationMode>>.
-<<fmi3EnterConfigurationMode>> can only be called if the FMU contains at least one <<structuralParameter,`structural parameter`>>.
-
-Allowed Function Calls::
-
-Function <<fmi3ExitConfigurationMode>>::
-Returns back to *Event Mode* (ME), *Step Mode* (CS) or *Clock Activation Mode* (SE).
-
-Function `fmi3Set{VariableType}`::
-Only for variables with <<causality>> = <<structuralParameter>> and <<variability>> = <<tunable>>.
-No other variables can be changed during *Reconfiguration Mode*.
 
 ====== State: Initialization Mode [[InitializationMode]]
 
@@ -574,8 +518,15 @@ Artificial or real algebraic loops over connected FMUs in *Initialization Mode* 
 
 Allowed Function Calls::
 
-Function <<fmi3ExitInitializationMode>>::
-This function call changes the state of the FMU to the start state of the super state *Initialized* which is either *Continuous-Time Mode* (ME), *Step Mode* (CS) or *Clock Activation Mode* (SE).
+[[fmi3ExitInitializationMode,`fmi3ExitInitializationMode`]]
+Function `fmi3ExitInitializationMode`::
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=ExitInitializationMode]
+----
+
+Changes the state to *Event Mode* (ME), *Step Mode* (CS) or *Clock Activation Mode* (SE).
+_[This function switches off all initialization equations.]_
 
 Function <<fmi3GetDirectionalDerivative>>::
 See <<fmi3GetDirectionalDerivative>>.
@@ -590,7 +541,39 @@ Function `fmi3Get{VariableType}`::
 The variables that can be retrieved by `fmi3Get{VariableType}` calls are defined in the XML file as elements `<ModelStructure><InitialUnknown>`.
 For variables with <<causality>> = <<output>> or continuous-time <<state,`states`>> or state derivatives.
 
-====== Super State: Initialized [[Initialized]]
+====== State: Configuration Mode [[ConfigurationMode]]
+
+In this state <<structuralParameter,`structural parameters`>> with <<variability>> = <<fixed>> or <<variability>> = <<tunable>> can be changed.
+No other variables can be changed during *Configuration Mode*.
+This state is entered from state *Instantiated* by calling <<fmi3EnterConfigurationMode>> and left back to *Instantiated* by calling <<fmi3ExitConfigurationMode>>.
+<<fmi3EnterConfigurationMode>> can only be called if the FMU contains at least one <<structuralParameter,`structural parameter`>>
+
+Allowed Function Calls::
+
+[[fmi3ExitConfigurationMode,`fmi3ExitConfigurationMode`]]
+Function `fmi3ExitConfigurationMode`::
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=ExitConfigurationMode]
+----
+
+Exits the *Configuration Mode* and returns to state *Instantiated*.
+
+Function `fmi3Set{VariableType}`::
+Only for variables with <<causality>> = <<structuralParameter>> and <<variability>> = <<fixed>> or <<variability>> = <<tunable>>.
+
+====== State: Terminated [[Terminated]]
+In this state, the solution at the final time of a simulation can be retrieved.
+
+Allowed Function Calls::
+
+Function <<fmi3GetDirectionalDerivative>>::
+No restrictions.
+
+Function <<fmi3GetOutputDerivatives>>::
+No restrictions.
+
+===== Super State: Initialized [[Initialized]]
 
 This super state is entered by the FMU when <<fmi3ExitInitializationMode>> is called.
 If the function <<fmi3Terminate>> is called, the FMU enters state *Terminated* from all states of this super state.
@@ -598,19 +581,82 @@ If any function returns <<fmi3Error>> in *Initialized*, the FMU switches to stat
 
 The states of this super state differ between the FMI types and will be described in detail in their respective chapters.
 
-===== State: Terminated [[Terminated]]
-In this state, the solution at the final time of a simulation can be retrieved.
+====== State: Event Mode [[EventMode]]
+
+_[TODO: add *Event Mode* description after clocks/event clarification...]
+
+In this mode all continuous-time and discrete-time equations are active and the unknowns at an event can be computed and retrieved.
+The event time of a <<state event>> may be determined if a domain change of at least one event indicator is detected at the end of a completed integrator step.
+
+*Event Mode* is entered by calling <<fmi3EnterEventMode>>, if an event is triggered in *Continuous-Time Mode*.
 
 Allowed Function Calls::
 
-Function `fmi3Get{VariableType}`::
-No restrictions on which variables to get values for.
+Function <<fmi3ExitInitializationMode>>::
+When the *Initialization Mode* is terminated with <<fmi3ExitInitializationMode>>, then *Event Mode* is directly entered, and the continuous-time and discrete-time variables at the initial time are computed based on the initial continuous-time states determined in the *Initialization Mode*.
+
+The co-simulation algorithm and the FMU enter this state when the co-simulation algorithm calls <<fmi3EnterEventMode>> in state *Step Mode*, in order to handle discrete events and <<clock>> ticks.
+If the co-simulation algorithm signals `eventModeUsed == fmi3False` during instantiation, the co-simulation algorithm is not allowed to call <<fmi3EnterEventMode>>.
+
+Function <<fmi3NewDiscreteStates>>::
+In order to handle discrete events <<fmi3NewDiscreteStates>> is called.
+When the output argument `newDiscreteStatesNeeded == fmi3True`, the FMU should stay in *Event Mode* and another call to <<fmi3NewDiscreteStates>> is required.
+
+Function <<fmi3EnterContinuousTimeMode>>::
+[[fmi3EnterContinuousTimeMode,`fmi3EnterContinuousTimeMode`]]
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=EnterContinuousTimeMode]
+----
+
+TODO only in ME
+
+The model enters *Continuous-Time Mode* and all discrete-time equations become inactive and all relations are "frozen". +
+This function has to be called when changing from *Event Mode* (after the global event iteration in *Event Mode* over all involved FMUs and other models has converged) into *Continuous-Time Mode*. +
+
+_[This function might be used additionally for the following purposes:_
+* _If the FMU stores results internally on file, then the results after the initialization and/or the event has been processed can be stored._
+* _If the FMU contains dynamically changing states, then a new state selection might be performed with this function.]_
+
+Function <<fmi3EnterStepMode>>::
+
+TODO only in CS
+
+Once all events are handled and `newDiscreteStatesNeeded == fmi3False`, the FMU should be pushed to *Step Mode* by calling <<fmi3EnterStepMode>>, unless it requests to terminate the Co-Simulation by setting  <<terminateSimulation,`terminateSimulation`> to `fmi3True`.
+In this case, a new step can be started from the current communication point time.
+
+<<fmi3GetClock>>::
+The status of <<outputClock,`output clocks`>> and <<localClock,`local clocks`>> can be inquired by this function during *Event Mode* and *Intermediate Update Mode*.
+
+<<fmi3SetClock>>::
+For <<inputClock,`input clocks`>>, <<fmi3SetClock>> is called after entering *Event Mode* to set the activation status of <<clock,`clocks`>>.
+This function can be called several times, only if re-computations of clock state are needed during *Event Mode*.
+
+<<fmi3GetIntervalDecimal>> & <<fmi3GetIntervalFraction>>::
+For <<outputClock,`output clocks`>> and <<localClock,`local clocks`>> it is allowed to call these functions during *Event Mode* and *Intermediate Update Mode*.
+These functions can be called only at the first activation of <<periodic>> <<outputClock,`output clocks`>>.
+For <<periodic,`aperiodic`>> <<outputClock,`output clocks`>>, these functions must be called at every activation _[to inquire when triggered <<inputClock,`input clocks`>> must tick]_.
+
+<<fmi3SetIntervalDecimal>> & <<fmi3SetIntervalFraction>>::
+These functions can be called only at the first activation of <<periodic>> <<inputClock,`input clocks`>>.
+These functions can be called for every activation of <<periodic,`aperiodic`>> <<inputClock,`input clocks`>>.
 
 Function <<fmi3GetDirectionalDerivative>>::
-No restrictions.
+See <<fmi3GetDirectionalDerivative>>.
 
-Function <<fmi3GetOutputDerivatives>>::
-No restrictions.
+====== State: Reconfiguration Mode [[ReconfigurationMode]]
+
+This state is entered from state *Event Mode* (ME), *Step Mode* (CS) or *Clock Activation Mode* (SE) by calling <<fmi3EnterConfigurationMode>>.
+<<fmi3EnterConfigurationMode>> can only be called if the FMU contains at least one <<structuralParameter,`structural parameter`>>.
+
+Allowed Function Calls::
+
+Function <<fmi3ExitConfigurationMode>>::
+Returns back to *Event Mode* (ME), *Step Mode* (CS) or *Clock Activation Mode* (SE).
+
+Function `fmi3Set{VariableType}`::
+Only for variables with <<causality>> = <<structuralParameter>> and <<variability>> = <<tunable>>.
+No other variables can be changed during *Reconfiguration Mode*.
 
 ===== State: Intermediate Update Mode [[IntermediateUpdateMode]]
 
