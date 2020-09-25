@@ -847,7 +847,8 @@ This is only allowed if <<canReturnEarly,`canReturnEarly == fmi3True`>>.
 * `earlyReturnTime` is used to tell the FMU at what time to return early from the current <<fmi3DoStep>> (at the earliest), if the return value of <<earlyReturnRequested>> of <<fmi3CallbackIntermediateUpdate>> is `fmi3True`.
 If the <<earlyReturnTime>> is greater than the last signaled <<intermediateUpdateTime>>, the FMU may integrate up to the time instant <<earlyReturnTime>>.
 
-When providing intermediate inputs to the FMU, it is important that the co-simulation algorithm provides the same input value for the same variable, at the same <<intermediateUpdateTime>>. In other words, it is required that the calculation of inputs to the FMU be deterministic.
+When providing intermediate inputs to the FMU, it is important that the co-simulation algorithm provides the same input value for the same variable, at the same <<intermediateUpdateTime>>.
+In other words, it is required that the calculation of inputs to the FMU be deterministic.
 This is assumed by the internal solver.
 If an input value changes for the same <<intermediateUpdateTime>>, the internal numerical solver may deem that re-estimate a state multiple times, without ever being able to decrease the approximation error.
 
@@ -900,76 +901,67 @@ The term <<clock>> is used for both <<clock>> types.
 
 ===== Synchronous Clocks [[SynchronousClocks]]
 
-The main use case of the <<SynchronousClocks,Synchronous Clocks>> is to represent sampled data systems.
+_[The main use case of synchronous clocks is to facilitate the simulation of systems with:_
 
-Consider the system in <<figure-synchronous-clock-example>>, adapted from the Modelica specification:
+- _different components whose behavior is triggered at different times by events, and_
 
-- The controller samples the non-linear plant at some rate, and the plant is continuously affected by the actuator values between samples.
+- _the components that trigger the events are different than the components handling those events._]
 
-- The controller equations are executed synchronously whenever there is a new sample latexmath:[y_d].
-This is implicit in the equations.
-
-- The timing of the sample induces an event indicator that forces the importer to execute the controller and plant at the times at which the sensor wants to sample.
-_[TODO: How could this be done with a zero crossing function? Wouldn't this be simple with a time-event?
-Claudio: use time event instead.
-]_
-
-- latexmath:[Previous(xd)] means the value of latexmath:[xd] computed at the previous sample.
-
-- latexmath:[y] is a continuous variable, and latexmath:[u] is piecewise constant.
-
-- The importer
-
-_[TODO: The elements of the example are not FMUs. Hence we cannot talk about an importer.
-Claudio: rewrite this sentence to make it clear that the plant is evolving continuously.]_
-
-_[TODO: All of this should be non normative.]_
-
-may execute both controller and plant FMUs at times other than sample times as part of the time integration of the plant.
-In this case, the controller must produce the zero order hold value latexmath:[u].
-
-.Sample scenario showcasing use of <<SynchronousClocks,Synchronous Clocks>>.
+.Sample scenario showcasing use of synchronous clocks.
 [[figure-synchronous-clock-example]]
 image::images/synchronous-clock-example.svg[width=80%, align="center"]
 
-_[TODO: Improve the example to provide more motivation. Maybe look for one in the synchronous clock text.]_
+_[Consider the system in <<figure-synchronous-clock-example>>:_
 
-Now suppose the above architecture is realized with ME FMUs as illustrated in <<figure-synchronous-clock-scenario>>.
-Since there's no guarantee that the equations in Ctrl, Actuator, and Sensor FMUs will be invoked exactly at the times that coincide with the sampling times of the Sensor FMU (recall that it is the importer that picks the time advancement, based on the needs of the different FMUs), the Ctrl, Actuator, and Sensor FMUs need to be configured with the same sample rate.
-_[TODO: Why do all 3 need to be configured with the same sample rate? Wouldn't the event in the sensor trigger input events?]_
-There are two problems associated with this approach:
+- _The controller samples the plant at some rate latexmath:[r], and the plant is continuously affected by the actuator values between samples._
 
-- It is error-prone for more complex controller architectures; and
+- _A supervisor adapts the controller behavior when some criteria on latexmath:[u] is met._
 
-- it represents time and the sample rate as real numbers and there are numerical difficulties in guaranteeing that all three FMUs will execute exactly at the same wall-clock time.
+- _When there is a new sample of latexmath:[x], the equations in blue have to be executed synchronously (i.e., at the exact same time)._
 
-These are the problems that <<SynchronousClocks,Synchronous Clocks>> solve.
+- _Similarly, when the supervisor decides to update the controller behavior, the equations in purple have to be executed synchronously._
 
-.Realization of the system in <<figure-synchronous-clock-example>> using ME FMUs.
+- _latexmath:[previous(u_r)] means the value of latexmath:[u_r] computed at the previous sample by the controller.]_
+
+.Example plot of the scenario introduced in <<figure-synchronous-clock-example>>.
+[[figure-synchronous-clock-example-plot]]
+image::images/synchronous-clock-example-plot.svg[width=30%, align="center"]
+
+_[<<figure-synchronous-clock-example-plot>> illustrates a potential behavior of this example.
+Note that it is the supervisor that decides when to adapt the behavior of the controller, but the controller has to be executed when that happens.
+Also note that the change in controller behavior should only be reflected on its output when the next sample of the plant is done.]_
+
+.Realization of the system in <<figure-synchronous-clock-example>> using FMI 2.0 Model Exchange FMUs.
 [[figure-synchronous-clock-scenario]]
 image::images/synchronous-clock-scenario.svg[width=80%, align="center"]
 
-The idea of clock comes naturally if we consider that the controller will sample the plant according to some frequency that depends on the frequency of the clock generator of the controller's microprocessor.
-It is easy then to describe the controller execution as happening every 100-th processor clock tick.
-We can even go further and define a new clock, that is based on the microprocessor clock, but abstracts away from the controller execution platform details.
-Such a clock would represent the capabilities of the controller execution platform.
+_[In order to understand the problem that synchronous clocks are trying to solve, it helps to try to implement the above system with FMI 2.0 Model Exchange FMUs.
+Such implementation is illustrated in <<figure-synchronous-clock-scenario>>.
+In this implementation, time and state events can be used to mimic the behavior in <<figure-synchronous-clock-example-plot>> with the Sensor FMU or Supervisor FMU driving the simulation into event mode when the events happen.]_
 
-Getting back to the example in <<figure-synchronous-clock-scenario>>, the Ctrl FMU may declare a clock that ticks every 100ms.
-In order to inform the importer that the sensor and actuator FMUs are supposed to execute whenever the controller FMU executed, we need to connect that clock to those FMUs, as shown in <<figure-synchronous-clock-scenario-clocked>>.
+_[However, this approach poses a big problem: since both Ctrl and Sensor FMUs have time events to sample with frequency latexmath:[x], it is unclear how the importer will guarantee that the two are going to executed in the same event mode._
+_Due to floating point precision, it can happen that the importer takes both FMUs into event mode, but only one knows that it is entering event mode because it has to sample the signal._
+_It makes it unclear which equations should be executed.]_
 
-.Realization of the system in <<figure-synchronous-clock-example>> using <<SynchronousClocks,Synchronous Clocks>>.
+_[This is the problem that synchronous clocks solve._
+_Getting back to the example in <<figure-synchronous-clock-scenario>>, by making Ctrl and Sensor share a clock, it will be clear which FMU is triggering the event, and it is easier for them to be executed at the same exact time.]_
+
+.Realization of the system in <<figure-synchronous-clock-example>> using synchronous clocks.
 [[figure-synchronous-clock-scenario-clocked]]
 image::images/synchronous-clock-scenario-clocked.svg[width=80%, align="center"]
 
-In <<figure-synchronous-clock-scenario-clocked>>, the red lines show the clock signal.
-The clock signal forces the importer to execute the controller, sensor, and actuator, equations at the same time (hence the name Synchronous for these clocks).
-It also motivates input and output clocks:
+_[<<figure-synchronous-clock-scenario-clocked>> illustrates one way to use clocks to realize the system introduced in <<figure-synchronous-clock-example>>.
+The red lines denote clock connections.
+The Ctrl FMU declares an output clock latexmath:[r], and the Sensor and Actuator FMUs declare input clocks, connected to latexmath:[r].
+This way, the importer knows that when the Ctrl clock latexmath:[r] ticks, then the Sensor and Actuator FMUs will be informed that the clock ticked and execute the corresponding equations.]_
 
-- The ticking of an output clock is determined by the FMU that declares it.
+_[In general:_
 
-- The ticking of an input clock is determined by the importer, which in turn will find the source that determines the ticking of such clock.
+- _The ticking of an output clock is determined by the FMU that declares it._
+_So in <<figure-synchronous-clock-scenario-clocked>>, the Supervisor FMU determines the ticking of latexmath:[s] and Ctrl FMU determines the ticking of latexmath:[r]._
+_The FMU Ctrl declared both an input clock and an outut clock, and the Sensor and Actuator FMUs both declare an input clock._
 
-So in <<figure-synchronous-clock-scenario-clocked>>, FMU Ctrl declares an output clock, and the Sensor and Actuator FMUs both declare an input clock.
+- _The ticking of an input clock is signaled by the importer, which in turn will find the source that determines the ticking of such clock.]_
 
 A clocked partition is a set of equations that are associated to a <<clock>> and are executed when the corresponding <<clock>> is active.
 A clocked partition is mathematically defined as:
@@ -1028,7 +1020,7 @@ _[This mode can be used to compute partial derivatives_ latexmath:[\partial y_j 
 
 ===== Communication Point Clocks [[CommunicationPointClocks]]
 
-<<CommunicationPointClocks,Communication Point Clocks>>, introduced here, are used to define the communication points of model partitions (defined below).
+Communication Point Clocks, introduced here, are used to define the communication points of model partitions (defined below).
 These <<clock,`clocks`>> are not compatible with synchronous clock theory and must not be used together with <<SynchronousClocks,Synchronous Clocks>> in one model.
 
 A model partition is mathematically defined as:
@@ -1052,7 +1044,8 @@ y_j=g_j(x_{j-1},u_j,t_j)
 where:
 
 * latexmath:[x] denotes the variables that are associated with the model partition.
-These are the variables that are computed when the model partition is evaluated. Each variable in latexmath:[x] is associated with one, and only one, model partition.
+These are the variables that are computed when the model partition is evaluated.
+Each variable in latexmath:[x] is associated with one, and only one, model partition.
 Multiple model partitions, when evaluated, may read the value of a single variable, but only one will change it.
 
 * latexmath:[u_j] denotes the variables that are read, but not changed, when the model partition is evaluated.
@@ -1062,7 +1055,7 @@ Multiple model partitions, when evaluated, may read the value of a single variab
 * latexmath:[x_{\mathit{start}}] denotes the start value of the variables that are associated with the model partition.
 This is the value that has been computed before <<fmi3ExitInitializationMode>> is called.
 
-<<CommunicationPointClocks,Communication Point Clocks>> can also be defined for continuous or piecewise continuous parts of the model.
+Communication Point Clocks can also be defined for continuous or piecewise continuous parts of the model.
 
 Please refer to <<example-scheduled-execution>> for an FMU example of scheduled execution.
 
@@ -1133,7 +1126,8 @@ An <<outputClock,`output clock`>> can be part of multiple clock unions.
 Clock unions are needed to allow for an external scheduler to achieve an optimal control of model partitions and are applicable to both <<SynchronousClocks,Synchronous Clocks>> and <<CommunicationPointClocks,Communication Point Clocks>> and therefore apply to ME, CS and SE.
 _[TODO: ??? model partitions only belong to Communication point clocks, how can this be true??
 Claudio:
-- the FMU needs a mechanism to tell the importer that the FMU needs to go into event iteration when its own output clock ticks. It's just a mechanism for the FMU to use its own output clocks as an input clock without having to rely on the master.
+- the FMU needs a mechanism to tell the importer that the FMU needs to go into event iteration when its own output clock ticks.
+  It's just a mechanism for the FMU to use its own output clocks as an input clock without having to rely on the master.
 - The importer need to trigger explicitly that input clock (refer to input clock section) after the output clock ticks.
 - Replace table by "Only aperiodic input clocks can be part of a union.".
 ]_
@@ -1158,7 +1152,9 @@ The following table lists which <<inputClock>> variants can be combined with whi
 [#ExampleUseCase]
 image::images/example_usecase.png[]
 
-_[TODO: This example is given here out of context. Shouldn't this be at SE? The text of of the figure should be normal text and. What is a Heider model?
+_[TODO: This example is given here out of context.
+Shouldn't this be at SE? The text of of the figure should be normal text and.
+What is a Heider model?
 Claudio: remove it.
 ]
 
@@ -1209,7 +1205,8 @@ _[This information can be used for emulating <<periodic>> <<inputClock,`input cl
 
 _[TODO: shouldn't we use constant and fixed like for other variable variabilities (strictly periodic = constant periodic; periodic = fixed periodic; aperiodic = tunable periodic! TorstenBlochwitz will start an issue to collect use cases to clarify clock use.)_
 _Does the importer have to call fmi3SetInterval for aperiodic clocks at each clock tick if the clock should tick with the same interval? Or will there be only one clock tick per fmi3SetInterval call?
-FMI Design meeting: remark that set interval functions are informative to design model based controllers. The environment is the one that will tick.
+FMI Design meeting: remark that set interval functions are informative to design model based controllers.
+The environment is the one that will tick.
 ]_
 
 A <<clock>> is <<strict,strictly>> <<periodic>> if latexmath:[\Delta T] is fixed for an FMU and cannot be changed.
@@ -1275,7 +1272,8 @@ It is required for an FMU to directly internally set back the activation <<state
 _[This is required to allow preemption.]_
 
 _[TODO: WHAT?_
-_Separate issue to discuss needs of preemption. Link to example._
+_Separate issue to discuss needs of preemption._
+_Link to example._
 _This is necessary but nor sufficient requirement for preemption._
 _Pick better name for the Getting to show that the clock is auto-reset._
 _]_
