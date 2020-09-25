@@ -854,71 +854,63 @@ The term <<clock>> is used for both <<clock>> types.
 
 ===== Synchronous Clocks [[SynchronousClocks]]
 
-The main use case of synchronous clocks is to facilitate the simulation of systems with:
+_[The main use case of synchronous clocks is to facilitate the simulation of systems with:_
 
-- different components whose behavior is triggered at different times by events, and
+- _different components whose behavior is triggered at different times by events, and_
 
-- the components that trigger the events are different than the components handling those events.
+- _the components that trigger the events are different than the components handling those events._]
 
 .Sample scenario showcasing use of synchronous clocks.
 [[figure-synchronous-clock-example]]
 image::images/synchronous-clock-example.svg[width=80%, align="center"]
 
-Consider the system in <<figure-synchronous-clock-example>>:
+_[Consider the system in <<figure-synchronous-clock-example>>:_
 
-- The controller samples the plant at some rate latexmath:[r], and the plant is continuously affected by the actuator values between samples.
+- _The controller samples the plant at some rate latexmath:[r], and the plant is continuously affected by the actuator values between samples._
 
-- A supervisor adapts the controller behavior when some criteria on latexmath:[u] is met.
+- _A supervisor adapts the controller behavior when some criteria on latexmath:[u] is met._
 
-- When there is a new sample of latexmath:[x], the equations in blue have to be executed synchronously (i.e., at the exact same time).
+- _When there is a new sample of latexmath:[x], the equations in blue have to be executed synchronously (i.e., at the exact same time)._
 
-- Similarly, when the supervisor decides to update the controller behavior, the equations in purple have to be executed synchronously.
+- _Similarly, when the supervisor decides to update the controller behavior, the equations in purple have to be executed synchronously._
 
-- latexmath:[previous(u_r)] means the value of latexmath:[u_r] computed at the previous sample by the controller.
-
-_[TODO: All of this should be non normative.]_
+- _latexmath:[previous(u_r)] means the value of latexmath:[u_r] computed at the previous sample by the controller.]_
 
 .Example plot of the scenario introduced in <<figure-synchronous-clock-example>>.
 [[figure-synchronous-clock-example-plot]]
 image::images/synchronous-clock-example-plot.svg[width=30%, align="center"]
 
-<<figure-synchronous-clock-example-plot>> illustrates a potential behavior of this example.
+_[<<figure-synchronous-clock-example-plot>> illustrates a potential behavior of this example.
 Note that it is the supervisor that decides when to adapt the behavior of the controller, but the controller has to be executed when that happens.
-Also note that the change in controller behavior should only be reflected on its output when the next sample of the plant is done.
+Also note that the change in controller behavior should only be reflected on its output when the next sample of the plant is done.]_
 
-.Realization of the system in <<figure-synchronous-clock-example>> using FMUs.
+.Realization of the system in <<figure-synchronous-clock-example>> using FMI 2.0 Model Exchange FMUs.
 [[figure-synchronous-clock-scenario]]
 image::images/synchronous-clock-scenario.svg[width=80%, align="center"]
 
-In order to understand the problem that synchronous clocks are trying to solve, it helps to try to implement the above system with FMI 2.0 Model Exchange FMUs.
+_[In order to understand the problem that synchronous clocks are trying to solve, it helps to try to implement the above system with FMI 2.0 Model Exchange FMUs.
 Such implementation is illustrated in <<figure-synchronous-clock-scenario>>.
-In this implementation, time and state events can be used to mimic the behavior in <<figure-synchronous-clock-example-plot>> with the Sensor FMU or Supervisor FMU driving the simulation into event mode when the events happen.
+In this implementation, time and state events can be used to mimic the behavior in <<figure-synchronous-clock-example-plot>> with the Sensor FMU or Supervisor FMU driving the simulation into event mode when the events happen.]_
 
-However, this approach is error-prone for more complex controller architectures: imagine there is another FMU, called SafetyFMU, sampling latexmath:[x_r] at a rate latexmath:[\frac{r}{2}]. Now SafetyFMU is driven into event mode but does not know whether it's because of the time event it scheduled, or because of the time event that Sensor FMU scheduled (the two event times may differ due to floating point precision), and so it does not know exactly when to update the sampled variable.
+_[However, this approach poses a big problem: since both Ctrl and Sensor FMUs have time events to sample with frequency latexmath:[x], it is unclear how the importer will guarantee that the two are going to executed in the same event mode. Due to floating point precision, it can happen that the importer takes both FMUs into event mode, but only one knows that it is entering event mode because it has to sample the signal. It makes it unclear which equations should be executed.]_
 
-This is the problem that <<SynchronousClocks,Synchronous Clocks>> solve.
+_[This is the problem that synchronous clocks solve.
+Getting back to the example in <<figure-synchronous-clock-scenario>>, by making Ctrl and Sensor share a clock, it will be clear which FMU is triggering the event, and it is easier for them to be executed at the same exact time.]_
 
-The idea of clock comes naturally if we consider that the controller will sample the plant according to some frequency that depends on the frequency of the clock generator of the controller's microprocessor.
-It is easy then to describe the controller execution as happening every 100-th processor clock tick.
-We can even go further and define a new clock, that is based on the microprocessor clock, but abstracts away from the controller execution platform details.
-Such a clock would represent the capabilities of the controller execution platform.
-
-Getting back to the example in <<figure-synchronous-clock-scenario>>, the Ctrl FMU may declare a clock that ticks every 100ms.
-In order to inform the importer that the sensor and actuator FMUs are supposed to execute whenever the controller FMU executed, we need to connect that clock to those FMUs, as shown in <<figure-synchronous-clock-scenario-clocked>>.
-
-.Realization of the system in <<figure-synchronous-clock-example>> using <<SynchronousClocks,Synchronous Clocks>>.
+.Realization of the system in <<figure-synchronous-clock-example>> using synchronous clocks.
 [[figure-synchronous-clock-scenario-clocked]]
 image::images/synchronous-clock-scenario-clocked.svg[width=80%, align="center"]
 
-In <<figure-synchronous-clock-scenario-clocked>>, the red lines show the clock signal.
-The clock signal forces the importer to execute the controller, sensor, and actuator, equations at the same time (hence the name Synchronous for these clocks).
-It also motivates input and output clocks:
+_[<<figure-synchronous-clock-scenario-clocked>> illustrates one way to use clocks to realize the system introduced in <<figure-synchronous-clock-example>>.
+The red lines denote clock connections.
+The Ctrl FMU declares an output clock latexmath:[r], and the Sensor and Actuator FMUs declare input clocks, connected to latexmath:[r].
+This way, the importer knows that when the Ctrl clock latexmath:[r] ticks, then the Sensor and Actuator FMUs will be informed that the clock ticked and execute the corresponding equations.]_
 
-- The ticking of an output clock is determined by the FMU that declares it.
+_[In general:_
 
-- The ticking of an input clock is determined by the importer, which in turn will find the source that determines the ticking of such clock.
+- _The ticking of an output clock is determined by the FMU that declares it. So in <<figure-synchronous-clock-scenario-clocked>>, the Supervisor FMU determines the ticking of latexmath:[s] and Ctrl FMU determines the ticking of latexmath:[r]. The FMU Ctrl declared both an input clock and an outut clock, and the Sensor and Actuator FMUs both declare an input clock._
 
-So in <<figure-synchronous-clock-scenario-clocked>>, FMU Ctrl declares an output clock, and the Sensor and Actuator FMUs both declare an input clock.
+- _The ticking of an input clock is signaled by the importer, which in turn will find the source that determines the ticking of such clock.]_
 
 A clocked partition is a set of equations that are associated to a <<clock>> and are executed when the corresponding <<clock>> is active.
 A clocked partition is mathematically defined as:
@@ -977,7 +969,7 @@ _[This mode can be used to compute partial derivatives_ latexmath:[\partial y_j 
 
 ===== Communication Point Clocks [[CommunicationPointClocks]]
 
-<<CommunicationPointClocks,Communication Point Clocks>>, introduced here, are used to define the communication points of model partitions (defined below).
+Communication Point Clocks, introduced here, are used to define the communication points of model partitions (defined below).
 These <<clock,`clocks`>> are not compatible with synchronous clock theory and must not be used together with <<SynchronousClocks,Synchronous Clocks>> in one model.
 
 A model partition is mathematically defined as:
@@ -1011,7 +1003,7 @@ Multiple model partitions, when evaluated, may read the value of a single variab
 * latexmath:[x_{\mathit{start}}] denotes the start value of the variables that are associated with the model partition.
 This is the value that has been computed before <<fmi3ExitInitializationMode>> is called.
 
-<<CommunicationPointClocks,Communication Point Clocks>> can also be defined for continuous or piecewise continuous parts of the model.
+Communication Point Clocks can also be defined for continuous or piecewise continuous parts of the model.
 
 Please refer to <<example-scheduled-execution>> for an FMU example of scheduled execution.
 
