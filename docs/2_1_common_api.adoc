@@ -759,13 +759,15 @@ Note, <<fmi3Discard,`fmi3Status == fmi3Discard`>> is possible for the `fmi3Set{V
 
 The value of a variable may only be accessed with the respective `fmi3Get/Set{VariableType}` for its type.
 
-==== Intermediate Variables Update [[intermediate-update]]
+==== Intermediate Update [[intermediate-update]]
 
-The *Intermediate Update Mode* was introduced to Co-Simulation and Scheduled Execution to facilitate the following use cases:
+The *Intermediate Update Mode* was introduced to Co-Simulation and Scheduled Execution. This mode enables FMUs during a current computation to inform the importer of updates, which are significant for further processing. The following use cases are supported:
 
-* improve input accuracy between communication points when importer sets intermediate input values extracted with the same mechanism from another FMU (see below for details),
-* allow for cooperative multitasking when FMU calls <<fmi3CallbackIntermediateUpdate>> with <<canReturnEarly, `canReturnEarly == fmi3True`>> (see <<scheduled-execution-api>>),
-* allow for the FMU to return early from an <<fmi3DoStep>> because the importer detected an event between communication points (see <<Computation-in-Co-Simulation>>).
+* improve the input accuracy in CS between communication points, when the importer sets intermediate input values extracted with the same mechanism from another FMU as output values (see below for details and <<Communication-during-update>>),
+* allow FMUs to inform the importer of an event, which occurs during a <<fmi3DoStep>> in case of CS or <<fmi3ActivateModelPartition>> in case of SE (see <<co-simulation-api>>, <<Communication-during-update>> and <<IntermediateUpdateModeSE>>),
+* allow the importer in CS to request an early return from FMUs calling <<fmi3CallbackIntermediateUpdate>> with <<canReturnEarly, `canReturnEarly == fmi3True`>>, because of any event between communication points (see <<early-return>> and <<Computation-in-Co-Simulation>>). This also enables cooperative multitasking of FMUs in CS.
+
+Note that the call to <<fmi3CallbackIntermediateUpdate>> and thus entering the *Intermediate Update Mode* can only be triggered by the FMU itself. The importer cannot actively trigger this and hence for some use cases (e.g. cooperative multitasking and setting of intermediate input values) relies on the callbacks from the FMUs to be able to realize this use cases properly. 
 
 A Co-Simulation FMU can provide values for its <<output>> variables at intermediate points between two consecutive communication points, and is able to accept new values for <<input>> variables at these intermediate points.
 This is typically required when the FMU uses a numerical solver to integrate the FMU's internal state between communication points in <<fmi3DoStep>>.
