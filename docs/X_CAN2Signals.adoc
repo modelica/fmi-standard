@@ -16,7 +16,7 @@
 :revnumber: 3.0
 :icons: font
 
-This layered standard defines on top of FMI 3.0, how to describe and simulate CAN signals as input and output variables of an FMU.
+This layered standard defines on top of FMI 3.0, how to describe and simulate network signals as input and output variables of an FMU.
 
 {empty} +
 {empty}
@@ -33,17 +33,16 @@ The licenses text can be found in the https://raw.githubusercontent.com/modelica
 
 === Intend of this Document
 
-Automotive CAN is a bus technology that has been applied successfully over many years by all automotive OEMs world wide.
-Virtualizing electronic control units (ECUs) and then simulating multiple such vECUs requires connecting them using a virtual version of the bus technology.
-Reusing standard bus topology description formats, such as DBC and ARXML, is required for efficiency and testing reasons alike.
+Automotive CAN, LIN, FlexRay, CAN FD and CAN XL are network technologies that have been applied successfully over many years by all automotive OEMs world wide.
+Virtualizing electronic control units (ECUs) and then simulating multiple such vECUs requires connecting them using a virtual version of these network technologies.
+Reusing standard network topology description formats, such as DBC, LDF, Fibex and ARXML, is required for efficiency and testing reasons alike.
 Files in these formats exist in validated form as part of the engineering process, tooling exists and these standards evolve to support new use cases.
 
-This document describes how to use standard description formats for CAN bus topologies on top of the FMI 3.0 standard.
-vECUs following this standard can then easily be connected in importing tools because the bus description files declare which signals have what properties and belong to what messages in which of the potentially multiple buses connected to each vECUs.
-The importer does not need to know about the special CAN semantics of certain signals of an FMU; it simply forwards signal values according to the FMI standard.
+This document describes how to use standard description formats for automotive  topologies on top of the FMI 3.0 standard.
+vECUs following this standard can then easily be connected in importing tools because the network description files declare which signals have what properties and belong to what messages in which of the potentially multiple networks connected to each vECUs.
+The importer does not need to know about the special network semantics of certain signals of an FMU; it simply forwards signal values according to the FMI standard.
 
-This document only deals with classic CAN, not CAN-FD.
-Signal and message properties will be extracted from the bus description files and it allows all exporters to have the same understanding and interpretation of the FMU signals.
+Signal and message properties will be extracted from the network description files and it allows all exporters and importers to have the same understanding and interpretation of the FMU signals.
 Such signal properties are, for example: signal scaling, message timing and trigger conditions, packaging of signals in messages, unit definitions.
 This document does not address potential open points of these description formats, it is assumed that such ambiguities will be handled elsewhere (e.g. message timing in the DBC format).
 This document does not address IP protection or copyright issues.
@@ -51,23 +50,26 @@ These are technical and legal issues that need attention from standardization bo
 
 === Rough Outline of the Approach
 
-The bus description files will be placed into the `/extra/org.modelica.fmi.layered_CAN` folder.
+The network description files will be placed into the `/extra/org.modelica.fmi.layered_BUS` folder.
 
-CAN signals will be input or output variables with physical interpretation (units and numeric values) if possible, or binary types, if no numeric interpretation is possible.
-There will be one terminal type for each CAN message with the name `BusName::MessageName` and it will group input or output variables with their corresponding signal names `BusName::MessageName::SignalName`.
+Bus signals will be input or output variables with physical interpretation (units and numeric values) if possible, or binary types, if no numeric interpretation is possible.
+There will be one terminal type for each network frame with the name `BusName::FrameName` and it will group input or output variables with their corresponding signal names `BusName::FrameName::PDUName::SignalName`.
 All variables of one terminal must be either input or output depending on the message being received or sent.
 This naming schema will create unique variable names as required by the FMI standard.
-Each CAN message `BusName::MessageName` has its own dedicated clock, the name is `BusName::MessageName_CLOCK` and it will be part of the terminal of the CAN message it belongs to.
-Optionally, it is allowed to also send the message data as `fmi3Binary` variable `BusName::MessageName_DATA`.
-All variables belonging to a CAN message are clocked variables _[The output/input clock is active when a message is sent/received.]_.
+Each network frame `BusName::FrameName` has its own dedicated clock, the name is `BusName::FrameName_CLOCK` and it will be part of the terminal of the frame it belongs to.
+Optionally, it is allowed to also send the frame data as `fmi3Binary` variable `BusName::FrameName_DATA`.
+A further option allows to send the frame itself as `fmi3Binary` variable `BusName::FrameName_FRAME`, including start and stop sequence.
+All variables belonging to one frame are clocked variables _[The output/input clock is active when a message is sent/received.]_.
 Signal variables are generally of type `fmiFloat64`, except if conversion to physical requires other data types, e.g. `fmi3Int64`, or escapes numeric interpretation and is given the `fmi3Binary` type.
 
 _[For example, XCP over CAN or UDS over CAN will use all 64 bits in the CAN message payload, often defining a single "signal"._
 _While one could call this an `fmi3UInt64`, a numeric interpretation is clearly not intended and should use `fmi3Binary` instead.]_
 
-All CAN message terminals will be wrapped into the CAN bus terminal they belong to.
-The CAN bus terminal will also specify which node(s) are wrapped inside this FMU.
-If an FMU specifies nodes that are both senders and receivers of a message, the receiver role will be removed from the FMU interface to allow the CAN signals to have a unique role as output.
+Each FMU defines hierarchically ordered FMI terminals: bus, frame and pdu.
+For each network connected to an FMU, there will be a bus terminal containing all frame terminals, which in turn reference all their PDUs, which in turn reference their signals.
+A bus terminal will specify which network node(s) this FMU embodies.
+
+If an FMU specifies nodes that are both senders and receivers of a message, the receiver role will be removed from the FMU interface to allow the signals to have a unique role as output.
 _[The FMI standard requires a variable to be either input or output.]_
 
 === Comments about this Approach
@@ -76,45 +78,46 @@ _[Splitting messages into signals to be transported as FMI variables cuts the co
 _This is largely functionally equivalent to cutting below the communication stack where 64-bit messages are sent._
 _Given the presence of the ARXML or DBC description formats, one can translate one cut layer into the other._
 _Primarily exchanging signals as chosen here simplifies interaction with plant models and is intentionally kept simple._
-_Optionally, the message data can be transported as well for each CAN message to eliminate the need for reconstruction of the message data from the signal values allowing for use cases that focus on the Basic Software._
+_Optionally, the message data can be transported as well for each network frame to eliminate the need for reconstruction of the message data from the signal values allowing for use cases that focus on the Basic Software._
+_Sending even a binary frame object allows for very low level implementation validation._
 _Forcing the variables into a naming schema will allow simpler connection of FMUs with other simulation artifacts not aware of this layered standard._
-_The naming schema proposed here is already in use with MCD tools when measuring CAN and other bus types.]_
+_The naming schema proposed here is already in use with MCD tools when measuring into networks.]_
 
 == Details
 
-=== Bus Description Files
+=== Network Description Files
 
 FMI 3.0 introduces an `/extra` folder in its `zip` structure.
-The CAN description files will be placed under the reverse domain name controlled by the MAP FMI: `/extra/org.modelica.fmi.layered_CAN`.
-Both DBC and ARXML files are allowed.
-The root name of the description files shall be used as bus identifier in the CAN bus terminal type and are case sensitive.
+The network description files will be placed under the reverse domain name controlled by the MAP FMI: `/extra/org.modelica.fmi.layered_BUS`.
+DBC, LDF, Fibex and ARXML files are allowed.
+The root name of the description files shall be used as network identifier in the bus terminal type and are case sensitive.
 
-Multiple files can be specified, each one defining one bus architecture used by the FMU.
-This standard does not support composing one CAN bus architecture from multiple description files.
+Multiple files can be specified, each one defining one network architecture used by the FMU.
+This standard does not support composing one network architecture from multiple description files.
 
-It is recommended to use ARXML files if possible, because the DBC standard lacks some key properties that have later been added using non-standard extensions with many dialects in use.
+It is recommended to use ARXML over DBC files for CAN whenever possible, because the DBC standard lacks some key properties that have later been added using non-standard extensions with many dialects in use.
 
 === Terminal Definitions
 
-==== CAN Bus Terminal
+==== Bus Terminal
 
-Each bus connected to the FMU must be described by a CAN bus terminal named `CAN::BusName` in `icons/terminalsAndIcons.xml` as a `<Terminal>` element of `<fmiTerminalsAndIcons><Terminals>` that wraps all message terminals.
-The CAN bus name must match the root name of the CAN description file, e.g. `Powertrain`, if the file is `/extra/org.modelica.fmi.layered_CAN/Powertrain.dbc`.
+Each network connected to the FMU must be described by a bus terminal named `BusName` in `icons/terminalsAndIcons.xml` as a `<Terminal>` element of `<fmiTerminalsAndIcons><Terminals>` that wraps all frame terminals.
+The network name must match the root name of its description file, e.g. `Powertrain`, if the file is `/extra/org.modelica.fmi.layered_BUS/Powertrain.dbc`.
 
 // TODO: EXAMPLE here
 
 Attribute definitions::
- * `terminalKind` must be set to `CAN_bus`.
+ * `terminalKind` must be set to `BUS`.
  * `matchingRule` must be set to `bus`.
- * `name` is the CAN bus name, e.g. `Powertrain`, see example and constraints above.
+ * `name` is the network name, e.g. `Powertrain`, see example and constraints above.
 
 Element definitions::
  * There must be no `<TerminalMemberVariable>` element.
  * There must be no `<TerminalStreamMemberVariable>` element.
- * There must be one `<Terminal>` element per CAN bus message described in the description file.
+ * There must be one `<Terminal>` element per network frame described in the description file.
 
 Annotation element::
- * In the annotation elements, there will be an `<Annotation>` element defining which node or nodes of the CAN bus description file are wrapped inside the FMU.
+ * In the annotation elements, there will be an `<Annotation>` element defining which node or nodes of the network description file are wrapped inside the FMU.
 If the combination of nodes specified for this FMU turns a message and its signals into both input and output because sending and receiving nodes are specified, only the sending (output) role will be defined in the FMU interface.
 Receiving messages must then be handled internal to the FMU.
 
@@ -122,70 +125,102 @@ Receiving messages must then be handled internal to the FMU.
 
 // TODO: do we need to define what the graphical representation looks like? Or should we not allow it?
 
-==== CAN Message Terminal
+==== Frame Terminal
 
-Each CAN message described in the description file must be an element of its corresponding CAN bus terminal (see `<Terminal>` element of CAN bus terminal).
+Each frame listed in the description file must be an element of its corresponding network terminal (see `<Terminal>` element of bus terminal).
 
 Attribute definitions::
- * `terminalKind` must be set to `CAN_message`.
+ * `terminalKind` must be set to `frame`.
  * `matchingRule` must be set to `bus`.
- * `name` must match the message name of the CAN bus description file in `/extra/org.modelica.fmi.layered_CAN`, prefixed with the CAN bus name and `::`.
+ * `name` must match the frame name of the network description file in `/extra/org.modelica.fmi.layered_BUS`, prefixed with the network name and `::`.
 
 Element definitions::
  * There must be no `<TerminalStreamMemberVariable>` element.
  * There must be no `<Terminal>` element.
- * There must be one `<TerminalMemberVariable>` per CAN signal of this CAN message.
- * There must be one `<TerminalMemberVariable>` for the clock referenced by all CAN signals of this message with their `clockReference` attribute.
- * Optionally, there can be an additional `<TerminalMemberVariable>` element referencing a variable of type `fmi3Binary` that contains the binary representation of the CAN message data.
-   If one output CAN message has such a binary representation of the message data, all output CAN messages must have such a binary representation of the data.
-   Any of the input CAN messages may have such a binary representation of the message data.
+ * There must be one `<TerminalMemberVariable>` per PDU of this frame.
+ * There must be one `<TerminalMemberVariable>` for the clock referenced by all signals of this frame with their `clockReference` attribute (included via all PDU terminals, see below).
+   This variable is named <<ClockVariable,`BusName::FrameName_CLOCK`>>.
+ * Optionally, there can be an additional `<TerminalMemberVariable>` element referencing a variable of type `fmi3Binary` that contains the binary representation of the frame payload (only).
+   This variable is named <<PayloadVariable,`BusName::FrameName_PAYLOAD`>>.
+ * Furthermore, there can be an optional variable of type `fmi3Binary` that represents the entire frame.
+   This variable is named <<FrameVariable,`BusName::FrameName_FRAME`>>.
+
+For network types not natively referencing a "frame", like CAN, usually a trivial concept mapping exists, e.g. a CAN "message" is equivalent to a "frame" in the more general sense.
+
+==== PDU Terminal
+
+Each PDU listed in the description file must be an element of its corresponding frame terminal (see `<Terminal>` element of frame terminal).
+
+Attribute definitions::
+ * `terminalKind` must be set to `PDU`.
+ * `matchingRule` must be set to `bus`.
+ * `name` must match the PDU name of the network description file in `/extra/org.modelica.fmi.layered_BUS`, prefixed with the network name and `::`.
+   If the network type or network description format does not allow for PDUs (CAN and LIN), a single, synthetic PDU with the same name as the frame it belongs to must be created.
+
+Element definitions::
+ * There must be no `<TerminalStreamMemberVariable>` element.
+ * There must be no `<Terminal>` element.
+ * There must be one `<TerminalMemberVariable>` per signal of this PDU.
 
 All `<TerminalMemberVariables>` must have the same type of either input or output, including the clock.
 
-==== CAN Signal Variables
+==== Signal Variables
 
-Each CAN signal must be listed as `<TerminalMemberVariable>` of its corresponding CAN message terminal.
+Each network signal must be listed as `<TerminalMemberVariable>` of its corresponding PDU terminal.
 
 Attribute definitions::
- * `variableName` refers to the input or output variable name of the FMU and to enforce uniqueness is built as follows: `BusName::MessageName::SignalName`.
- * `memberName` is the `SignalName` as given in the bus description file.
- * `variableKind` is `CAN_signal_physical` for all variables that represent physical (numeric) variables.
-   For variables of type `fmi3Binary` the `variableKind` is set to `CAN_signal_binary`.
+ * `variableName` refers to the input or output variable name of the FMU and to enforce uniqueness is built as follows: `BusName::FrameName::PDUName::SignalName`.
+ * `memberName` is the `SignalName` as given in the network description file.
+ * `variableKind` is `signal_physical` for all variables that represent physical (numeric) variables.
+   For variables of type `fmi3Binary` the `variableKind` is set to `signal_binary`.
 
 In case multiplexed signals are present in a message: all signals are present, but only the active signal according to the multiplex switch signal contains a valid value, all inactive values must be ignored _[those values could even be outside their specified min-max range without fault]_.
 
-==== CAN Message Clocks
+==== Frame Clock Variable [[ClockVariable]]
 
-In order to use FMU input and output variables as transport layer for CAN buses, aperiodic clock variables are used.
-Such a clock is activated by the sender to indicate the transmission of the corresponding CAN message.
-Each CAN message `BusName::MessageName` has its own dedicated clock variable `BusName::MessageName_CLOCK`.
-All clocked variables triggered by this clock belonging to the same CAN message are then valid and can be read by the recipients of this CAN messages.
-The value of the clocked variable must be a message counter modulus 1024.
+// TODO check after clocks are fixed
 
-_[Using a message counter allows recipients to detect dropped messages._
-_These clocks must be aperiodic clocks to allow for non-ideal bus communication patterns.]_
+In order to use FMU input and output variables as transport layer for networks, aperiodic clock variables are used.
+Such a clock is activated by the sender to indicate the transmission of the corresponding frame.
+Each frame `BusName::FrameName` has its own dedicated clock variable named `BusName::FrameName_CLOCK`.
+All clocked variables triggered by this clock belonging to the same frame are then valid and can be read by the recipients of this frame.
+The value of the clocked variable must be a frame counter modulus 1024.
 
-==== CAN Message Data
+_[Using a frame counter allows recipients to detect dropped messages._
+_These clocks must be aperiodic clocks to allow for non-ideal network communication patterns.]_
 
-There can be an optional `fmi3Binary` variable representing the CAN message data.
-For CAN message `BusName::MessageName` the name of the CAN message data variable is `BusName::MessageName_DATA` a
+==== Frame Payload Variable [[PayloadVariable]]
+
+There can be an optional `fmi3Binary` variable representing the payload of the frame.
+For a frame `BusName::FrameName` the name of the payload variable is `BusName::FrameName_PAYLOAD`.
+
+If one output frame has such a binary representation of the frame payload, all output frames must have such a binary representation of their payload.
+Any of the input frames may have such a binary representation of the frame payload as input variable.
+
+==== Frame Variable [[FrameVariable]]
+
+There can be an optional `fmi3Binary` variable representing the entire frame, from and including "Start of Frame" until and including "End of Frame".
+For network frame `BusName::FrameName`, the name of the network-frame variable is `BusName::FrameName_FRAME`.
+
+If one output frame has such a binary representation of the entire frame, all output frames must have such a binary representation of the frame.
+Any of the input frames may have such a binary representation of the entire frame as input variable.
 
 === Known Limitations of this Standard
 
-This layered standard maps the CAN bus protocol onto co-simulation variables as transport layer simulating in many ways an ideal CAN bus.
-Such an ideal CAN bus differs from physical CAN buses in the following ways:
+This layered standard maps several network protocols onto co-simulation variables as transport layer simulating in many ways an ideal network.
+Such an ideal network differs from physical networks in the following ways:
 
- * Bus message arbitration: CAN messages are sent according to priority (determined by Frame_ID) on wire.
+ * Network frame arbitration: frames are sent on the wire according to network-specific priority rules.
    Here all message are transmitted at the same time without delay.
 
- * Bus congestion/bandwidth: too many CAN messages for the bandwidth of the bus.
-   Here the CAN bus has infinite capacity.
+ * Network congestion/bandwidth: too many network frames sent for the bandwidth of the network.
+   Here the network has infinite capacity.
 
  * Protocol functions of higher levels: i.e. CAN request for retransmit is a specific protocol function.
-   Here such specialties must be handled by the first layer inside the FMU.
+   Here such specialties must be handled by the first layer inside the FMU and require <<FrameVariable,binary frame variables>>.
 
- * Incoming buffer overflow: when an ECU receives more messages than its buffer can hold.
-   Here the FMU will receive all messages, regardless of buffer size.
+ * Incoming buffer overflow: when an ECU receives more frames than its buffer can hold.
+   Here the FMU will receive all frames, regardless of buffer size.
 
- * Bus transmission errors: electrical errors which cause failed message transmission.
+ * network transmission errors: electrical errors which cause failed frame transmission.
    Here no such transmission errors can occur, unless explicitly added into the simulation.
