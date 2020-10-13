@@ -143,8 +143,59 @@ Callback function `lockPreemption` and `unlockPreemption`::
 
 See <<preemption-support>> for details.
 
+[[fmi3SetDebugLogging,`fmi3SetDebugLogging`]]
+Function `fmi3SetDebugLogging`::
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=SetDebugLogging]
+----
+The function controls debug logging that is output via the <<logMessage>> callback function.
+
+* If `loggingOn == fmi3True`, debug logging is enabled, otherwise it is switched off.
+
+* `nCategories` defines the length of the next argument `categories`
+If `loggingOn == fmi3True` and `nCategories == 0`, then all debug messages shall be output.
+If `loggingOn == fmi3True` and `nCategories > 0`, then only debug messages according to the `categories` argument shall be printed via the <<logMessage>> function.
+
+* `categories` is a vector with `nCategories` elements.
+The allowed values of `categories` are defined by the modeling environment that generated the FMU.
+Depending on the generating modeling environment, none, some or all allowed values for `categories` for this FMU are defined in the <<modelDescription.xml>> file via element `<fmiModelDescription><LogCategories>`, see <<definition-of-log-categories>>.
+
+[[fmi3Reset,`fmi3Reset`]]
+Function `fmi3Reset`::
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=Reset]
+----
+
+Is called by the environment to reset the FMU after a simulation run.
+The FMU goes into the same state as if <<fmi3Instantiate>> would have been called.
+All variables have their default values.
+Before starting a new run <<fmi3EnterInitializationMode>> has to be called.
+
+[[fmi3Terminate,`fmi3Terminate`]]
+Function `fmi3Terminate`::
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=Terminate]
+----
+
+Changes state to *Terminated*.
+After calling this function, the final values of all variables can be inquired with the `fmi3Get{VariableType}` functions.
+It is not allowed to call this function after one of the functions returned with a status flag of <<fmi3Error>> or <<fmi3Fatal>>.
+
+[[fmi3FreeInstance,`fmi3FreeInstance`]]
+Function `fmi3FreeInstance`::
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=FreeInstance]
+----
+
+Disposes the given instance, unloads the loaded model, and frees all the allocated memory and other resources that have been allocated by the functions of the FMU interface.
+If a null pointer is provided for argument `instance`, the function call is ignored (does not have an effect).
+
 [[get-set-fmu-state]]
-Functions for getting and setting the complete FMU state::
+Getting and Setting the Complete FMU State::
 
 // TODO: should this be a heading and all 6 following calls indented?
 
@@ -242,61 +293,10 @@ This function deserializes the byte vector `serializedState` of length `size`, c
 These functions are only supported by the FMU, if the optional capability flags `canGetAndSetFMUState` and `canSerializeFMUState` in `<fmiModelDescription><ModelExchange|CoSimulation|ScheduledExecution>` in the XML file are explicitly set to `true` (see <<ModelExchange>>, <<fmi-for-co-simulation>>, <<fmi-for-scheduled-execution>>).
 --
 
-Functions <<<<get-and-set-variable-values,`fmi3Get{VariableType}`>>::
+Functions <<get-and-set-variable-values,`fmi3Get{VariableType}`>>::
 See <<get-and-set-variable-values>> for the general mechanism to get variable values.
-_[Getting variable might trigger computations._
-_If *Terminated* is entered because of an `fmi3Error` return value, retrieved values should only be used for debugging purposes.]_
-
-[[fmi3Reset,`fmi3Reset`]]
-Function `fmi3Reset`::
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=Reset]
-----
-
-Is called by the environment to reset the FMU after a simulation run.
-The FMU goes into the same state as if <<fmi3Instantiate>> would have been called.
-All variables have their default values.
-Before starting a new run <<fmi3EnterInitializationMode>> has to be called.
-
-[[fmi3SetDebugLogging,`fmi3SetDebugLogging`]]
-Function `fmi3SetDebugLogging`::
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=SetDebugLogging]
-----
-The function controls debug logging that is output via the <<logMessage>> callback function.
-
-* If `loggingOn == fmi3True`, debug logging is enabled, otherwise it is switched off.
-
-* `nCategories` defines the length of the next argument `categories`
-If `loggingOn == fmi3True` and `nCategories == 0`, then all debug messages shall be output.
-If `loggingOn == fmi3True` and `nCategories > 0`, then only debug messages according to the `categories` argument shall be printed via the <<logMessage>> function.
-
-* `categories` is a vector with `nCategories` elements.
-The allowed values of `categories` are defined by the modeling environment that generated the FMU.
-Depending on the generating modeling environment, none, some or all allowed values for `categories` for this FMU are defined in the <<modelDescription.xml>> file via element `<fmiModelDescription><LogCategories>`, see <<definition-of-log-categories>>.
-
-[[fmi3Terminate,`fmi3Terminate`]]
-Function `fmi3Terminate`::
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=Terminate]
-----
-
-Changes state to *Terminated*.
-After calling this function, the final values of all variables can be inquired with the `fmi3Get{VariableType}` functions.
-It is not allowed to call this function after one of the functions returned with a status flag of <<fmi3Error>> or <<fmi3Fatal>>.
-
-[[fmi3FreeInstance,`fmi3FreeInstance`]]
-Function `fmi3FreeInstance`::
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=FreeInstance]
-----
-
-Disposes the given instance, unloads the loaded model, and frees all the allocated memory and other resources that have been allocated by the functions of the FMU interface.
-If a null pointer is provided for argument `instance`, the function call is ignored (does not have an effect).
+Getting variable might trigger computations.
+_[If *Terminated* is entered because of an `fmi3Error` return value, retrieved values should only be used for debugging purposes.]_
 
 ===== State: Instantiated [[Instantiated]]
 
@@ -529,10 +529,110 @@ No other variables can be changed during *Reconfiguration Mode*.
 ==== State: Intermediate Update Mode [[IntermediateUpdateMode]]
 
 This state is only available in Co-Simulation and Scheduled Execution.
+The following use cases are enabled:
 
-The FMU enters this state by calling <<fmi3CallbackIntermediateUpdate>> within *Step Mode* (CS) or *Clock Activation Mode* (SE) and leaves the state towards state *Step Mode* (CS) or *Clock Activation Mode* (SE) if the function returns <<fmi3OK>> or <<fmi3Warning>>.
+* improve the input accuracy in CS between communication points, when the importer sets intermediate input values extracted with the same mechanism from another FMU as output values (see below for details and <<Communication-during-update>>),
+* allow FMUs to inform the importer of an event, which occurs during an <<fmi3DoStep>> in case of CS or <<fmi3ActivateModelPartition>> in case of SE (see <<co-simulation-api>>, <<Communication-during-update>> and <<IntermediateUpdateModeSE>>),
+* allow the importer in CS to request an early return from FMUs calling <<fmi3CallbackIntermediateUpdate>> with <<canReturnEarly, `canReturnEarly == fmi3True`>>, because of any event between communication points (see <<early-return>> and <<Computation-in-Co-Simulation>>).
+This also enables cooperative multitasking of FMUs in CS.
+
+Note that the call to <<fmi3CallbackIntermediateUpdate>> and thus entering the *Intermediate Update Mode* can only be triggered by the FMU itself.
+The importer cannot actively trigger this and hence for some use cases (e.g. cooperative multitasking and setting of intermediate input values) relies on the callbacks from the FMUs to be able to realize these use cases properly.
+
+A Co-Simulation FMU can provide values for its <<output>> variables at intermediate points between two consecutive communication points, and is able to accept new values for <<input>> variables at these intermediate points.
+This is typically required when the FMU uses a numerical solver to integrate the FMU's internal state between communication points in <<fmi3DoStep>>.
+This numerical solver assumes that the inputs are continuous in the integration interval, dictated by <<fmi3DoStep>>.
+In FMI 2.0 Co-simulation, the intermediate inputs are provided by the use of extrapolations.
+The intermediate update functions allow FMUs to receive inputs, and provide outputs, directly to the co-simulation algorithm, in those intermediate time points.
+
+Due to the way numerical solvers estimate and correct the approximation error, these intermediate <<output>> values may be tentative or may be final.
+It is possible for the FMU to inform the co-simulation algorithm whether the internal solver is in a tentative state, meaning that the output values computed from that state are also tentative, or if the internal solver has successfully completed the integration step, meaning that the FMU's internal state is final, and will never be change by the normal in the current execution of <<fmi3DoStep>>.
+If the internal integration step has successfully completed, the co-simulation algorithm can forward intermediate outputs to other FMUs, where they can be used, for e.g., for extrapolation, interpolation, filtering or asynchronous co-simulation.
+_[For tentative output values, the co-simulation algorithm must keep in mind that these values may change for the same time point.]_
+
+The FMU requests updated intermediate <<input>> values for continuous variables every time they are required by the internal solver.
+This can be either at tentative solver states or after successful integration steps.
+
+Access to intermediate variables enables advanced Co-Simulation with interpolation/extrapolation techniques (such as polynomial extrapolation, TLM co-simulation, anti-alias filtering, smoothing of input) +
+Moreover, this enables the same input approximation that was possible in FMI 2.0 with `fmi2SetInputDerivatives`, now evaluating the approximation polynomial and not within the FMU as in FMI 2.0.
+
+<<figure-IntermediateUpdateMode>> summarizes the above description.
+It illustrates that multiple intermediate internal solver steps, distinguishing between the final ones (with black-filled circles) and tentative ones (with white-filled circles).
+It distinguishes the level of trust that can be placed in the tentative outputs (with dashed arrows) and in final outputs (with solid arrows).
+
+.Overview of solver states and intermediate update during a communication step
+[#figure-IntermediateUpdateMode]
+image::images/intermediateupdate.svg[width=65%, align="center"]
+
+The FMU signals the support of *Intermediate Update Mode* by the capability flag `providesIntermediateUpdate`.
+The co-simulation algorithm signals the support for *Intermediate Update Mode* by providing a non-NULL callback-function pointer for <<fmi3CallbackIntermediateUpdate, `intermediateUpdate`>>.
+
+The FMU enters *Intermediate Update Mode* by calling <<fmi3CallbackIntermediateUpdate>> within *Step Mode* (CS) or *Clock Activation Mode* (SE) and leaves the state towards state *Step Mode* (CS) or *Clock Activation Mode* (SE) if the function returns <<fmi3OK>> or <<fmi3Warning>>.
 If the function returns <<fmi3Error>> the FMU enters state *Terminated*.
 If the function returns <<fmi3Fatal>> the FMU enters the terminal state.
+
+[[fmi3CallbackIntermediateUpdate,`fmi3CallbackIntermediateUpdate`]]
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tag=CallbackIntermediateUpdate]
+----
+
+[[intermediateUpdateTime,`intermediateUpdateTime`]]
+* <<intermediateUpdateTime>> is the internal value of the <<independent>> variable _[typically simulation time]_ of the FMU at which the callback has been called.
+If an event happens or an <<outputClock>> ticks, <<intermediateUpdateTime>> is the time of event or <<outputClock>> tick.
+If the FMU returns with <<earlyReturn,`earlyReturn == fmi3True`>> from <<fmi3DoStep>> then <<intermediateUpdateTime>> is the internal simulation time of the FMU of the last <<fmi3CallbackIntermediateUpdate>> call that signaled <<canReturnEarly,`canReturnEarly == fmi3True`>>.
+<<intermediateUpdateTime>> is also the value of the <<independent>> variable of intermediate steps of the internal FMU solver.
+The FMU must not call the callback function <<fmi3CallbackIntermediateUpdate>> with an <<intermediateUpdateTime>> that is smaller than the <<intermediateUpdateTime>> given in a previous call of <<fmi3CallbackIntermediateUpdate>> with `intermediateStepFinished == fmi3True`.
+
+[[clocksTickedIA,`clocksTicked`]]
+* The <<clocksTickedIA>> parameter is only used in Scheduled Execution and is ignored in Co-Simulation.
+When <<clocksTickedIA,`clocksTicked == fmi3True`>>, it means that <<fmi3GetClock>> function must be called for gathering all <<clock>> related information about ticking <<outputClock,`output clocks`>> at <<intermediateUpdateTime>> and then activate the given model partitions accordingly.
+
+[[intermediateVariableSetRequested,`intermediateVariableSetRequested`]]
+* If <<intermediateVariableSetRequested,`intermediateVariableSetRequested == fmi3True`>>, the co-simulation algorithm should provide intermediate <<input>> variables by calling `fmi3Set{VariableType}` for continuous variables with <<intermediateUpdate,`intermediateUpdate = true`>>.
+The set of variables for which the co-simulation algorithm can provide intermediate values is supplied through the <<requiredIntermediateVariables>> argument to <<fmi3Instantiate>>.
+Note that if a co-simulation algorithm does not provide a new value for any of the variables contained in the set it registered, the last set value will be deemed to be the new value.
+
+[[intermediateVariableGetAllowed,`intermediateVariableGetAllowed`]]
+* If <<intermediateVariableGetAllowed,`intermediateVariableGetAllowed == fmi3True`>>, the co-simulation algorithm may collect intermediate output variables by calling `fmi3Get{VariableType}` for variables with <<intermediateUpdate,`intermediateUpdate = true`>>.
+The set of variables for which the co-simulation algorithm can get values is supplied through the <<requiredIntermediateVariables>> argument to <<fmi3Instantiate>>.
+
+[[intermediateStepFinished,`intermediateStepFinished`]]
+* If <<intermediateStepFinished, `intermediateStepFinished == fmi3False`>>, the intermediate outputs of the FMU that the co-simulation algorithm inquires with `fmi3Get{VariableTypes}` resulting from tentative interval solver states and may still change for the same <<intermediateUpdateTime>> (e.g., if the solver deems the tentative state to cause a too high approximation error, it may go back in time and try to re-estimate the state using smaller internal time steps).
+_[These outputs shall for example not be communicated to other connected FMUs._
+_The use case for this is to let the co-simulation algorithm do some calculations for the FMU even for unfinished solver steps._
+_This is beneficial for example for Transmission Line (TLM) co-simulation, where this helps to keep the interface cleaner._
+_Instead of FMUs exchanging hard-to-understand variables such as "wave variable" and "characteristic impedance", they can exchange intuitive variables like "force" and "speed".]_
+
+* If <<intermediateStepFinished, `intermediateStepFinished == fmi3True`>>, intermediate outputs inquired by the co-simulation algorithm with `fmi3Get{VariableTypes}` correspond to accepted internal solver steps and will not change (if the co-simulation algorithm does not rollback the FMU).  +
+_[So the co-simulation algorithm could for example_
+
+- _use the values obtained with `fmi3Get{VariableTypes}` with <<intermediateStepFinished, `intermediateStepFinished == fmi3True`>> to create an interpolation for the intermediate inputs of other FMUs._
+- _use this information for plotting.]_
+
+[[canReturnEarly,`canReturnEarly`]]
+* When <<canReturnEarly,`canReturnEarly == fmi3True`>> the co-simulation algorithm can request the FMU to return early at the current <<intermediateUpdateTime>> time instant by returning with <<earlyReturnRequested,`earlyReturnRequested == fmi3True`>> from the callback function <<fmi3CallbackIntermediateUpdate>>.
+If <<canReturnEarly,`canReturnEarly == fmi3False`>> the FMU will not do the early return, regardless of the co-simulation algorithm request.
+
+[[earlyReturnRequested,`earlyReturnRequested`]]
+* `earlyReturnRequested == fmi3True` requests the FMU to end the <<fmi3DoStep>> at a Newtonian time instant and return early.
+This is only allowed if <<canReturnEarly,`canReturnEarly == fmi3True`>>.
+
+[[earlyReturnTime,`earlyReturnTime`]]
+* `earlyReturnTime` is used to tell the FMU at what time to return early from the current <<fmi3DoStep>> (at the earliest), if the return value of <<earlyReturnRequested>> of <<fmi3CallbackIntermediateUpdate>> is `fmi3True`.
+If the <<earlyReturnTime>> is greater than the last signaled <<intermediateUpdateTime>>, the FMU may integrate up to the time instant <<earlyReturnTime>>.
+
+When providing intermediate inputs to the FMU, it is important that the co-simulation algorithm provides the same input value for the same variable, at the same <<intermediateUpdateTime>>.
+In other words, it is required that the calculation of inputs to the FMU be deterministic.
+This is assumed by the internal solver.
+If an input value changes for the same <<intermediateUpdateTime>>, the internal numerical solver may deem that re-estimate a state multiple times, without ever being able to decrease the approximation error.
+
+Because the FMU intermediate outputs may be trusted when <<intermediateStepFinished,`intermediateStepFinished == fmi3True`>>, the FMU is not allowed to call <<intermediateUpdate>> for a simulation time point prior to or equal to a previous call whose argument <<intermediateStepFinished,`intermediateStepFinished == fmi3True`>>.
+
+If the early return is conducted successfully by the FMU it must return with <<earlyReturn,`earlyReturn == fmi3True`>> from <<fmi3DoStep>>, indicating the current FMU time with <<lastSuccessfulTime>>.
+
+The co-simulation algorithm can decide if a rollback of the FMU to reach the <<earlyReturnTime>> time is required or it may continue the simulation from <<lastSuccessfulTime>> for that FMU.
+Note that *Event Mode* is not supported in Scheduled Execution.
 
 Allowed Function Calls::
 
@@ -548,3 +648,10 @@ There is a defined order of calling these functions: first all `fmi3Get{Variable
 _[This is analogous to the calling sequence of of_ `fmi3Get{VariableType}` _and_ `fmi3Set{VariableType}` _calls at communication points.]_
 
 Please refer to <<IntermediateUpdateModeSE>> for additional allowed functions in *Intermediate Update Mode* for SE.
+
+The following code example shows an implementation of <<fmi3CallbackIntermediateUpdate>> that uses intermediate update to record a set of variables at every internal solver step:
+
+[source, c]
+----
+include::Reference-FMUs/examples/bcs_intermediate_update.c[tag=IntermediateUpdateCallback]
+----
