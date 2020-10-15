@@ -34,7 +34,7 @@ The licenses text can be found in the https://raw.githubusercontent.com/modelica
 === Intend of this Document
 
 FMI 3.0 was extended also with virtual Electronic Control Units (vECUs) in mind.
-Engineers can measure into ECUs using the XCP protocol:
+Engineers can measure into ECUs using the XCP protocol and A2L variable descriptions:
 
 [quote, ASAM e.V., https://www.asam.net/standards/detail/mcd-1-xcp/[ASAM MCD-1 XCP]]
 ____
@@ -50,9 +50,9 @@ This layered standard describes how an FMU advertises its XCP capabilities to im
 === Rough Outline of the Approach
 
 The XCP description file for the vECU wrapped as FMU will be placed into the `/extra/org.modelica.fmi.layered_XCP` folder.
-This description file follows the https://www.asam.net/standards/detail/mcd-2-mc/[ASAP MCD-2 MC] standard (aka `ASAP2`, also `A2L`) and customarily carries the file extension `.a2l`.
+This description file follows the https://www.asam.net/standards/detail/mcd-2-mc/[ASAM MCD-2 MC] standard (aka `ASAP2`, also `A2L`) and customarily carries the file extension `.a2l`.
 
-[quote, ASAM e.V., https://www.asam.net/standards/detail/mcd-2-mc/[ASAP MCD-2 MC]]
+[quote, ASAM e.V., https://www.asam.net/standards/detail/mcd-2-mc/[ASAM MCD-2 MC]]
 ____
 ASAM MCD-2 MC (aka ASAP2) defines the description format of the internal ECU variables used in measurement and calibration.
 Measurement & calibration systems (MC-systems) require this description for both the parameterization of scalar constants, curves and maps of the ECU software and for recording the system's response via measurement variables during real-time testing.
@@ -63,9 +63,11 @@ ____
 === Comments about this Approach
 
 _[This standard will have no effect on the FMU interface, nor the C-API behavior._
-_The XCP server inside the FMU will most likely run in its own thread and leave the rest of the operation of the FMU unaffected._
-_The FMU must configure the XCP server and trigger certain actions and provide timing information._
-_This approach can also be used for plant models when the FMU exporter can generate an appropriate `A2L` file.]_
+_The XCP slave inside the FMU will most likely run in its own thread and leave the rest of the operation of the FMU unaffected._
+_The FMU must configure the XCP slave and trigger certain actions and provide timing information._
+_This approach can also be used for plant models when the FMU exporter can generate an appropriate `A2L` file._
+_It is assumed that the XCP slave (in the FMU) communicates with the XCP master (in the MC tool) using a separate bus channel, e.g. the IP stack of the host OS._
+_Thus, the communication of the XCP service is not mixed with the simulated bus communication of the ECU wrapped in the FMU.]_
 
 == Details
 
@@ -79,13 +81,18 @@ The root name of the description files shall be identical to the FMU name and ar
 
 This standard forbids the use of the `including mechanism` of additional `A2L` files to simplify complete extraction and copying of `A2L` files.
 
-It is recommended to include `IF_DATA XCP` elements to help MCD tools to connect and interact with the XCP server inside the FMU more reliably and without user interaction.
+It is recommended to include `IF_DATA XCP` elements to help MCD tools to connect and interact with the XCP slave inside the FMU more reliably and without user interaction.
 
-=== Server Startup and Shutdown
+=== XCP Slave Startup and Shutdown
 
 It is recommended to start the XCP service during `fmi3EnterInitializationMode` (or earlier) and shut down during `fmi3Terminate` (or later) if the FMU has no explicit power-up signal to simplify user interactions between simulator and MCD tool.
 
 If the FMU contains a virtual ECU with power-up control (K15), all build in OS and Basic Software services (including XCP) should follow normal power-up protocol.
+
+_[The A2L/XCP standards allow to measure variables synchronous to different time- or angular-based events._
+_This requires to invoke the XCP service with a so-called raster ID in the thread which is executed for an event._
+_Calibration is typically performed in a background thread._
+_Refer to the A2L/XCP standards for more information.]_
 
 === Variable Visibility
 
@@ -100,10 +107,10 @@ _The `A2L` file might publish a much larger set of variables and parameters that
 
 While measurement of FMU internal variables does not have a numeric effect on the FMU, so called calibration does.
 Calibration is the tuning of FMU internal parameters.
-Such changes will effect the numeric behavior of the FMU.
+Such changes will affect the numeric behavior of the FMU.
 If the FMU contains controller code, numeric stability or energy preservation laws are of lesser concern.
 On the other hand, plant models offering XCP access for parameter calibration may introduce surprising numerical effects in solvers that might require proper handling, like resetting solvers with every XCP write action.
 
 It is therefore necessary to synchronize XCP variable access (read and write) with the state of the FMU.
 _[For instance is time not linear in Model Exchange and Intermediate Variable Access might also introduce surprising measurements in Co-Simulation._
-_Appropriate care must be taken when to serve XCP client requests to ensure simulation and measurement integrity.]_
+_Appropriate care must be taken when to serve XCP master requests to ensure simulation and measurement integrity.]_
