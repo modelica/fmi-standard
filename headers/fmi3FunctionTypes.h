@@ -489,7 +489,7 @@ typedef fmi3Status fmi3SetIntervalFractionTYPE(fmi3Instance instance,
 /* end::SetIntervalFraction[] */
 
 /* tag::NewDiscreteStates[] */
-typedef fmi3Status fmi3NewDiscreteStatesTYPE(fmi3Instance instance,
+typedef fmi3Status fmi3UpdateDiscreteStatesTYPE(fmi3Instance instance,
                                              fmi3Boolean *newDiscreteStatesNeeded,
                                              fmi3Boolean *terminateSimulation,
                                              fmi3Boolean *nominalsOfContinuousStatesChanged,
