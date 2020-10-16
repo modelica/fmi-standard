@@ -171,7 +171,7 @@ Common Functions
 #define fmi3GetIntervalFraction      fmi3FullName(fmi3GetIntervalFraction)
 #define fmi3SetIntervalDecimal       fmi3FullName(fmi3SetIntervalDecimal)
 #define fmi3SetIntervalFraction      fmi3FullName(fmi3SetIntervalFraction)
-#define fmi3UpdateDiscreteStates        fmi3FullName(fmi3UpdateDiscreteStates)
+#define fmi3UpdateDiscreteStates     fmi3FullName(fmi3UpdateDiscreteStates)
 
 /***************************************************
 Functions for Model Exchange
