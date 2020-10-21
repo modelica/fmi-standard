@@ -72,10 +72,10 @@ include::../headers/fmi3FunctionTypes.h[tags=DoStep]
 _[The FMU can use this flag to flush a result buffer.]_
 
 [[eventEncountered,`eventEncountered`]]
-* <<eventEncountered,`eventEncountered == fmi3True`>> indicates that an event was encountered at <<lastSuccessfulTime>> and the co-simulation algorithm has to call <<fmi3NewDiscreteStates>> to gather related information about the event.
+* <<eventEncountered,`eventEncountered == fmi3True`>> indicates that an event was encountered at <<lastSuccessfulTime>> and the co-simulation algorithm has to call <<fmi3UpdateDiscreteStates>> to gather related information about the event.
 
 [[clocksAboutToTick,`clocksAboutToTick`]]
-* <<clocksAboutToTick,`clocksAboutToTick == fmi3True`>> indicates that one or more clocks will tick at <<lastSuccessfulTime>> and, after calling <<fmi3NewDiscreteStates>>, <<fmi3GetClock>> should be called to gather all information related to <<outputClock,`output clocks`>> that have the value `fmi3ClockActive`.
+* <<clocksAboutToTick,`clocksAboutToTick == fmi3True`>> indicates that one or more clocks will tick at <<lastSuccessfulTime>> and, after calling <<fmi3UpdateDiscreteStates>>, <<fmi3GetClock>> should be called to gather all information related to <<outputClock,`output clocks`>> that have the value `fmi3ClockActive`.
 
 * `terminate` signals to the co-simulation algorithm that the FMU requests the end of the simulation for internal reasons.
 This is not due to an error, but a natural limit to the simulation time has been reached inside the FMU.
@@ -125,7 +125,7 @@ include::../headers/fmi3FunctionTypes.h[tag=CallbackIntermediateUpdate]
 Only the first discontinuity event at a Newtonian time instant shall be signaled using this function.
 There may be an event iteration in *Event Mode* at a Newtonian time instant causing super-dense time instants.
 
-Based on the information provided by <<fmi3CallbackIntermediateUpdate>>, additional information about the discontinuity at that time instant can be obtained by the co-simulation algorithm from the FMU by calling <<fmi3NewDiscreteStates>> and <<fmi3GetClock>>.
+Based on the information provided by <<fmi3CallbackIntermediateUpdate>>, additional information about the discontinuity at that time instant can be obtained by the co-simulation algorithm from the FMU by calling <<fmi3UpdateDiscreteStates>> and <<fmi3GetClock>>.
 
 ==== Early Return [[early-return]]
 
@@ -199,29 +199,29 @@ the FMU signals this via <<canReturnEarlyAfterIntermediateUpdate>> in the <<mode
 
 The FMU stops computation at the first encountered internal event (if any) and the event time is provided through the output argument <<lastSuccessfulTime>>, along with the reason <<eventEncountered, `eventEncountered == fmi3True`>>.
 The co-simulation algorithm will start event handling by calling <<fmi3EnterEventMode>> for that FMU to push the FMU into *Event Mode*.
-In this mode the co-simulation algorithm is supposed to catch all events through the <<fmi3NewDiscreteStates>> function.
+In this mode the co-simulation algorithm is supposed to catch all events through the <<fmi3UpdateDiscreteStates>> function.
 
 If an early-return request of the co-simulation algorithm is ignored by the FMU, then <<fmi3DoStep>> returns with <<earlyReturn,`earlyReturn == fmi3False`>>.
 The co-simulation algorithm can start a resynchronization of FMUs at an event time, if the <<currentCommunicationPoint>> has passed the event time, the co-simulation algorithm can roll-back the FMU and repeat the step with a suitable <<communicationStepSize>> (if the FMU supports the roll-back).
 
 [source, C]
 ----
-include::../headers/fmi3FunctionTypes.h[tag=NewDiscreteStates]
+include::../headers/fmi3FunctionTypes.h[tag=UpdateDiscreteStates]
 ----
 
-In *Event Mode* and only after <<fmi3DoStep>> returned with <<earlyReturn,`earlyReturn == fmi3True`>>, and <<fmi3EnterEventMode>> was called, the function <<fmi3NewDiscreteStates>> may be called.
+In *Event Mode* and only after <<fmi3DoStep>> returned with <<earlyReturn,`earlyReturn == fmi3True`>>, and <<fmi3EnterEventMode>> was called, the function <<fmi3UpdateDiscreteStates>> may be called.
 Only the following output arguments are defined by the FMU:
 
-- When `newDiscreteStatesNeeded = true`, the co-simulation algorithm should stay in *Event Mode* and another call to <<fmi3NewDiscreteStates>> is required.
+- When `discreteStatesNeedUpdate = true`, the co-simulation algorithm should stay in *Event Mode* and another call to <<fmi3UpdateDiscreteStates>> is required.
 
 - When <<nextEventTime,`nextEventTimeDefined == fmi3True`>>, an event time is available and the value is given by <<nextEventTime>>.
 This is the case when the model can report in advance the accurate time of the next predictable <<time event>>.
 
 - When <<terminateSimulation,`terminateSimulation == fmi3True`>>, the model requested to stop integration and the co-simulation algorithm should call <<fmi3Terminate>>.
 
-All other output arguments of <<fmi3NewDiscreteStates>> are undefined and have no meaning in Co-Simulation.
+All other output arguments of <<fmi3UpdateDiscreteStates>> are undefined and have no meaning in Co-Simulation.
 
-In *Event Mode* it is allowed to call `fmi3Get{VariableType}` after <<fmi3NewDiscreteStates>> has been called and it is allowed to call `fmi3Set{VariableType}` before calling <<fmi3NewDiscreteStates>>.
+In *Event Mode* it is allowed to call `fmi3Get{VariableType}` after <<fmi3UpdateDiscreteStates>> has been called and it is allowed to call `fmi3Set{VariableType}` before calling <<fmi3UpdateDiscreteStates>>.
 The FMU leaves *Event Mode* when the co-simulation algorithm calls <<fmi3EnterStepMode>>.
 
 //The following pseudo-code example shows an implementation of <<fmi3CallbackIntermediateUpdate>> that uses <<earlyReturn>>, <<earlyReturnRequested>> and //<<earlyReturnTime>> to handle events inside the FMU:
@@ -251,7 +251,7 @@ include::../headers/fmi3FunctionTypes.h[tag=EnterStepMode]
 
 If the co-simulation algorithm supports <<clock,`clocks`>>, all <<inputClock,`input clocks`>> of the model should be handled and <<inputClock>> events should be scheduled by the co-simulation algorithm.
 If an <<outputClock>> will tick, the FMU returns from <<fmi3DoStep>> with <<clocksAboutToTick,`clocksAboutToTick == fmi3True`>>.
-After calling <<fmi3NewDiscreteStates>>, the activation status of <<outputClock,`output clocks`>> can be retrieved with <<fmi3GetClock>>.
+After calling <<fmi3UpdateDiscreteStates>>, the activation status of <<outputClock,`output clocks`>> can be retrieved with <<fmi3GetClock>>.
 Then <<fmi3SetClock>> (and <<fmi3SetIntervalDecimal>> or <<fmi3SetIntervalFraction>> if necessary) should be invoked to enable the ticked <<inputClock,`input clocks`>>.
 Each <<clock>>, that ticks outside of the FMU (i.e. <<inputClock>>), is activated for an FMU based on its <<clockReference>> and an associated <<fmi3SetClock>> in *Event Mode*.
 <<fmi3SetClock>> can activate multiple <<clock,`clocks`>> with each call.
@@ -265,17 +265,17 @@ The co-simulation algorithm sets and gets <<clock>> variable values similar to t
 ===== Computation in Co-Simulation [[computation-clocked-co-simulation]]
 
 Similar to FMI for Model Exchange, in order to activate <<inputClock,`input clocks`>> of an FMU, it is required to push the FMU into *Event Mode* by calling <<fmi3EnterEventMode>>.
-If <<fmi3DoStep>> returns with <<eventEncountered,`eventEncountered == fmi3True`>> or <<clocksAboutToTick,`clocksAboutToTick == fmi3True`>>, the FMU must be pushed into *Event Mode* and <<fmi3NewDiscreteStates>> must be called.
+If <<fmi3DoStep>> returns with <<eventEncountered,`eventEncountered == fmi3True`>> or <<clocksAboutToTick,`clocksAboutToTick == fmi3True`>>, the FMU must be pushed into *Event Mode* and <<fmi3UpdateDiscreteStates>> must be called.
 
 In order to retrieve the status of <<outputClock,`output clocks`>>, <<fmi3GetClock>> and <<fmi3GetIntervalDecimal>> or <<fmi3GetIntervalFraction>> need to be called in the *Event Mode*.
-If the <<fmi3DoStep>> return value is <<fmi3OK>>, the calling of <<fmi3GetClock>>, <<fmi3GetIntervalDecimal>>, <<fmi3GetIntervalFraction>>, <<fmi3NewDiscreteStates>> is only meaningful after <<fmi3SetClock>> in the case of super-dense time iterations are desired.
+If the <<fmi3DoStep>> return value is <<fmi3OK>>, the calling of <<fmi3GetClock>>, <<fmi3GetIntervalDecimal>>, <<fmi3GetIntervalFraction>>, <<fmi3UpdateDiscreteStates>> is only meaningful after <<fmi3SetClock>> in the case of super-dense time iterations are desired.
 
 Similar to the Model Exchange case, the allowed call order is <<fmi3GetClock>>, <<fmi3GetIntervalDecimal>>, <<fmi3GetIntervalFraction>>, `fmi3Get{VariableType}`, `fmi3Set{VariableType}`.
 Function calls of this call order can be omitted.
 
 The handling of return values of function calls is identical to Co-Simulation.
 
-If <<terminateSimulation,`terminateSimulation`>> becomes `fmi3True` after calling <<fmi3NewDiscreteStates>> then the co-simulation should be terminated by calling <<fmi3Terminate>>.
+If <<terminateSimulation,`terminateSimulation`>> becomes `fmi3True` after calling <<fmi3UpdateDiscreteStates>> then the co-simulation should be terminated by calling <<fmi3Terminate>>.
 Once handling of the <<clock>> events finished, the co-simulation algorithm calls <<fmi3EnterStepMode>> for that FMU to push it into *Step Mode*.
 Note that it is not allowed to call <<fmi3EnterEventMode>> or <<fmi3EnterStepMode>> in Scheduled Execution.
 

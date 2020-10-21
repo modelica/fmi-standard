@@ -488,15 +488,15 @@ typedef fmi3Status fmi3SetIntervalFractionTYPE(fmi3Instance instance,
                                                size_t nValues);
 /* end::SetIntervalFraction[] */
 
-/* tag::NewDiscreteStates[] */
-typedef fmi3Status fmi3NewDiscreteStatesTYPE(fmi3Instance instance,
-                                             fmi3Boolean *newDiscreteStatesNeeded,
+/* tag::UpdateDiscreteStates[] */
+typedef fmi3Status fmi3UpdateDiscreteStatesTYPE(fmi3Instance instance,
+                                             fmi3Boolean *discreteStatesNeedUpdate,
                                              fmi3Boolean *terminateSimulation,
                                              fmi3Boolean *nominalsOfContinuousStatesChanged,
                                              fmi3Boolean *valuesOfContinuousStatesChanged,
                                              fmi3Boolean *nextEventTimeDefined,
                                              fmi3Float64 *nextEventTime);
-/* end::NewDiscreteStates[] */
+/* end::UpdateDiscreteStates[] */
 
 /***************************************************
 Types for Functions for Model Exchange
