@@ -79,4 +79,5 @@ Export-Schema Enumeration 1 -schema fmi3Variable.xsd
 Export-Schema Annotations 2
 Export-Schema ModelStructure 2
 Export-Schema ModelExchange 2
-Export-Schema BasicCoSimulation 2
+Export-Schema CoSimulation 2
+Export-Schema ScheduledExecution 2

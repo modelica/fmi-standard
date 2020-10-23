@@ -131,7 +131,7 @@ typedef fmi3Instance fmi3InstantiateCoSimulationTYPE(
     fmi3String                     resourceLocation,
     fmi3Boolean                    visible,
     fmi3Boolean                    loggingOn,
-    fmi3Boolean                    eventModeRequired,
+    fmi3Boolean                    eventModeUsed,
     const fmi3ValueReference       requiredIntermediateVariables[],
     size_t                         nRequiredIntermediateVariables,
     fmi3InstanceEnvironment        instanceEnvironment,
@@ -380,21 +380,25 @@ typedef fmi3Status fmi3SetFMUStateTYPE (fmi3Instance instance, fmi3FMUState  FMU
 typedef fmi3Status fmi3FreeFMUStateTYPE(fmi3Instance instance, fmi3FMUState* FMUState);
 /* end::FreeFMUState[] */
 
-/* tag::SerializedFMUState[] */
+/* tag::SerializedFMUStateSize[] */
 typedef fmi3Status fmi3SerializedFMUStateSizeTYPE(fmi3Instance instance,
                                                   fmi3FMUState  FMUState,
                                                   size_t* size);
+/* end::SerializedFMUStateSize[] */
 
+/* tag::SerializeFMUState[] */
 typedef fmi3Status fmi3SerializeFMUStateTYPE     (fmi3Instance instance,
                                                   fmi3FMUState  FMUState,
                                                   fmi3Byte serializedState[],
                                                   size_t size);
+/* end::SerializeFMUState[] */
 
+/* tag::DeSerializeFMUState[] */
 typedef fmi3Status fmi3DeSerializeFMUStateTYPE   (fmi3Instance instance,
                                                   const fmi3Byte serializedState[],
                                                   size_t size,
                                                   fmi3FMUState* FMUState);
-/* end::SerializedFMUState[] */
+/* end::DeSerializeFMUState[] */
 
 /* Getting partial derivatives */
 /* tag::GetDirectionalDerivative[] */
@@ -484,15 +488,15 @@ typedef fmi3Status fmi3SetIntervalFractionTYPE(fmi3Instance instance,
                                                size_t nValues);
 /* end::SetIntervalFraction[] */
 
-/* tag::NewDiscreteStates[] */
-typedef fmi3Status fmi3NewDiscreteStatesTYPE(fmi3Instance instance,
-                                             fmi3Boolean *newDiscreteStatesNeeded,
+/* tag::UpdateDiscreteStates[] */
+typedef fmi3Status fmi3UpdateDiscreteStatesTYPE(fmi3Instance instance,
+                                             fmi3Boolean *discreteStatesNeedUpdate,
                                              fmi3Boolean *terminateSimulation,
                                              fmi3Boolean *nominalsOfContinuousStatesChanged,
                                              fmi3Boolean *valuesOfContinuousStatesChanged,
                                              fmi3Boolean *nextEventTimeDefined,
                                              fmi3Float64 *nextEventTime);
-/* end::NewDiscreteStates[] */
+/* end::UpdateDiscreteStates[] */
 
 /***************************************************
 Types for Functions for Model Exchange

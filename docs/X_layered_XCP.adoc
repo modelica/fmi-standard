@@ -1,0 +1,116 @@
+= XCP and FMI 3.0
+:sectnums:
+:sectnumlevels: 5
+:toc: left
+:toc-title: Contents
+:toclevels: 5
+:xrefstyle: short
+:docinfo: shared
+:docinfodir: docs
+:stylesheet: docs/fmi-spec.css
+:stem: latexmath
+:source-highlighter: highlightjs
+:nofooter:
+:favicon: images/favicon.ico
+:revdate: unreleased
+:revnumber: 3.0
+:icons: font
+
+This layered standard defines, based on FMI 3.0, how to describe and implement XCP support for FMUs.
+
+{empty} +
+{empty}
+
+Copyright (C) 2008-2011 MODELISAR Consortium and 2012-2020 The Modelica Association Project FMI.
+
+This document is licensed under the Attribution-ShareAlike 4.0 International license.
+The code is released under the 2-Clause BSD License.
+The licenses text can be found in the https://raw.githubusercontent.com/modelica/fmi-standard/master/LICENSE.txt[LICENSE.txt] file that accompanies this distribution.
+
+{empty}
+
+== Introduction
+
+=== Intend of this Document
+
+FMI 3.0 was extended also with virtual Electronic Control Units (virtual ECUs) in mind.
+Engineers can measure into ECUs using the XCP protocol and A2L variable descriptions:
+
+[quote, ASAM e.V., https://www.asam.net/standards/detail/mcd-1-xcp/[ASAM MCD-1 XCP]]
+____
+The ASAM MCD-1 XCP (Universal Measurement and Calibration Protocol) standard defines a bus-independent, master-slave communication protocol to connect ECUs with calibration systems.
+XCP is short for Universal Measurement and Calibration Protocol. The primary purpose of XCP is to adjust internal parameters and acquire the current values of internal variables of an ECU.
+The first letter X in XCP expresses the fact that the protocol is designed for a variety of bus systems.
+The standard consists of a base standard, which describes memory-oriented protocol services without direct dependencies on specific bus systems.
+Several associate standards contain the transport layer definitions for CAN, FlexRay, Ethernet (UDP/IP and TCP/IP), serial links (SPI and SCI) and USB.
+____
+
+This layered standard describes how an FMU advertises its XCP capabilities to importers and MCD tools using the XCP protocol.
+
+=== Rough Outline of the Approach
+
+The XCP description file for the virtual ECU wrapped as FMU will be placed into the `/extra/org.modelica.fmi.layered_XCP` folder.
+This description file follows the https://www.asam.net/standards/detail/mcd-2-mc/[ASAM MCD-2 MC] standard (aka `ASAP2`, also `A2L`) and customarily carries the file extension `.a2l`.
+
+[quote, ASAM e.V., https://www.asam.net/standards/detail/mcd-2-mc/[ASAM MCD-2 MC]]
+____
+ASAM MCD-2 MC (aka ASAP2) defines the description format of the internal ECU variables used in measurement and calibration.
+Measurement & calibration systems (MC-systems) require this description for both the parameterization of scalar constants, curves and maps of the ECU software and for recording the system's response via measurement variables during real-time testing.
+The description contains information about data types, dimensions, record layouts and memory locations of ECU variables.
+The standard also describes how the variable values are converted into human-readable quantities and displayed in an MC-system.
+____
+
+=== Comments about this Approach
+
+_[This standard will have no effect on the FMU interface, nor the C-API behavior._
+_The XCP slave inside the FMU will most likely run in its own thread and leave the rest of the operation of the FMU unaffected._
+_The FMU must configure the XCP slave and trigger certain actions and provide timing information._
+_This approach can also be used for plant models when the FMU exporter can generate an appropriate `A2L` file._
+_It is assumed that the XCP slave (in the FMU) communicates with the XCP master (in the MC tool) using a separate bus channel, e.g. the IP stack of the host OS._
+_Thus, the communication of the XCP service is not mixed with the simulated bus communication of the ECU wrapped in the FMU.]_
+
+== Details
+
+=== A2L Description Files
+
+FMI 3.0 introduces an `/extra` folder in its `zip` structure.
+The A2L description files will be placed under the reverse domain name controlled by the MAP FMI: `/extra/org.modelica.fmi.layered_XCP`.
+All versions of the `A2L` standard are allowed and it is the MCD tool's responsibility to handle each version correctly.
+It is currently not recommended to supply multiple versions of the `A2L` file due to their considerable size.
+The root name of the description files shall be identical to the FMU name and are case sensitive.
+
+This standard forbids the use of the `including mechanism` of additional `A2L` files to simplify complete extraction and copying of `A2L` files.
+
+It is recommended to include `IF_DATA XCP` elements to help MCD tools to connect and interact with the XCP slave inside the FMU more reliably and without user interaction.
+
+=== XCP Slave Startup and Shutdown
+
+It is recommended to start the XCP service during `fmi3EnterInitializationMode` (or earlier) and shut down during `fmi3Terminate` (or later) if the FMU has no explicit power-up signal to simplify user interactions between simulator and MCD tool.
+
+If the FMU contains a virtual ECU with power-up control (K15), all build in OS and Basic Software services (including XCP) should follow normal power-up protocol.
+
+_[The A2L/XCP standards allow to measure variables synchronous to different time- or angular-based events._
+_This requires to invoke the XCP service with a so-called raster ID in the thread which is executed for an event._
+_Calibration is typically performed in a background thread._
+_Refer to the A2L/XCP standards for more information.]_
+
+=== Variable Visibility
+
+`modelDescription.xml` files publish a certain set of variables and parameters.
+The `A2L` file also publishes a set of FMU variables and parameters.
+This standard expressly does not restrict the relationship between both sets of variables.
+
+_[As a matter of fact, it is quite likely that the variables published in `modelDescription.xml` is a minimal set required for connectivity reasons._
+_The `A2L` file might publish a much larger set of variables and parameters that the user can selectively chose to measure or calibrate.]_
+
+=== Numeric Effects of XCP Access
+
+While measurement of FMU internal variables does not have a numeric effect on the FMU, so called calibration does.
+Calibration is the tuning of FMU internal parameters.
+Such changes will affect the numeric behavior of the FMU.
+If the FMU contains controller code, numeric stability or energy preservation laws are of lesser concern.
+On the other hand, plant models offering XCP access for parameter calibration may introduce surprising numerical effects in solvers that might require proper handling, like resetting solvers with every XCP write action.
+
+It is therefore necessary to synchronize XCP variable access (read and write) with the state of the FMU.
+_[For instance is time not linear in Model Exchange and Intermediate Variable Access might also introduce surprising measurements in Co-Simulation._
+_Appropriate care must be taken when to serve XCP master requests to ensure simulation and measurement integrity.]_
