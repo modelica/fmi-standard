@@ -4,7 +4,7 @@
 #include "fmi2TypesPlatform.h"
 
 /* This header file must be utilized when compiling an FMU or an FMI master.
-   It declares data and function types for FMI 2.0.1
+   It declares data and function types for FMI 2.0.2
 
    Revisions:
    - Sep. 30, 2019: License changed to 2-clause BSD License (without extensions)
@@ -50,7 +50,7 @@
 
 
    Copyright (C) 2008-2011 MODELISAR consortium,
-                 2012-2019 Modelica Association Project "FMI"
+                 2012-2020 Modelica Association Project "FMI"
                  All rights reserved.
 
    This file is licensed by the copyright holders under the 2-Clause BSD License
