@@ -2,15 +2,15 @@
 
 ## v2.0.2 (unreleased)
 
-*	`p. 22` Fixed: Discourage use of memory management functions (#931)
-*	`p. 27` Fixed formula for directional derivatives (#668)
-*	`p. 29` Fixed: Correct code example describing Jacobian construction using fmi2GetDirectionalDerivative (#867)
-*	`p. 29` Fixed: Formatting of hints on graph coloring algorithm  (#703)
-*	`p. 37ff` Fixed: Unit speficiation error relative quantity usage (#1267)
-*	`p. 67` Fixed: "Apostrophe" instead of "Right Single Quotation Mark" in EBNF (#692)
-*	`p. 68` Clarified: allowing 0-based arrays (#1197)
-*	`p. 70` Added: /extra directory as clarification of storage location for additional files, non-functional change (#1207)
-*	`p. 91` Fixed: typos in pseudocode (#1269)
+* `p. 22` Fixed: Discourage use of memory management functions (#931)
+* `p. 27` Fixed formula for directional derivatives (#668)
+* `p. 29` Fixed: Correct code example describing Jacobian construction using fmi2GetDirectionalDerivative (#867)
+* `p. 29` Fixed: Formatting of hints on graph coloring algorithm  (#703)
+* `p. 37ff` Fixed: Unit speficiation error relative quantity usage (#1267)
+* `p. 67` Fixed: "Apostrophe" instead of "Right Single Quotation Mark" in EBNF (#692)
+* `p. 68` Clarified: allowing 0-based arrays (#1197)
+* `p. 70` Added: /extra directory as clarification of storage location for additional files, non-functional change (#1207)
+* `p. 91` Fixed: typos in pseudocode (#1269)
 
 ## v2.0.1 (2019-10-31)
 
