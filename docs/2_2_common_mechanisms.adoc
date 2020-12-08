@@ -278,18 +278,16 @@ _]_
 
 ===== Getting and Setting Variable Values [[get-and-set-variable-values]]
 
-The actual values of the variables that are defined in the <<modelDescription.xml>> can be inquired with the following functions.
-Restrictions for certain variable types, variable causalities and variable variabilities are described in the state machine and state descriptions (for example <<common-state-machine>>).
+Restrictions for setting and getting of variables with certain types, causalities and variabilities are described in the state machine and state descriptions (see <<common-state-machine>>, <<state-machine-model-exchange>> in case of Model Exchange, <<state-machine-co-simulation>> for Co-Simulation and <<state-machine-scheduled-execution>> for Scheduled Execution).
+
+The value of a variable may only be accessed with the respective `fmi3Get/Set{VariableType}` for its type.
+
+The current values of the variables can be inquired with the following functions:
 
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=Getters]
 ----
-
-Get actual values of variables by providing their variable references.
-_[These functions are used to get the values of output variables if a model is connected with other models.
-Since state derivatives are also variables, it is also possible to get the value of a state derivative.
-Furthermore, the actual value of every variable defined in the <<modelDescription.xml>> file can be determined at the actually defined time instant (see <<definition-of-model-variables>>).]_
 
 * `valueReferences` is a vector of `nValueReferences` value handles that define the variables that shall be inquired.
 
@@ -301,16 +299,12 @@ Furthermore, the actual value of every variable defined in the <<modelDescriptio
 
 The strings returned by `fmi3GetString`, as well as the binary values returned by `fmi3GetBinary`, must be copied by the importer because the allocated memory for these strings might be deallocated or overwritten by the next call of an FMU function.
 
-For Model Exchange: <<fmi3Discard,`fmi3Status == fmi3Discard`>> is possible for `fmi3GetFloat32` and `fmi3GetFloat64` only, but not for `fmi3Get*Int*`, `fmi3GetBoolean`, `fmi3GetString`, `fmi3GetBinary`, because these are discrete-time variables and their values can only change at an event instant where <<fmi3Discard>> does not make sense.
-
-It is also possible to set the values of certain variables at particular instants in time using the following functions:
+It is possible to set the values of variables using the following functions:
 
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=Setters]
 ----
-
-Set <<parameter,`parameters`>>, <<input,`inputs`>>, and <<start>> values, and re-initialize caching of variables that depend on these variables (see <<definition-of-model-variables>> for the exact rules on which type of variables `fmi3Set{VariableType}` can be called, as well as <<state-machine-model-exchange>> in case of Model Exchange, and <<state-machine-co-simulation>> for Co-Simulation and <<state-machine-scheduled-execution>> for Scheduled Execution).
 
 * `valueReferences` is a vector of `nValueReferences` value handles that define the variables that shall be set.
 
@@ -321,10 +315,6 @@ Set <<parameter,`parameters`>>, <<input,`inputs`>>, and <<start>> values, and re
 * `nValues` provides the number of values in the `values` vector (and `sizes` vector, where applicable) which is only equal to `nValueReferences` if all <<valueReference>>pass:[s] point to scalar variables.
 
 All strings passed as arguments to `fmi3SetString`, as well as all binary values passed as arguments to `fmi3SetBinary`, must be copied during these function calls, because there is no guarantee of the lifetime of strings or binary values, when these functions return.
-
-Note, <<fmi3Discard,`fmi3Status == fmi3Discard`>> is possible for the `fmi3Set{VariableType}` functions.
-
-The value of a variable may only be accessed with the respective `fmi3Get/Set{VariableType}` for its type.
 
 ==== Advancing Time [[advancing-time]]
 
@@ -348,119 +338,21 @@ The time itself is communicated to the FMU as <<activationTime>> argument of <<f
 Depending on the instantiated FMI type, the importer is restricted in what functions it is allowed to call in order to drive the simulation.
 The following chapters will focus on what mechanisms are relevant for the interface type at hand, without trying to constantly declare which functions not to use because they belong to the other interface type mechanisms.
 
-==== Operation on Clocks [[operation-on-clocks]]
+==== Clocks [[clocks]]
 
-In the following section the operations on <<clock,`clocks`>> are described.
-Clocks are defined for the exact timing of evaluations of clocked model partitions and exact timing of event handling across FMUs.
-_[In FMI 2.0 event detection in a system of FMUs was still done inside each of the FMUs individually with all the issues of floating point arithmetic._
-_Clocks offer a way to delegate event triggering to the importer to ensure that events meant to trigger at the exact same time will be synchronized across FMUs.]_
+===== Motivation and Definitions
 
-Two types of <<clock,`clocks`>> are available, designed to address similar use cases with differences in details.
-The <<clock>> type "<<SynchronousClocks,Synchronous Clocks>>"" complies with the limitations imposed by the synchronous clock theory, the other clock type "<<CommunicationPointClocks,Communication Point Clocks>>" is a general purpose co-simulation clock for providing suitable communication points for the timed evaluation of model partitions.
-The term <<clock>> is used for both <<clock>> types.
+Clock variables synchronize events between importer and across FMUs, by
+ - communicating exactly which specific event happens
+ - and exactly at which time instant, independent from continuous time specified by the arguments of `fmi3SetTime` or `fmi3DoStep`.
 
-===== Synchronous Clocks [[SynchronousClocks]]
-
-_[The main use case of synchronous clocks is to facilitate the simulation of systems with:_
-
-- _different components whose behavior is triggered at different times by events, and_
-
-- _the components that trigger the events are different than the components handling those events._]
-
-.Sample scenario showcasing use of synchronous clocks.
-[[figure-synchronous-clock-example]]
-image::images/synchronous-clock-example.svg[width=80%, align="center"]
-
-_[Consider the system in <<figure-synchronous-clock-example>>:_
-
-- _The controller samples the plant at some rate latexmath:[r], and the plant is continuously affected by the actuator values between samples._
-
-- _A supervisor adapts the controller behavior when some criteria on latexmath:[u] is met._
-
-- _When there is a new sample of latexmath:[x], the equations in blue have to be executed synchronously (i.e., at the exact same time)._
-
-- _Similarly, when the supervisor decides to update the controller behavior, the equations in purple have to be executed synchronously._
-
-- _latexmath:[previous(u_r)] means the value of latexmath:[u_r] computed at the previous sample by the controller.]_
-
-.Example plot of the scenario introduced in <<figure-synchronous-clock-example>>.
-[[figure-synchronous-clock-example-plot]]
-image::images/synchronous-clock-example-plot.svg[width=30%, align="center"]
-
-_[<<figure-synchronous-clock-example-plot>> illustrates a potential behavior of this example.
-Note that it is the supervisor that decides when to adapt the behavior of the controller, but the controller has to be executed when that happens.
-Also note that the change in controller behavior should only be reflected on its output when the next sample of the plant is done.]_
-
-.Realization of the system in <<figure-synchronous-clock-example>> using FMI 2.0 Model Exchange FMUs.
-[[figure-synchronous-clock-scenario]]
-image::images/synchronous-clock-scenario.svg[width=80%, align="center"]
-
-_[In order to understand the problem that synchronous clocks are trying to solve, it helps to try to implement the above system with FMI 2.0 Model Exchange FMUs.
-Such implementation is illustrated in <<figure-synchronous-clock-scenario>>.
-In this implementation, time and state events can be used to mimic the behavior in <<figure-synchronous-clock-example-plot>> with the Sensor FMU or Supervisor FMU driving the simulation into event mode when the events happen.]_
-
-_[However, this approach poses a big problem: since both Ctrl and Sensor FMUs have time events to sample with frequency latexmath:[x], it is unclear how the importer will guarantee that the two are going to executed in the same event mode._
-_Due to floating point precision, it can happen that the importer takes both FMUs into event mode, but only one knows that it is entering event mode because it has to sample an input variable._
-_It makes it unclear which equations should be executed.]_
-
-_[This is the problem that synchronous clocks solve._
-_Getting back to the example in <<figure-synchronous-clock-scenario>>, by making Ctrl and Sensor share a clock, it will be clear which FMU is triggering the event, and it is easier for them to be executed at the same exact time.]_
-
-.Realization of the system in <<figure-synchronous-clock-example>> using synchronous clocks.
-[[figure-synchronous-clock-scenario-clocked]]
-image::images/synchronous-clock-scenario-clocked.svg[width=80%, align="center"]
-
-_[<<figure-synchronous-clock-scenario-clocked>> illustrates one way to use clocks to realize the system introduced in <<figure-synchronous-clock-example>>.
-The red lines denote clock connections.
-The Ctrl FMU declares an output clock latexmath:[r], and the Sensor and Actuator FMUs declare input clocks, connected to latexmath:[r].
-This way, the importer knows that when the Ctrl clock latexmath:[r] ticks, then the Sensor and Actuator FMUs will be informed that the clock ticked and execute the corresponding equations.]_
-
-_[In general:_
-
-- _The ticking of an output clock is determined by the FMU that declares it._
-_So in <<figure-synchronous-clock-scenario-clocked>>, the Supervisor FMU determines the ticking of latexmath:[s] and Ctrl FMU determines the ticking of latexmath:[r]._
-_The FMU Ctrl declared both an input clock and an outut clock, and the Sensor and Actuator FMUs both declare an input clock._
-
-- _The ticking of an input clock is signaled by the importer, which in turn will find the source that determines the ticking of such clock.]_
-
-A clocked partition is a set of equations that are associated to a <<clock>> and are executed when the corresponding <<clock>> is active.
-A clocked partition is mathematically defined as:
-
-[latexmath]
-++++
-x_j=\begin{cases}
-    x_{j-1} & \text{if subactive}\\
-    f_j(x_{j-1},u_j,t_j) & \text{else}
-    \end{cases}
-++++
-
-[latexmath]
-++++
-y_j=g_j(x_{j-1},u_j,t_j);
-++++
-
-_[TODO: shouldn't this be:
-Claudio: rewrite this to make it clearer: the distinction between these two are just local vars and outputs.
-Claudio: Also relate to the previous example.
-Claudio: Also change the modelica sentence.
-Claudio: Make it clear that clocks are just a way to implement numerically sound event having across different FMUs.
-]_
-[latexmath]
-++++
-y_j=g_j(x_{j},u_j,t_j);
-++++
-
-
-[latexmath]
-++++
-\text{with } j=0,1,2,...;x_{-1}=x_{\mathit{start}}
-++++
+FMI specifies clearly the behavior of a clocked FMU.
+FMI does not specify how the importer uses this functionality.
+This will allow different use cases to be implemented with different semantics.
 
 Variables latexmath:[x_j] are called `states of a clocked partition`, or `discrete-time states` and latexmath:[j] is the latexmath:[j+1]th tick of the associated <<clock>>.
 Variables latexmath:[u_j] are the (external or <<local>>) <<input,`inputs`>> and latexmath:[y_j] are the (external or <<local>>) <<output,`outputs`>> of a clocked partition.
 A discrete-time state variable can be of any type (e.g. `fmi3Float64` or `fmi3Boolean`, but not of <<clock>> type).
-
-_[TODO: (external or local) is here very confusing]_
 
 A clocked partition is not executed during *Initialization Mode*, but it is executed the first time at its first <<clock>> tick.
 The associated <<clock>> of the model partition is synchronous to its discrete-time states.
@@ -468,165 +360,47 @@ The associated <<clock>> of the model partition is synchronous to its discrete-t
 Discrete-time states are listed in the `<ModelStructure>`.
 They can have initial values defined by XML attributes <<initial>> and <<start>>, or the initial values are computed internally as a function of the parameters.
 
-There are two kinds of evaluation modes:
-[start=1]
-* Regular evaluation for an active <<clock>>: <<state>> and <<output>> equations are evaluated.
-States get updated.
-Current input values are taken into account.
-* Partial evaluation for a subactive <<clock>>: <<state,`states`>> are left unmodified, only outputs are computed.
-Current input values are taken into account.
-+
-_[This mode can be used to compute partial derivatives_ latexmath:[\partial y_j / \partial x_{j-1}] _.]_
+// TODO: add references to Modelica clocks paper PC06 MSL12
+// TODO: remove clockReference - clocks are variables, dependencies can be used just like for other variables
 
-===== Communication Point Clocks [[CommunicationPointClocks]]
 
-Communication Point Clocks, introduced here, are used to define the communication points of model partitions (defined below).
-These <<clock,`clocks`>> are not compatible with synchronous clock theory and must not be used together with <<SynchronousClocks,Synchronous Clocks>> in one model.
+// --> Mathematical Description of Event Mode
+// TODO: non-normative call sequence proposal (maybe import from Reference/Example FMU code)
+// TODO: definition clocked partition and clocked variables with the equations (1) and (2) --> Event Mode
+// TODO: describe auto-reset of clocks in UdpateDiscreteStates --> Event Mode
+// TODO: describe deactivation of clock via fmi3SetClock(..., fmi3Deactivate) - clocked variable values return to previous values --> Event Mode
 
-A model partition is mathematically defined as:
+===== Concepts and Representation
+// TODO: Definition of time-base clocks and triggered clocks
 
-[latexmath]
-++++
-x_j=f_j(x_{j-1},u_j,t_j)
-++++
+// TODO: import and improve table from PPT
+// TODO: forward link to "Clock Type Definition" and fix that section
+// TODO: forward link to attributes: triggeredBy (clock union), priority,
 
-_[TODO: why do we need y_j here? it is not mentioned afterwards]_
-[latexmath]
-++++
-y_j=g_j(x_{j-1},u_j,t_j)
-++++
+====== Scheduled Execution
 
-[latexmath]
-++++
-\text{with } j=0,1,2,...;x_{-1}=x_{\mathit{start}}
-++++
+An external scheduler needs to know when an <<triggered>> <<inputClock>> depends on an <<outputClock>> of the same FMU.
+When the <<outputClock>> ticks, the scheduler will trigger the corresponding <<inputClock>> according to all other scheduling constraints.
+The <<triggeredBy>> attribute of an <<inputClock>> defines such a relationship.
 
-where:
+In case more than one clock have to be activated at the same time instant, the scheduler needs a priority to define the activation sequence.
+This ordering is defined by the <<priority>> attributes of the <<inputClock, `input clocks`>>.
 
-* latexmath:[x] denotes the variables that are associated with the model partition.
-These are the variables that are computed when the model partition is evaluated.
-Each variable in latexmath:[x] is associated with one, and only one, model partition.
-Multiple model partitions, when evaluated, may read the value of a single variable, but only one will change it.
+_[For real-time computation use cases, the priority information is used also for task preemption configurations._
+_It is therefore important to restrict the number of distinct priority levels for an FMU to available priority levels on the target platform and/or to avoid unnecessary computational overhead._
+_A common number of different priority levels is, e.g., 100 (0 to 99), as defined in Linux based operating systems.]_
 
-* latexmath:[u_j] denotes the variables that are read, but not changed, when the model partition is evaluated.
-
-* latexmath:[t_j] denotes the time at which the model partition is evaluated.
-
-* latexmath:[x_{\mathit{start}}] denotes the start value of the variables that are associated with the model partition.
-This is the value that has been computed before <<fmi3ExitInitializationMode>> is called.
-
-Communication Point Clocks can also be defined for continuous or piecewise continuous parts of the model.
-
-Please refer to <<example-scheduled-execution>> for an FMU example of scheduled execution.
-
-====== Clock Priority
-
-The <<clock,`clocks`>> are ordered descending based on their priorities.
-It is nevertheless possible to define multiple <<clock,`clocks`>> with the same priority.
-No ordering is defined for <<clock,`clocks`>> of the same priority.
-If a computational order information is needed, different priorities for <<clock,`clocks`>> have to be defined.
-The priority of a <<clock>> has to be defined in the <<modelDescription.xml>> via the <<clock>> variable integer attribute `priority` - smaller values have a higher priority.
+_[The clock priorities are local to an FMU._
+_It is not possible for an FMU exporting tool to know in advance the priorities of other FMUs that will be connected to an FMU in a simulation setup._
+_It is the task of the importer to derive a computational order for the computation of two or more distinct FMUs based on the local FMU clock priorities and input-output relationships of connected FMUs.]_
 
 _[For <<periodic>> <<clock,`clocks`>> it is recommended to derive the priorities based on a rate monotonic scheduling scheme (smallest period leads to highest priority, that is, has the smallest priority value.]_
 
-_[The clock priorities are local to an FMU.
-It is not possible for an FMU exporting tool to know in advance the priorities of other FMUs that will be connected to an FMU in a simulation setup.
-It is the task of the simulation algorithm to derive a computational order for the computation of two or more distinct FMUs based on the local FMU clock priorities and input-output relationships of connected FMUs.]_
+====== Time-Based Clocks
 
-_[For real-time computation use cases (e.g., in Scheduled Execution), the priority information is used also for task preemption configurations.
-It is therefore important to restrict the number of distinct priority levels for an FMU to available priority levels on the target platform and/or to avoid unnecessary computational overhead.
-A common number of different priority levels is, e.g., 100 (0 to 99), as defined in Linux based operating systems.]_
-
-===== Output Clocks [[outputClockVariant]]
-
-An <<outputClock>> is a general <<clock>> that ticks when a time-, state- or step-event occurs in the continuous-model partition of the FMU (for <<CommunicationPointClocks,Communication Point Clocks>> these <<outputClock>> activations can occur in all model partitions) and are identified based on their <<valueReference>>.
-The clock can be <<periodic>> or <<periodic,aperiodic>>.
-
-_[Example: If_ latexmath:[b = x > 0] _, and a <<state event>> is defined when b changes from `false` to `true`, and b is defined as <<outputClock>>, then this <<clock>> is active whenever x changes from negative to positive values.]_
-
-Since <<outputClock,`output clocks`>> are ticking based on model internal information, it is required in case of FMI for Co-Simulation to signal the ticking of an <<outputClock>> to the simulation environment during a <<fmi3DoStep>> or <<fmi3ActivateModelPartition>> computation.
-In most cases _[TODO: not all cases? which cases? if the time of the clock tick is a communication point already?]_ the signaling of an <<outputClock>> tick requires creating a communication point for exchanging additional information (i.e. variable values) with the simulation environment.
-Additional cases need to be handled if a <<clock>> tick is not associated to an event that requires the creation of a communication point for the model partition that generated the event. _[TODO: what?]_
-
-_[Outside of the FMU it is not known in advance when this <<clock>> ticks._
-_Instead, only when the <<clock>> is activated by the FMU, then the environment is informed that the <<clock>> ticks at this time instant._
-_It is the task of the environment to handle the messaged events appropriately based on the <<clockReference>> information._
-_Example:_
-// TODO: add example
-_]_
-
-
-_[TODO: local clocks should be introduced here too, they are just used afterwards.
-Issue 1172 will address the definition of local variables (including local clocks).
-Then we can introduce a section here on local clocks.
-]_
-
-===== Input Clocks [[inputClockVariant]]
-
-An <<inputClock>> is a <<periodic>> or <<periodic,aperiodic>> <<clock>> that is defined by a <<clock>> outside of the FMU.
-I.e., only when the <<clock>> is activated by the environment of the FMU, then the FMU is informed that the <<clock>> ticks at this time instant.
-An <<inputClock,input clocks>> must be independent to all other input clocks.
-_[TODO: what does that mean?]
-If dependent clocks exist, they can be exposed as <<local>> or <<output>> clocks.
-
-_[
-TODO:
-Claudio: Explain why we have periodic clocks: because of the numerical problems.
-]_
-
-===== Clock Unions [[clock-relationships-for-communication-point-clocks]]
-
-It is possible for an <<inputClock>> to depend on an <<outputClock>> of the same FMU using the <<triggeredBy>> attribute of <<inputClock>> variables.
-An <<outputClock,`output clock`>> and the associated <<inputClock,`input clocks`>> define a clocks union to indicate that the <<outputClock>> triggers the associated <<inputClock, `input clocks`>> at the same time instant.
-It is only meaningful to combine an <<outputClock,`output clock`>> with an <<periodic,aperiodic>> <<inputClock>>.
-It is possible to define multiple unions of <<clock,`clocks`>>.
-An <<inputClock,`input clock`>> may be contained in at most one clock union _[naturally limited by the single <<triggeredBy>> attribute]_.
-An <<outputClock,`output clock`>> can be part of multiple clock unions.
-
-Clock unions are needed to allow for an external scheduler to achieve an optimal control of model partitions and are applicable to both <<SynchronousClocks,Synchronous Clocks>> and <<CommunicationPointClocks,Communication Point Clocks>> and therefore apply to ME, CS and SE.
-_[TODO: ??? model partitions only belong to Communication point clocks, how can this be true??
-Claudio:
-- the FMU needs a mechanism to tell the importer that the FMU needs to go into event iteration when its own output clock ticks.
-  It's just a mechanism for the FMU to use its own output clocks as an input clock without having to rely on the master.
-- The importer need to trigger explicitly that input clock (refer to input clock section) after the output clock ticks.
-- Replace table by "Only aperiodic input clocks can be part of a union.".
-]_
-_[TODO: Does the importer have to activate the corresponding input clocks???]_
-
-The following table lists which <<inputClock>> variants can be combined with which <<outputClock>> variants:
-
-.Allowed input and output clock combinations.
-[#table-clock-combinations]
-[cols="1,2"]
-|===
-|Input clock variant
-|Output clock variant
-
-|aperiodic
-|aperiodic, periodic, strictly periodic
-
-|periodic
-|-
-
-|strictly periodic
-|-
-|===
-
-[#ExampleUseCase]
-image::images/example_usecase.png[]
-
-_[TODO: This example is given here out of context.
-Shouldn't this be at SE? The text of of the figure should be normal text and.
-What is a Heider model?
-Claudio: remove it.
-]
-
-===== Dependent Output Clocks
-
-If an <<outputClock>> depends on an <<inputClock>>, the attribute <<clockReference>> is used to indicate that the <<outputClock>> may (but does not have to) tick if and only if the referenced <<inputClock>> ticks.
-An <<outputClock>> may depend on other unknowns, see the attribute <<dependencies>>.
-
-===== Periodic Clock Ticks [[periodic-clock-ticks]]
+// TODO: revisit this paragraph
+It is required for an FMU to directly internally set back the activation <<state>> of an output <<clock,clock[i]>> to `fmi3ClockInactive`, if the function <<fmi3GetClock>> is called for a <<clock,`clock[i]`>> and the interface is Scheduled Execution.
+_[This is required to allow preemption.]_
 
 Either <<output>> or <<input>>, a <<periodic>> <<clock>> ticks at equidistant sample time points that are known a priori (defined in <<modelDescription.xml>>) or are alternatively determined by the environment in case of <<inputClock,`input clocks`>>.
 
@@ -678,68 +452,10 @@ A <<clock>> is <<strict,strictly>> <<periodic>> if latexmath:[\Delta T] is fixed
 The <<clock>> is periodic, if latexmath:[\Delta T] can be defined before calling `fmi3EnterInitializationMode` via <<fmi3SetIntervalDecimal>> or <<fmi3SetIntervalFraction>>.
 The <<clock>> is <<periodic,aperiodic>> if latexmath:[\Delta T] is not constant during a simulation run (<<fmi3SetIntervalDecimal>> or <<fmi3SetIntervalFraction>> can be called for that <<clock>> during *Event Mode*).
 
-===== Connecting Clocked FMUs [[connecting-clocked-fmus]]
+====== Triggered Clocks
 
-When connecting imported FMUs, <<input>> and <<output>> variables can readily be connected only when they are defined on a <<clock>> with identical properties.
-If this is not possible, an explicit cast of one <<clock>> to another <<clock>> is typically defined in the environment.
 
-_[TODO: What is a clock cast? If a clock cast can be done by the environment anyway, why mention which inputs/outputs can be connected?_
-_Remove the entire section: we do not want to say: don't be stupid.]_
-
-The environment can evaluate required <<clock>> casts for connections using the information on the <<clockReference>> attribute of assigned variables _[i.e. the variables that are assigned to a <<clock>> based on <<modelDescription.xml>> information]_.
-
-_[Example: Elementary blocks like a PI controller will have all variables on an <<inputClock>> with identical properties._
-_Connecting such blocks together will therefore be possible without computationally expensive clock cast operations (and the environment can readily do the computation of assigned variables of the connected blocks based on the same <<clock>>).]_
-
-===== Setting and Getting Clock Activation State [[fmi-api-setting-getting-clock-activation-state]]
-
-A <<clock>> is activated by the environment for the current time instant by the function <<fmi3SetClock>>, and the status of a <<clock>> can be inquired with the function <<fmi3GetClock>>:
-
-[[fmi3SetClock,`fmi3SetClock`]]
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tag=SetClock]
-----
-
-Sets <<clock,`clocks`>> activation status by providing the value references of the corresponding <<clock>> variables and their values.
-Note that <<clock>> variables, like any other variables can be scalar or array variables.
-(The serialization of variables is described in <<serialization-of_variables>>.)
-
-* `valueReferences` is a vector of `nValueReferences` value handles that define the clock variables that shall be set.
-
-* `values` is a vector with the actual activation values of the clock variables, `fmi3ClockActive` specifying that the clock is activated, otherwise it is deactivated.
-
-* `subactive` requires evaluation of a clocked partition in subactive mode (only output equations, no states change) if the argument subactive is not a null pointer and `subactive[i] = fmi3True`.
-`subactive[i]` has no meaning for <<CommunicationPointClocks,Communication Point Clocks>> and is ignored for such <<clock,`clocks`>>.
-
-* `nValues` provides the number of values in the `values` and `subactive` (if not null) vectors, which is only equal to `nValueReferences` if all <<valueReference,`valueReferences`>> point to scalar clock variables.
-
-It is not allowed to call this function within the callback function <<intermediateUpdate>>.
-
-[[fmi3GetClock,`fmi3GetClock`]]
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tag=GetClock]
-----
-
-Inquires whether a set of <<clock,`clocks`>> is active by providing the value references of the corresponding <<clock>> variables.
-
-* `valueReferences` is a vector of `nValueReferences` value handles that define the clock variables that shall be inquired.
-
-* `values` will return the activation status at the current time instant of the <<clock,`clocks`>> referenced by `valueReferences[]`.
-If `values[i] == fmi3ClockActive` the <<clock>> is currently active, otherwise the <<clock>> is not active.
-
-* `nValues` provides the number of values in the `values` vector, which is only equal to `nValueReferences` if all <<valueReference,`valueReferences`>> point to scalar clock variables.
-
-It is required for an FMU to directly internally set back the activation <<state>> of an output <<clock,clock[i]>> to `fmi3ClockInactive`, if the function <<fmi3GetClock>> is called for a <<clock,`clock[i]`>> and the interface is Scheduled Execution.
-_[This is required to allow preemption.]_
-
-_[TODO: WHAT?_
-_Separate issue to discuss needs of preemption._
-_Link to example._
-_This is necessary but nor sufficient requirement for preemption._
-_Pick better name for the Getting to show that the clock is auto-reset._
-_]_
+===== API
 
 A <<clock>> interval is set by the environment for the current time instant by the function <<fmi3SetIntervalDecimal>> or <<fmi3SetIntervalFraction>>, and it can be inquired with the function <<fmi3GetIntervalDecimal>> or <<fmi3GetIntervalFraction>>:
 
@@ -798,8 +514,6 @@ Repeated calls if recomputations of clock state are needed during *Event Mode*.
 |Call after first <<clock>> activation.
 (only for <<periodic>> <<clock,`clocks`>>)
 |===
-
-//TODO-API: check if addition (only for periodic clocks) is correct
 
 ==== Getting Partial Derivatives
 
