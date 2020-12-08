@@ -267,6 +267,13 @@ typedef fmi3Status fmi3GetBinaryTYPE (fmi3Instance instance,
                                       size_t sizes[],
                                       fmi3Binary values[],
                                       size_t nValues);
+
+typedef fmi3Status fmi3GetClockTYPE  (fmi3Instance instance,
+                                      const fmi3ValueReference valueReferences[],
+                                      size_t nValueReferences,
+                                      fmi3Clock values[],
+                                      size_t nValues);
+
 /* end::Getters[] */
 
 /* tag::Setters[] */
@@ -347,6 +354,12 @@ typedef fmi3Status fmi3SetBinaryTYPE (fmi3Instance instance,
                                       size_t nValueReferences,
                                       const size_t sizes[],
                                       const fmi3Binary values[],
+                                      size_t nValues);
+
+typedef fmi3Status fmi3SetClockTYPE  (fmi3Instance instance,
+                                      const fmi3ValueReference valueReferences[],
+                                      size_t nValueReferences,
+                                      const fmi3Clock values[],
                                       size_t nValues);
 /* end::Setters[] */
 
@@ -435,24 +448,6 @@ typedef fmi3Status fmi3EnterConfigurationModeTYPE(fmi3Instance instance);
 /* tag::ExitConfigurationMode[] */
 typedef fmi3Status fmi3ExitConfigurationModeTYPE(fmi3Instance instance);
 /* end::ExitConfigurationMode[] */
-
-/* Clock related functions */
-/* tag::GetClock[] */
-typedef fmi3Status fmi3GetClockTYPE(fmi3Instance instance,
-                                    const fmi3ValueReference valueReferences[],
-                                    size_t nValueReferences,
-                                    fmi3Clock values[],
-                                    size_t nValues);
-/* end::GetClock[] */
-
-/* tag::SetClock[] */
-typedef fmi3Status fmi3SetClockTYPE(fmi3Instance instance,
-                                    const fmi3ValueReference valueReferences[],
-                                    size_t nValueReferences,
-                                    const fmi3Clock values[],
-                                    const fmi3Boolean subactive[],
-                                    size_t nValues);
-/* end::SetClock[] */
 
 /* tag::GetIntervalDecimal[] */
 typedef fmi3Status fmi3GetIntervalDecimalTYPE(fmi3Instance instance,
