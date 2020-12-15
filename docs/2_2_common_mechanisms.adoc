@@ -340,28 +340,130 @@ The following chapters will focus on what mechanisms are relevant for the interf
 
 ==== Clocks [[clocks]]
 
-===== Motivation and Definitions
+===== Motivation
 
 Clock variables synchronize events between importer and across FMUs, by
- - communicating exactly which specific event happens
- - and exactly at which time instant, independent from continuous time specified by the arguments of `fmi3SetTime` or `fmi3DoStep`.
+. communicating exactly which specific event happens and
+. exactly at which time instant, independent from continuous time specified by the arguments of `fmi3SetTime` or `fmi3DoStep`.
 
-FMI specifies clearly the behavior of a clocked FMU.
-FMI does not specify how the importer uses this functionality.
-This will allow different use cases to be implemented with different semantics.
+The first point solves the issue that an FMU must know exactly which event happens during an *Event Mode* if several events are very close to one another.
 
-Variables latexmath:[x_j] are called `states of a clocked partition`, or `discrete-time states` and latexmath:[j] is the latexmath:[j+1]th tick of the associated <<clock>>.
-Variables latexmath:[u_j] are the (external or <<local>>) <<input,`inputs`>> and latexmath:[y_j] are the (external or <<local>>) <<output,`outputs`>> of a clocked partition.
-A discrete-time state variable can be of any type (e.g. `fmi3Float64` or `fmi3Boolean`, but not of <<clock>> type).
+The second point solves the issue that computing exactly when an event happens is impossible to guarantee across importer and FMUs when using floating point computations.
 
-A clocked partition is not executed during *Initialization Mode*, but it is executed the first time at its first <<clock>> tick.
-The associated <<clock>> of the model partition is synchronous to its discrete-time states.
-
-Discrete-time states are listed in the `<ModelStructure>`.
-They can have initial values defined by XML attributes <<initial>> and <<start>>, or the initial values are computed internally as a function of the parameters.
+====== Concepts
 
 // TODO: add references to Modelica clocks paper PC06 MSL12
 // TODO: remove clockReference - clocks are variables, dependencies can be used just like for other variables
+
+Clocks are FMI variables with a special semantic.
+
+Time-based clocks::
+tick definition is specified by the FMU to the importer.
+The importer will tick the clock according to the FMUs definition by calling <<fmi3SetClock>>.
+All time-based clocks are defined to be input clocks because the importer calls <<fmi3SetClock>> on these clocks.
+Time-based clocks are in a sense predictable and help the importer to take these clock ticks into account a priori.
+
+Periodic clocks::
+are special time-base clocks that the importer ticks periodically calling <<fmi3SetClock>> according to the definition retrieved from the FMU using <<fmi3GetInterval>>.
+
+Constant periodic clocks::
+are periodic clocks that define the clock period in the XML.
+Even though, the importer can call <<fmi3GetInterval>> to retrieve the `constant` interval.
+Constant periodic clocks have the clock attribute `interval=constant`.
+
+Fixed periodic clocks::
+are periodic clocks where the importer can overwrite the XML-defined default using <<fmi3SetInterval>> in *Initialization Mode*.
+Fixed periodic clocks have the clock attribute `interval=fixed`.
+
+Calculated periodic clocks::
+are periodic clocks where the FMU may change the period of the clock after FMU parameters have been changed during *Initialization Mode*.
+If the clock interval depends on FMU parameters, changing those parameters may change the clock interval.
+The importer must use <<fmi3GetInterval>> to retrieve the new clock interval.
+Calculated periodic clocks have the clock attribute `interval=calculated`.
+
+Tunable periodic clocks::
+are periodic clocks depending on tunable parameters (documented in the model dependencies).
+Changing any of these tunable parameters in *Event Mode* requires the importer to call <<fmi3GetInterval>> to retrieve the new clock interval.
+Tunable periodic clocks have the clock attribute `interval=tunable`.
+
+Aperiodic clocks::
+are time-based clocks where the next interval is unchangeably known right after the clock just ticked.
+<<fmi3GetInterval>> must be called to retrieve the new clock interval in ever *Event Mode* when the corresponding clock ticked.
+This next interval cannot change.
+Aperiodic clocks have the clock attribute `interval=variable`.
+
+Countdown clock::
+are time-based clocks where the next interval may change during any *Event Mode*, forcing the importer to call <<fmi3GetInterval>> at the end of each *Event Mode*.
+Countdown clocks have the clock attribute `interval=countdown`.
+
+Triggered clocks::
+convey unpredictable events from FMUs to importer and other FMUs.
+There are two mechanisms for an FMU to communicate to a master that a triggered output clock is about to tick:
+ - early return from a <<fmi3DoStep>> with <<clocksAboutToTick, `clocksAboutToTick == fmi3True`>>, and
+ - calling <<fmi3CallbackIntermediateUpdate>> with <<clocksTicked, `clocksTicked == fmi3True`>>.
+ Triggered input clocks are set with <<fmi3SetClock>> by the importer.
+
+
+.Overview of Clocks.
+[[table-overview-clocks]]
+[cols="1,1,1,1,1,4,4",options="header"]
+|====
+2+|Clock type
+|Attribute `causality`
+|Attribute `interval`
+|XML interval
+|API calls to use
+|Example
+
+.6+|time-based
+.4+|periodic clock
+.4+|`input`
+|`constant`
+.4+|required
+|`fmi3GetInterval` in *Initialization Mode* and `fmi3SetClock`
+|clocked PI-controller with a defined constant interval
+
+|`fixed`
+|`fmi3SetInterval` in *Initialization Mode* and `fmi3SetClock`
+|clocked PI-controller with an adaptable interval
+
+|`calculated`
+|`fmi3GetInterval` in *Initialization Mode* and `fmi3SetClock`
+|clocked PI-controller defined by fixed parameter(s) of the FMU
+
+|`tunable`
+|`fmi3GetInterval` in *Event Mode* and `fmi3SetClock`
+|clocked PI-controller defined by tunable parameter(s) of the FMU
+
+|aperiodic clock
+|`input`
+|`variable`
+.2+|ignored
+|`fmi3GetInterval` in *Event Mode* when this clock ticked and `fmi3SetClock`
+|simulation of the behavior of a control algorithm with variable execution time, Generation of pulse sequences
+
+|countdown clock
+|`input`
+|`countdown`
+|`fmi3GetInterval` in every *Event Mode* and `fmi3SetClock`
+|time-delayed actions after and event, for example, ignition signal some time after specific crank shaft angle
+
+.2+|triggered
+|input clock
+|`input`
+|`triggered`
+.2+|ignored
+|arguments <<clocksAboutToTick>> (<<fmi3DoStep>>) and <<clocksTicked>> (<<fmi3CallbackIntermediateUpdate>>), <<fmi3SetClock>> in *Event Mode*
+|control algorithm, triggered by a crankshaft angle
+
+|output clock
+|`output`
+|`triggered`
+|arguments <<clocksAboutToTick>> (<<fmi3DoStep>>) and <<clocksTicked>> (<<fmi3CallbackIntermediateUpdate>>), <<fmi3GetClock>> in *Event Mode*
+|crankshaft angle sensor ticking several times per revolution
+
+|====
+
 
 
 // --> Mathematical Description of Event Mode
@@ -370,13 +472,32 @@ They can have initial values defined by XML attributes <<initial>> and <<start>>
 // TODO: describe auto-reset of clocks in UdpateDiscreteStates --> Event Mode
 // TODO: describe deactivation of clock via fmi3SetClock(..., fmi3Deactivate) - clocked variable values return to previous values --> Event Mode
 
-===== Concepts and Representation
+===== Definitions
+
+FMI 3.0 specifies clearly the behavior of a clocked FMU.
+FMI 3.0 does not specify how the importer uses this functionality.
+This allows different use cases to be implemented with different semantics.
+
+===== Representation
 // TODO: Definition of time-base clocks and triggered clocks
 
 // TODO: import and improve table from PPT
 // TODO: forward link to "Clock Type Definition" and fix that section
 // TODO: forward link to attributes: triggeredBy (clock union), priority
 // TODO: remove attribute strict and add interval
+
+Variables latexmath:[x_j] are called `states of a clocked partition`, or `discrete-time states` and latexmath:[j] is the latexmath:[j+1]th tick of the associated <<clock>>.
+Variables latexmath:[u_j] are the (external or <<local>>) <<input,`inputs`>> and latexmath:[y_j] are the (external or <<local>>) <<output,`outputs`>> of a clocked partition.
+A discrete-time state variable can be of any type (e.g. `fmi3Float64` or `fmi3Boolean`, but not of <<clock>> type).
+
+Discrete-time states are listed in the `<ModelStructure>`.
+They can have initial values defined by XML attributes <<initial>> and <<start>>, or the initial values are computed internally as a function of the parameters.
+
+====== Calling Sequence
+
+A clocked partition is not executed during *Initialization Mode*, but it is executed the first time at its first <<clock>> tick.
+The associated <<clock>> of the model partition is synchronous to its discrete-time states.
+
 
 ====== Scheduled Execution
 
@@ -453,7 +574,7 @@ The <<clock>> is <<periodic,aperiodic>> if latexmath:[\Delta T] is not constant 
 
 ===== API
 
-A <<clock>> interval is set by the environment for the current time instant by the function <<fmi3SetIntervalDecimal>> or <<fmi3SetIntervalFraction>>, and it can be inquired with the function <<fmi3GetIntervalDecimal>> or <<fmi3GetIntervalFraction>>:
+A <<clock>> interval [[fmi3SetInterval,`fmi3SetInterval`]] is set by the environment for the current time instant by the function <<fmi3SetIntervalDecimal>> or <<fmi3SetIntervalFraction>>, and it can be inquired with the function <<fmi3GetIntervalDecimal>> or <<fmi3GetIntervalFraction>>:
 
 [[fmi3SetIntervalDecimal,`fmi3SetIntervalDecimal`]]
 [source, C]
@@ -479,7 +600,7 @@ include::../headers/fmi3FunctionTypes.h[tag=GetIntervalDecimal]
 include::../headers/fmi3FunctionTypes.h[tag=GetIntervalFraction]
 ----
 
-Both functions inquire the interval value for the provided <<clock,`clocks`>> (<<periodic>> or <<periodic,aperiodic>>).
+Both [[fmi3GetInterval,`fmi3GetInterval`]] functions inquire the interval value for the provided <<clock,`clocks`>> (<<periodic>> or <<periodic,aperiodic>>).
 If the <<clock,`clocks`>> are aperiodic, the interval has to be inquired at every <<clock>> tick, to define the follow-up <<clock>> tick.
 
 The following table summarizes the use of the API functions by the environment for different kinds of <<clock,`clocks`>>:
