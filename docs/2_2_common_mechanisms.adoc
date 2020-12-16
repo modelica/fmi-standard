@@ -242,12 +242,36 @@ This function call is allowed always and in all interface types.
 
 The standard header file as documented in this specification has version `"3.0"`, so this function returns `"3.0"`.
 
-==== Variables of a Functional Mockup Unit [[fmu-variables]]
+==== Advancing Time [[advancing-time]]
 
-All variables of an FMU are identified with a handle called <<valueReference, value reference>>.
-This handle is defined in the <<modelDescription.xml>> file as unique attribute <<valueReference>> of each variable.
+This section highlights the differences of the concept of time (in general the independent variable) for the three different FMI types, ME, CS and SE.
 
-A variable can be a scalar or an array.
+In Model Exchange, time is under the sole control of the importer and its integration algorithm.
+The model itself receives the current time to be used in its computation with <<fmi3SetTime>>.
+In fact, time is not necessarily advancing linearly as solvers might need to jump back and forth in time to localize events using zero-crossings of <<eventIndicator, event indicators>>.
+
+In Co-Simulation, time advances in (possibly variable) steps negotiated between the co-simulation algorithm of the importer and the FMU.
+The importer calls <<fmi3DoStep>> with the <<currentCommunicationPoint>> and a target <<communicationStepSize>> (required to be larger than 0.0).
+During this <<fmi3DoStep>>, both importer and FMU might encounter events (or other situations) that require reduction of the <<communicationStepSize>> (potentially even down to 0.0).
+The FMU may use <<earlyReturn>> argument of the <<fmi3DoStep>> function to tell the import that the FMU needs to return earlier, and the importer may use the callback <<fmi3CallbackIntermediateUpdate>> to signal the FMU that the later should return earlier.
+The output argument <<lastSuccessfulTime>> of <<fmi3DoStep>> allows the FMU to signal the importer its current internal time.
+
+In Scheduled Execution, time has a more discrete form.
+The scheduler of the importer activates specific tasks according to the time of the importer.
+The time itself is communicated to the FMU as <<activationTime>> argument of <<fmi3ActivateModelPartition>>.
+
+Depending on the instantiated FMI type, the importer is restricted in what functions it is allowed to call in order to drive the simulation.
+
+==== Variables [[fmu-variables]]
+
+FMU and importer use variables to exchange information.
+All variables are listed in the <<definition-of-model-variables,`modelDescription.xml`>> as elements of `<fmiModelDescription><ModelVariables>`.
+
+They are identified with a unique handle called <<valueReference, value reference>>.
+
+The attribute <<causality>> defines the direction of the information flow with respect to the FMU (e.g. <<input>>, <<output>>, <<parameter>>).
+
+A variable can be a scalar or an multi-dimensional array.
 
 ===== Serialization of Array Variables [[serialization-of_variables]]
 
@@ -314,35 +338,116 @@ include::../headers/fmi3FunctionTypes.h[tags=Setters]
 
 * `nValues` provides the number of values in the `values` vector (and `sizes` vector, where applicable) which is only equal to `nValueReferences` if all <<valueReference>>pass:[s] point to scalar variables.
 
+With two exceptions, all variables that are allowed to be set with `fmi3Set{VariableType}` keep their respective values until the next call to `fmi3Set{VariableType}`.
+Exceptions:
+
+. Variables of type clock must be deactivated during <<fmi3UpdateDiscreteStates>> by the FMU.
+. By setting the complete <<get-set-fmu-state,FMU state>> using <<fmi3SetFMUState>>, all variables are potentially changed.
+
 All strings passed as arguments to `fmi3SetString`, as well as all binary values passed as arguments to `fmi3SetBinary`, must be copied during these function calls, because there is no guarantee of the lifetime of strings or binary values, when these functions return.
 
-==== Advancing Time [[advancing-time]]
+===== Getting and Setting the Complete FMU State [[get-set-fmu-state]]
 
-This section highlights the differences of the concept of time (in general the independent variable) for the three different FMI types, ME, CS and SE.
+--
+The FMU has an internal state consisting of all values that are needed to continue a simulation.
+This internal state consists especially of the values of the continuous-time states, iteration variables, <<parameter>> values, <<input>> values, delay buffers, file identifiers, and FMU internal status information.
+With the functions of this section, the internal FMU state can be copied and the pointer to this copy is returned to the environment.
+The FMU state copy can be set as actual FMU state, in order to continue the simulation from it.
 
-In Model Exchange, time is under the sole control of the importer and its integration algorithm.
-The model itself receives the current time to be used in its computation with <<fmi3SetTime>>.
-In fact, time is not necessarily advancing linearly as solvers might need to find zero-crossing points or the importer uses the Model Exchange FMU to find points of optimal control.
+_[Examples for using this feature:_
 
-In Co-Simulation, time advances in (possibly variable) steps negotiated between the co-simulation algorithm of the importer and the FMU.
-The importer calls <<fmi3DoStep>> with the <<currentCommunicationPoint>> and a target <<communicationStepSize>> (required to be larger than 0.0).
-During this <<fmi3DoStep>>, both importer and FMU might encounter events that will reduce the <<communicationStepSize>> (potentially even down to 0.0).
-The FMU may use <<earlyReturn>> argument of the <<fmi3DoStep>> function to tell the import that the FMU needs to return earlier, and the importer may use the callback <<fmi3CallbackIntermediateUpdate>> to signal the FMU that the later should return earlier.
-This way both can determine if such a step-size reduction is required.
-The output argument <<lastSuccessfulTime>> of <<fmi3DoStep>> allows the FMU to signal the importer its current internal time.
+_For variable step-size control of co-simulation algorithms (get the FMU state for every accepted communication step; if the follow-up step is not accepted, restart co-simulation from this FMU state)._
 
-In Scheduled Execution, time has a more discrete form.
-The scheduler of the importer activates specific tasks according to the time of the importer.
-The time itself is communicated to the FMU as <<activationTime>> argument of <<fmi3ActivateModelPartition>>.
+_For nonlinear Kalman filters (get the FMU state just before initialization; in every sample period, set new continuous states from the Kalman filter algorithm based on measured values; integrate to the next sample instant and inquire the predicted continuous states that are used in the Kalman filter algorithm as basis to set new continuous states)._
 
-Depending on the instantiated FMI type, the importer is restricted in what functions it is allowed to call in order to drive the simulation.
-The following chapters will focus on what mechanisms are relevant for the interface type at hand, without trying to constantly declare which functions not to use because they belong to the other interface type mechanisms.
+_For nonlinear model predictive control (get the FMU state just before initialization; in every sample period, set new continuous states from an observer, initialize and get the FMU state after initialization._
+_From this state, perform many simulations that are restarted after the initialization with new input variables proposed by the optimizer).]_
+
+Furthermore, the FMU state can be serialized and copied in a byte vector.
+_[This can be, for example, used to perform an expensive steady-state initialization, copy the received FMU state in a byte vector and store this vector on file._
+_Whenever needed, the byte vector can be loaded from file and deserialized, and the simulation can be restarted from this FMU state, in other words, from the steady-state initialization.]_
+
+[[fmi3GetFMUState, `fmi3GetFMUState`]]
+Function <<fmi3GetFMUState>>::
+
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=GetFMUState]
+----
+
+This function makes a copy of the internal FMU state and returns a pointer to this copy (`FMUState`).
+If on entry `*FMUState == NULL`, a new allocation is required.
+If `*FMUState != NULL`, then `*FMUState` points to a previously returned `FMUState` that has not been modified since.
+In particular, <<fmi3FreeFMUState>> had not been called with this `FMUState` as an argument.
+_[Function <<fmi3GetFMUState>> typically reuses the memory of this `FMUState` in this case and returns the same pointer to it, but with the actual `FMUState`.]_
+
+[[fmi3SetFMUState, `fmi3SetFMUState`]]
+Function <<fmi3SetFMUState>>::
+
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=SetFMUState]
+----
+
+This function copies the content of the previously copied `FMUState` back and uses it as actual new FMU state.
+The `FMUState` copy still exists.
+_[The simulation is restarted at this state, when calling <<fmi3SetFMUState>> with `FMUState`.]_
+
+[[fmi3FreeFMUState, `fmi3FreeFMUState`]]
+Function <<fmi3FreeFMUState>>::
+
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=FreeFMUState]
+----
+
+This function frees all memory and other resources allocated with the <<fmi3GetFMUState>> call for this `FMUState`.
+The argument to this function is the `FMUState` to be freed.
+If a null pointer is provided, the call is ignored.
+The function returns a null pointer in argument `FMUState`.
+
+These functions can be called, if the optional capability flag <<canGetAndSetFMUState>> is set to `true`.
+
+[[fmi3SerializedFMUStateSize,`fmi3SerializedFMUStateSize`]]
+Function <<fmi3SerializedFMUStateSize>>::
+
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=SerializedFMUStateSize]
+----
+
+This function returns the `size` of the byte vector, in order that `FMUState` can be stored in it.
+With this information, the environment has to allocate an `fmi3Byte` vector of the required length `size`.
+
+[[fmi3SerializeFMUState,`fmi3SerializeFMUState`]]
+Function <<fmi3SerializeFMUState>>::
+
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=SerializeFMUState]
+----
+
+This function serializes the data which is referenced by pointer `FMUState` and copies this data in to the byte vector `serializedState` of length `size`, that must be provided by the environment.
+
+[[fmi3DeSerializeFMUState,`fmi3DeSerializeFMUState`]]
+Function <<fmi3DeSerializeFMUState>>::
+
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=DeSerializeFMUState]
+----
+
+This function deserializes the byte vector `serializedState` of length `size`, constructs a copy of the FMU state and returns `FMUState`, the pointer to this copy.
+
+These functions are only supported by the FMU, if the optional capability flags `canGetAndSetFMUState` and `canSerializeFMUState` in `<fmiModelDescription><ModelExchange|CoSimulation|ScheduledExecution>` in the XML file are explicitly set to `true` (see <<fmi-for-model-exchange>>, <<fmi-for-co-simulation>>, <<fmi-for-scheduled-execution>>).
+--
 
 ==== Clocks [[clocks]]
 
 ===== Motivation
 
 Clock variables synchronize events between importer and across FMUs, by
+
 . communicating exactly which specific event happens and
 . exactly at which time instant, independent from continuous time specified by the arguments of `fmi3SetTime` or `fmi3DoStep`.
 
@@ -350,12 +455,72 @@ The first point solves the issue that an FMU must know exactly which event happe
 
 The second point solves the issue that computing exactly when an event happens is impossible to guarantee across importer and FMUs when using floating point computations.
 
-====== Concepts
+===== Concepts
 
 // TODO: add references to Modelica clocks paper PC06 MSL12
 // TODO: remove clockReference - clocks are variables, dependencies can be used just like for other variables
 
-Clocks are FMI variables with a special semantic.
+This section introduces concepts related to FMI clocks.
+<<table-overview-clocks>> shows how these concepts relate.
+These concepts are described in detail after the table.
+
+.Overview of Clocks.
+[[table-overview-clocks]]
+[cols="1,1,1,1,4,4",options="header"]
+|====
+2+|Clock type
+|Attribute <<causality>>
+|Attribute <<interval>>
+|API calls to use
+|Example
+
+.6+|time-based
+.4+|periodic clock
+.4+|`input`
+|`constant`
+|<<fmi3GetInterval>> in *Initialization Mode* and <<fmi3SetClock>>
+|clocked PI-controller with a defined constant interval
+
+|`fixed`
+|<<fmi3SetInterval>> in *Initialization Mode* and <<fmi3SetClock>>
+|clocked PI-controller with an adaptable interval
+
+|`calculated`
+|<<fmi3GetInterval>> in *Initialization Mode* and <<fmi3SetClock>>
+|clocked PI-controller defined by fixed parameter(s) of the FMU
+
+|`tunable`
+|<<fmi3GetInterval>> in *Event Mode* and <<fmi3SetClock>>
+|clocked PI-controller defined by tunable parameter(s) of the FMU
+
+|aperiodic clock
+|`input`
+|`variable`
+|<<fmi3GetInterval>> in *Event Mode* when this clock ticked and <<fmi3SetClock>>
+|simulation of the behavior of a control algorithm with variable execution time, Generation of pulse sequences
+
+|countdown clock
+|`input`
+|`countdown`
+|<<fmi3GetInterval>> in every *Event Mode* and <<fmi3SetClock>>
+|time-delayed actions after and event, for example, ignition signal some time after specific crank shaft angle
+
+.2+|triggered
+|input clock
+|`input`
+|`triggered`
+|arguments <<clocksAboutToTick>> (<<fmi3DoStep>>) and <<clocksTicked>> (<<fmi3CallbackIntermediateUpdate>>), <<fmi3SetClock>> in *Event Mode*
+|control algorithm, triggered by a crankshaft angle
+
+|output clock
+|`output`
+|`triggered`
+|arguments <<clocksAboutToTick>> (<<fmi3DoStep>>) and <<clocksTicked>> (<<fmi3CallbackIntermediateUpdate>>), <<fmi3GetClock>> in *Event Mode*
+|crankshaft angle sensor ticking several times per revolution
+
+|====
+
+Clocks are FMI <<fmu-variables,variables>> with a special semantic.
 
 Time-based clocks::
 tick definition is specified by the FMU to the importer.
@@ -402,68 +567,6 @@ There are two mechanisms for an FMU to communicate to a master that a triggered 
  - early return from a <<fmi3DoStep>> with <<clocksAboutToTick, `clocksAboutToTick == fmi3True`>>, and
  - calling <<fmi3CallbackIntermediateUpdate>> with <<clocksTicked, `clocksTicked == fmi3True`>>.
  Triggered input clocks are set with <<fmi3SetClock>> by the importer.
-
-
-.Overview of Clocks.
-[[table-overview-clocks]]
-[cols="1,1,1,1,1,4,4",options="header"]
-|====
-2+|Clock type
-|Attribute `causality`
-|Attribute `interval`
-|XML interval
-|API calls to use
-|Example
-
-.6+|time-based
-.4+|periodic clock
-.4+|`input`
-|`constant`
-.4+|required
-|`fmi3GetInterval` in *Initialization Mode* and `fmi3SetClock`
-|clocked PI-controller with a defined constant interval
-
-|`fixed`
-|`fmi3SetInterval` in *Initialization Mode* and `fmi3SetClock`
-|clocked PI-controller with an adaptable interval
-
-|`calculated`
-|`fmi3GetInterval` in *Initialization Mode* and `fmi3SetClock`
-|clocked PI-controller defined by fixed parameter(s) of the FMU
-
-|`tunable`
-|`fmi3GetInterval` in *Event Mode* and `fmi3SetClock`
-|clocked PI-controller defined by tunable parameter(s) of the FMU
-
-|aperiodic clock
-|`input`
-|`variable`
-.2+|ignored
-|`fmi3GetInterval` in *Event Mode* when this clock ticked and `fmi3SetClock`
-|simulation of the behavior of a control algorithm with variable execution time, Generation of pulse sequences
-
-|countdown clock
-|`input`
-|`countdown`
-|`fmi3GetInterval` in every *Event Mode* and `fmi3SetClock`
-|time-delayed actions after and event, for example, ignition signal some time after specific crank shaft angle
-
-.2+|triggered
-|input clock
-|`input`
-|`triggered`
-.2+|ignored
-|arguments <<clocksAboutToTick>> (<<fmi3DoStep>>) and <<clocksTicked>> (<<fmi3CallbackIntermediateUpdate>>), <<fmi3SetClock>> in *Event Mode*
-|control algorithm, triggered by a crankshaft angle
-
-|output clock
-|`output`
-|`triggered`
-|arguments <<clocksAboutToTick>> (<<fmi3DoStep>>) and <<clocksTicked>> (<<fmi3CallbackIntermediateUpdate>>), <<fmi3GetClock>> in *Event Mode*
-|crankshaft angle sensor ticking several times per revolution
-
-|====
-
 
 
 // --> Mathematical Description of Event Mode
@@ -631,6 +734,7 @@ Repeated calls if recomputations of clock state are needed during *Event Mode*.
 |Call after first <<clock>> activation.
 (only for <<periodic>> <<clock,`clocks`>>)
 |===
+
 
 ==== Getting Partial Derivatives
 

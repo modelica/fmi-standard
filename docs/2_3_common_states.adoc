@@ -194,109 +194,19 @@ include::../headers/fmi3FunctionTypes.h[tags=FreeInstance]
 Disposes the given instance, unloads the loaded model, and frees all the allocated memory and other resources that have been allocated by the functions of the FMU interface.
 If a null pointer is provided for argument `instance`, the function call is ignored (does not have an effect).
 
-[[get-set-fmu-state]]
-Getting and Setting the Complete FMU State::
-
-// TODO: should this be a heading and all 6 following calls indented?
-
---
-The FMU has an internal state consisting of all values that are needed to continue a simulation.
-This internal state consists especially of the values of the continuous-time states, iteration variables, <<parameter>> values, <<input>> values, delay buffers, file identifiers, and FMU internal status information.
-With the functions of this section, the internal FMU state can be copied and the pointer to this copy is returned to the environment.
-The FMU state copy can be set as actual FMU state, in order to continue the simulation from it.
-
-_[Examples for using this feature:_
-
-_For variable step-size control of co-simulation algorithms (get the FMU state for every accepted communication step; if the follow-up step is not accepted, restart co-simulation from this FMU state)._
-
-_For nonlinear Kalman filters (get the FMU state just before initialization; in every sample period, set new continuous states from the Kalman filter algorithm based on measured values; integrate to the next sample instant and inquire the predicted continuous states that are used in the Kalman filter algorithm as basis to set new continuous states)._
-
-_For nonlinear model predictive control (get the FMU state just before initialization; in every sample period, set new continuous states from an observer, initialize and get the FMU state after initialization._
-_From this state, perform many simulations that are restarted after the initialization with new input variables proposed by the optimizer).]_
-
-Furthermore, the FMU state can be serialized and copied in a byte vector.
-_[This can be, for example, used to perform an expensive steady-state initialization, copy the received FMU state in a byte vector and store this vector on file._
-_Whenever needed, the byte vector can be loaded from file and deserialized, and the simulation can be restarted from this FMU state, in other words, from the steady-state initialization.]_
-
-[[fmi3GetFMUState, `fmi3GetFMUState`]]
-Functions <<fmi3GetFMUState>>::
-
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=GetFMUState]
-----
-
-This function makes a copy of the internal FMU state and returns a pointer to this copy (`FMUState`).
-If on entry `*FMUState == NULL`, a new allocation is required.
-If `*FMUState != NULL`, then `*FMUState` points to a previously returned `FMUState` that has not been modified since.
-In particular, <<fmi3FreeFMUState>> had not been called with this `FMUState` as an argument.
-_[Function <<fmi3GetFMUState>> typically reuses the memory of this `FMUState` in this case and returns the same pointer to it, but with the actual `FMUState`.]_
-
-[[fmi3SetFMUState, `fmi3SetFMUState`]]
-Function <<fmi3SetFMUState>>::
-
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=SetFMUState]
-----
-
-This function copies the content of the previously copied `FMUState` back and uses it as actual new FMU state.
-The `FMUState` copy still exists.
-_[The simulation is restarted at this state, when calling <<fmi3SetFMUState>> with `FMUState`.]_
-
-[[fmi3FreeFMUState, `fmi3FreeFMUState`]]
-<<fmi3FreeFMUState>>::
-
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=FreeFMUState]
-----
-
-This function frees all memory and other resources allocated with the <<fmi3GetFMUState>> call for this `FMUState`.
-The argument to this function is the `FMUState` to be freed.
-If a null pointer is provided, the call is ignored.
-The function returns a null pointer in argument `FMUState`.
-
-These functions can be called, if the optional capability flag <<canGetAndSetFMUState>> is set to `true`.
-
-[[fmi3SerializedFMUStateSize,`fmi3SerializedFMUStateSize`]]
-Function `fmi3SerializedFMUStateSize`::
-
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=SerializedFMUStateSize]
-----
-
-This function returns the `size` of the byte vector, in order that `FMUState` can be stored in it.
-With this information, the environment has to allocate an `fmi3Byte` vector of the required length `size`.
-
-[[fmi3SerializeFMUState,`fmi3SerializeFMUState`]]
-Function <<fmi3SerializeFMUState>>::
-
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=SerializeFMUState]
-----
-
-This function serializes the data which is referenced by pointer `FMUState` and copies this data in to the byte vector `serializedState` of length `size`, that must be provided by the environment.
-
-[[fmi3DeSerializeFMUState,`fmi3DeSerializeFMUState`]]
-Function <<fmi3DeSerializeFMUState>>::
-
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=DeSerializeFMUState]
-----
-
-This function deserializes the byte vector `serializedState` of length `size`, constructs a copy of the FMU state and returns `FMUState`, the pointer to this copy.
-
-These functions are only supported by the FMU, if the optional capability flags `canGetAndSetFMUState` and `canSerializeFMUState` in `<fmiModelDescription><ModelExchange|CoSimulation|ScheduledExecution>` in the XML file are explicitly set to `true` (see <<fmi-for-model-exchange>>, <<fmi-for-co-simulation>>, <<fmi-for-scheduled-execution>>).
---
-
 Functions <<get-and-set-variable-values,`fmi3Get{VariableType}`>>::
 See <<get-and-set-variable-values>> for the general mechanism to get variable values.
 Getting variable might trigger computations.
 _[If *Terminated* is entered because of an `fmi3Error` return value, retrieved values should only be used for debugging purposes.]_
+
+
+Function <<fmi3GetFMUState>>::
+Function <<fmi3SetFMUState>>::
+Function <<fmi3FreeFMUState>>::
+Function <<fmi3SerializedFMUStateSize>>::
+Function <<fmi3SerializeFMUState>>::
+Function <<fmi3DeSerializeFMUState>>::
+All these allowed functions are described in <<get-set-fmu-state>>.
 
 ===== State: Instantiated [[Instantiated]]
 
@@ -343,6 +253,8 @@ _If the <<independent>> variable is `time`, `startTime` is the starting time of 
 * If `stopTimeDefined == fmi3True`, then `stopTime` is the final value of the <<independent>> variable and inherits its unit.
 If the environment tries to compute past `stopTime`, the FMU has to return <<fmi3Error,`fmi3Status == fmi3Error`>>.
 If `stopTimeDefined == fmi3False`, then no final value of the <<independent>> variable is defined and argument `stopTime` is meaningless.
+
+// TODO: Verweis zu get-set-state and list all functions here again
 
 Function `fmi3Set{VariableType}`::
 
