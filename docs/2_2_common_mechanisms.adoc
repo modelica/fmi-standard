@@ -444,6 +444,9 @@ These functions are only supported by the FMU, if the optional capability flags 
 
 ==== Clocks [[clocks]]
 
+FMI 3.0 specifies clearly the behavior of a clocked FMU.
+FMI 3.0 does not specify how the importer uses this functionality.
+This allows different use cases to be implemented with different semantics.
 
 ===== Motivation
 
@@ -541,6 +544,7 @@ The importer queries the FMU about when a time-based clock should be activated.
 The importer will then activate the clock by calling <<fmi3SetClock>> with `values == fmi3ClockActive`.
 
 Periodic clocks::
+[[periodic-clock-ticks]]
 are time-based clocks witch have a constant interval during the execution, except `interval = tunable` which indicates changes when <<tunable>> parameters change this clock interval depends on.
 The time instant of the first clock activation is defined by a <<shift>>.
 
@@ -588,12 +592,6 @@ There are two mechanisms for an FMU to communicate to the importer that a trigge
 // TODO: definition clocked partition and clocked variables with the equations (1) and (2) --> Event Mode
 // TODO: describe auto-reset of clocks in UdpateDiscreteStates --> Event Mode
 // TODO: describe deactivation of clock via fmi3SetClock(..., fmi3Deactivate) - clocked variable values return to previous values --> Event Mode
-
-===== Definitions
-
-FMI 3.0 specifies clearly the behavior of a clocked FMU.
-FMI 3.0 does not specify how the importer uses this functionality.
-This allows different use cases to be implemented with different semantics.
 
 ===== Representation
 // TODO: Definition of time-base clocks and triggered clocks
@@ -685,10 +683,6 @@ A <<clock>> is `interval=constant` <<periodic>> if latexmath:[\Delta T] is fixed
 The <<clock>> is periodic, if latexmath:[\Delta T] can be defined before calling `fmi3EnterInitializationMode` via <<fmi3SetIntervalDecimal>> or <<fmi3SetIntervalFraction>>.
 The <<clock>> is <<periodic,aperiodic>> if latexmath:[\Delta T] is not constant during a simulation run (<<fmi3SetIntervalDecimal>> or <<fmi3SetIntervalFraction>> can be called for that <<clock>> during *Event Mode*).
 
-====== Triggered Clocks
-
-====== Periodic Clocks [[periodic-clock-ticks]]
-
 ===== API
 
 // TODO: add API for GetShift/Offset
@@ -721,6 +715,22 @@ include::../headers/fmi3FunctionTypes.h[tag=GetIntervalFraction]
 
 Both [[fmi3GetInterval,`fmi3GetInterval`]] functions inquire the interval value for the provided <<clock,`clocks`>> (<<periodic>> or <<periodic,aperiodic>>).
 If the <<clock,`clocks`>> are aperiodic, the interval has to be inquired at every <<clock>> tick, to define the follow-up <<clock>> tick.
+
+[[shift, `shift`]]
+In case the first clock activation is shifted away from the start of the execution, the <<shift>> amount can be
+retrieved from the FMU using the following functions[[fmi3GetShift,`fmi3GetShift`]]:
+
+[[fmi3GetShiftDecimal,`fmi3GetShiftDecimal`]]
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tag=GetShiftDecimal]
+----
+
+[[fmi3GetShiftFraction,`fmi3GetShiftFraction`]]
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tag=GetShiftFraction]
+----
 
 The following table summarizes the use of the API functions by the environment for different kinds of <<clock,`clocks`>>:
 

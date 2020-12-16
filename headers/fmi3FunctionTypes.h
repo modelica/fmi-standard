@@ -70,6 +70,14 @@ typedef enum {
 } fmi3DependencyKind;
 /* end::DependencyKind[] */
 
+/* tag::IntervalQualifier[] */
+typedef enum {
+    fmi3NewInterval,
+    fmi3NoChange,
+    fmi3NotYetKnown,
+} fmi3IntervalQualifier;
+/* end::IntervalQualifier[] */
+
 /* tag::CallbackLogMessage[] */
 typedef void  (*fmi3CallbackLogMessage)     (fmi3InstanceEnvironment instanceEnvironment,
                                              fmi3String instanceName,
@@ -454,6 +462,7 @@ typedef fmi3Status fmi3GetIntervalDecimalTYPE(fmi3Instance instance,
                                               const fmi3ValueReference valueReferences[],
                                               size_t nValueReferences,
                                               fmi3Float64 interval[],
+                                              fmi3IntervalQualifier qualifier[],
                                               size_t nValues);
 /* end::GetIntervalDecimal[] */
 
@@ -463,8 +472,26 @@ typedef fmi3Status fmi3GetIntervalFractionTYPE(fmi3Instance instance,
                                                size_t nValueReferences,
                                                fmi3UInt64 intervalCounter[],
                                                fmi3UInt64 resolution[],
+                                               fmi3IntervalQualifier qualifier[],
                                                size_t nValues);
 /* end::GetIntervalFraction[] */
+
+/* tag::GetShiftDecimal[] */
+typedef fmi3Status fmi3GetShiftDecimalTYPE(fmi3Instance instance,
+                                              const fmi3ValueReference valueReferences[],
+                                              size_t nValueReferences,
+                                              fmi3Float64 shift[],
+                                              size_t nValues);
+/* end::GetShiftDecimal[] */
+
+/* tag::GetShiftFraction[] */
+typedef fmi3Status fmi3GetShiftFractionTYPE(fmi3Instance instance,
+                                               const fmi3ValueReference valueReferences[],
+                                               size_t nValueReferences,
+                                               fmi3UInt64 shiftCounter[],
+                                               fmi3UInt64 resolution[],
+                                               size_t nValues);
+/* end::GetShiftFraction[] */
 
 /* tag::SetIntervalDecimal[] */
 typedef fmi3Status fmi3SetIntervalDecimalTYPE(fmi3Instance instance,
