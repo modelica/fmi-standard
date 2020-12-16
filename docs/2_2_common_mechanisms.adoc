@@ -632,7 +632,6 @@ There are two mechanisms for an FMU to communicate to the importer that a trigge
 ===== Representation
 
 // TODO: forward link to "Clock Type Definition" and fix that section
-// TODO: forward link to attributes: triggeredBy, priority
 
 Variables latexmath:[x_j] are called `states of a clocked partition`, or `discrete-time states` and latexmath:[j] is the latexmath:[j+1]th tick of the associated <<clock>>.
 Variables latexmath:[u_j] are the (external or <<local>>) <<input,`inputs`>> and latexmath:[y_j] are the (external or <<local>>) <<output,`outputs`>> of a clocked partition.
@@ -641,13 +640,7 @@ A discrete-time state variable can be of any type (e.g. `fmi3Float64` or `fmi3Bo
 Discrete-time states are listed in the `<ModelStructure>`.
 They can have initial values defined by XML attributes <<initial>> and <<start>>, or the initial values are computed internally as a function of the parameters.
 
-====== Calling Sequence
-
-A clocked partition is not executed during *Initialization Mode*, but it is executed the first time at its first <<clock>> tick.
-The associated <<clock>> of the model partition is synchronous to its discrete-time states.
-
-
-====== Scheduled Execution
+===== Scheduled Execution
 
 An external scheduler needs to know when an triggered <<inputClock>> depends on an <<outputClock>> of the same FMU.
 When the <<outputClock>> ticks, the scheduler will trigger the corresponding <<inputClock>> according to all other scheduling constraints.
@@ -666,12 +659,10 @@ _It is the task of the importer to derive a computational order for the computat
 
 _[For <<periodic>> <<clock,`clocks`>> it is recommended to derive the priorities based on a rate monotonic scheduling scheme (smallest period leads to highest priority, that is, has the smallest priority value.]_
 
+[[fmi3GetInterval]]
+===== [[fmi3SetInterval]][[fmi3GetShift]] API
 
-===== API
-
-// TODO: add API for GetShift/Offset
-
-A <<clock>> interval [[fmi3SetInterval,`fmi3SetInterval`]] is set by the environment for the current time instant by the function <<fmi3SetIntervalDecimal>> or <<fmi3SetIntervalFraction>>, and it can be inquired with the function <<fmi3GetIntervalDecimal>> or <<fmi3GetIntervalFraction>>:
+A <<clock>> interval [[fmi3SetInterval,`fmi3SetInterval`]] is set by the environment for the current time instant by the function <<fmi3SetIntervalDecimal>> or <<fmi3SetIntervalFraction>>:
 
 [[fmi3SetIntervalDecimal,`fmi3SetIntervalDecimal`]]
 [source, C]
@@ -685,6 +676,8 @@ include::../headers/fmi3FunctionTypes.h[tag=SetIntervalDecimal]
 include::../headers/fmi3FunctionTypes.h[tag=SetIntervalFraction]
 ----
 
+In other cases, the importer calls <<fmi3GetIntervalDecimal>> or <<fmi3GetIntervalFraction>> to query the next clock interval:
+
 [[fmi3GetIntervalDecimal,`fmi3GetIntervalDecimal`]]
 [source, C]
 ----
@@ -697,9 +690,16 @@ include::../headers/fmi3FunctionTypes.h[tag=GetIntervalDecimal]
 include::../headers/fmi3FunctionTypes.h[tag=GetIntervalFraction]
 ----
 
+[[qualifier,`qualifier`]]
+The type of the argument `qualifier` is defined as follows:
+[[fmi3IntervalQualifier,`fmi3IntervalQualifier`]]
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tag=IntervalQualifier]
+----
+
 [[shift, `shift`]]
-In case the first clock activation is shifted away from the start of the execution, the <<shift>> amount can be
-retrieved from the FMU using the following functions[[fmi3GetShift,`fmi3GetShift`]]:
+For some clocks, the importer has to query the delay to the first clock tick from the FMU using the following functions[[fmi3GetShift,`fmi3GetShift`]]:
 
 [[fmi3GetShiftDecimal,`fmi3GetShiftDecimal`]]
 [source, C]
