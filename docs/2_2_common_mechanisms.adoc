@@ -444,6 +444,7 @@ These functions are only supported by the FMU, if the optional capability flags 
 
 ==== Clocks [[clocks]]
 
+
 ===== Motivation
 
 Clock variables synchronize events between importer and across FMUs, by
@@ -464,110 +465,123 @@ This section introduces concepts related to FMI clocks.
 <<table-overview-clocks>> shows how these concepts relate.
 These concepts are described in detail after the table.
 
+// TODO: mark table as non-normative
+
 .Overview of Clocks.
 [[table-overview-clocks]]
-[cols="1,1,1,1,4,4",options="header"]
+[cols="10,10,15,10,40,40",options="header"]
 |====
-2+|Clock type
+2+|Clock Type
 |Attribute <<causality>>
 |Attribute <<interval>>
-|API calls to use
+|Related API Calls and Arguments
 |Example
 
 .6+|time-based
 .4+|periodic clock
 .4+|`input`
 |`constant`
-|<<fmi3GetInterval>> in *Initialization Mode* and <<fmi3SetClock>>
+|<<fmi3SetClock>> in *Event Mode*,
+<<fmi3GetInterval>> and <<fmi3GetShift>> in *Initialization Mode*
 |clocked PI-controller with a defined constant interval
 
 |`fixed`
-|<<fmi3SetInterval>> in *Initialization Mode* and <<fmi3SetClock>>
+|<<fmi3SetClock>> in *Event Mode*,
+<<fmi3SetInterval>> in *Initialization Mode*
 |clocked PI-controller with an adaptable interval
 
 |`calculated`
-|<<fmi3GetInterval>> in *Initialization Mode* and <<fmi3SetClock>>
-|clocked PI-controller defined by fixed parameter(s) of the FMU
+|<<fmi3SetClock>> in *Event Mode*,
+<<fmi3GetInterval>> and <<fmi3GetShift>> in *Initialization Mode*
+|clocked PI-controller with interval defined by fixed parameter(s) of the FMU
 
 |`tunable`
-|<<fmi3GetInterval>> in *Event Mode* and <<fmi3SetClock>>
-|clocked PI-controller defined by tunable parameter(s) of the FMU
+|<<fmi3SetClock>> in *Event Mode*,
+<<fmi3GetShift>> in *Initialization Mode*,
+<<fmi3GetInterval>> in *Event Mode*
+|clocked PI-controller with interval defined by tunable parameter(s) of the FMU
 
 |aperiodic clock
 |`input`
 |`variable`
-|<<fmi3GetInterval>> in *Event Mode* when this clock ticked and <<fmi3SetClock>>
-|simulation of the behavior of a control algorithm with variable execution time, Generation of pulse sequences
+|<<fmi3SetClock>> in *Event Mode*,
+<<fmi3GetInterval>> in *Initialization Mode* and in *Event Mode* if and only if this clock ticked
+|simulation of the behavior of a control algorithm with variable execution time, generation of pulse sequences
 
 |countdown clock
 |`input`
 |`countdown`
-|<<fmi3GetInterval>> in every *Event Mode* and <<fmi3SetClock>>
+|<<fmi3SetClock>> in *Event Mode*,
+<<fmi3GetInterval>> in *Initialization Mode* and in every *Event Mode*
 |time-delayed actions after and event, for example, ignition signal some time after specific crank shaft angle
 
 .2+|triggered
 |input clock
 |`input`
 |`triggered`
-|arguments <<clocksAboutToTick>> (<<fmi3DoStep>>) and <<clocksTicked>> (<<fmi3CallbackIntermediateUpdate>>), <<fmi3SetClock>> in *Event Mode*
+|<<fmi3SetClock>> in *Event Mode*,
+arguments <<clocksAboutToTick>> (<<fmi3DoStep>>) and <<clocksTicked>> (<<fmi3CallbackIntermediateUpdate>>)
 |control algorithm, triggered by a crankshaft angle
 
 |output clock
 |`output`
 |`triggered`
-|arguments <<clocksAboutToTick>> (<<fmi3DoStep>>) and <<clocksTicked>> (<<fmi3CallbackIntermediateUpdate>>), <<fmi3GetClock>> in *Event Mode*
+|<<fmi3GetClock>> in *Event Mode*,
+arguments <<clocksAboutToTick>> (<<fmi3DoStep>>) and <<clocksTicked>> (<<fmi3CallbackIntermediateUpdate>>),
 |crankshaft angle sensor ticking several times per revolution
 
 |====
 
-Clocks are FMI <<fmu-variables,variables>> with a special semantic.
+Clocks are <<discrete>> <<fmu-variables,variables>> with a special semantic.
 
 Time-based clocks::
-tick definition is specified by the FMU to the importer.
-The importer will tick the clock according to the FMUs definition by calling <<fmi3SetClock>>.
+are in a sense predictable and help the importer to take these clock ticks into account a priori.
 All time-based clocks are defined to be input clocks because the importer calls <<fmi3SetClock>> on these clocks.
-Time-based clocks are in a sense predictable and help the importer to take these clock ticks into account a priori.
+The importer queries the FMU about when a time-based clock should be activated.
+The importer will then activate the clock by calling <<fmi3SetClock>> with `values == fmi3ClockActive`.
 
 Periodic clocks::
-are special time-base clocks that the importer ticks periodically calling <<fmi3SetClock>> according to the definition retrieved from the FMU using <<fmi3GetInterval>>.
+are time-based clocks witch have a constant interval during the execution, except `interval = tunable` which indicates changes when <<tunable>> parameters change this clock interval depends on.
+The time instant of the first clock activation is defined by a <<shift>>.
 
 Constant periodic clocks::
-are periodic clocks that define the clock period in the XML.
-Even though, the importer can call <<fmi3GetInterval>> to retrieve the `constant` interval.
-Constant periodic clocks have the clock attribute `interval=constant`.
+are time-based periodic clocks that define their interval and <<shift>> in the <<modelDescription.xml>>.
 
 Fixed periodic clocks::
-are periodic clocks where the importer can overwrite the XML-defined default using <<fmi3SetInterval>> in *Initialization Mode*.
-Fixed periodic clocks have the clock attribute `interval=fixed`.
+are time-base periodic clocks which can be activated by the importer with an arbitrary, but constant interval starting after an arbitrary <<shift>>.
+The importer informs the FMU about the interval using <<fmi3SetInterval>>.
 
 Calculated periodic clocks::
-are periodic clocks where the FMU may change the period of the clock after FMU parameters have been changed during *Initialization Mode*.
-If the clock interval depends on FMU parameters, changing those parameters may change the clock interval.
-The importer must use <<fmi3GetInterval>> to retrieve the new clock interval.
-Calculated periodic clocks have the clock attribute `interval=calculated`.
+are time-base periodic clocks where the interval and <<shift>> depend on <<fixed>> <<parameter, parameters>>.
+The importer must use <<fmi3GetInterval>> and <<fmi3GetShift>> to retrieve the clock interval and <<shift>> in *Initialization Mode*.
 
 Tunable periodic clocks::
-are periodic clocks depending on tunable parameters (documented in the model dependencies).
-Changing any of these tunable parameters in *Event Mode* requires the importer to call <<fmi3GetInterval>> to retrieve the new clock interval.
-Tunable periodic clocks have the clock attribute `interval=tunable`.
+are time-base periodic clocks where the interval depends on <<tunable>> <<parameter, parameters>>.
+The importer must use <<fmi3GetInterval>> to retrieve the clock interval in *Event Mode*, if any of the <<tunable>> <<parameter, parameters>> it depends on was changed.
+<<shift>> may only depend on <<fixed>> <<parameter, parameters>>.
+The importer must use <<fmi3GetShift>> to retrieve the clock <<shift>> in *Initialization Mode*.
 
 Aperiodic clocks::
 are time-based clocks where the next interval is unchangeably known right after the clock just ticked.
-<<fmi3GetInterval>> must be called to retrieve the new clock interval in ever *Event Mode* when the corresponding clock ticked.
-This next interval cannot change.
-Aperiodic clocks have the clock attribute `interval=variable`.
+<<fmi3GetInterval>> must be called to retrieve the first interval in *Initialization Mode* and every next clock interval in every *Event Mode* if and only if the corresponding clock ticked.
+Calling <<fmi3GetShift>> is not allowed.
 
-Countdown clock::
-are time-based clocks where the next interval may change during any *Event Mode*, forcing the importer to call <<fmi3GetInterval>> at the end of each *Event Mode*.
-Countdown clocks have the clock attribute `interval=countdown`.
+Countdown clocks::
+are time-based clocks where the next interval is not yet known right after the clock just ticked, forcing the importer to call <<fmi3GetInterval>> in *Initialization Mode* and in every *Event Mode*.
+The return argument <<qualifier>> of <<fmi3GetInterval>> is used to indicate if the next interval is already known.
+Calling <<fmi3GetShift>> is not allowed.
 
 Triggered clocks::
-convey unpredictable events from FMUs to importer and other FMUs.
-There are two mechanisms for an FMU to communicate to a master that a triggered output clock is about to tick:
- - early return from a <<fmi3DoStep>> with <<clocksAboutToTick, `clocksAboutToTick == fmi3True`>>, and
- - calling <<fmi3CallbackIntermediateUpdate>> with <<clocksTicked, `clocksTicked == fmi3True`>>.
- Triggered input clocks are set with <<fmi3SetClock>> by the importer.
+tick unpredictably.
 
+Triggered input clocks::
+are activated with <<fmi3SetClock>> by the importer in *Event Mode*.
+
+Triggered output clocks::
+are activated within the FMU and the importer must call <<fmi3GetClock>> in *Event Mode*.
+There are two mechanisms for an FMU to communicate to the importer that a triggered output clock is about to tick:
+ * early return from a <<fmi3DoStep>> with <<clocksAboutToTick, `clocksAboutToTick == fmi3True`>>, and
+ * calling <<fmi3CallbackIntermediateUpdate>> with <<clocksTicked, `clocksTicked == fmi3True`>>.
 
 // --> Mathematical Description of Event Mode
 // TODO: non-normative call sequence proposal (maybe import from Reference/Example FMU code)
@@ -676,6 +690,8 @@ The <<clock>> is <<periodic,aperiodic>> if latexmath:[\Delta T] is not constant 
 ====== Periodic Clocks [[periodic-clock-ticks]]
 
 ===== API
+
+// TODO: add API for GetShift/Offset
 
 A <<clock>> interval [[fmi3SetInterval,`fmi3SetInterval`]] is set by the environment for the current time instant by the function <<fmi3SetIntervalDecimal>> or <<fmi3SetIntervalFraction>>, and it can be inquired with the function <<fmi3GetIntervalDecimal>> or <<fmi3GetIntervalFraction>>:
 
