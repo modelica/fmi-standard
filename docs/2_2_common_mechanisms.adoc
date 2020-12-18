@@ -547,7 +547,7 @@ All time-based clocks are defined to be input clocks because the importer calls 
 The importer queries the FMU about when a time-based clock should be activated.
 The importer will then activate the clock by calling <<fmi3SetClock>> with `values == fmi3ClockActive`.
 +
-The next <<clock>> tick at time instant latexmath:[t_i] is defined as:
+The next <<clock>> activation at time instant latexmath:[t_i] is defined as:
 [latexmath]
 ++++
 \begin{align*}
@@ -578,11 +578,19 @@ where:
 |The time interval from the previous <<clock>> tick to the current <<clock>> tick, defined differently for the different clock types.
 |===
 
-
-[[periodic-clock-ticks]]
-Periodic clocks::
+[[periodic-clock-ticks]]Periodic clocks::
 are time-based clocks which have a constant interval during the execution, except `interval = tunable` which indicates changes when <<tunable>> parameters change this clock interval depends on.
 The time instant of the first clock activation is defined by a <<shift>>.
+
+Periodic clocks can also be defined using rational numbers (see <<resolution>>).
+In this case, <<clock>> activations are defined as (see <<#table-notation-description>> for notation):
+[latexmath]
+++++
+\begin{align*}
+t_0 &:= t_{\mathit{start}} + (\mathit{shiftCounter} / \mathit{resolution}) \\
+t_i &:= t_{i-1} + (\mathit{intervalCounter} / \mathit{resolution})
+\end{align*}
+++++
 
 Constant periodic clocks::
 are time-based periodic clocks that define their interval and <<shift>> in the <<modelDescription.xml>>.
@@ -662,7 +670,7 @@ _[For <<periodic>> <<clock,`clocks`>> it is recommended to derive the priorities
 [[fmi3GetInterval]]
 ===== [[fmi3SetInterval]][[fmi3GetShift]] API
 
-A <<clock>> interval [[fmi3SetInterval,`fmi3SetInterval`]] is set by the environment for the current time instant by the function <<fmi3SetIntervalDecimal>> or <<fmi3SetIntervalFraction>>:
+For some <<clock>> types, the interval [[fmi3SetInterval,`fmi3SetInterval`]] is set by the environment for the current time instant by the function <<fmi3SetIntervalDecimal>> or <<fmi3SetIntervalFraction>>:
 
 [[fmi3SetIntervalDecimal,`fmi3SetIntervalDecimal`]]
 [source, C]
@@ -676,7 +684,11 @@ include::../headers/fmi3FunctionTypes.h[tag=SetIntervalDecimal]
 include::../headers/fmi3FunctionTypes.h[tag=SetIntervalFraction]
 ----
 
-In other cases, the importer calls <<fmi3GetIntervalDecimal>> or <<fmi3GetIntervalFraction>> to query the next clock interval:
+* `interval` is a vector of size `nValues` containing the clock interval to be set.
+
+* `intervalCounter` and `resolution` are vectors of size `nValues` containing the clock intervals specified in the <<modelDescription.xml>>, see <<resolution>>.
+
+For other clock types, the importer calls <<fmi3GetIntervalDecimal>> or <<fmi3GetIntervalFraction>> to query the next clock interval:
 
 [[fmi3GetIntervalDecimal,`fmi3GetIntervalDecimal`]]
 [source, C]
@@ -691,7 +703,7 @@ include::../headers/fmi3FunctionTypes.h[tag=GetIntervalFraction]
 ----
 
 [[qualifier,`qualifier`]]
-The type of the argument `qualifier` is defined as follows:
+* `qualifier` describes how to treat the `shift` and `shiftCounter` arguments and is defined as:
 [[fmi3IntervalQualifier,`fmi3IntervalQualifier`]]
 [source, C]
 ----
@@ -712,6 +724,9 @@ include::../headers/fmi3FunctionTypes.h[tag=GetShiftDecimal]
 ----
 include::../headers/fmi3FunctionTypes.h[tag=GetShiftFraction]
 ----
+
+* `shift` and `shiftCounter` define the time of the first clock activation, as defined in <<shiftCounter>>.
+
 
 The following table summarizes the use of the API functions by the environment for different kinds of <<clock,`clocks`>>:
 
