@@ -63,15 +63,15 @@ Using the element index 0 means all elements of the <<clock>> variable.
 [[activationTime, `activationTime`]]
 - `fmi3Float64 activationTime`: value of the <<independent>> variable of the assigned <<inputClock>> tick time latexmath:[t_i] _[typically: simulation (i.e. virtual) time]_ (which is known to the simulation algorithm).
 
-Scheduling of <<fmi3ActivateModelPartition>> calls for each FMU is done by the simulation algorithm.
-Calls are based on ticks of <<periodic>> or <<periodic,aperiodic>> <<inputClock,`input clocks`>>.
-These <<inputClock,`input clock`>> ticks can be based on <<clock>> ticks from FMU external sources (e.g. <<outputClock,`output clocks`>> of other FMUs).
-The <<inputClock>> ticks can also be based on <<outputClock,`output clock`>> ticks of the same FMU.
+The importer schedules calls of <<fmi3ActivateModelPartition>> for each FMU.
+Calls are based on activations of <<inputClock,`input clocks`>>.
+These <<inputClock,`input clock`>> activations can be based on <<clock>> activations from FMU external sources (e.g. <<outputClock,`output clocks`>> of other FMUs).
+The <<inputClock>> activations can also be based on <<outputClock,`output clock`>> ticks of the same FMU.
 Refer to <<math-scheduled-execution>> and <<clocks>>.
-The <<fmi3ActivateModelPartition>> function is not called for <<outputClock,`output clocks`>> of an FMU.
+The <<fmi3ActivateModelPartition>> function must not be called on <<outputClock,`output clocks`>> of an FMU.
 
 Note that this is a different timing concept compared to <<fmi3DoStep>> calls for Co-Simulation FMUs or the <<fmi3SetTime>> for Model Exchange FMUs.
-A <<fmi3ActivateModelPartition>> call will compute the results of the model partition defined by <<clockReference>> and <<clockElementIndex>> (i.e. <<valueReference>> of the variable that defines a <<clock>> and an element index into that for arrays) for the current <<clock>> tick latexmath:[t_i].
+An <<fmi3ActivateModelPartition>> call will compute the results of the model partition defined by <<clockReference>> and <<clockElementIndex>> (i.e. <<valueReference>> of the variable that defines a <<clock>> and an element index into that for arrays) for the current <<clock>> tick latexmath:[t_i].
 
 If required, the FMU can internally derive the <<clock>> interval latexmath:[\Delta T_i] based on the last <<clock>> tick time latexmath:[t_{i-1}] i.e. last `activationTime` for this <<clockReference>> and <<clockElementIndex>> (based on last <<fmi3ActivateModelPartition>> call).
 
@@ -153,7 +153,7 @@ The simulation algorithm can call `fmi3Set{VariableType}` and `fmi3Get{VariableT
 
 <<fmi3GetIntervalDecimal>> & <<fmi3GetIntervalFraction>>::
 For <<outputClock,`output clocks`>> and <<localClock,`local clocks`>> it is allowed to call these functions during *Intermediate Update Mode*.
-These functions can be called only at the first activation of <<periodic>> <<outputClock,`output clocks`>>.
+These functions can be called only at the first activation of periodic <<outputClock,`output clocks`>>.
 For <<periodic,`aperiodic`>> <<outputClock,`output clocks`>>, these functions must be called at every activation _[to inquire when triggered <<inputClock,`input clocks`>> must tick]_.
 
 _[Based on the FMI standard it cannot be determined which part of the code of an FMU has called the callback function <<fmi3CallbackIntermediateUpdate>>._
@@ -163,7 +163,7 @@ _This causes no issues since all function call prerequisites are connected to th
 ==== Preemption Support [[preemption-support]]
 
 For real-time applications the simulation time equals the real wall <<clock>> time, thus each <<fmi3ActivateModelPartition>> computation step has to be finished in real-time within its current period time length (computation time is not only defined by the runtime of <<fmi3ActivateModelPartition>> but also by the time for setting and getting variables and related operations).
-Usually a preemptive scheduling of the <<fmi3ActivateModelPartition>>, `fmi3Get{VariableType}`, `fmi3Set{VariableType}` calls is required for respecting this constraint.
+Usually a preemptive scheduling of the <<fmi3ActivateModelPartition>>, `fmi3Get{VariableType}`, `fmi3Set{VariableType}` calls is required to respect this constraint.
 
 The FMU's code has to be prepared for being able to correctly handle preemptive calls of <<fmi3ActivateModelPartition>>, `fmi3Get{VariableType}`, `fmi3Set{VariableType}`.
 That requires a secured internal and external access to global states and variable values.
@@ -197,13 +197,13 @@ _[If multiple tasks are needed to be scheduled for computation at a certain time
 
 <<input,`Input`>> <<clock>> ticks:
 
-- <<periodic>> (period can be predefined by FMU or be defined by simulation algorithm, depending on XML information)
-- <<periodic,aperiodic>> (based on external possibly unpredictable events or on an <<outputClock>> of the same FMU)
+- periodic (period can be predefined by FMU or be defined by simulation algorithm, depending on XML information)
+- aperiodic (based on external possibly unpredictable events or on an <<outputClock>> of the same FMU)
 
 Based on the period and priority definitions the exporting tool can restrict the code evaluation order.
 It nevertheless has to secure its code against concurrent evaluation _[not against parallel evaluation, as this is not supported for model partitions of an FMU in the interface description of this mode]_ along the defined priority restrictions.
 Mostly this is required for internal inter-model-partition communication and in general for the joint use of global variables within the FMU.
-The exporting tool has to consider the effect of <<input>> <<periodic,aperiodic>> <<clock,`clocks`>> and the influences of computing speed, so the exact preemption occurrence points cannot be foreseen (within the given priority and period restrictions).
+The exporting tool has to consider the effect of <<input>> aperiodic <<clock,`clocks`>> and the influences of computing speed, so the exact preemption occurrence points cannot be foreseen (within the given priority and period restrictions).
 
 To guard certain code parts against preemption they must be enclosed with the callback functions `lockPreemption` and `unlockPreemption`.
 
@@ -255,9 +255,9 @@ void Task2(void) //high priority
 The FMU ThreeInputClocks sketches the usage of the FMI functions.
 The example is given in a mix of pseudo-code and C, in order to keep it small and understandable.
 We consider one FMU with three model partitions.
-Two model partitions associated to two <<periodic>> <<inputClock,`input clocks`>> 10msClock and 50msClock (<<clock>> periods 10 ms and 50 ms) and one <<periodic,aperiodic>> <<inputClock>> AperiodicClock.
+Two model partitions associated to two periodic <<inputClock,`input clocks`>> 10msClock and 50msClock (<<clock>> periods 10 ms and 50 ms) and one aperiodic <<inputClock>> AperiodicClock.
 
-During the execution of the model partition of <<inputClock,`input clock`>> 10msClock the <<outputClock,`output clock`>> OutClock may tick and invoke the execution of model partition of <<periodic,aperiodic>> <<inputClock>> AperiodicClock.
+During the execution of the model partition of <<inputClock,`input clock`>> 10msClock the <<outputClock,`output clock`>> OutClock may tick and invoke the execution of model partition of aperiodic <<inputClock>> AperiodicClock.
 
 The function calls <<fmi3ActivateModelPartition>> are executed in the context of preemptable tasks whose priorities are derived from the respective <<inputClock>> configurations of the FMU.
 In this example the execution of the task of <<inputClock>> AperiodicClock is waiting for the task of <<inputClock>> 10msClock to finish.
