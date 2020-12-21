@@ -144,15 +144,15 @@ _In this context based on parallel multi-FMU calculations, <<figure-early-return
 image::images/earlyReturnFigure.svg[width=100%, align="center"]
 
 _Each FMU starts integration from communication point_ latexmath:[t_{i}] _to reach the next communication point_ latexmath:[t_{i+1}] _._
-_Assuming an unexpected internal event is detected at_ latexmath:[t^{'}_{i+1}< t_{i+1}] _inside FMU~1~ , the FMU immediately informs the co-simulation algorithm and asks for an early return._
+_Assuming an unexpected internal event is detected at_ latexmath:[t^{'}_{i+1}< t_{i+1}] _inside FMU~1~ , the FMU immediately informs the co-simulation algorithm and asks for an <<early-return,early return>>._
 _Since all FMUs should be resynchronized at the event time which will be the next new communication point, the co-simulation algorithm would like to avoid other FMUs exceed the event time._
 
 * _In the case of FMU~1~, the FMU waits to get pushed into the event mode to handle the event at_ latexmath:[t^{'}_{i+1}] _._
 * _FMU~2~ can not be interrupted before it reaches_ latexmath:[t_{i+1}] _, which requires a complete rollback and a new co-simulation from_ latexmath:[t_{i}] _to_ latexmath:[t^{'}_{i+1}] _._
-* _FMU~3~ triggers the callback function to the co-simulation algorithm after passing_ latexmath:[t^{'}{i+1}] _, which leads to a request by the co-simulation algorithm to immediately do an early return.
+* _FMU~3~ triggers the callback function to the co-simulation algorithm after passing_ latexmath:[t^{'}{i+1}] _, which leads to a request by the co-simulation algorithm to immediately do an <<early-return,early return>>.
 The FMU interrupts its computation and a partial rollback and a new co-simulation from_ latexmath:[t_{i}] _to_ latexmath:[t^{'}_{i+1}] _is necessary._
 * _In the case of FMU~4~, the FMU triggered the callback function before reaching_ latexmath:[t^{'}_{i+1}] _.
-The co-simulation algorithm requests FMU~4~ to do an early return at_ latexmath:[t^{'}{i+1}] _and the FMU will interrupt its current integration step at_ latexmath:[t^{'}{i+1}] _.
+The co-simulation algorithm requests FMU~4~ to do an <<early-return,early return>> at_ latexmath:[t^{'}{i+1}] _and the FMU will interrupt its current integration step at_ latexmath:[t^{'}{i+1}] _.
 No rollback is necessary for FMU~4~._
 
 _Each ongoing FMU stops its integration either exactly at the interrupt time given by the co-simulation algorithm or immediately after its current intermediate step, if this time is already out-of-date._
@@ -161,30 +161,30 @@ _Afterwards, a new step integration done on the FMU returns and signals the prem
 _Due to the early-return mechanism, the overall execution time of the simulation can be reduced.]_
 
 A Co-Simulation FMU is allowed to stop the execution of <<fmi3DoStep>> and return without reaching the predefined communication time, i.e. <<currentCommunicationPoint>> `+` <<communicationStepSize>>.
-This mechanism is called "early return".
+This mechanism is called <<early-return,"early return">>.
 
 [[canReturnEarlyAfterIntermediateUpdate,`canReturnEarlyAfterIntermediateUpdate`]]
 The Boolean capability flag <<canReturnEarlyAfterIntermediateUpdate>> in the <<modelDescription.xml>> file indicates whether the FMU supports the early-return feature.
 The default value of this capability flag is `false`.
 
 Each time an internal discontinuity or an event happens inside an FMU with capability flag <<canReturnEarlyAfterIntermediateUpdate,`canReturnEarlyAfterIntermediateUpdate = true`>>, the callback function <<fmi3CallbackIntermediateUpdate>> is called by the FMU.
-The co-simulation algorithm can only use this early return functionality, if it provides the <<fmi3CallbackIntermediateUpdate>> callback function pointer in the instantiate function.
+The co-simulation algorithm can only use this <<early-return,early return>> functionality, if it provides the <<fmi3CallbackIntermediateUpdate>> callback function pointer in the instantiate function.
 
-With the early return feature, an FMU can signal <<outputClock>> events or internal state changes, i.e., discontinuity events to the co-simulation algorithm at any time (not only at the end of <<fmi3DoStep>> function calls).
+With the <<early-return,early return>> feature, an FMU can signal <<outputClock>> events or internal state changes, i.e., discontinuity events to the co-simulation algorithm at any time (not only at the end of <<fmi3DoStep>> function calls).
 When an internal event occurs inside the FMU at a time instant, it informs the co-simulation algorithm that a new communication point for the Co-Simulation can be created.
 Note that an event signal is not seen in the narrow sense of solver induced discontinuity events but in the general sense of a simulation event that has to be handled by the co-simulation algorithm (e.g. state changes that require extended handling).
 
 A second use of the early-return mechanism is the following:
 In particular in multi-node architectures, significant co-simulation speed-up may be obtained if the co-simulation algorithm can avoid waiting until the end of the slowest <<fmi3DoStep>>, when many FMUs are integrating in parallel and an event occurs.
 To exploit such efficiency gains, the co-simulation algorithm can command the FMUs to return early from the current communication step, if it gets triggered in the callback function by the FMUs.
-_[In this use case, early return is a simple form of cooperative multitasking.]_
+_[In this use case, <<early-return,early return>> is a simple form of cooperative multitasking.]_
 
-Early return is even helpful if the FMU or the co-simulation algorithm do not support the advanced handling of events based on the <<co-simulation-api,Co-Simulation>> functionalities.
+<<early-return,Early return>> is even helpful if the FMU or the co-simulation algorithm do not support the advanced handling of events based on the <<co-simulation-api,Co-Simulation>> functionalities.
 Multiple event types and also <<triggered>> <<clock>> activations can be supported based on the early-return functionality and additional functionalities provided by <<co-simulation-api,Co-Simulation>>.
 
 ==== Handling Early Return and Events
 
-If the FMU is successful in conducting an early return, <<fmi3DoStep>> returns with <<earlyReturn,`earlyReturn == fmi3True`>>.
+If the FMU is successful in conducting an <<early-return,early return>>, <<fmi3DoStep>> returns with <<earlyReturn,`earlyReturn == fmi3True`>>.
 If the FMU returns from <<fmi3DoStep>> with <<earlyReturn,`earlyReturn == fmi3True`>>, the co-simulation algorithm has to call <<fmi3EnterEventMode>> for that FMU.
 
 [source, C]
@@ -235,9 +235,9 @@ The FMU leaves *Event Mode* when the co-simulation algorithm calls <<fmi3EnterSt
 
 In this section, signaling and retrieving <<clock>> ticks as well as the interface for supporting <<clock,`clocks`>> in FMI for Co-Simulation will be discussed.
 If an FMU for Co-Simulation declares <<clock,`clocks`>> and clocked variables in the <<modelDescription.xml>> file, it supports <<clock,`clocks`>>.
-Note, even if no <<clock>> is defined by an FMU in <<modelDescription.xml>>, the co-simulation algorithm can instantiate a Co-Simulation FMU to be able to use early return with event handling in *Event Mode*.
+Note, even if no <<clock>> is defined by an FMU in <<modelDescription.xml>>, the co-simulation algorithm can instantiate a Co-Simulation FMU to be able to use <<early-return,early return>> with event handling in *Event Mode*.
 
-If an FMU provides <<clock,`clocks`>> and the co-simulation algorithm is using the interface type Co-Simulation, the co-simulation algorithm must handle these <<clock,`clocks`>> and early return requests by the FMU.
+If an FMU provides <<clock,`clocks`>> and the co-simulation algorithm is using the interface type Co-Simulation, the co-simulation algorithm must handle these <<clock,`clocks`>> and <<early-return,early return>> requests by the FMU.
 If the co-simulation algorithm does not support or does not want to support early-return or <<clock,`clocks`>>, it must set the interface type to Co-Simulation if supported by the FMU.
 If the FMU provides the Co-Simulation interface and is instantiated with it, the FMU must internally handle all events during <<fmi3DoStep>>.
 
@@ -258,7 +258,7 @@ Each <<clock>>, that ticks outside of the FMU (i.e. <<inputClock>>), is activate
 An event iteration is possible.
 Once all <<clock>> events are handled for this time instant, the FMU should be pushed into *Step Mode* by calling <<fmi3EnterStepMode>>.
 In *Step Mode*, the co-simulation algorithm can call <<fmi3DoStep>> for the time interval from the current event time instant until the next input event instant.
-Note that <<fmi3DoStep>> may not reach the next input event instant because an early return may occur.
+Note that <<fmi3DoStep>> may not reach the next input event instant because an <<early-return,early return>> may occur.
 
 The co-simulation algorithm sets and gets <<clock>> variable values similar to the FMI for Model Exchange, as defined in <<clocks>>.
 
