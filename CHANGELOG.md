@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.0.2 (unreleased)
+## v2.0.2 (2020-12-15)
 
 * `p. 22` Fixed: Discourage use of memory management functions (#931)
 * `p. 27` Fixed formula for directional derivatives (#668)
