@@ -76,6 +76,7 @@ Export-Schema Int32 1 -schema fmi3Variable.xsd
 Export-Schema Boolean 1 -schema fmi3Variable.xsd
 Export-Schema Binary 1 -schema fmi3Variable.xsd
 Export-Schema Enumeration 1 -schema fmi3Variable.xsd
+Export-Schema Clock 1 -schema fmi3Variable.xsd
 Export-Schema Annotations 2
 Export-Schema ModelStructure 2
 Export-Schema ModelExchange 2
