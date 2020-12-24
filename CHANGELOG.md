@@ -3,7 +3,7 @@
 ## v2.0.2 (2020-12-15)
 
 * `p. 22` Fixed: Discourage use of memory management functions (#931)
-* `p. 27` Fixed formula for directional derivatives (#668)
+* `p. 27` Fixed: formula for directional derivatives (#668)
 * `p. 29` Fixed: Correct code example describing Jacobian construction using fmi2GetDirectionalDerivative (#867)
 * `p. 29` Fixed: Formatting of hints on graph coloring algorithm  (#703)
 * `p. 37ff` Fixed: Unit speficiation error relative quantity usage (#1267)
