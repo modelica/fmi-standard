@@ -80,55 +80,22 @@ If `nEventIndicators == 0` the value of `rootsFound` is not defined.
 
 * `nEventIndicators` contains the number of event indicators (length of `rootsFound`) or `0` if the caller cannot provide this information.
 
+[[timeEvent,`timeEvent`]]
 * `timeEvent` signals with `fmi3True` that a <<time event>> occurred.
 
 _[An <<input-event>> can be detected by the FMU by keeping track of the calls of `fmi3Set{VariableType}` in *Event Mode*.]_
 
-[[fmi3UpdateDiscreteStates,`fmi3UpdateDiscreteStates`]]
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=UpdateDiscreteStates]
-----
-
-The FMU is in *Event Mode*.
-If the super-dense time before a call to <<fmi3UpdateDiscreteStates>> was latexmath:[(t_R,t_I)], then the time instant after the call is latexmath:[(t_R,t_{I + 1})]. +
-
-* If output argument `discreteStatesNeedUpdate == fmi3True`, the FMU should stay in *Event Mode*, and the FMU requires to set new inputs to the FMU (`fmi3Set{VariableType}` on <<input,`inputs`>>) to compute and get the <<output,`outputs`>> (`fmi3Get{VariableType}` on <<output,`outputs`>>) and to call <<fmi3UpdateDiscreteStates>> again.
-
-[[terminateSimulation,`terminateSimulation`]]
-* If output argument `terminateSimulation == fmi3True`, the FMU signals it needs to terminate the simulation.
-
-* If argument `nominalsOfContinuousStatesChanged == fmi3True`, then the nominal values of the <<state,`states`>> have changed due to the function call and can be inquired with <<fmi3GetNominalsOfContinuousStates>>.
-
-* If argument `valuesOfContinuousStatesChanged == fmi3True`, then at least one element of the continuous state vector has changed its value due to the function call.
-
-[[state,`state`]]
-The new values of the <<state,`states`>> can be inquired with <<fmi3GetContinuousStates>> or individually for each state for which <<reinit, `reinit = true`>> by calling `fmi3GetFloat*`.
-If no element of the continuous state vector has changed its value, `valuesOfContinuousStatesChanged` must return `fmi3False`.
-_[If `fmi3True` would be returned in this case, an infinite event loop may occur.]_
-
-[[nextEventTimeDefined,`nextEventTimeDefined`]]
-* If argument `nextEventTimeDefined == fmi3True`, then the simulation shall integrate at most until `time` reaches value of
-
-[[nextEventTime,`nextEventTime`]]
-* argument <<nextEventTime>>, and shall call <<fmi3EnterEventMode>> at this time instant.
-If a (e.g. <<state event>>) event happens before <<nextEventTime>>, the definition of <<nextEventTime>> becomes obsolete.
-
-With multiple connected FMUs, the environment shall
-
-* call <<fmi3Terminate>>, if <<terminateSimulation,`terminateSimulation == fmi3True`>> is returned by at least one FMU,
-
-* call <<fmi3EnterContinuousTimeMode>> if all FMUs return `discreteStatesNeedUpdate == fmi3False`, and
-
-* stay in *Event Mode* otherwise.
-
-When the FMU is terminated, it is assumed that an appropriate message is printed by the <<logMessage>> function (see <<FMUStateSetable>>) to explain the reason for the termination.
 
 [[fmi3CompletedIntegratorStep,`fmi3CompletedIntegratorStep`]]
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=CompletedIntegratorStep]
 ----
+
+// TODO: fix the following
+Such an event is called <<step event>>.
+_[<<step event,`Step events`>> are, for example, used to dynamically change the (continuous) <<state,`states`>> of a model internally in the FMU, because the previous states are no longer suited numerically.]_
+
 
 This function must be called by the environment after every completed step of the integrator provided the capability flag `completedIntegratorStepNotNeeded = false`.
 Argument `noSetFMUStatePriorToCurrentPoint == fmi3True` if `fmi3SetFMUState` will no longer be called for time instants prior to current time in this simulation run [the FMU can use this flag to flush a result buffer]. +
@@ -179,9 +146,18 @@ _[Array variables are serialized as defined in <<serialization-of_variables>>.]_
 The event indicators are returned as a vector with `nEventIndicators` elements.
 The order of the `eventIndicators` vector must be the same as the ordered list of elements `<ModelStructure><EventIndicator>`.
 _[Array variables are serialized as defined in <<serialization-of_variables>>.]_
+
+[[state-event,state event]]
 A <<state event>> is triggered when the domain of an event indicator changes from latexmath:[z_j > 0] to latexmath:[z_j \leq 0] or vice versa.
-The FMU must guarantee that at an event restart latexmath:[z_j \neq 0], for example, by shifting latexmath:[z_j] with a small value.
-Furthermore, latexmath:[z_j] should be scaled in the FMU with its nominal value (so all elements of the returned vector `eventIndicators` should be in the order of "one").
+_[This definition is slightly different from the usual standard definition of state events:_ "latexmath:[z(t)*z(t_{i-1}) \leq 0]" _which has the severe drawback that the value of the event indicator at the previous event instant,_ latexmath:[z(t_{i-1}) \neq 0], _must be non-zero and this condition cannot be guaranteed._
+_The often used term "zero crossing function" for `z` is misleading (and is therefore not used in this document), since a state event is defined by a change of a domain and not by a zero crossing of a variable.]_
+The FMU must guarantee that after leaving *Event Mode* latexmath:[z_j \neq 0], for example, by shifting latexmath:[z_j] with a small value.
+_[All event indicators should be piecewise continuous._
+_Furthermore, latexmath:[z_j] should be scaled in the FMU with its nominal value (so all elements of the returned vector `eventIndicators` should be in the order of 1).]_
+
+.An event occurs when the event indicator changes its domain from latexmath:[z>0] to latexmath:[z\leq 0] or vice versa.
+[#figure-events]
+image::images/Event.svg[width=60%, align="center"]
 
 [[fmi3GetContinuousStates,`fmi3GetContinuousStates`]]
 [source, C]
@@ -272,40 +248,6 @@ In the code above errors are handled by the following definition:
 ----
 include::Reference-FMUs/examples/util.h[tags=CheckStatus]
 ----
-
-==== Event Handling
-
-This concerns the following API calls: <<fmi3SetClock>>, <<fmi3GetClock>>, <<fmi3SetIntervalDecimal>>, <<fmi3SetIntervalFraction>>, <<fmi3GetIntervalDecimal>>, <<fmi3GetIntervalFraction>>
-
-A <<clock>> event is handled by the environment in the following way:
-
-_[TODO: Move this section into Common and there the Event Mode description.]_
-
-Enter event mode::
-The *Event Mode* is entered after initialization (call to function <<fmi3ExitInitializationMode>>) or during simulation with a call to the function <<fmi3EnterEventMode>>.
-The FMU activates <<outputClock,`output clocks`>>.
-
-Synchronize clock activation and intervals with the environment::
-
-_[TODO: remove usage of clock tick and use clock activation instead (Note to self: search also for "`clock` tick").]_
-
-The <<clock>> activation status can be inquired with the function <<fmi3GetClock>>.
-The environment calls the function <<fmi3SetClock>> for periodic <<clock,`clocks`>> and <<inputClock,`input clocks`>>.
-Moreover the current <<clock>> intervals may be inquired with the function <<fmi3GetIntervalDecimal>> or <<fmi3GetIntervalFraction>> and set with the function <<fmi3SetIntervalDecimal>> <<fmi3SetIntervalFraction>>.
-_[In the Modelica language this is the value returned by the interval() operator._
-_The initialization of intervals is needed for <<output>> and <<input>> sample times if a <<clock>> ticks the first time._
-_The FMU determines the interval itself at subsequent <<clock>> ticks.]_
-
-_[TODO: This should not be in Event Handling, merge into the other section for clock intervals with the table.]_
-
-_[TODO: Write here a few sentences about how clocks interact with the event iteration.]_
-
-Leave event mode::
-The function <<fmi3UpdateDiscreteStates>> evaluates the discrete-time equations, provided the corresponding <<clock>> is active and the discrete-time equations have not already been evaluated with calls to `fmi3Get{VariableType}` functions.
-Clocks are automatically deactivated by <<fmi3UpdateDiscreteStates>> and by <<fmi3Reset>>.
-_[This handling of discrete-time states and <<time event,`time events>> is forward compatible with FMI 2.0 for any model that could be treated with FMI 2.0 and is exported again using the new features._
-_The environment may ignore the new functions <<fmi3SetClock>>, <<fmi3GetClock>>, <<fmi3SetIntervalDecimal>>, <<fmi3SetIntervalFraction>>, <<fmi3GetIntervalDecimal>> and <<fmi3GetIntervalFraction>>._
-_The new functions are needed for FMUs with input sample times and to set discrete-time states in model-based control applications or if algebraic loops are present among discrete-time equations of multiple connected FMUs.]_
 
 ==== Getting Number of Event Indicators
 

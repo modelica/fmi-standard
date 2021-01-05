@@ -10,9 +10,7 @@ image::images/state-machines-common-states.svg[width=80%, align="center"]
 
 ==== Super State: FMU State Setable [[FMUStateSetable]]
 
-The description of the super state *FMU State Setable* generally describes functions that deal with instantiation, destruction and logging of FMUs.
-
-This state is entered when any of the following functions is called: <<fmi3InstantiateModelExchange>>, <<fmi3InstantiateCoSimulation>> and <<fmi3InstantiateScheduledExecution>>.
+The state *FMU State Setable* is entered when any of the following functions is called: <<fmi3InstantiateModelExchange>>, <<fmi3InstantiateCoSimulation>> and <<fmi3InstantiateScheduledExecution>>.
 The state is left by either calling <<fmi3FreeInstance>> or when any of the functions called during *FMU State Setable* returns <<fmi3Fatal>>.
 If any function called in super state *FMU State Setable* returns <<fmi3Error>>, the FMU enters state *Terminated*.
 
@@ -200,8 +198,7 @@ All these allowed functions are described in <<get-set-fmu-state>>.
 
 ===== State: Instantiated [[Instantiated]]
 
-In this state the FMU can do one-time initializations and allocate memory.
-This state is entered after <<fmi3Instantiate>> returned successfully.
+In the state *Instantiated* the FMU can do one-time initializations and allocate memory.
 
 [#table-math-instantiated]
 [cols="2,1",options="header",]
@@ -411,53 +408,61 @@ Changes state to *Terminated*.
 
 ===== State: Event Mode [[EventMode]]
 
-_[TODO: add *Event Mode* description after clocks/event clarification...]
+*Event Mode* is only available in Model Exchange and Co-Simulation.
+In *Event Mode* all continuous-time, discrete-time equations and active model partitions are evaluated.
 
-*Event Mode* is used to compute new values for all continuous-time variables, as well as for all discrete-time variables that are activated at the current event instant latexmath:[t], given the values of the variables from the previous instant latexmath:[{}^{\bullet}t].
-This is performed by solving algebraic equations consisting of all continuous-time and all active discrete-time equations.
+There are multiple kinds of events that require a transition to *Event Mode*:
 
-The next event instant latexmath:[t_{i+1}] is defined by the earliest occurrence of one of the following conditions:
-
-. The environment of the FMU triggers an event at the current time instant because at least one discrete-time <<input>> changes its value, a continuous-time <<input>> has a discontinuous change, or a <<tunable>> <<parameter>> changes its value.
-_[Note that if an FMU A is connected to an FMU B, and an event is triggered for A, then potentially all <<output,`outputs`>> of A will be discontinuous at this time instant._
-_It is therefore advisable to move B into *Event Mode* at this time instant too if an <<output>> of A is connected to B._
-_This means to call <<fmi3EnterEventMode>> on B.]_ +
-+
-All the following events are internal events:
-
-. At a predefined time instant latexmath:[t_i=T_{\mathit{next}}(t_{i-1}, 0)] that was defined at the previous event instant latexmath:[t_{i-1}] by the FMU.
-Such an event is called <<time event>>.
-
-. At a time instant, where an event indicator latexmath:[z_j(t)] changes its domain from latexmath:[z_j > 0] to latexmath:[z_j \leq 0] or from latexmath:[z_j \leq 0] to latexmath:[z_j > 0] (see <<figure-events>>).
-More precisely: An event latexmath:[t = t_i] occurs at the smallest time instant latexmath:[t] with latexmath:[t>t_{i-1}] where latexmath:[(z_j(t)>0) \neq (z_j(t_{i-1}) >0)].
-Such an event is called <<state event>>.
-_[This definition is slightly different from the standard definition of <<state event,`state events`>>: _ latexmath:[z_j(t) \cdot z_j(t_{i-1}) \leq 0] _._
-_This often used definition has the severe drawback that_ latexmath:[z_j(t_{i-1}) \neq 0] _is required in order to be well-defined and this condition cannot be guaranteed.]._
-All event indicators are piecewise continuous and are collected together in one vector of floating point numbers latexmath:[\mathbf{z(t)}]. +
-
-.An event occurs when the event indicator changes its domain from latexmath:[z>0] to latexmath:[z\leq 0] or vice versa.
-[#figure-events]
-image::images/Event.svg[width=60%, align="center"]
-
-[start=4]
-. At every completed step of an integrator, <<fmi3CompletedIntegratorStep>> must be called (provided the capability flag `completedIntegratorStepNotNeeded` of `<fmiModelDescription>` is `false`).
-An event occurs at this time instant, if indicated by the return argument `enterEventMode == fmi3True`.
-Such an event is called <<step event>>.
-_[<<step event,`Step events`>> are, for example, used to dynamically change the (continuous) <<state,`states`>> of a model internally in the FMU, because the previous states are no longer suited numerically.]_
-
-In this mode all continuous-time and discrete-time equations are active and the unknowns at an event can be computed and retrieved.
-The event time of a <<state event>> may be determined if a domain change of at least one event indicator is detected at the end of a completed integrator step.
-
-*Event Mode* is entered by calling <<fmi3EnterEventMode>>, if an event is triggered in *Continuous-Time Mode*.
+* <<time-event,Time events>>: The time instant of such an event is signaled to the importer by
+  - the argument <<nextEventTime>> of <<fmi3UpdateDiscreteStates>>, or
+  - the arguments of <<fmi3GetShift>> and <<fmi3GetInterval>>.
+* <<state-event,State events>>
+* <<input-event,Input events>>
+* <<step-event,Step events>>
 
 Allowed Function Calls::
 
 Function <<fmi3UpdateDiscreteStates>>::
-In order to handle discrete events <<fmi3UpdateDiscreteStates>> is called.
-When the output argument `discreteStatesNeedUpdate == fmi3True`, the FMU should stay in *Event Mode* and another call to <<fmi3UpdateDiscreteStates>> is required.
+When the importer converges on a solution for event handling at the current super-dense time step it calls
+ <<fmi3UpdateDiscreteStates>> to determine if a another event iteration is required (introducing a new instance of super-dense time) or *Event Mode* can be exited.
 
-Function <<fmi3EnterContinuousTimeMode>>::
+[[fmi3UpdateDiscreteStates,`fmi3UpdateDiscreteStates`]]
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tag=UpdateDiscreteStates
+----
+
+[[discreteStatesNeedUpdate,`discreteStatesNeedUpdate`]]
+* When `discreteStatesNeedUpdate == fmi3True`, the importer must stay in *Event Mode* for another event iteration.
+
+[[terminateSimulation,`terminateSimulation`]]
+* When <<terminateSimulation,`terminateSimulation == fmi3True`>>, the model requested to stop integration and the importer must call <<fmi3Terminate>>.
+
+[[nominalsOfContinuousStatesChanged,`nominalsOfContinuousStatesChanged`]]
+* If argument `nominalsOfContinuousStatesChanged == fmi3True`, then at least one nominal value of the <<state,`states`>> has changed and can be inquired with <<fmi3GetNominalsOfContinuousStates>>. +
+This argument is only valid in Model Exchange.
+
+[[valuesOfContinuousStatesChanged,`valuesOfContinuousStatesChanged`]]
+* If argument `valuesOfContinuousStatesChanged == fmi3True`, then at least one continuous state has changed its value. +
+[[state,`state`]]
+The new values of the <<state,`states`>> can be inquired with <<fmi3GetContinuousStates>> or individually for each state for which <<reinit, `reinit = true`>> by calling `fmi3GetFloat64`. +
+This argument is only valid in Model Exchange.
+
+[[nextEventTimeDefined,`nextEventTimeDefined`]]
+* When <<nextEventTimeDefined,`nextEventTimeDefined == fmi3True`>>, the next time event is known and <<nextEventTime>> has a valid value.
+
+[[nextEventTime,`nextEventTime`]]
+* The return argument <<nextEventTime>> contains the absolute time of the next time event if <<nextEventTimeDefined,`nextEventTimeDefined == fmi3True`>>.
+The importer must compute up to <<nextEventTime>> (or if needed slightly further) and then enter *Event Mode* using <<fmi3EnterEventMode>> with argument <<timeEvent,`timeEvent == fmi3True`>>.
+The FMU must handle this time event at the first call to <<fmi3EnterEventMode>> with <<timeEvent,`timeEvent == fmi3True`>> at or after <<nextEventTime>>. +
+_[This might be needed if, for example, the time resolution of the importer does not allow hitting the precise <<nextEventTime>>._
+_If the time offset proves to be too large, the FMU could issue a log message and return fmi3Error._
+_The user can improve time settings of the importer to alleviate the issues.]_ +
+If another (e.g. <<state event>>) event happens before that <<nextEventTime>>, the previous definition of <<nextEventTime>> becomes obsolete.
+
+
 [[fmi3EnterContinuousTimeMode,`fmi3EnterContinuousTimeMode`]]
+Function <<fmi3EnterContinuousTimeMode>>::
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=EnterContinuousTimeMode]
@@ -504,11 +509,49 @@ These functions can be called only at the first activation of <<fixedClock>> <<c
 Function <<fmi3GetDirectionalDerivative>>::
 See <<fmi3GetDirectionalDerivative>>.
 
+
+==== Event Handling
+
+This concerns the following API calls: <<fmi3SetClock>>, <<fmi3GetClock>>, <<fmi3SetIntervalDecimal>>, <<fmi3SetIntervalFraction>>, <<fmi3GetIntervalDecimal>>, <<fmi3GetIntervalFraction>>
+
+A <<clock>> event is handled by the environment in the following way:
+
+_[TODO: Move this section into Common and there the Event Mode description.]_
+
+Enter event mode::
+The *Event Mode* is entered after initialization (call to function <<fmi3ExitInitializationMode>>) or during simulation with a call to the function <<fmi3EnterEventMode>>.
+The FMU activates <<outputClock,`output clocks`>>.
+
+Synchronize clock activation and intervals with the environment::
+
+_[TODO: remove usage of clock tick and use clock activation instead (Note to self: search also for "`clock` tick").]_
+
+The <<clock>> activation status can be inquired with the function <<fmi3GetClock>>.
+The environment calls the function <<fmi3SetClock>> for periodic <<clock,`clocks`>> and <<inputClock,`input clocks`>>.
+Moreover the current <<clock>> intervals may be inquired with the function <<fmi3GetIntervalDecimal>> or <<fmi3GetIntervalFraction>> and set with the function <<fmi3SetIntervalDecimal>> <<fmi3SetIntervalFraction>>.
+_[In the Modelica language this is the value returned by the interval() operator._
+_The initialization of intervals is needed for <<output>> and <<input>> sample times if a <<clock>> ticks the first time._
+_The FMU determines the interval itself at subsequent <<clock>> ticks.]_
+
+_[TODO: This should not be in Event Handling, merge into the other section for clock intervals with the table.]_
+
+_[TODO: Write here a few sentences about how clocks interact with the event iteration.]_
+
+Leave event mode::
+The function <<fmi3UpdateDiscreteStates>> evaluates the discrete-time equations, provided the corresponding <<clock>> is active and the discrete-time equations have not already been evaluated with calls to `fmi3Get{VariableType}` functions.
+Clocks are automatically deactivated by <<fmi3UpdateDiscreteStates>> and by <<fmi3Reset>>.
+_[This handling of discrete-time states and <<time event,`time events>> is forward compatible with FMI 2.0 for any model that could be treated with FMI 2.0 and is exported again using the new features._
+_The environment may ignore the new functions <<fmi3SetClock>>, <<fmi3GetClock>>, <<fmi3SetIntervalDecimal>>, <<fmi3SetIntervalFraction>>, <<fmi3GetIntervalDecimal>> and <<fmi3GetIntervalFraction>>._
+_The new functions are needed for FMUs with input sample times and to set discrete-time states in model-based control applications or if algebraic loops are present among discrete-time equations of multiple connected FMUs.]_
+
+
+
+
+
 ===== State: Reconfiguration Mode [[ReconfigurationMode]]
 
-This state is entered from state *Event Mode* (ME), *Step Mode* (CS) or *Clock Activation Mode* (SE) by calling <<fmi3EnterConfigurationMode>>.
 The *Reconfiguration Mode* allows setting <<structuralParameter, `structural parameters`>> for example to resize array variables.
-<<fmi3EnterConfigurationMode>> must not be called if the FMU contains no <<structuralParameter,`structural parameter`>>.
+This state must not be entered, if the FMU contains no <<structuralParameter,`structural parameters`>>.
 
 [#table-math-reconfigurationMode]
 [cols="2,1",options="header",]
@@ -616,6 +659,23 @@ This argument is ignored in Scheduled Execution.
 * `earlyReturnTime` is used to signal the FMU at which time to return early from the current <<fmi3DoStep>>, if the return value of <<earlyReturnRequested, `earlyReturnRequested == fmi3True`>>.
 If the <<earlyReturnTime>> is greater than the last signaled <<intermediateUpdateTime>>, the FMU may integrate up to the time instant <<earlyReturnTime>>. +
 This argument is ignored in Scheduled Execution.
+
+.Mathematical description of *Intermediate Update Mode*.
+[#table-math-intermediateUpdateMode]
+[cols="2,1",options="header",]
+|====
+|Equations in *Intermediate Update Mode*
+|Functions
+
+|Get intermediate variable values latexmath:[\mathbf{v}_u(t_u)]
+|`fmi3Get{VariableType}`
+
+|Set intermediate input variables latexmath:[\mathbf{u}_u(t_u)]
+|`fmi3Set{VariableType}`
+
+// TODO Irina & Matthias: do we need to add lines for <<fmi3GetIntervalDecimal>> & <<fmi3GetIntervalFraction>>
+
+|====
 
 
 Allowed Function Calls::
