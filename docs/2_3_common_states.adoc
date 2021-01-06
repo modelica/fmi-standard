@@ -18,18 +18,18 @@ Allowed Function Calls::
 
 [[fmi3InstantiateModelExchange,`fmi3InstantiateModelExchange`]]
 Function `fmi3InstantiateModelExchange`::
-FMU with initialization and events; between events, the simulation of continuous systems is performed with external integrators from the environment (see <<fmi-for-model-exchange>>).
-The <<modelDescription.xml>> has to include a `<ModelExchange>` element to allow calling `fmi3InstantiateModelExchange`.
+This function instantiates a Model Exchange FMU (see <<fmi-for-model-exchange>>).
+It is allowed to call this function only if <<modelDescription.xml>> includes a `<ModelExchange>` element.
 
 [[fmi3InstantiateCoSimulation,`fmi3InstantiateCoSimulation`]]
 Function `fmi3InstantiateCoSimulation`::
-Black box interface for Co-Simulation (see <<fmi-for-co-simulation>>).
-The <<modelDescription.xml>> has to include a `<CoSimulation>` element to allow calling `fmi3InstantiateCoSimulation`.
+This function instantiates a Co-Simulation FMU (see <<fmi-for-co-simulation>>).
+It is allowed to call this function only if <<modelDescription.xml>> includes a `<CoSimulation>` element.
 
 [[fmi3InstantiateScheduledExecution,`fmi3InstantiateScheduledExecution`]]
 Function `fmi3InstantiateScheduledExecution`::
-Black box interface for Scheduled Execution (see <<fmi-for-scheduled-execution>>).
-The <<modelDescription.xml>> has to include a `<ScheduledExecution>` element to allow calling `fmi3InstantiateScheduledExecution`.
+This function instantiates a Scheduled Execution FMU (see <<fmi-for-scheduled-execution>>).
+It is allowed to call this function only if <<modelDescription.xml>> includes a `<ScheduledExecution>` element.
 
 [[fmi3Instantiate,`fmi3InstantiateXXX`]]
 [source, C]
@@ -219,6 +219,11 @@ Activate initialization equations latexmath:[\mathbf{f}_{\mathit{init}}].
 
 Allowed Function Calls::
 
+Function `fmi3Set{VariableType}`::
+
+This function can be called for variables with <<variability>> latexmath:[\neq] <<constant>> and with <<initial>> = <<exact>> or <<approx>>.
+The intention is to set <<start>> and guess values for these variables.
+
 [[fmi3EnterConfigurationMode,`fmi3EnterConfigurationMode`]]
 Function `fmi3EnterConfigurationMode`::
 [source, C]
@@ -259,13 +264,6 @@ _If the <<independent>> variable is `time`, `startTime` is the starting time of 
 If the environment tries to compute past `stopTime`, the FMU has to return <<fmi3Error,`fmi3Status == fmi3Error`>>.
 If `stopTimeDefined == fmi3False`, then no final value of the <<independent>> variable is defined and argument `stopTime` is meaningless.
 
-// TODO: Verweis zu get-set-state and list all functions here again
-
-Function `fmi3Set{VariableType}`::
-
-This function can be called for variables with <<variability>> latexmath:[\neq] <<constant>> and with <<initial>> = <<exact>> or <<approx>>.
-The intention is to set <<start>> and guess values for these variables.
-
 ===== State: Initialization Mode [[InitializationMode]]
 
 The *Initialization Mode* is used by the simulation algorithm to compute consistent initial conditions for the overall system.
@@ -288,14 +286,14 @@ continuous-time <<state,`states`>> latexmath:[\mathbf{x}_{c,\mathit{initial=exac
 |Set continuous-time and discrete-time <<input,`inputs`>>  latexmath:[\mathbf{u}_{c+d}(\mathbf{t}_{start})]
 |`fmi3Set{VariableType}`
 
-|latexmath:[(\mathbf{v}_{\mathit{causality \neq parameter}}, \mathbf{T}_{\mathit{shift}}, \mathbf{T}_{\mathit{interval}}) := \mathbf{f}_{\mathit{init}}(\mathbf{u}_{c+d}, \mathbf{t}_{start}, \mathbf{v}_{\mathit{initial=exact}})]
-|`fmi3Get{VariableType}`, <<fmi3GetContinuousStates>>, <<fmi3GetDirectionalDerivative>>, <<fmi3GetShift>>, <<fmi3GetInterval>>
+|latexmath:[(\mathbf{y}_{c+d}, \mathbf{\dot{x}}_c, \mathbf{x}_{c+d}, \mathbf{z}, \mathbf{r}, \mathbf{w}_{c+d}, \mathbf{T}_{\mathit{shift}}, \mathbf{T}_\mathit{interval}) := \mathbf{f}_{\mathit{init}}(\mathbf{u}_{c+d}, \mathbf{t}_{start}, \mathbf{v}_{\mathit{initial=exact}})]
+|`fmi3Get{VariableType}`, <<fmi3GetDerivatives>>, <<fmi3GetContinuousStates>>, <<fmi3GetDirectionalDerivative>>, <<fmi3GetEventIndicators>>, <<fmi3GetShift>>, <<fmi3GetInterval>>
 
 a|
-* evaluate latexmath:[\mathbf{f}_{\mathit{init}}], if no `fmi3GetXXX` function was called
-* deactivate initialization equations latexmath:[\mathbf{f}_{\mathit{init}}].
+* Evaluate latexmath:[\mathbf{f}_{\mathit{init}}], if no `fmi3GetXXX` function was called
+* Deactivate initialization equations latexmath:[\mathbf{f}_{\mathit{init}}].
 * Model Exchange:
-  - activate event equations latexmath:[\mathbf{f}_{\mathit{event}}]
+  - Activate event equations latexmath:[\mathbf{f}_{\mathit{event}}]
   - latexmath:[\mathbf{t}:=(\mathbf{t}_{\mathit{start}}, 0)]
 
 |<<fmi3ExitInitializationMode>>
@@ -303,15 +301,20 @@ a|
 
 Allowed Function Calls::
 
-[[fmi3ExitInitializationMode,`fmi3ExitInitializationMode`]]
-Function `fmi3ExitInitializationMode`::
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=ExitInitializationMode]
-----
+Function `fmi3Set{VariableType}`::
+This function can be called for variables with <<variability>> latexmath:[\neq] <<constant>> and with <<initial>> = <<exact>>.
 
-Changes the state to *Event Mode* (ME), *Step Mode* (CS) or *Clock Activation Mode* (SE).
-_[This function switches off all initialization equations.]_
+Function <<fmi3GetDerivatives>>::
+See <<fmi3GetDerivatives>> for Model Exchange only.
+
+Function <<fmi3GetContinuousStates>>::
+See <<fmi3GetContinuousStates>> for Model Exchange only.
+
+Function <<fmi3GetDirectionalDerivative>>::
+See <<fmi3GetDirectionalDerivative>>.
+
+Function <<fmi3GetEventIndicators>>::
+See <<fmi3GetEventIndicators>>.
 
 Function <<fmi3GetShiftDecimal>>::
 Function <<fmi3GetShiftFraction>>::
@@ -321,18 +324,18 @@ Function <<fmi3GetIntervalDecimal>>::
 Function <<fmi3GetIntervalFraction>>::
 See <<fmi3GetInterval>>.
 
-Function <<fmi3GetContinuousStates>>::
-See <<fmi3GetContinuousStates>> for Model-Exchange only.
+Function <<fmi3SetIntervalDecimal>>::
+Function <<fmi3SetIntervalFraction>>::
+One of these functions must be called for all <<fixed-periodic-clocks>>.
 
-Function <<fmi3GetDirectionalDerivative>>::
-See <<fmi3GetDirectionalDerivative>>.
+[[fmi3ExitInitializationMode,`fmi3ExitInitializationMode`]]
+Function `fmi3ExitInitializationMode`::
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=ExitInitializationMode]
+----
 
-Function `fmi3Set{VariableType}`::
-This function can be called for variables with <<variability>> latexmath:[\neq] <<constant>> and with <<initial>> = <<exact>>.
-
-Function `fmi3Get{VariableType}`::
-The variables that can be retrieved by `fmi3Get{VariableType}` calls are defined in the XML file as elements `<ModelStructure><InitialUnknown>`.
-For variables with <<causality>> = <<output>> or continuous-time <<state,`states`>> or state derivatives.
+Changes the state to *Event Mode* (ME), *Step Mode* (CS) or *Clock Activation Mode* (SE).
 
 ===== State: Configuration Mode [[ConfigurationMode]]
 
@@ -351,12 +354,14 @@ The *Configuration Mode* allows setting <<structuralParameter, `structural param
 _[<<structuralParameter,`structuralParameters`>> with_ latexmath:[\mathbf{p}_{\mathit{variability=fixed}}] _or_ latexmath:[\mathbf{p}_{\mathit{variability=tunable}}] _are included here]_
 |`fmi3Set{VariableType}`
 
-|Exit *Configuration Mode* +
-Resize arrays with dimensions that just changed.
+|Resize arrays with dimensions that just changed.
 |<<fmi3ExitConfigurationMode>>
 |====
 
 Allowed Function Calls::
+
+Function `fmi3Set{VariableType}`::
+Only for variables with <<causality>> = <<structuralParameter>> and <<variability>> = <<fixed>> or <<variability>> = <<tunable>>.
 
 [[fmi3ExitConfigurationMode,`fmi3ExitConfigurationMode`]]
 Function `fmi3ExitConfigurationMode`::
@@ -367,9 +372,6 @@ include::../headers/fmi3FunctionTypes.h[tags=ExitConfigurationMode]
 
 Exits the *Configuration Mode* and returns to state *Instantiated*.
 
-Function `fmi3Set{VariableType}`::
-Only for variables with <<causality>> = <<structuralParameter>> and <<variability>> = <<fixed>> or <<variability>> = <<tunable>>.
-
 ===== State: Terminated [[Terminated]]
 In this state, the final values of all variables at the final time of a simulation can be retrieved.
 
@@ -379,15 +381,17 @@ In this state, the final values of all variables at the final time of a simulati
 |Equations
 |Functions
 
-|latexmath:[\mathbf{v}_{\mathit{causality \neq parameter}}:=\mathbf{f}_{\mathit{term}}(\mathbf{t}, \mathbf{^{\bullet}v(t)})]
-|`fmi3Get{VariableType}`, <<fmi3GetContinuousStates>>, <<fmi3GetDirectionalDerivative>>, <<fmi3GetOutputDerivatives>>
+|latexmath:[(\mathbf{y}_{c+d}, \mathbf{\dot{x}}_c, \mathbf{x}_{c+d}, \mathbf{z}, \mathbf{w}_{c+d}) := \mathbf{f}_{\mathit{term}}({}^\bullet\mathbf{x}_{c+d}, \mathbf{u}_{c+d}, \mathbf{p}, \mathbf{t})]
+|`fmi3Get{VariableType}`, <<fmi3GetDerivatives>>, <<fmi3GetContinuousStates>>, <<fmi3GetEventIndicators>>, <<fmi3GetDirectionalDerivative>>, <<fmi3GetOutputDerivatives>>
 |====
 
 Allowed Function Calls::
 
+Function <<fmi3GetDerivatives>>::
+Function <<fmi3GetContinuousStates>>::
+Function <<fmi3GetEventIndicators>>::
 Function <<fmi3GetDirectionalDerivative>>::
 Function <<fmi3GetOutputDerivatives>>::
-Function <<fmi3GetContinuousStates>>::
 No restrictions.
 
 ==== Super State: Initialized [[Initialized]]
@@ -444,35 +448,66 @@ There are multiple kinds of events that require a transition to *Event Mode*:
 a|
 * Activate clocks and respective model partitions in latexmath:[\mathbf{f}_{\mathit{event}}]
 * Deactivate clocks and
-  - reset respective clocked variables to their previous values: latexmath:[\mathbf{v}_{\mathit{d}} = {}^\bullet\mathbf{v}_{\mathit{d}}]
-  - deactivate respective model partitions in latexmath:[\mathbf{f}_{\mathit{event}}]
+  - Reset respective clocked variables to their previous values: latexmath:[\mathbf{v}_{\mathit{d}} := {}^\bullet\mathbf{v}_{\mathit{d}}]
+  - Deactivate respective model partitions in latexmath:[\mathbf{f}_{\mathit{event}}]
 |<<fmi3SetClock>>
 
 a|
 * Activate output clocks and respective model partitions in latexmath:[\mathbf{f}_{\mathit{event}}] +
-* latexmath:[(\mathbf{y}_{c+d}, \mathbf{\dot{x}}_c, \mathbf{x}_{c+d}, \mathbf{z}, \mathbf{w}_{c+d}, \mathbf{T}_{\mathit{next}}, \mathbf{T}_\mathit{interval}) = \mathbf{f}_{\mathit{event}}({}^\bullet\mathbf{x}_{c+d}, \mathbf{u}_{c+d}, \mathbf{p}, \mathbf{t})]
-|<<fmi3GetClock>>,
+* latexmath:[(\mathbf{y}_{c+d}, \mathbf{\dot{x}}_c, \mathbf{x}_{c+d}, \mathbf{z}, \mathbf{r}, \mathbf{w}_{c+d}, \mathbf{T}_{\mathit{next}}, \mathbf{T}_\mathit{interval}) := \mathbf{f}_{\mathit{event}}({}^\bullet\mathbf{x}_{c+d}, \mathbf{u}_{c+d}, \mathbf{p}, \mathbf{t})]
+|<<fmi3GetClock>>, +
 <<fmi3GetInterval>>, +
-`fmi3Get{VariableType}`,
-<<fmi3GetDerivatives>>,
-<<fmi3GetContinuousStates>>,
-<<fmi3GetEventIndicators>>
+`fmi3Get{VariableType}`, +
+<<fmi3GetDerivatives>>, +
+<<fmi3GetContinuousStates>>, +
+<<fmi3GetEventIndicators>> +
 
 a|
-* evaluate latexmath:[\mathbf{f}_{\mathit{event}}], if no `fmi3GetXXX` function was called in this instant of super-dense time
-* update previous values of discrete states: latexmath:[{}^\bullet\mathbf{x}_d:=\mathbf{x}_d]
-* deactivate active clocks and respective model partitions in latexmath:[\mathbf{f}_{\mathit{event}}]
-* increment super-dense time: latexmath:[\mathit{\mathbf{t}:=(\mathbf{t}_R, \mathbf{t}_I + 1)}]
+* Evaluate latexmath:[\mathbf{f}_{\mathit{event}}], if no `fmi3GetXXX` function was called in this instant of super-dense time
+* Update previous values of discrete states: latexmath:[{}^\bullet\mathbf{x}_d:=\mathbf{x}_d]
+* Deactivate active clocks and respective model partitions in latexmath:[\mathbf{f}_{\mathit{event}}]
+* Increment super-dense time: latexmath:[\mathbf{t}:=(\mathbf{t}_\mathit{R}, \mathbf{t}_\mathit{I} + 1)]
 |<<fmi3UpdateDiscreteStates>>
+
+a|
+* Update previous values of <<relations>>: latexmath:[{}^\bullet\mathbf{r}:=\mathbf{r}]
+* Deactivate event equations latexmath:[\mathbf{f}_\mathit{event}]
+* Model Exchange: Activate continuous-time equations latexmath:[\mathbf{f}_\mathit{cont}]
+
+|<<fmi3EnterContinuousTimeMode>>,
+<<fmi3EnterStepMode>>
 
 |====
 
-
 Allowed Function Calls::
 
+Function `fmi3Set{VariableType}`::
+This function can be called for variables with <<causality,`causality == input`>> and for variables with <<causality,`causality == parameter`>> and <<variability, `variability == tunable`>>.
+
+[[fmi3SetClock,`fmi3SetClock`]]Function <<fmi3SetClock>>::
+For <<inputClock,`input clocks`>>, <<fmi3SetClock>> is called to set the activation status of <<clock,`clocks`>> to `fmi3ClockActive` or `fmi3ClockInactive`.
+During the solution of algebraic loops, the activation condition of triggered input clocks may change and therefore <<fmi3SetClock>> can be called multiple times per super-dense time instant.
+Only <<time-based-clocks,Time-based clocks>> must not be active for more than one call of <<fmi3UpdateDiscreteStates>> per *Event Mode*.
+
+[[fmi3GetClock,`fmi3GetClock`]]Function <<fmi3GetClock>>::
+is used to inquire the status of <<clocks>>.
+
+Function <<fmi3GetIntervalDecimal>>::
+Function <<fmi3GetIntervalFraction>>::
+For <<clock,`input clocks`>> it is allowed to call these functions to query the next activation interval. +
+For <<changing-aperiodic-clocks>>, these functions must be called in every *Event Mode* where this clock was activated. +
+For <<countdown-aperiodic-clocks>>, these functions must be called in every *Event Mode*.
+
+Function <<fmi3GetDirectionalDerivative>>::
+See <<fmi3GetDirectionalDerivative>>.
+
+Function <<fmi3GetDerivatives>>::
+Function <<fmi3GetContinuousStates>>::
+Function <<fmi3GetEventIndicators>>::
+Can only be called in Model Exchange.
+
 Function <<fmi3UpdateDiscreteStates>>::
-When the importer converges on a solution for event handling at the current super-dense time step it calls
- <<fmi3UpdateDiscreteStates>> to determine if a another event iteration is required (introducing a new instance of super-dense time) or *Event Mode* can be exited.
+When the importer converges on a solution for event handling at the current super-dense time step it calls <<fmi3UpdateDiscreteStates>> to determine if a another event iteration is required (introducing a new instance of super-dense time) or *Event Mode* can be exited.
 
 [[fmi3UpdateDiscreteStates,`fmi3UpdateDiscreteStates`]]
 [source, C]
@@ -516,14 +551,7 @@ Function <<fmi3EnterContinuousTimeMode>>::
 include::../headers/fmi3FunctionTypes.h[tags=EnterContinuousTimeMode]
 ----
 
-// TODO only in ME
-
-The model enters *Continuous-Time Mode* and all discrete-time equations become inactive and all relations are "frozen". +
-This function has to be called when changing from *Event Mode* (after the global event iteration in *Event Mode* over all involved FMUs and other models has converged) into *Continuous-Time Mode*. +
-
-_[This function might be used additionally for the following purposes:_
-* _If the FMU stores results internally on file, then the results after the initialization and/or the event has been processed can be stored._
-* _If the FMU contains dynamically changing states, then a new state selection might be performed with this function.]_
+This function must be called to change from *Event Mode* into *Continuous-Time Mode* in Model Exchange.
 
 Function <<fmi3EnterStepMode>>::
 [[fmi3EnterStepMode,`fmi3EnterStepMode`]]
@@ -532,69 +560,7 @@ Function <<fmi3EnterStepMode>>::
 include::../headers/fmi3FunctionTypes.h[tag=EnterStepMode]
 ----
 
-// TODO: only in CS
-
-Once all events are handled and `discreteStatesNeedUpdate == fmi3False`, the FMU should be pushed to *Step Mode* by calling <<fmi3EnterStepMode>>, unless it requests to terminate the Co-Simulation by setting  <<terminateSimulation,`terminateSimulation`> to `fmi3True`.
-In this case, a new step can be started from the current communication point time.
-
-<<fmi3GetClock>>::
-[[fmi3GetClock,`fmi3GetClock`]]
-is used to inquire the status of <<triggered>> <<outputClock,`output clocks`>> this function during *Event Mode* and *Intermediate Update Mode*.
-
-<<fmi3SetClock>>::
-[[fmi3SetClock,`fmi3SetClock`]]
-For <<inputClock,`input clocks`>>, <<fmi3SetClock>> is called after entering *Event Mode* to set the activation status of <<clock,`clocks`>>.
-This function can be called several times for the same <<clock>>, only if re-computations of clock state are needed during *Event Mode*.
-
-<<fmi3GetIntervalDecimal>> & <<fmi3GetIntervalFraction>>::
-For <<clock,`input clocks`>> it is allowed to call these functions to query the next activation interval.
-For <<aperiodic>> <<clock,`clocks`>>, these functions must be called in every *Event Mode* where this clock was activated.
-For <<countdown>> <<clock,`clocks`>>, these functions must be called in every *Event Mode*.
-
-<<fmi3SetIntervalDecimal>> & <<fmi3SetIntervalFraction>>::
-These functions can be called only at the first activation of <<fixedClock>> <<clocks>>.
-
-Function <<fmi3GetDirectionalDerivative>>::
-See <<fmi3GetDirectionalDerivative>>.
-
-
-==== Event Handling
-
-This concerns the following API calls: <<fmi3SetClock>>, <<fmi3GetClock>>, <<fmi3SetIntervalDecimal>>, <<fmi3SetIntervalFraction>>, <<fmi3GetIntervalDecimal>>, <<fmi3GetIntervalFraction>>
-
-A <<clock>> event is handled by the environment in the following way:
-
-_[TODO: Move this section into Common and there the Event Mode description.]_
-
-Enter event mode::
-The *Event Mode* is entered after initialization (call to function <<fmi3ExitInitializationMode>>) or during simulation with a call to the function <<fmi3EnterEventMode>>.
-The FMU activates <<outputClock,`output clocks`>>.
-
-Synchronize clock activation and intervals with the environment::
-
-_[TODO: remove usage of clock tick and use clock activation instead (Note to self: search also for "`clock` tick").]_
-
-The <<clock>> activation status can be inquired with the function <<fmi3GetClock>>.
-The environment calls the function <<fmi3SetClock>> for periodic <<clock,`clocks`>> and <<inputClock,`input clocks`>>.
-Moreover the current <<clock>> intervals may be inquired with the function <<fmi3GetIntervalDecimal>> or <<fmi3GetIntervalFraction>> and set with the function <<fmi3SetIntervalDecimal>> <<fmi3SetIntervalFraction>>.
-_[In the Modelica language this is the value returned by the interval() operator._
-_The initialization of intervals is needed for <<output>> and <<input>> sample times if a <<clock>> ticks the first time._
-_The FMU determines the interval itself at subsequent <<clock>> ticks.]_
-
-_[TODO: This should not be in Event Handling, merge into the other section for clock intervals with the table.]_
-
-_[TODO: Write here a few sentences about how clocks interact with the event iteration.]_
-
-Leave event mode::
-The function <<fmi3UpdateDiscreteStates>> evaluates the discrete-time equations, provided the corresponding <<clock>> is active and the discrete-time equations have not already been evaluated with calls to `fmi3Get{VariableType}` functions.
-Clocks are automatically deactivated by <<fmi3UpdateDiscreteStates>> and by <<fmi3Reset>>.
-_[This handling of discrete-time states and <<time event,`time events>> is forward compatible with FMI 2.0 for any model that could be treated with FMI 2.0 and is exported again using the new features._
-_The environment may ignore the new functions <<fmi3SetClock>>, <<fmi3GetClock>>, <<fmi3SetIntervalDecimal>>, <<fmi3SetIntervalFraction>>, <<fmi3GetIntervalDecimal>> and <<fmi3GetIntervalFraction>>._
-_The new functions are needed for FMUs with input sample times and to set discrete-time states in model-based control applications or if algebraic loops are present among discrete-time equations of multiple connected FMUs.]_
-
-
-
-
+This function must be called to change from *Event Mode* into *Step Mode* in Co-Simulation.
 
 ===== State: Reconfiguration Mode [[ReconfigurationMode]]
 
@@ -611,8 +577,7 @@ This state must not be entered, if the FMU contains no <<structuralParameter,`st
 _[<<structuralParameter,`structuralParameters`>> with_ latexmath:[\mathbf{p}_{\mathit{variability=tunable}}] _are included here]_
 |`fmi3Set{VariableType}`
 
-|Exit *Reconfiguration Mode* +
-Resize arrays with dimensions that just changed.
+|Resize arrays with dimensions that just changed.
 |<<fmi3ExitConfigurationMode>>
 |====
 
