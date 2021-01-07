@@ -1,12 +1,18 @@
 === State Machine and Semantics [[common-state-machine]]
 
+To define allowed calling sequences of FMI functions, state machines are used.
 All FMI interface types share a number of states in their respective state machines.
-This chapter describes these common modes.
-FMI specific state-machine modes will be described in their respective chapters.
+This chapter describes these common states used in at least two of the interface types.
+FMI specific state-machine states will be described in their respective chapters.
+Each state of the state machine corresponds to a certain phase of a simulation.
 
 .Common calling sequence for C functions of common states for all three FMI types.
 [#figure-common-state-machine]
 image::images/state-machines-common-states.svg[width=80%, align="center"]
+
+The state machine is given here as UML 2.0 state machine.
+If a transition is labeled with one or more function names (for example, <<fmi3EnterInitializationMode>>, <<fmi3EnterEventMode>>), the transition is taken if the function call returns successfully (not `NULL` for <<fmi3Instantiate>> or <<fmi3OK>> and <<fmi3Warning>> for all other functions).
+This way, importer and FMU can determine in which state the FMU is.
 
 ==== Super State: FMU State Setable [[FMUStateSetable]]
 
@@ -187,6 +193,30 @@ See <<get-and-set-variable-values>> for the general mechanism to get variable va
 Getting variable might trigger computations.
 _[If *Terminated* is entered because of an `fmi3Error` return value, retrieved values should only be used for debugging purposes.]_
 
+[[fmi3GetNominalsOfContinuousStates,`fmi3GetNominalsOfContinuousStates`]]
+Function <<fmi3GetNominalsOfContinuousStates>>::
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=GetNominalsOfContinuousStates]
+----
+
+// TODO fix following text
+
+Return the nominal values of the continuous <<state,`states`>> with the some convention for the order as above.
+This function should always be called after calling function <<fmi3UpdateDiscreteStates>>, if `nominalsOfContinuousStatesChanged == fmi3True`, since then the nominal values of the continuous <<state,`states`>> have changed _[for example, because the association of the continuous <<state,`states`>> to variables has changed due to internal dynamic state selection]_.
+If the FMU does not have information about the nominal value of a continuous <<state>> i, a nominal value `nominals[i] == 1.0` should be returned.
+Note that it is required that `nominals[i] > 0.0`.
+_[Typically, the nominal values of the continuous <<state,`states`>> are used to compute the absolute tolerance required by the integrator._
+_Example:_ +
+`absoluteTolerance[i] = 0.01 * tolerance * nominals[i];` _]_
+
+Note that simulation backward in time is only allowed over continuous time intervals.
+As soon as an event occurs (<<fmi3EnterEventMode>> was called), going back in time is forbidden, because <<fmi3EnterEventMode>> / <<fmi3UpdateDiscreteStates>> can only compute the next discrete state, not the previous one.
+
+Note that during *Initialization*, *Event Mode*, and *Continuous-Time Mode*, <<input>> variables can be set with `fmi3Set{VariableType}` and output variables can be retrieved with `fmi3Get{VariableType}` interchangeably according to the model structure defined under element `<ModelStructure>` in the XML file.
+_[For example, if one <<output>> `y1` depends on two <<input,`inputs`>> `u1`, `u2`, then these two <<input,`inputs`>> must be set, before `y1` can be retrieved._
+_If additionally an <<output>> `y2` depends on an <<input>> `u3`, then `u3` can be set and `y2` can be retrieved afterwards._
+_As a result, artificial or `real` algebraic loops over connected FMUs in any of these three modes can be handled by using appropriate numerical algorithms.]_
 
 Function <<fmi3GetFMUState>>::
 Function <<fmi3SetFMUState>>::
@@ -212,8 +242,9 @@ In the state *Instantiated* the FMU can do one-time initializations and allocate
 |Get variable <<start>> values as defined in <<modelDescription.xml>>.
 |`fmi3Get{VariableType}`
 
-|latexmath:[\mathbf{t}_{\mathit{start}} = startTime] +
-Activate initialization equations latexmath:[\mathbf{f}_{\mathit{init}}].
+a|
+* latexmath:[\mathbf{t}_{\mathit{start}} := (]<<startTime>>latexmath:[,0)]
+* Activate initialization equations latexmath:[\mathbf{f}_{\mathit{init}}].
 |<<fmi3EnterInitializationMode>>
 |====
 
@@ -232,6 +263,42 @@ include::../headers/fmi3FunctionTypes.h[tags=EnterConfigurationMode]
 ----
 
 Changes state to *Configuration Mode*.
+
+[[fmi3GetNumberOfContinuousStates,`fmi3GetNumberOfContinuousStates`]]
+Function <<fmi3GetNumberOfContinuousStates>>::
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=GetNumberOfContinuousStates]
+----
+
+This function returns the number of <<state,continuous states>>. +
+This function can only be called in Model Exchange.
+
+* Argument `nContinuousStates` points to the `size_t` variable that will receive the number of <<state,states>>.
+
+The number of <<state,continuous states>> can change during simulation if they are an array with a `<Dimension>` depending on one or more <<structuralParameter,`structural parameters`>>.
+This dependency is defined in the <<modelDescription.xml>> file by the `<Dimension>` element pointing to a <<structuralParameter>>.
+<<fmi3GetNumberOfContinuousStates>> must be called after such <<structuralParameter,`structural parameters`>> changed.
+
+As long as no <<structuralParameter,`structural parameters`>> changed, the number of states is given in the <<modelDescription.xml>>, alleviating the need to call this function.
+
+[[fmi3GetNumberOfEventIndicators,`fmi3GetNumberOfEventIndicators`]]
+Function <<fmi3GetNumberOfEventIndicators>>::
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=GetNumberOfEventIndicators]
+----
+
+This function returns the number of <<state-event,event indicators>>. +
+This function can only be called in Model Exchange.
+
+* Argument `nEventIndicators` points to the `size_t` variable that will receive the number of event indicators.
+
+The number of <<state-event,event indicators>> can change during simulation if they are an array with a `<Dimension>` depending on one or more <<structuralParameter,`structural parameters`>>.
+This dependency is defined in the <<modelDescription.xml>> file by the `<Dimension>` element pointing to a <<structuralParameter>>.
+<<fmi3GetNumberOfEventIndicators>> must be called after such <<structuralParameter,`structural parameters`>> changed.
+
+As long as no <<structuralParameter,`structural parameters`>> changed, the number of event indicators is given in the <<modelDescription.xml>>, alleviating the need to call this function.
 
 [[fmi3EnterInitializationMode,`fmi3EnterInitializationMode`]]
 Function `fmi3EnterInitializationMode`::
@@ -286,12 +353,12 @@ continuous-time <<state,`states`>> latexmath:[\mathbf{x}_{c,\mathit{initial=exac
 |Set continuous-time and discrete-time <<input,`inputs`>>  latexmath:[\mathbf{u}_{c+d}(\mathbf{t}_{start})]
 |`fmi3Set{VariableType}`
 
-|latexmath:[(\mathbf{y}_{c+d}, \mathbf{\dot{x}}_c, \mathbf{x}_{c+d}, \mathbf{z}, \mathbf{r}, \mathbf{w}_{c+d}, \mathbf{T}_{\mathit{shift}}, \mathbf{T}_\mathit{interval}) := \mathbf{f}_{\mathit{init}}(\mathbf{u}_{c+d}, \mathbf{t}_{start}, \mathbf{v}_{\mathit{initial=exact}})]
-|`fmi3Get{VariableType}`, <<fmi3GetDerivatives>>, <<fmi3GetContinuousStates>>, <<fmi3GetDirectionalDerivative>>, <<fmi3GetEventIndicators>>, <<fmi3GetShift>>, <<fmi3GetInterval>>
+|latexmath:[(\mathbf{y}_{c+d}, \mathbf{\dot{x}}_c, \mathbf{x}_{c+d}, \mathbf{z}, \mathbf{r}, \mathbf{w}_{c+d}, \mathbf{b}, \mathbf{T}_{\mathit{shift}}, \mathbf{T}_\mathit{interval}) := \mathbf{f}_{\mathit{init}}(\mathbf{u}_{c+d}, \mathbf{t}_{start}, \mathbf{v}_{\mathit{initial=exact}})]
+|`fmi3Get{VariableType}`, <<fmi3GetDerivatives>>, <<fmi3GetContinuousStates>>, <<fmi3GetEventIndicators>>, <<fmi3GetShift>>, <<fmi3GetInterval>>
 
 a|
 * Evaluate latexmath:[\mathbf{f}_{\mathit{init}}], if no `fmi3GetXXX` function was called
-* Deactivate initialization equations latexmath:[\mathbf{f}_{\mathit{init}}].
+* Deactivate initialization equations latexmath:[\mathbf{f}_{\mathit{init}}]
 * Model Exchange:
   - Activate event equations latexmath:[\mathbf{f}_{\mathit{event}}]
   - latexmath:[\mathbf{t}:=(\mathbf{t}_{\mathit{start}}, 0)]
@@ -312,6 +379,9 @@ See <<fmi3GetContinuousStates>> for Model Exchange only.
 
 Function <<fmi3GetDirectionalDerivative>>::
 See <<fmi3GetDirectionalDerivative>>.
+
+Function <<fmi3GetAdjointDerivative>>::
+See <<fmi3GetAdjointDerivative>>.
 
 Function <<fmi3GetEventIndicators>>::
 See <<fmi3GetEventIndicators>>.
@@ -382,7 +452,7 @@ In this state, the final values of all variables at the final time of a simulati
 |Functions
 
 |latexmath:[(\mathbf{y}_{c+d}, \mathbf{\dot{x}}_c, \mathbf{x}_{c+d}, \mathbf{z}, \mathbf{w}_{c+d}) := \mathbf{f}_{\mathit{term}}({}^\bullet\mathbf{x}_{c+d}, \mathbf{u}_{c+d}, \mathbf{p}, \mathbf{t})]
-|`fmi3Get{VariableType}`, <<fmi3GetDerivatives>>, <<fmi3GetContinuousStates>>, <<fmi3GetEventIndicators>>, <<fmi3GetDirectionalDerivative>>, <<fmi3GetOutputDerivatives>>
+|`fmi3Get{VariableType}`, <<fmi3GetDerivatives>>, <<fmi3GetContinuousStates>>, <<fmi3GetEventIndicators>>, <<fmi3GetOutputDerivatives>>
 |====
 
 Allowed Function Calls::
@@ -391,6 +461,7 @@ Function <<fmi3GetDerivatives>>::
 Function <<fmi3GetContinuousStates>>::
 Function <<fmi3GetEventIndicators>>::
 Function <<fmi3GetDirectionalDerivative>>::
+Function <<fmi3GetAdjointDerivative>>::
 Function <<fmi3GetOutputDerivatives>>::
 No restrictions.
 
@@ -454,7 +525,7 @@ a|
 
 a|
 * Activate output clocks and respective model partitions in latexmath:[\mathbf{f}_{\mathit{event}}] +
-* latexmath:[(\mathbf{y}_{c+d}, \mathbf{\dot{x}}_c, \mathbf{x}_{c+d}, \mathbf{z}, \mathbf{r}, \mathbf{w}_{c+d}, \mathbf{T}_{\mathit{next}}, \mathbf{T}_\mathit{interval}) := \mathbf{f}_{\mathit{event}}({}^\bullet\mathbf{x}_{c+d}, \mathbf{u}_{c+d}, \mathbf{p}, \mathbf{t})]
+* latexmath:[(\mathbf{y}_{c+d}, \mathbf{\dot{x}}_c, \mathbf{x}_{c+d}, \mathbf{z}, \mathbf{r}, \mathbf{w}_{c+d}, \mathbf{b}, \mathbf{T}_{\mathit{next}}, \mathbf{T}_\mathit{interval}) := \mathbf{f}_{\mathit{event}}({}^\bullet\mathbf{x}_{c+d}, \mathbf{u}_{c+d}, \mathbf{p}, {}^\bullet\mathbf{b}, \mathbf{t})]
 |<<fmi3GetClock>>, +
 <<fmi3GetInterval>>, +
 `fmi3Get{VariableType}`, +
@@ -465,6 +536,7 @@ a|
 a|
 * Evaluate latexmath:[\mathbf{f}_{\mathit{event}}], if no `fmi3GetXXX` function was called in this instant of super-dense time
 * Update previous values of discrete states: latexmath:[{}^\bullet\mathbf{x}_d:=\mathbf{x}_d]
+* Update previous values of <<buffers>>: latexmath:[{}^\bullet\mathbf{b}:=\mathbf{b}]
 * Deactivate active clocks and respective model partitions in latexmath:[\mathbf{f}_{\mathit{event}}]
 * Increment super-dense time: latexmath:[\mathbf{t}:=(\mathbf{t}_\mathit{R}, \mathbf{t}_\mathit{I} + 1)]
 |<<fmi3UpdateDiscreteStates>>
@@ -501,9 +573,14 @@ For <<countdown-aperiodic-clocks>>, these functions must be called in every *Eve
 Function <<fmi3GetDirectionalDerivative>>::
 See <<fmi3GetDirectionalDerivative>>.
 
+Function <<fmi3GetAdjointDerivative>>::
+See <<fmi3GetAdjointDerivative>>.
+
 Function <<fmi3GetDerivatives>>::
 Function <<fmi3GetContinuousStates>>::
 Function <<fmi3GetEventIndicators>>::
+Function <<fmi3GetNumberOfContinuousStates>>::
+Function <<fmi3GetNumberOfEventIndicators>>::
 Can only be called in Model Exchange.
 
 Function <<fmi3UpdateDiscreteStates>>::
