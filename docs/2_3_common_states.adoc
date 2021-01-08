@@ -36,7 +36,7 @@ It is allowed to call this function only if <<modelDescription.xml>> includes a 
 Function `fmi3InstantiateScheduledExecution`::
 This function instantiates a Scheduled Execution FMU (see <<fmi-for-scheduled-execution>>).
 It is allowed to call this function only if <<modelDescription.xml>> includes a `<ScheduledExecution>` element.
-
++
 [[fmi3Instantiate,`fmi3InstantiateXXX`]]
 [source, C]
 ----
@@ -112,6 +112,7 @@ These callback functions are defined below.
 
 [[logMessage,`logMessage`]]
 Callback function `logMessage`::
++
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=CallbackLogMessage]
@@ -150,6 +151,7 @@ See <<preemption-support>> for details.
 
 [[fmi3SetDebugLogging,`fmi3SetDebugLogging`]]
 Function `fmi3SetDebugLogging`::
++
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=SetDebugLogging]
@@ -168,6 +170,7 @@ Depending on the generating modeling environment, none, some or all allowed valu
 
 [[fmi3Reset,`fmi3Reset`]]
 Function `fmi3Reset`::
++
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=Reset]
@@ -180,6 +183,7 @@ Before starting a new run <<fmi3EnterInitializationMode>> has to be called.
 
 [[fmi3FreeInstance,`fmi3FreeInstance`]]
 Function `fmi3FreeInstance`::
++
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=FreeInstance]
@@ -195,28 +199,22 @@ _[If *Terminated* is entered because of an `fmi3Error` return value, retrieved v
 
 [[fmi3GetNominalsOfContinuousStates,`fmi3GetNominalsOfContinuousStates`]]
 Function <<fmi3GetNominalsOfContinuousStates>>::
++
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=GetNominalsOfContinuousStates]
 ----
 
-// TODO fix following text
+Return the nominal values of the continuous <<state,`states`>>.
+This function can only be called in Model Exchange.
 
-Return the nominal values of the continuous <<state,`states`>> with the some convention for the order as above.
-This function should always be called after calling function <<fmi3UpdateDiscreteStates>>, if `nominalsOfContinuousStatesChanged == fmi3True`, since then the nominal values of the continuous <<state,`states`>> have changed _[for example, because the association of the continuous <<state,`states`>> to variables has changed due to internal dynamic state selection]_.
-If the FMU does not have information about the nominal value of a continuous <<state>> i, a nominal value `nominals[i] == 1.0` should be returned.
-Note that it is required that `nominals[i] > 0.0`.
-_[Typically, the nominal values of the continuous <<state,`states`>> are used to compute the absolute tolerance required by the integrator._
-_Example:_ +
-`absoluteTolerance[i] = 0.01 * tolerance * nominals[i];` _]_
+* Return argument `nominals` contains the nominal values for each <<state,continuous state>> with the same convention for the order as defined for <<fmi3SetContinuousStates>>.
+If the FMU does not have information about the nominal value of a continuous <<state>> `i`, a nominal value `nominals[i] == 1.0` should be returned.
+It is required that `nominals[i] > 0.0`.
 
-Note that simulation backward in time is only allowed over continuous time intervals.
-As soon as an event occurs (<<fmi3EnterEventMode>> was called), going back in time is forbidden, because <<fmi3EnterEventMode>> / <<fmi3UpdateDiscreteStates>> can only compute the next discrete state, not the previous one.
+* Argument `nContinuousStates` is the size of the `nominals` vector.
 
-Note that during *Initialization*, *Event Mode*, and *Continuous-Time Mode*, <<input>> variables can be set with `fmi3Set{VariableType}` and output variables can be retrieved with `fmi3Get{VariableType}` interchangeably according to the model structure defined under element `<ModelStructure>` in the XML file.
-_[For example, if one <<output>> `y1` depends on two <<input,`inputs`>> `u1`, `u2`, then these two <<input,`inputs`>> must be set, before `y1` can be retrieved._
-_If additionally an <<output>> `y2` depends on an <<input>> `u3`, then `u3` can be set and `y2` can be retrieved afterwards._
-_As a result, artificial or `real` algebraic loops over connected FMUs in any of these three modes can be handled by using appropriate numerical algorithms.]_
+This function should always be called after calling function <<fmi3UpdateDiscreteStates>>, if `nominalsOfContinuousStatesChanged == fmi3True`, since then the nominal values of the continuous <<state,`states`>> have changed _[for example, because the mapping of the continuous <<state,`states`>> to variables has changed because of internal <<dynamic-state-selection>>]_.
 
 Function <<fmi3GetFMUState>>::
 Function <<fmi3SetFMUState>>::
@@ -233,8 +231,8 @@ In the state *Instantiated* the FMU can do one-time initializations and allocate
 [#table-math-instantiated]
 [cols="2,1",options="header",]
 |====
-|Equations
-|Functions
+|Equations and Actions
+|Functions Influencing Equations
 
 |Set variables latexmath:[(\mathbf{v}_{\mathit{initial=exact}}] or latexmath:[\mathbf{v}_{\mathit{initial=approx}})] and latexmath:[\mathbf{v}_{\mathit{variability \neq constant}}]
 |`fmi3Set{VariableType}`
@@ -257,15 +255,17 @@ The intention is to set <<start>> and guess values for these variables.
 
 [[fmi3EnterConfigurationMode,`fmi3EnterConfigurationMode`]]
 Function `fmi3EnterConfigurationMode`::
++
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=EnterConfigurationMode]
 ----
 
-Changes state to *Configuration Mode*.
+If the importer needs to change <<structuralParameter,`structural parameters`>>, it must move the FMU into *Configuration Mode* using <<fmi3EnterConfigurationMode>>.
 
 [[fmi3GetNumberOfContinuousStates,`fmi3GetNumberOfContinuousStates`]]
 Function <<fmi3GetNumberOfContinuousStates>>::
++
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=GetNumberOfContinuousStates]
@@ -284,6 +284,7 @@ As long as no <<structuralParameter,`structural parameters`>> changed, the numbe
 
 [[fmi3GetNumberOfEventIndicators,`fmi3GetNumberOfEventIndicators`]]
 Function <<fmi3GetNumberOfEventIndicators>>::
++
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=GetNumberOfEventIndicators]
@@ -302,6 +303,7 @@ As long as no <<structuralParameter,`structural parameters`>> changed, the numbe
 
 [[fmi3EnterInitializationMode,`fmi3EnterInitializationMode`]]
 Function `fmi3EnterInitializationMode`::
++
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=EnterInitializationMode]
@@ -342,8 +344,8 @@ In *Initialization Mode*, the FMU computes at the start time latexmath:[\mathbf{
 [#table-math-initializationMode]
 [cols="2,1",options="header",]
 |====
-|Equations
-|Functions
+|Equations and Actions
+|Functions Influencing Equations
 
 |Set variables latexmath:[\mathbf{v}_{\mathit{initial=exact}}] +
 _[<<parameter,`parameters`>> latexmath:[\mathbf{p}] and
@@ -400,6 +402,7 @@ One of these functions must be called for all <<fixed-periodic-clocks>>.
 
 [[fmi3ExitInitializationMode,`fmi3ExitInitializationMode`]]
 Function `fmi3ExitInitializationMode`::
++
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=ExitInitializationMode]
@@ -417,8 +420,8 @@ The *Configuration Mode* allows setting <<structuralParameter, `structural param
 [#table-math-configurationMode]
 [cols="2,1",options="header",]
 |====
-|Equations
-|Functions
+|Equations and Actions
+|Functions Influencing Equations
 
 |Set latexmath:[\mathbf{v}_{\mathit{causality=structuralParameter}}] +
 _[<<structuralParameter,`structuralParameters`>> with_ latexmath:[\mathbf{p}_{\mathit{variability=fixed}}] _or_ latexmath:[\mathbf{p}_{\mathit{variability=tunable}}] _are included here]_
@@ -435,6 +438,7 @@ Only for variables with <<causality>> = <<structuralParameter>> and <<variabilit
 
 [[fmi3ExitConfigurationMode,`fmi3ExitConfigurationMode`]]
 Function `fmi3ExitConfigurationMode`::
++
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=ExitConfigurationMode]
@@ -448,8 +452,8 @@ In this state, the final values of all variables at the final time of a simulati
 [#table-math-terminated]
 [cols="2,1",options="header",]
 |====
-|Equations
-|Functions
+|Equations and Actions
+|Functions Influencing Equations
 
 |latexmath:[(\mathbf{y}_{c+d}, \mathbf{\dot{x}}_c, \mathbf{x}_{c+d}, \mathbf{z}, \mathbf{w}_{c+d}) := \mathbf{f}_{\mathit{term}}({}^\bullet\mathbf{x}_{c+d}, \mathbf{u}_{c+d}, \mathbf{p}, \mathbf{t})]
 |`fmi3Get{VariableType}`, <<fmi3GetDerivatives>>, <<fmi3GetContinuousStates>>, <<fmi3GetEventIndicators>>, <<fmi3GetOutputDerivatives>>
@@ -472,8 +476,8 @@ This super state is entered by the FMU when <<fmi3ExitInitializationMode>> is ca
 [#table-math-initialized]
 [cols="2,1",options="header",]
 |====
-|Equations
-|Functions
+|Equations and Actions
+|Functions Influencing Equations
 
 |Activate termination equations latexmath:[\mathbf{f}_{\mathit{term}}].
 |<<fmi3Terminate>>
@@ -483,6 +487,7 @@ Allowed Function Calls::
 
 [[fmi3Terminate,`fmi3Terminate`]]
 Function `fmi3Terminate`::
++
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=Terminate]
@@ -507,8 +512,8 @@ There are multiple kinds of events that require a transition to *Event Mode*:
 [#table-math-event-mode]
 [cols="5,3",options="header",]
 |====
-|Equations
-|Functions
+|Equations and Actions
+|Functions Influencing Equations
 
 |Set <<tunable>> <<parameter,`parameters`>> latexmath:[\mathbf{p}_{\mathit{tune}}]
 |`fmi3Set{VariableType}`
@@ -576,8 +581,11 @@ See <<fmi3GetDirectionalDerivative>>.
 Function <<fmi3GetAdjointDerivative>>::
 See <<fmi3GetAdjointDerivative>>.
 
-Function <<fmi3GetDerivatives>>::
 Function <<fmi3GetContinuousStates>>::
+This function must be called if <<fmi3UpdateDiscreteStates>> returned with <<valuesOfContinuousStatesChanged, `valuesOfContinuousStatesChanged == fmi3True`>>.
+Can only be called in Model Exchange.
+
+Function <<fmi3GetDerivatives>>::
 Function <<fmi3GetEventIndicators>>::
 Function <<fmi3GetNumberOfContinuousStates>>::
 Function <<fmi3GetNumberOfEventIndicators>>::
@@ -585,7 +593,7 @@ Can only be called in Model Exchange.
 
 Function <<fmi3UpdateDiscreteStates>>::
 When the importer converges on a solution for event handling at the current super-dense time step it calls <<fmi3UpdateDiscreteStates>> to determine if a another event iteration is required (introducing a new instance of super-dense time) or *Event Mode* can be exited.
-
++
 [[fmi3UpdateDiscreteStates,`fmi3UpdateDiscreteStates`]]
 [source, C]
 ----
@@ -620,24 +628,30 @@ _If the time offset proves to be too large, the FMU could issue a log message an
 _The user can improve time settings of the importer to alleviate the issues.]_ +
 If another (e.g. <<state event>>) event happens before that <<nextEventTime>>, the previous definition of <<nextEventTime>> becomes obsolete.
 
+[[dummy1]]
+Function <<fmi3EnterConfigurationMode>>::
+If the importer needs to change <<structuralParameter,`structural parameters`>>, it must move the FMU into *Reconfiguration Mode* using <<fmi3EnterConfigurationMode>>.
 
 [[fmi3EnterContinuousTimeMode,`fmi3EnterContinuousTimeMode`]]
 Function <<fmi3EnterContinuousTimeMode>>::
++
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=EnterContinuousTimeMode]
 ----
-
++
 This function must be called to change from *Event Mode* into *Continuous-Time Mode* in Model Exchange.
 
-Function <<fmi3EnterStepMode>>::
 [[fmi3EnterStepMode,`fmi3EnterStepMode`]]
+Function <<fmi3EnterStepMode>>::
++
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tag=EnterStepMode]
 ----
-
++
 This function must be called to change from *Event Mode* into *Step Mode* in Co-Simulation.
+
 
 ===== State: Reconfiguration Mode [[ReconfigurationMode]]
 
@@ -647,8 +661,8 @@ This state must not be entered, if the FMU contains no <<structuralParameter,`st
 [#table-math-reconfigurationMode]
 [cols="2,1",options="header",]
 |====
-|Equations
-|Functions
+|Equations and Actions
+|Functions Influencing Equations
 
 |Set latexmath:[\mathbf{v}_{\mathit{causality=structuralParameter}}] +
 _[<<structuralParameter,`structuralParameters`>> with_ latexmath:[\mathbf{p}_{\mathit{variability=tunable}}] _are included here]_
@@ -707,6 +721,7 @@ The co-simulation algorithm signals the support for *Intermediate Update Mode* b
 The FMU enters *Intermediate Update Mode* by calling <<fmi3CallbackIntermediateUpdate>> within *Step Mode* (CS) or *Clock Activation Mode* (SE) and leaves the state towards *Step Mode* (CS) or *Clock Activation Mode* (SE) when the function returns.
 
 [[fmi3CallbackIntermediateUpdate,`fmi3CallbackIntermediateUpdate`]]
++
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tag=CallbackIntermediateUpdate]
@@ -754,8 +769,8 @@ This argument is ignored in Scheduled Execution.
 [#table-math-intermediateUpdateMode]
 [cols="2,1",options="header",]
 |====
-|Equations in *Intermediate Update Mode*
-|Functions
+|Equations and Actions
+|Functions Influencing Equations
 
 |Get intermediate variable values latexmath:[\mathbf{v}_u(t_u)]
 |`fmi3Get{VariableType}`
