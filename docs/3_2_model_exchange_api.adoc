@@ -1,35 +1,4 @@
-=== Application Programming Interface
-
-This section contains the interface description to evaluate different model parts from a C program.
-
-==== Providing Independent Variables and Re-initialization of Caching [[providing-independent-variables-and-re-initialization]]
-
-Depending on the situation, different variables need to be computed.
-In order to be efficient, it is important that the interface requires only the computation of variables that are needed in the present context.
-For example, during the iteration of an integrator step, only the state derivatives need to be computed, provided the <<output>> of a model is not connected.
-It might be that at the same time instant other variables are needed.
-For example, if an integrator step is completed, the event indicator functions need to be computed as well.
-If the state derivatives have already been computed at the present time instant, then it is important for efficiency that they are not newly computed in the call to compute the event indicator functions.
-This means, the state derivatives shall be reused from the previous call.
-This feature is called "caching of variables" in the sequel. +
-Caching requires that the model evaluation can detect when the input arguments, like time or states, have changed.
-This is achieved by setting them explicitly with a function call, since every such function call signals precisely a change of the corresponding variables.
-For this reason, this section contains functions to set the input arguments of the equation evaluation functions.
-This is unproblematic for time and states, but is more involved for <<parameter,`parameters`>> and <<input,`inputs`>>, since the latter may have different data types.
-
-[source, C]
-----
-fmi3Status fmi3Set{VariableType}(..);
-----
-
-Set new values for <<parameter,`parameters`>>, <<start>> values and <<input,`inputs`>> and re-initialize caching of variables that depend on these variables.
-The details of these functions are defined in <<get-and-set-variable-values>>.
-
-_[The functions above have the slight drawback that values must always be copied._
-_For example, a call to_ <<fmi3SetContinuousStates>> _will provide the actual states in a vector, and this function has to copy the values in to the internal model data structure so that subsequent evaluation calls can utilize these values._
-_If this turns out to be an efficiency issue, a future release of FMI might provide additional functions to provide the address of a memory area where the variable values are present.]_
-
-==== State Machine for Model Exchange [[state-machine-model-exchange]]
+=== State Machine for Model Exchange [[state-machine-model-exchange]]
 
 Every implementation of the FMI for Model Exchange must support calling sequences of the functions according to the state machine in <<figure-model-exchange-state-machine>>.
 
@@ -39,7 +8,7 @@ image::images/state-machine-model-exchange.svg[width=60%, align="center"]
 
 Common states are defined in <<common-state-machine>>, such as super states <<FMUStateSetable,*FMU State Setable*>> and  <<Initialized,*Initialized*>>, states <<Instantiated,*Instantiated*>>, <<ConfigurationMode,*Configuration Mode*>>, <<ReconfigurationMode,*Reconfiguration Mode*>>, <<InitializationMode,*Initialization Mode*>>, <<EventMode,*Event Mode*>> and <<Terminated,*Terminated*>>.
 
-===== State: Continuous-Time Mode
+==== State: Continuous-Time Mode
 
 The *Continuous-Time Mode* is used by the importer to compute the values of all continuous-time variables between events by numerically solving ordinary differential and algebraic equations.
 All discrete-time variables are fixed during this phase and the corresponding discrete-time equations are not evaluated.
@@ -258,22 +227,3 @@ Note that during *Initialization*, *Event Mode*, and *Continuous-Time Mode*, <<i
 _[For example, if one <<output>> `y1` depends on two <<input,`inputs`>> `u1`, `u2`, then these two <<input,`inputs`>> must be set, before `y1` can be retrieved._
 _If additionally an <<output>> `y2` depends on an <<input>> `u3`, then `u3` can be set and `y2` can be retrieved afterwards._
 _As a result, artificial or `real` algebraic loops over connected FMUs in any of these three modes can be handled by using appropriate numerical algorithms.]_
-
-
-==== Code Example
-
-In the following example, the usage of the `fmi3XXX` functions is sketched in order to clarify the typical calling sequence of the functions in a simulation environment.
-Furthermore, it is assumed that one FMU is directly integrated in a simulation environment.
-If the FMU would be used inside another model, additional code is needed, especially initialization and event iteration has to be adapted.
-
-[source, c]
-----
-include::Reference-FMUs/examples/model_exchange.c[tags=ModelExchange]
-----
-
-In the code above errors are handled by the following definition:
-
-[source, C]
-----
-include::Reference-FMUs/examples/util.h[tags=CheckStatus]
-----

@@ -1,5 +1,33 @@
 === Concepts [[math-model-exchange]]
 
+==== Providing Independent Variables and Re-initialization of Caching [[providing-independent-variables-and-re-initialization]]
+
+Depending on the situation, different variables need to be computed.
+In order to be efficient, it is important that the interface requires only the computation of variables that are needed in the present context.
+For example, during the iteration of an integrator step, only the state derivatives need to be computed, provided the <<output>> of a model is not connected.
+It might be that at the same time instant other variables are needed.
+For example, if an integrator step is completed, the event indicator functions need to be computed as well.
+If the state derivatives have already been computed at the present time instant, then it is important for efficiency that they are not newly computed in the call to compute the event indicator functions.
+This means, the state derivatives shall be reused from the previous call.
+This feature is called "caching of variables" in the sequel. +
+Caching requires that the model evaluation can detect when the input arguments, like time or states, have changed.
+This is achieved by setting them explicitly with a function call, since every such function call signals precisely a change of the corresponding variables.
+For this reason, this section contains functions to set the input arguments of the equation evaluation functions.
+This is unproblematic for time and states, but is more involved for <<parameter,`parameters`>> and <<input,`inputs`>>, since the latter may have different data types.
+
+
+[source, C]
+----
+fmi3Status fmi3Set{VariableType}(..);
+----
+
+Set new values for <<parameter,`parameters`>>, <<start>> values and <<input,`inputs`>> and re-initialize caching of variables that depend on these variables.
+The details of these functions are defined in <<get-and-set-variable-values>>.
+
+_[The functions above have the slight drawback that values must always be copied._
+_For example, a call to_ <<fmi3SetContinuousStates>> _will provide the actual states in a vector, and this function has to copy the values in to the internal model data structure so that subsequent evaluation calls can utilize these values._
+_If this turns out to be an efficiency issue, a future release of FMI might provide additional functions to provide the address of a memory area where the variable values are present.]_
+
 ==== Model Evaluations, Dependencies, and Call Sequence
 
 // TODO: Move this section to General Mechanisms and generalize for both ME and CS
@@ -142,9 +170,10 @@ _This restriction is communicated to the environment of the FMU by the `ScalarVa
 [[Remark3]]
 _Remark 3 - Event Indicators / Frozen Relations:_
 
-_In <<table-variable-types>>, vector_ latexmath:[\mathbf{r}] _is used to collect all relations together that are utilized in the event indicators_ latexmath:[\mathbf{z}] _._
-_In *Continuous-Time Mode* all these relations are "frozen" and do not change during the evaluations in the respective mode._
-_This is indicated in <<table-math-model-exchange>> by computing_ latexmath:[\mathbf{r}] _when entering the *Continuous-Time Mode* and providing_ latexmath:[\mathbf{r}] _as (internal) input argument to the evaluation functions._
+_In <<table-variable-types>>, vector_ latexmath:[\mathbf{r}] _is used to label all relations in_ latexmath:[{\mathbf{f}_{\mathit{cont}}}] _and_ latexmath:[{\mathbf{f}_{\mathit{comp}}}] _._
+_In *Continuous-Time Mode* all these relations are "frozen"._
+_This is indicated in <<updateRelations, the mathematical description>> of *Event Mode* by computing_ latexmath:[{}^\bullet\mathbf{r}] _when entering the *Continuous-Time Mode* and providing_ latexmath:[{}^\bullet\mathbf{r}] _as part of the right-hand side of_ latexmath:[{\mathbf{f}_{\mathit{cont}}}] _and_ latexmath:[{\mathbf{f}_{\mathit{comp}}}] _in <<table-math-model-exchange,mathematical description>> of *Continuous-Time Mode*._
+
 _Example:_
 
 _An equation of the form_
@@ -190,39 +219,3 @@ y = if Greater(x1-x2,...) or Greater(x3-x1,...) then +1 else -1;
 ----
 
 _Furthermore, a hysteresis should be added for the event indicators.]_
-
-An FMU is initialized in *Initialization Mode* with latexmath:[\mathbf{f}_{\mathit{init}}(\ldots)].
-
-The input arguments to this function consist of the <<input>> variables (= variables with <<causality>> = <<input>>), of the <<independent>> variable (= variable with <<causality>> = <<independent>> _[typically: time]_), and of all variables that have a <<start>> value with <<initial>> = <<exact>> in order to compute the continuous-time <<state,`states`>> and the output variables at the initial time latexmath:[t_0].
-In <<table-math-model-exchange>>, the variables with <<initial>> = <<exact>> are collected together in variable latexmath:[\mathbf{v}_{\mathit{initial=exact}}].
-
-For example, initialization might be defined by providing initial <<start>> values for the <<state,`states`>>, latexmath:[\mathbf{x}_{\mathit{c0}}], or by stating that the state derivatives are zero (latexmath:[\dot{\mathbf{x}}_{c} = \mathbf{0}]).
-Initialization is a difficult topic by itself, and it is required that an FMU solves a well-defined initialization problem inside the FMU in *Initialization Mode*. +
-After calling <<fmi3ExitInitializationMode>>, the FMU is implicitly in *Event Mode*, and all discrete-time and continuous-time variables at the initial time instant latexmath:[(t_R, 0)] can be calculated.
-If these variables are present in an algebraic loop, iteration can be used to compute them.
-Once finalized, <<fmi3UpdateDiscreteStates>> must be called, and depending on the value of the return argument, the FMU either continues the event iteration at the initial time instant or switches to *Continuous-Time Mode*. +
-After switching to *Continuous-Time Mode*, the integration is started.
-Basically, during *Continuous-Time Mode*, the <<derivative,`derivatives`>> of the continuous <<state,`states`>> are computed.
-If FMUs and/or submodels are connected, then the <<input,`inputs`>> of these models are the <<output,`outputs`>> of other models, and therefore, the corresponding FMU outputs must be computed.
-Whenever result values shall be stored, usually at output points defined before the start of the simulation, the `fmi3Get{VariableType}` function with respect to the desired variables must be called. +
-Continuous integration is stopped at an event instant.
-An event instant is determined by a <<time event,`time`>>, <<state event,`state`>> or <<step event>>, or by the environment (e.g. to change a <<continuous>> variable discretely).
-
-In order to determine a <<state event>>, the event indicators *z* have to be inquired at every completed integrator step.
-Once the event indicators signal a change of their domain, an iteration over time is performed between the previous and the actual completed integrator step, in order to determine the time instant of the domain change up to a certain precision. +
-After an event is triggered, the FMU needs to be switched to *Event Mode*.
-In this mode, systems of equations over connected FMUs might be solved (similarly as in *Continuous-Time Mode*).
-Once convergence is reached, <<fmi3UpdateDiscreteStates>> must be called to increment super-dense time (and conceptually update the discrete-time states defined internally in the FMU by latexmath:[^{\bullet}\mathbf{x}_d := \mathbf{x}_d]).
-Depending on the discrete-time model, a new event iteration might be needed.
-
-_[For example, an FMU implements a state machine that forces an internal state transitions to occur, when new <<input>> values are available.]_
-
-The function calls in <<table-math-model-exchange>> describe precisely which input arguments are needed to compute the desired output argument(s).
-There is no 1:1 mapping of these mathematical functions to C functions.
-Instead, all input arguments are set with `fmi3Set{VariableType}` C function calls, and then the result argument(s) can be determined with the C functions defined in the right column of <<table-math-model-exchange>>.
-This technique is discussed in detail in <<providing-independent-variables-and-re-initialization>>.
-_[In short: For efficiency reasons, all equations from <<table-math-model-exchange>> will usually be available in one (internal) C function._
-_With the C functions described in the next sections, input arguments are copied into the internal model data structure only when their value has changed in the environment._
-_With the C functions in the right column of <<table-math-model-exchange>>, the internal function is called in such a way that only the minimum needed equations are evaluated._
-_Hereby, variable values calculated from previous calls can be reused._
-_This technique is called "caching" and can significantly enhance the simulation efficiency of real-world models.]_
