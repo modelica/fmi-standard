@@ -1,4 +1,4 @@
-=== Application Programming Interface [[scheduled-execution-api]]
+=== State Machine for Scheduled Execution [[state-machine-scheduled-execution]]
 
 This section contains the description of the Scheduled Execution interface for a C program.
 
@@ -9,8 +9,6 @@ The simulation algorithm signals to the FMU that it supports and has recognized 
 Error, reset or terminate information is a global state of the FMU.
 If e.g. an function returns <<fmi3Discard>> or <<fmi3Error>> this is also assumed for all active or preempted model partitions.
 In case of <<fmi3Discard>> or <<fmi3Error>> no repetition of the step is possible, the only possible way to go forward is to enter the *Terminated* state and to end or to reset the simulation or - if supported - to set the FMU back to a former state.
-
-==== State Machine for Scheduled Execution [[state-machine-scheduled-execution]]
 
 This section summarizes the available states and the allowed function calls in the respective states.
 
@@ -25,13 +23,13 @@ If in these states a function returns <<fmi3Discard>> or <<fmi3Error>> the simul
 Each state of the state machine corresponds to a certain phase of a simulation.
 Common states are defined in <<common-state-machine>>, such as super states <<FMUStateSetable,*FMU State Setable*>> and  <<Initialized,*Initialized*>>, states <<Instantiated,*Instantiated*>>, <<ConfigurationMode,*Configuration Mode*>>, <<ReconfigurationMode,*Reconfiguration Mode*>>, <<InitializationMode,*Initialization Mode*>>, <<Terminated,*Terminated*>> and <<IntermediateUpdateMode,*Intermediate Update Mode*>>.
 
-===== Super State: Initialized [[Initialized-SE]]
+==== Super State: Initialized [[Initialized-SE]]
 
 Special to Scheduled Execution, the following additional constrains apply to the state *Initialized* (see <<Initialized>>).
 The FMU enters state *Terminated* only after all other tasks related to the computation of model partitions of this FMU have ended.
 After <<fmi3Terminate>> has been called no new tasks can be started (e.g. related to <<outputClock>> ticks) and all other function calls for this FMU must return <<fmi3Error>> until the state *Terminated* is reached.
 
-===== State: Clock Activation Mode
+==== State: Clock Activation Mode
 
 The FMU enters this state when the simulation algorithm calls <<fmi3ExitInitializationMode>> in state *Initialization Mode* or <<fmi3ExitConfigurationMode>> in state *Reconfiguration Mode*.
 
@@ -67,7 +65,6 @@ The importer schedules calls of <<fmi3ActivateModelPartition>> for each FMU.
 Calls are based on activations of <<inputClock,`input clocks`>>.
 These <<inputClock>> activations can be based on <<clock>> activations from FMU external sources (e.g. <<outputClock,`output clocks`>> of other FMUs).
 The <<inputClock>> activations can also be based on <<outputClock>> ticks of the same FMU.
-Refer to <<math-scheduled-execution>> and <<clocks>>.
 The <<fmi3ActivateModelPartition>> function must not be called on <<outputClock,`output clocks`>> of an FMU.
 
 Note that this is a different timing concept compared to <<fmi3DoStep>> calls for Co-Simulation FMUs or the <<fmi3SetTime>> for Model Exchange FMUs.
@@ -131,228 +128,3 @@ The function must not return <<fmi3Discard>>.
 Functions <<fmi3GetFMUState>>, <<fmi3SetFMUState>>, <<fmi3FreeFMUState>>, <<fmi3SerializedFMUStateSize>>, <<fmi3SerializeFMUState>>, <<fmi3DeSerializeFMUState>>::
 These functions must not be called if any model partition is currently active or preempted.
 _[This is because these functions apply to the whole FMU and not only to a specific model partition.]_
-
-==== Preemption Support [[preemption-support]]
-
-For real-time applications the simulation time equals the real wall <<clock>> time, thus each <<fmi3ActivateModelPartition>> computation step has to be finished in real-time within its current period time length (computation time is not only defined by the runtime of <<fmi3ActivateModelPartition>> but also by the time for setting and getting variables and related operations).
-Usually a preemptive scheduling of the <<fmi3ActivateModelPartition>>, `fmi3Get{VariableType}`, `fmi3Set{VariableType}` calls is required to respect this constraint.
-
-The FMU's code has to be prepared for being able to correctly handle preemptive calls of <<fmi3ActivateModelPartition>>, `fmi3Get{VariableType}`, `fmi3Set{VariableType}`.
-That requires a secured internal and external access to global states and variable values.
-Thus in Scheduled Execution a support for a correct handling of the preemption of model partition computations is required.
-That also requires that the FMU reports the active state of a <<outputClock>> only with the first call of <<fmi3GetClock>> for a specific activation of this <<clock>> and sets the reported activation state immediately back to `false` for the following <<fmi3GetClock>> calls for that <<clock>> until this <<outputClock>> is internally activated again.
-
-If a preemptive multitasking regime is intended an individual task (or thread -- task and thread are used synonymously here) for each model partition (associated to an <<inputClock>>) has to be created.
-The task for computing each <<fmi3ActivateModelPartition>> is created and controlled by the simulation algorithm, not by the FMU.
-So the FMU exporting tool does not need to take care for that (except for preparing its code to support preemption).
-
-_[If only one single model partition (<<inputClock>>) is available via the interface of an FMU, preemptive calls of the related <<fmi3ActivateModelPartition>> function are possible by default since there are no external cross dependencies within one model partition between communication points.]_
-
-Based on the <<inputClock>> settings defined in the XML the simulation algorithm calls `fmi3Set{VariableType}`, <<fmi3ActivateModelPartition>>, `fmi3Get{VariableType}` calls.
-Set/get calls for each task are only allowed for variables that are associated to the <<inputClock>> associated to that task or - here preemption issues become important - to variables that are associated to no <<clock,`clocks`>> (global variables), based on the XML information (see <<table-overview-clocks>>).
-
-_[The recommendation is to avoid global variable associations as much as possible in the XML._
-_It is also recommended to reduce dependencies (defined in XML model structure) between variables located in different model partitions of one FMU, since this also requires in most cases that the related variables have to be global variables.]_
-
-The simulation algorithm has no knowledge about the FMU internal communication between the model partitions of a single FMU and does not handle it.
-
-The simulation algorithm schedules the <<fmi3ActivateModelPartition>> (as well as related `fmi3Get{VariableType}` and `fmi3Set{VariableType}`) calls based on given priorities for <<inputClock,`input clocks`>> defined in the <<modelDescription.xml>>.
-
-Priority (see <<priority>>):
-
-- Same priority: Model partitions (e.g. tasks) cannot preempt each other.
-Arbitrary evaluation order is possible for model partitions of the same priority.
-
-- Different priorities: Model partitions of a higher priority preempt partitions of a lower priority as soon as the higher priority partition needs to be computed.
-
-_[If multiple tasks are needed to be scheduled for computation at a certain time instant a simulation algorithm must schedule a task of a higher priority always before a task of a lower priority]_
-
-<<input,`Input`>> <<clock>> ticks:
-
-- periodic (period can be predefined by FMU or be defined by simulation algorithm, depending on XML information)
-- aperiodic (based on external possibly unpredictable events or on an <<outputClock>> of the same FMU)
-
-Based on the period and priority definitions the exporting tool can restrict the code evaluation order.
-It nevertheless has to secure its code against concurrent evaluation _[not against parallel evaluation, as this is not supported for model partitions of an FMU in the interface description of this mode]_ along the defined priority restrictions.
-Mostly this is required for internal inter-model-partition communication and in general for the joint use of global variables within the FMU.
-The exporting tool has to consider the effect of <<input>> aperiodic <<clock,`clocks`>> and the influences of computing speed, so the exact preemption occurrence points cannot be foreseen (within the given priority and period restrictions).
-
-To guard certain code parts against preemption they must be enclosed with the callback functions `lockPreemption` and `unlockPreemption`.
-
-_[Such locks should be used with care and only for securing very short code parts that cannot be secured otherwise.]_
-
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tag=CallbackPreemptionLock]
-----
-
-Even if the scheduler does not support preemption, at least an empty implementation of these callback functions must be provided to allow the reuse of code for different modes together with an efficient preemption.
-_[This avoids checks for null function pointers._
-_A function call to a void-void function with an immediate return is hardly any overhead.]_
-
-Example for the use of `fmi3CallbackLockPreemption` and `fmi3CallbackUnlockPreemption` callback functions in the FMU code:
-
-[source, C]
-----
-Int16 DataBuffer[3];   // global buffer
-
-void Task1(void) //low priority
-{
-   ...
-   // write data to DataBuffer
-   fmi3CallbackLockPreemption();
-   DataBuffer[0] = internal_out_RootSys1_1;
-   DataBuffer[1] = internal_out_RootSys1_2;
-   DataBuffer[2] = internal_out_RootSys1_3;
-   fmi3CallbackUnlockPreemption();
-   ...
- }
-
-...
-void Task2(void) //high priority
-{
-   ...
-   // read data from DataBuffer
-   fmi3CallbackLockPreemption();
-   internal_in_RootSys2_1 = DataBuffer[0];
-   internal_in_RootSys2_2 = DataBuffer[1];
-   internal_in_RootSys2_3 = DataBuffer[2];
-   fmi3CallbackUnlockPreemption();
-   ...
-}
-----
-
-==== Example for Scheduled Execution [[example-scheduled-execution]]
-
-The FMU ThreeInputClocks sketches the usage of the FMI functions.
-The example is given in a mix of pseudo-code and C, in order to keep it small and understandable.
-We consider one FMU with three model partitions.
-Two model partitions associated to two periodic <<inputClock,`input clocks`>> 10msClock and 50msClock (<<clock>> periods 10 ms and 50 ms) and one aperiodic <<inputClock>> AperiodicClock.
-
-During the execution of the model partition of <<inputClock>> 10msClock the <<outputClock>> OutClock may tick and invoke the execution of model partition of aperiodic <<inputClock>> AperiodicClock.
-
-The function calls <<fmi3ActivateModelPartition>> are executed in the context of preemptable tasks whose priorities are derived from the respective <<inputClock>> configurations of the FMU.
-In this example the execution of the task of <<inputClock>> AperiodicClock is waiting for the task of <<inputClock>> 10msClock to finish.
-Likewise the task of AperiodicClock is suspended when the task of higher priority is scheduled again.
-
-The example also depicts how a task associated to an even lower prior <<inputClock>> 50msClock is delayed several times by tasks of higher priority.
-Note that the point of time when the task was scheduled is the `activationTime` of <<fmi3ActivateModelPartition>> (...Activate...(`input clock`, `activationTime`)).
-
-.Scheduled Execution Example ThreeInputClocks
-[[figure-scs_example]]
-image::images/se_example.png[width=90%, align="center"]
-
-===== Description Schema
-
-The simulation algorithm collects the information about the number and properties of <<clock,`clocks`>> supported by the FMU via analyzing the <<modelDescription.xml>> as defined in <<fmi-description-schema>>.
-For every <<inputClock>> the simulation algorithm defines a task.
-The properties `period` and `priority` are defined based on the <<inputClock,`input clocks'`>> `period` and `priority` defined in the <<modelDescription.xml>>.
-The simulation algorithm can read from the <<modelDescription.xml>> that <<outputClock>> OutClock may tick triggered by <<inputClock>> 10msClock and that <<inputClock>> AperiodicClock is triggered by OutClock.
-
-[source, xml]
-----
-include::examples/se_example_modelDescription.xml[]
-----
-
-
-===== Simulation Algorithm Implementation
-
-To enable the computation of a Scheduled Execution FMU a simulation algorithm has to provide a task scheduler.
-Depending on the particular configuration the simulation algorithm sets up tasks for every <<inputClock>>.
-When executed each task calls <<fmi3ActivateModelPartition>> for its respective <<inputClock>>.
-The `activationTime` is provided by the simulation algorithm.
-Periodic tasks can be scheduled on initialization of the simulation application.
-Aperiodic tasks are scheduled explicitly during the execution.
-
-[source, C]
-----
-Task10ms.Execute()
-{
-   // Set inputs with valueReference 0 and 1 associated to clockIndex 5
-   fmi3SetFloat64(s, {0,1}, &AIn);
-   // call for 10msClock tick (clockIndex 5)
-   fmi3ActivateModelPartition(s, 5, 0, Task10ms.ActivationTime);
-   // Get output with valueReference 2 associated to clockIndex 0
-   fmi3GetFloat64(s, {2}, &AOut);
-};
-----
-
-As specified in the XML file, <<inputClock>> AperiodicClock is triggered by <<outputClock>> OutClock thus the simulation algorithm ensures the task associated to AperiodicClock is scheduled when <<fmi3CallbackIntermediateUpdate>> is called by the FMU and OutClock has ticked.
-
-[source, C]
-----
-void CallbackIntermediateUpdate(..., fmi3Boolean clocksTicked, ...)
-{
-   fmi3ValueReference outputClockReferences = {7};
-   fmi3Boolean[] clocksActivationState = {fmi3ClockInactive};
-   if (clocksTicked)
-   {
-      // ask FMU if output clock has ticked
-      fmi3GetClocks(... outputClockReferences, &clocksActivationState, ...);
-   }
-   if (clocksActivationState[0])
-   {
-      // schedule task for AperiodicClock
-      Scheduler->ScheduleTask(TaskAperiodic);
-   }
-}
-----
-
-===== FMU Implementation
-
-The FMU implements <<fmi3ActivateModelPartition>> dispatching for every <<inputClock>> so the code might look like this:
-
-[source, C]
-----
-fmi3Status fmi3ActivateModelPartition(fmi3Instance *instance,
-   fmi3ValueReference clockReference, fmi3Float64 activationTime)
-{
-   switch (clockReference)
-   {
-      case 5:
-         // Input clock 10msClock
-         activateModelPartition10ms(instance, activationTime);
-      case 6:
-         // Input clock AperiodicClock
-         activateModelPartitionAperiodic(instance, activationTime);
-      case 8:
-         // Input clock AperiodicClock
-         activateModelPartition50ms(instance, activationTime);
-      ...
-   }
-}
-----
-
-In the context of the task being executed every 10 ms, the FMU lets <<outputClock>> OutClock tick and calls <<fmi3CallbackIntermediateUpdate>>.
-
-[source, C]
-----
-void activateModelPartition10ms(fmi3Instance *instance, ...)
-{
-   ...
-   if (...)
-   {
-      // outputClock ticks
-      fmi3SetClock({7});
-      // inform simulation algorithm that output clock has ticked
-      fmi3Boolean clocksTicked = fmi3True;
-      instance->fmi3CallbackIntermediateUpdate(..., clocksTicked, ...);
-   }
-   ...
-}
-----
-
-If <<fmi3GetClock>> is called for a certain <<outputClock>> the <<outputClock>> is reset.
-
-[source, C]
-----
-fmi3Status fmi3GetClock(..., fmi3ValueReference outputClockReferences,
-   fmi3Clock *clocksActivationState, ...)
-{
-   if (outputClockReferences[0] == 7)
-   {
-      clocksActivationState[0] = outClockActivationState;
-      outClockActivationState = fmi3ClockInactive;
-   }
-}
-----
