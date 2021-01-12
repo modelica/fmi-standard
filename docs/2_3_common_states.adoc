@@ -466,8 +466,10 @@ Function <<fmi3GetContinuousStates>>::
 Function <<fmi3GetEventIndicators>>::
 Function <<fmi3GetDirectionalDerivative>>::
 Function <<fmi3GetAdjointDerivative>>::
-Function <<fmi3GetOutputDerivatives>>::
 No restrictions.
+
+Function <<fmi3GetOutputDerivatives>>::
+Not allowed in Model Exchange.
 
 ==== Super State: Initialized [[Initialized]]
 
@@ -515,7 +517,7 @@ There are multiple kinds of events that require a transition to *Event Mode*:
 |Equations and Actions
 |Functions Influencing Equations
 
-|Set <<tunable>> <<parameter,`parameters`>> latexmath:[\mathbf{p}_{\mathit{tune}}]
+|Set <<tunable>> <<parameter,`parameters`>> latexmath:[\mathbf{p}_{\mathit{variability == tunable}}]
 |`fmi3Set{VariableType}`
 
 |Set continuous-time and discrete-time <<input,`inputs`>> latexmath:[\mathbf{u}_{c+d}(\mathbf{t})]
@@ -603,8 +605,8 @@ include::../headers/fmi3FunctionTypes.h[tag=UpdateDiscreteStates]
 [[discreteStatesNeedUpdate,`discreteStatesNeedUpdate`]]
 * When `discreteStatesNeedUpdate == fmi3True`, the importer must stay in *Event Mode* for another event iteration.
 
-[[terminateSimulation,`terminateSimulation`]]
-* When <<terminateSimulation,`terminateSimulation == fmi3True`>>, the model requested to stop integration and the importer must call <<fmi3Terminate>>.
+[[terminateSimulationUDS,`terminateSimulation`]]
+* When <<terminateSimulationUDS,`terminateSimulation == fmi3True`>>, the FMU requests to stop the simulation and the importer must call <<fmi3Terminate>>.
 
 [[nominalsOfContinuousStatesChanged,`nominalsOfContinuousStatesChanged`]]
 * If argument `nominalsOfContinuousStatesChanged == fmi3True`, then at least one nominal value of the <<state,`states`>> has changed and can be inquired with <<fmi3GetNominalsOfContinuousStates>>. +
@@ -630,7 +632,8 @@ If another (e.g. <<state event>>) event happens before that <<nextEventTime>>, t
 
 [[dummy1]]
 Function <<fmi3EnterConfigurationMode>>::
-If the importer needs to change <<structuralParameter,`structural parameters`>>, it must move the FMU into *Reconfiguration Mode* using <<fmi3EnterConfigurationMode>>.
+<<fmi3EnterConfigurationMode>> changes state to *Reconfiguration Mode* in Model Exchange.
+<<fmi3EnterConfigurationMode>> must not be called if the FMU contains no <<tunable>> <<structuralParameter,`structural parameters`>> (i.e. with <<causality>>= <<structuralParameter>> and <<variability>> = <<tunable>>).
 
 [[fmi3EnterContinuousTimeMode,`fmi3EnterContinuousTimeMode`]]
 Function <<fmi3EnterContinuousTimeMode>>::
@@ -689,7 +692,7 @@ _[The following use cases are enabled:_
 * _Access to intermediate variables enables advanced Co-Simulation with interpolation/extrapolation techniques (such as polynomial extrapolation, Transmission Line Modeling (TLM) co-simulation, anti-alias filtering, smoothing of input among others)._
 * _Intermediate Update Mode enables the same input approximation that was possible in FMI 2.0 with `fmi2SetInputDerivatives`, by evaluating the approximation polynomial and not within the FMU as in FMI 2.0._
 * _FMUs can inform the importer about an event, which occurs during an <<fmi3DoStep>> in case of CS (see <<fmi-for-co-simulation>>)._
-* _The Co-Simulation algorithm can request an <<early-return,early return>> from <<fmi3DoStep>>, because of an event between communication points (see <<early-return>> and <<Computation-in-Co-Simulation>>)._
+* _The Co-Simulation algorithm can request an <<early-return,early return>> from <<fmi3DoStep>>, because of an event between communication points (see <<early-return>>)._
 * _A model partition of an Scheduled Execution FMU calls <<fmi3CallbackIntermediateUpdate>> to signal clock activations with `clocksTicked == fmi3True`._
 
 _Note that the call to <<fmi3CallbackIntermediateUpdate>> and thus entering the *Intermediate Update Mode* can only be triggered by the FMU itself._
@@ -772,10 +775,12 @@ This argument is ignored in Scheduled Execution.
 |Equations and Actions
 |Functions Influencing Equations
 
-|Get intermediate variable values latexmath:[\mathbf{v}_u(t_u)]
+|Get intermediate variable values latexmath:[\mathbf{v}_u(\mathbf{t}_u)]
 |`fmi3Get{VariableType}`
 
-|Set intermediate input variables latexmath:[\mathbf{u}_u(t_u)]
+a|
+* Co-Simulation: Set continuous intermediate input variables latexmath:[\mathbf{u}_{\mathit{c,u}}(\mathbf{t}_u)]
+* Scheduled Execution: Set intermediate input variables latexmath:[\mathbf{u}_u(\mathbf{t}_u)]
 |`fmi3Set{VariableType}`
 
 // TODO Irina & Matthias: do we need to add lines for <<fmi3GetIntervalDecimal>> & <<fmi3GetIntervalFraction>>
@@ -792,6 +797,7 @@ Intermediate variables are variables that are marked with attribute <<intermedia
 Function `fmi3Set{VariableType}`::
 This function can be called for intermediate input variables, if <<intermediateVariableSetRequested,`intermediateVariableSetRequested == fmi3True`>>.
 Intermediate input variables are input variables that are marked with attribute <<intermediateUpdate,`intermediateUpdate = true`>> in the <<modelDescription.xml>> and have been included in the <<requiredIntermediateVariables>> argument of <<fmi3Instantiate>>.
+In Co-Simulation, <<discrete>> <<input,`inputs`>> must not be set.
 
 There is a defined order of calling these functions: first all `fmi3Get{VariableType}` calls must be performed, then `fmi3Set{VariableType}` may be called. +
 _[This is analogous to the calling sequence of_ `fmi3Get{VariableType}` _and_ `fmi3Set{VariableType}` _calls at communication points.]_

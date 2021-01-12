@@ -608,7 +608,7 @@ typedef fmi3Status fmi3DoStepTYPE(fmi3Instance instance,
                                   fmi3Boolean noSetFMUStatePriorToCurrentPoint,
                                   fmi3Boolean* eventEncountered,
                                   fmi3Boolean* clocksAboutToTick,
-                                  fmi3Boolean* terminate,
+                                  fmi3Boolean* terminateSimulation,
                                   fmi3Boolean* earlyReturn,
                                   fmi3Float64* lastSuccessfulTime);
 /* end::DoStep[] */

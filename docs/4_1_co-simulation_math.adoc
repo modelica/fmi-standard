@@ -136,111 +136,6 @@ _[In the case of Co-Simulation without events, detecting discrete changes to con
 Furthermore, changing <<discrete>> variables at communication points will likely require special handling within the FMU.
 Since the FMU itself can detect such changes, the co-simulation algorithm does not need to raise explicit events in such a case.
 
-==== Getting and Setting Variable Values [[transfer-of-input-output-and-parameters]]
-
-<<input,`Input`>>, <<output>> and other variables are accessed via the `fmi3Get{VariableType}` and `fmi3Set{VariableType}` functions, defined in <<get-and-set-variable-values>>.
-
-Function <<fmi3GetOutputDerivatives>>::
-
---
-The n-th <<derivative,`derivatives`>> with respect to time of continuous <<output,`outputs`>> can be retrieved with <<fmi3GetOutputDerivatives>> to allow interpolation/extrapolation of connected input variables between communication points by the importer using <<fmi3CallbackIntermediateUpdate>>. +
-_[This enables the same functionality as `fmi2SetInputDerivatives` did in FMI1.0 and FMI2.0.]_
-
-Whether the FMU is able to provide the <<derivative,`derivatives`>> of <<output,`outputs`>> is given by the unsigned integer capability flag `maxOutputDerivativeOrder` that represents the maximum order of the <<output>> <<derivative, `derivatives`>>.
-If the actual order is lower (because the order of integration algorithm is low), the retrieved value is 0.
-
-Restrictions on calling the function are the same as for the `fmi3Get{VariableType}` function for <<continuous>> <<output,`outputs`>>.
-The returned values correspond to the current time of the FMU.
-For example, after a successful call to <<fmi3DoStep>>, the returned values are related to the end of the communication step.
---
-
-[[fmi3GetOutputDerivatives,`fmi3GetOutputDerivatives`]]
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=GetOutputDerivatives]
-----
-
---
-* `valueReferences` is a vector of value references that define the variables whose <<derivative,`derivatives`>> shall be retrieved.
-If multiple derivatives of a variable shall be retrieved, list the value reference multiple times.
-
-* `nValueReferences` is the dimension of the arguments `valueReferences` and `orders`.
-
-* `orders` contains the orders of the respective <<derivative>> (1 means the first <<derivative>>, 2 means the second <<derivative>>, ..., 0 is not allowed).
-If multiple derivatives of a variable shall be retrieved, provide a list of them in the `orders` array, corresponding to a multiply occurring value reference in the `valueReferences` array.
-
-* `values` is a vector with the values of the <<derivative,`derivatives`>>.
-The order of the `values` elements is derived from a twofold serialization: the outer level corresponds to the combination of a value reference (e.g., `valueReferences[k]`) and order (e.g., `orders[k]`), and the inner level to the serialization of variables as defined in <<serialization-of_variables>>.
-The inner level does not exist for scalar variables.
-
-* `nValues` is the size of the argument `values`.
-`nValues` only equals `nValueReferences` if all corresponding output variables are scalar variables.
---
-
-_[ Example:_ +
-_Assuming an FMU has outputs latexmath:[y_1][2*3] with value reference 1, latexmath:[y_2] with value reference 2, latexmath:[ y_3][2] value reference 3, latexmath:[y_4] with value reference 4 and `maxOutputDerivativeOrder`=2._ +
-_With `valueReferences`= [1, 1, 3, 3, 4, 4], and `orders`= [1, 2, 1, 2, 1, 2], <<fmi3GetOutputDerivatives>> will provide first and second time derivatives of the outputs y1, y3, y4, which in `values` are serialized in the following way:_
-_((array serialization of latexmath:[\dot y_1]), (array serialization of latexmath:[\ddot y_1]), (array serialization of latexmath:[\dot y_3]), (array serialization of latexmath:[\ddot y_3]), latexmath:[\dot y_4], latexmath:[\ddot y_4])_ +
-_If the internal polynomial is of order 1 and the importer inquires the second <<derivative>> of an <<output>>, the FMU will return zero.]_
-
-==== Computation in Co-Simulation [[Computation-in-Co-Simulation]]
-
-The importer requests the computation of the next time step with the following function:
-
-[[fmi3DoStep,`fmi3DoStep`]]
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=DoStep]
-----
-
-[[currentCommunicationPoint,`currentCommunicationPoint`]]
-* `currentCommunicationPoint` is the current communication point of the importer (latexmath:[t_i]) with the unit of the <<independent>> variable and
-
-[[communicationStepSize,`communicationStepSize`]]
-* `communicationStepSize` is the communication step size (latexmath:[h_i]) with the unit of the <<independent>> variable.
-`communicationStepSize` must be latexmath:[> 0.0].
-
-[[noSetFMUStatePriorToCurrentPoint,`noSetFMUStatePriorToCurrentPoint`]]
-* `noSetFMUStatePriorToCurrentPoint == fmi3True` if `fmi3SetFMUState` will no longer be called for time instants prior to <<currentCommunicationPoint>> in this simulation run.
-_[The FMU can use this flag to flush a result buffer.]_
-
-[[eventEncountered,`eventEncountered`]]
-* <<eventEncountered,`eventEncountered == fmi3True`>> indicates that an event was encountered at <<lastSuccessfulTime>> and the importer has to call <<fmi3UpdateDiscreteStates>> to gather related information about the event.
-
-[[clocksAboutToTick,`clocksAboutToTick`]]
-* <<clocksAboutToTick,`clocksAboutToTick == fmi3True`>> indicates that one or more clocks will tick at <<lastSuccessfulTime>> and, after calling <<fmi3UpdateDiscreteStates>>, <<fmi3GetClock>> should be called to gather all information related to <<outputClock,`output clocks`>> that have the value `fmi3ClockActive`.
-
-* `terminate` signals to the importer that the FMU requests the end of the simulation for internal reasons.
-This is not due to an error, but a natural limit to the simulation time has been reached inside the FMU.
-
-[[earlyReturn,`earlyReturn`]]
-* `earlyReturn` signals to the importer that the FMU returns early from the <<fmi3DoStep>> at the time specified in <<lastSuccessfulTime>>.
-
-[[lastSuccessfulTime,`lastSuccessfulTime`]]
-* `lastSuccessfulTime` represents the internal time of the FMU when <<fmi3DoStep>> returns.
-
-The FMU is expected to compute until time latexmath:[t_{i+1} = t_i + h_i], or <<lastSuccessfulTime>> `=` <<currentCommunicationPoint>> `+` <<communicationStepSize>>.
-
-This is especially interesting, if <<fmi3DoStep>> returns with <<earlyReturn,`earlyReturn == fmi3True`>>.
-In this case, the step did not compute until latexmath:[t_{i+1}], but stopped computation error free until <<lastSuccessfulTime>>.
-However, even when the FMU returns from <<fmi3DoStep>> with <<fmi3OK>>, it is allowed that <<lastSuccessfulTime>> deviates from the expected <<currentCommunicationPoint>> `+` <<communicationStepSize>>.
-_[An example is a fixed-step integrator inside the FMU that cannot possibly stop at exactly the requested time._
-_Advanced co-simulation algorithms might be able to take this information into account._
-_It is even possible that the <<lastSuccessfulTime>> is still equal to <<currentCommunicationPoint>> when <<earlyReturn,`earlyReturn == fmi3True`>> is returned (contrary to the possibly expected <<fmi3Discard>>) to indicate a changed internal state of the FMU, e.g. steps in super-dense time.]_
-
-_[The calling environment defines the communication points and <<fmi3DoStep>> must synchronize to these points by always integrating exactly to latexmath:[t_i + h_i]._
-_It is up to <<fmi3DoStep>> how to achieve this.]_
-
-At the first call to <<fmi3DoStep>> after <<fmi3ExitInitializationMode>> was called <<currentCommunicationPoint>> must be equal to `startTime` as set with <<fmi3EnterInitializationMode>>.
-
-_[Formally, argument <<currentCommunicationPoint>> is not needed._
-_It is present in order to handle a mismatch between the importer and the state of the FMU: The <<currentCommunicationPoint>> and the state of the FMU defined by former_ <<fmi3DoStep>> _or_ `fmi3SetFMUState` _calls have to be consistent with respect to each other._
-_For example, if the FMU does not use the update formula for the <<independent>> variable as required above,_ latexmath:[t_{i+1} = t_i + h_i] _(using argument_ latexmath:[t_i] = <<currentCommunicationPoint>> _of_ <<fmi3DoStep>>) _but uses internally an own update formula, such as_ latexmath:[t_{s,i+1} = t_{s,i} + h_{s,i}] _then the FMU could use as time increment_ latexmath:[\text{h}_{s,i} := (t_i - t_{s,i}) + h_i] _(instead of_ latexmath:[\text{h}_{s,i} := h_i] _) to avoid a mismatch between the importer time_ latexmath:[t_{i+1}] _and the FMU internal time_ latexmath:[t_{s,i+1}] _for large i.]_
-
-It depends on the capabilities of the FMU which argument constellations and calling sequences are allowed (see <<fmi-for-co-simulation>>).
-
-Only <<fmi3DoStep>> can change the time of a Co-Simulation FMU from the outside (time advances internally during a communication interval).
-
 ==== Communication of Event Time and Input and Output Values [[Communication-during-update]]
 
 The <<fmi3CallbackIntermediateUpdate>> callback described in <<IntermediateUpdateMode>> is also used in order to communicate the <<input>> and <<output>> and, in particular, the event and <<clock>> time from the FMU to the importer.
@@ -374,11 +269,7 @@ If the <<fmi3DoStep>> return value is <<fmi3OK>>, the calling of <<fmi3GetClock>
 Similar to the Model Exchange case, the allowed call order is <<fmi3GetClock>>, <<fmi3GetIntervalDecimal>>, <<fmi3GetIntervalFraction>>, `fmi3Get{VariableType}`, `fmi3Set{VariableType}`.
 Function calls of this call order can be omitted.
 
-The handling of return values of function calls is identical to Co-Simulation.
-
-If <<terminateSimulation,`terminateSimulation`>> becomes `fmi3True` after calling <<fmi3UpdateDiscreteStates>> then the co-simulation should be terminated by calling <<fmi3Terminate>>.
 Once handling of the <<clock>> events finished, the importer calls <<fmi3EnterStepMode>> for that FMU to push it into *Step Mode*.
-Note that it is not allowed to call <<fmi3EnterEventMode>> or <<fmi3EnterStepMode>> in Scheduled Execution.
 
 _[Usually the importer should be able to derive the correct communication point times for <<inputClock,`input clocks`>> in advance and thus it should be able to set the proper <<communicationStepSize>> for <<fmi3DoStep>>._
 _Such predictions are not possible if an <<inputClock>> of an FMU depends on the ticking of a triggered <<outputClock>> of another FMU.]_

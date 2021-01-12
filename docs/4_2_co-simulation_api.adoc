@@ -1,17 +1,16 @@
 === State Machine for Co-Simulation [[state-machine-co-simulation]]
 
-The state machine in <<figure-co-simulation-state-machine>> defines the supported calling sequences.
+The state machine in <<figure-co-simulation-state-machine>> defines the allowed calling sequences for FMI for Co-Simulation.
 
 .Calling sequence of Co-Simulation C functions.
 [#figure-co-simulation-state-machine]
 image::images/state-machine-co-simulation.svg[width=80%, align="center"]
 
-Each state of the state machine corresponds to a certain phase of a simulation.
-Common states are defined in <<common-state-machine>>, such as super states <<FMUStateSetable,*FMU State Setable*>> and  <<Initialized,*Initialized*>>, states <<Instantiated,*Instantiated*>>, <<ConfigurationMode,*Configuration Mode*>>, <<ReconfigurationMode,*Reconfiguration Mode*>>, <<InitializationMode,*Initialization Mode*>>, <<Terminated,*Terminated*>> and <<IntermediateUpdateMode,*Intermediate Update Mode*>>.
+Common states are defined in <<common-state-machine>>, such as super states <<FMUStateSetable,*FMU State Setable*>> and  <<Initialized,*Initialized*>>, states <<Instantiated,*Instantiated*>>, <<ConfigurationMode,*Configuration Mode*>>, <<ReconfigurationMode,*Reconfiguration Mode*>>, <<InitializationMode,*Initialization Mode*>>, <<EventMode,*Event Mode*>>, <<Terminated,*Terminated*>> and <<IntermediateUpdateMode,*Intermediate Update Mode*>>.
 
 ==== State: Step Mode [[state-step-mode-co-simulation]]
 
-This state is used by the importer to progress simulation time.
+The state *Step Mode* is used to compute the values of all variables between communication points and events and to advance time in the FMU.
 
 [#table-math-co-simulation]
 [cols="2,1",options="header",]
@@ -19,70 +18,113 @@ This state is used by the importer to progress simulation time.
 |Equations and Actions
 |Functions Influencing Equations
 
-|Set <<tunable>> <<parameter,`parameters`>> latexmath:[\mathbf{p}_{\mathit{tune}}] (and do not set other <<parameter,`parameters`>> latexmath:[\mathbf{p}_{\mathit{other}}])
+|Set <<tunable>> <<parameter,`parameters`>> latexmath:[\mathbf{p}_{\mathit{variability == tunable}}].
 |`fmi3Set{VariableType}`
 
-|Set continuous-time and discrete-time <<input,`inputs`>> latexmath:[\mathbf{u}_{d+c}(t_i)]
+|Set continuous-time and discrete-time <<input,`inputs`>> latexmath:[\mathbf{u}_{c+d}(\mathbf{t})].
 |`fmi3Set{VariableType}`
 
-|latexmath:[\begin{matrix} t_{i+1} := t_i + h_i \\ (\mathbf{y}_{c+d}, \mathbf{y}_c^{(j)}, \mathbf{w}_{c+d}) := \mathbf{f}_{\mathit{doStep}}(\mathbf{u}_{c+d}, \mathbf{u}_u,  t_i, h_i, \mathbf{p}_{\mathit{tune}}, \mathbf{p}_{\mathit{other}})_{t_i} \\ t_i := t_{i+1} \end{matrix}] +
-latexmath:[\mathbf{f}_{\mathit{doStep}}] is also a function of the internal variables latexmath:[\mathbf{x}_c], latexmath:[^{\bullet}\mathbf{x}_d]
-|`fmi3DoStep` +
-`fmi3Get{VariableType}` +
-`fmi3GetOutputDerivatives` +
-`fmi3CallbackIntermediateUpdate`
+|Get values of variables latexmath:[\mathbf{v}(\mathbf{t})].
+|`fmi3Get{VariableType}`
+
+|Get time derivatives of <<continuous>> <<output,`outputs`>> latexmath:[\mathbf{y}_c^{(j)}(\mathbf{t})].
+|<<fmi3GetOutputDerivatives>>
+
+a|
+* latexmath:[(\mathbf{y}_{c+d}, \mathbf{y}_c^{(j)}, \mathbf{x}_d, \mathbf{w}_{c+d}, \mathbf{b}, \mathbf{t}_{i+1}) := \mathbf{f}_{\mathit{doStep}}({}^{\bullet}\mathbf{x}_d, \mathbf{u}_{c+d}, {}^{\bullet}\mathbf{u}_{c,u}, \mathbf{p}, {}^{\bullet}\mathbf{b}, \mathbf{t}_i, \mathbf{h}_i)] +
+* Update previous values of discrete states: latexmath:[{}^\bullet\mathbf{x}_d:=\mathbf{x}_d].
+* Update previous values of buffers: latexmath:[{}^\bullet\mathbf{b}:=\mathbf{b}].
+* latexmath:[\mathbf{t}:=(\mathbf{t}_\mathit{i+1}, 0)]
+|<<fmi3DoStep>>
+
+|latexmath:[(\mathbf{v}_{u}, \mathbf{t}_u) := \mathbf{f}_{\mathit{inter}}({}^{\bullet}\mathbf{x}_d, \mathbf{u}_{c+d}, {}^{\bullet}\mathbf{u}_{c,u}, \mathbf{p}, {}^{\bullet}\mathbf{b}, \mathbf{t}_i, \mathbf{h}_i)]
+|<<fmi3CallbackIntermediateUpdate>>
+
+|Activate event equations latexmath:[\mathbf{f}_{\mathit{event}}].
+|<<fmi3EnterEventMode>>
 
 |====
 
 Allowed Function Calls::
 
-Function <<fmi3EnterConfigurationMode>>::
-Changes state to *Reconfiguration Mode*.
-This function must not be called if the FMU contains no <<tunable>> <<structuralParameter,`structural parameters`>> (i.e. with <<causality>>= <<structuralParameter>> and <<variability>> = <<tunable>>).
+Function `fmi3Set{VariableType}`::
+sets the values of variables with:
+* <<causality>> = <<input>>, or
+* <<causality>> = <<parameter>> and <<variability>> = <<tunable>>
+
++
+at time latexmath:[\mathbf{t}].
+
+Function `fmi3Get{VariableType}`::
+returns values for all variables at latexmath:[\mathbf{t}].
+`fmi3Get{VariableType}` does not trigger an evaluation of latexmath:[\mathbf{f}_\mathit{doStep}].
+Therefore, <<algebraic-loops,algebraic loops>> at communication points cannot be handled by an appropriate sequence of `fmi3Get{VariableType}` and `fmi3Set{VariableType}` calls _[contrary to Model Exchange]_.
++
+_[Calling `fmi3Get{VariableType}` for outputs without <<fmi3DoStep>> will return the same values, regardless of what `fmi3Set{VariableType}` calls where made.]_
+
+Function <<fmi3GetOutputDerivatives>>::
+See <<getting-output-derivatives>>.
+
+Function <<fmi3DoStep>>::
+
+The importer requests the computation of the next time step with the following function:
+
+[[fmi3DoStep,`fmi3DoStep`]]
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=DoStep]
+----
+
+[[currentCommunicationPoint,`currentCommunicationPoint`]]
+* `currentCommunicationPoint` is the current communication point of the importer (latexmath:[t_i]) with the unit of the <<independent>> variable.
+At the first call of <<fmi3DoStep>>, <<currentCommunicationPoint>> must be equal to the argument <<startTime>> of <<fmi3EnterInitializationMode>>.
+
+[[communicationStepSize,`communicationStepSize`]]
+* `communicationStepSize` is the expected communication step size (latexmath:[h_i]) with the unit of the <<independent>> variable.
+`communicationStepSize` must be latexmath:[> 0.0].
+The FMU is expected to compute until time latexmath:[\mathbf{t}_{i+1} = \mathbf{t}_i + \mathbf{h}_i].
+See <<canHandleVariableCommunicationStepSize>> for restrictions.
++
+_[Formally, argument <<currentCommunicationPoint>> is not needed._
+_It is present in order to handle a potential mismatch between the importer´s and the FMU´s time representations and/or computations._
+_Both arguments <<currentCommunicationPoint>> and <<communicationStepSize>> allow computing of_ latexmath:[\mathbf{t}_\mathit{i+1}] _by one addition, avoiding accumulation of numerical errors.]_
+
+[[noSetFMUStatePriorToCurrentPoint,`noSetFMUStatePriorToCurrentPoint`]]
+* `noSetFMUStatePriorToCurrentPoint == fmi3True` if `fmi3SetFMUState` will no longer be called for time instants prior to <<currentCommunicationPoint>> in this simulation run.
++
+_[The FMU can use this flag to flush a result buffer.]_
+
+[[eventEncountered,`eventEncountered`]]
+* <<eventEncountered,`eventEncountered == fmi3True`>> indicates that an event was encountered at <<lastSuccessfulTime>> and the importer has to enter *Event Mode* by calling <<fmi3EnterEventMode>>.
+
+[[clocksAboutToTick,`clocksAboutToTick`]]
+* <<clocksAboutToTick,`clocksAboutToTick == fmi3True`>> indicates that one or more clocks will tick at <<lastSuccessfulTime>> and, after calling <<fmi3EnterEventMode>>, <<fmi3GetClock>> must be called to inquire the status of all <<outputClock,`output clocks`>>.
+
+[[terminateSimulationDS,`terminateSimulation`]]
+* When <<terminateSimulationDS,`terminateSimulation == fmi3True`>>, the FMU requests to stop the simulation and the importer must call <<fmi3Terminate>>.
+
+[[earlyReturn,`earlyReturn`]]
+* `earlyReturn` signals to the importer that the FMU returns at latexmath:[\mathbf{t}_{i+1} < \mathbf{t}_i + communicationStepSize] from the <<fmi3DoStep>>. The time reached is specified in <<lastSuccessfulTime>>.
+Reasons for <<earlyReturn, `earlyReturn == fmi3True`>> are
+** expressed by the return arguments of <<fmi3DoStep>> <<eventEncountered>>, <<clocksAboutToTick>>, <<terminateSimulationDS>>, or
+** the FMU´s reaction to the importers request for <<earlyReturn>> by the return argument <<earlyReturnRequested, `earlyReturnRequested == fmi3True`>> of <<fmi3CallbackIntermediateUpdate>>.
+
+[[lastSuccessfulTime,`lastSuccessfulTime`]]
+* `lastSuccessfulTime` represents the internal time latexmath:[t_{i+1}] of the FMU when <<fmi3DoStep>> returns, for any value of <<earlyReturn>>. Even if the FMU returns from <<fmi3DoStep>> with <<fmi3OK>> and <<earlyReturn, `earlyReturn == fmi3False`>>, it is allowed that <<lastSuccessfulTime>> deviates from the expected <<currentCommunicationPoint>> `+` <<communicationStepSize>>. +
+_[Examples:_
+** _A fixed-step integrator inside the FMU cannot reach the requested time exactly._
+_<<fixedInternalStepSize>> was introduced to reduces these effects._
+** _A variable-step integrator with minimal step size is not able to land exactly at_ latexmath:[t_{i+1}]_.]_
+
++
+It is possible that the <<lastSuccessfulTime>> is equal to <<currentCommunicationPoint>> when <<earlyReturn,`earlyReturn == fmi3True`>> to indicate, for example, the detection of an event at <<currentCommunicationPoint>>.
+
+Only <<fmi3DoStep>> can change the time of a Co-Simulation FMU from the outside (<<advancing-time,time advances internally during `fmi3DoStep`>>).
 
 Function <<fmi3EnterEventMode>>::
 Changes state to *Event Mode*.
 This function must not be called, if <<fmi3InstantiateCoSimulation>> signaled `eventModeUsed = fmi3False`, which implies that the capability flag `hasEventMode = true`.
 
-Function <<fmi3DoStep>>::
-Within <<fmi3DoStep>> the FMU may call <<fmi3CallbackIntermediateUpdate>>
-* If the function returns with <<fmi3OK>> or <<fmi3Warning>> the FMU stays in this state.
-* The importer must call <<fmi3DoStep>> with <<communicationStepSize, `communicationStepSize > 0.0`>>.
-* If the function returns with <<earlyReturn,`earlyReturn == fmi3True`>> the FMU will change to states depending on the flags of <<fmi3CallbackIntermediateUpdate>>.
-* The FMU may return immediately from <<fmi3DoStep>> with <<lastSuccessfulTime,`lastSuccessfulTime == currentCommunicationPoint`>> if an event was detected immediately at the <<currentCommunicationPoint>>.
-Such an event might be caused by the change of an input during the communication point, or may be pending after the initialization.
-
-Function `fmi3Set{VariableType}`::
-For variables with:
-* <<causality>> = <<input>>, or
-* <<causality>> = <<parameter>> and <<variability>> = <<tunable>>
-
-It is not allowed to call `fmi3Get{VariableType}` functions after `fmi3Set{VariableType}` functions without an <<fmi3DoStep>> call in between.
-
-_[The reason is to avoid different interpretations of the caching, since contrary to FMI for Model Exchange, <<fmi3DoStep>> will perform the actual calculation instead of `fmi3Get{VariableType}`, and therefore, dummy algebraic loops at communication points cannot be handled by an appropriate sequence of `fmi3Get{VariableType}` and `fmi3Set{VariableType}` calls as for Model Exchange._
-
-_Examples:_
-
-.Examples for calling sequences.
-[[table-example-calling-sequence]]
-[cols="3,4",options="header"]
-|====
-|_Correct calling sequence_
-|_Wrong calling sequence_
-
-|_fmi3Set{VariableType} on inputs_ +
-_fmi3DoStep_ +
-_fmi3Get{VariableType} on outputs_ +
-_fmi3Set{VariableType} on inputs_ +
-_fmi3DoStep_ +
-_fmi3Get{VariableType} on outputs_ +
-
-|_fmi3Set{VariableType} on inputs_ +
-_fmi3DoStep_ +
-_fmi3Get{VariableType} on outputs_ +
-_fmi3Set{VariableType} on inputs_ +
-_fmi3Get{VariableType} on outputs // not allowed_ +
-_fmi3DoStep_ +
-_fmi3Get{VariableType} on outputs_ +
-|====
-_]_
+Function <<fmi3EnterConfigurationMode>>::
+<<fmi3EnterConfigurationMode>> changes state to *Reconfiguration Mode*.
+<<fmi3EnterConfigurationMode>> must not be called if the FMU contains no <<tunable>> <<structuralParameter,`structural parameters`>> (i.e. with <<causality>>= <<structuralParameter>> and <<variability>> = <<tunable>>).
