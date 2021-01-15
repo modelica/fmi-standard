@@ -86,8 +86,9 @@ If `loggingOn == fmi3True`, the FMU enables a vendor defined set of `<LogCategor
 This set should typically contain categories for messages that explain execution errors, like <<fmi3Discard>>, <<fmi3Error>> and <<fmi3Fatal>>.
 The function <<fmi3SetDebugLogging>> gives more detailed control about required `<LogCategories>` (see <<definition-of-log-categories>>).
 
-* If `eventModeUsed == fmi3True` the simulation algorithm can handle events, otherwise `fmi3EnterEventMode` must not be called.
-The flag may only be `fmi3True`, if `hasEventMode == true`, otherwise the FMU must raise an error.
+[[eventModeUsed,`eventModeUsed`]]
+* If `eventModeUsed == fmi3True` the importer can handle events, otherwise <<fmi3EnterEventMode>> must not be called.
+The flag may only be `fmi3True`, if <<hasEventMode,`hasEventMode == true`>>, otherwise the FMU must raise an error.
 For FMUs that have clocks, `eventModeUsed == fmi3True` is required.
 
 * `instanceEnvironment` is a pointer that can be passed to the <<fmi3CallbackIntermediateUpdate>> function in order that the simulation environment can provide an efficient way to identify the FMU that called <<fmi3CallbackIntermediateUpdate>>.
@@ -339,7 +340,7 @@ The *Initialization Mode* is used by the simulation algorithm to compute consist
 Equations are active to determine the initial FMU state, as well as all <<output,`outputs`>> (and optionally other variables exposed by the exporting tool).
 Artificial or real algebraic loops over connected FMUs in *Initialization Mode* may be handled by using appropriate numerical algorithms.
 
-In *Initialization Mode*, the FMU computes at the start time latexmath:[\mathbf{t}_0] initial values for continuous-time <<state,`states`>> latexmath:[\mathbf{x}_c(\mathbf{t}_0)], and for the previous (internal) discrete-time states latexmath:[\mathbf{x}_d(\mathbf{t}_0)], by utilizing extra equations not present in the other modes (for example, equations to define the <<start>> value for a <<state>> or for the derivative of a <<state>>).
+In *Initialization Mode*, the FMU computes initial values at the start time latexmath:[\mathbf{t}_\mathit{start}] using function latexmath:[\mathbf{f}_\mathit{init}], not present in the other modes, for example, equations to define the <<start>> value for a <<state>> or for the derivative of a <<state>>.
 
 [#table-math-initializationMode]
 [cols="2,1",options="header",]
@@ -355,12 +356,13 @@ continuous-time <<state,`states`>> latexmath:[\mathbf{x}_{c,\mathit{initial=exac
 |Set continuous-time and discrete-time <<input,`inputs`>>  latexmath:[\mathbf{u}_{c+d}(\mathbf{t}_{start})]
 |`fmi3Set{VariableType}`
 
-|latexmath:[(\mathbf{y}_{c+d}, \mathbf{\dot{x}}_c, \mathbf{x}_{c+d}, \mathbf{z}, \mathbf{r}, \mathbf{w}_{c+d}, \mathbf{b}, \mathbf{T}_{\mathit{shift}}, \mathbf{T}_\mathit{interval}) := \mathbf{f}_{\mathit{init}}(\mathbf{u}_{c+d}, \mathbf{t}_{start}, \mathbf{v}_{\mathit{initial=exact}})]
+|latexmath:[(\mathbf{y}_{c+d}, \mathbf{\dot{x}}_c, \mathbf{x}_{c+d}, ^{\bullet}\mathbf{x}_d, \mathbf{z}, \mathbf{r}, \mathbf{w}_{c+d}, \mathbf{b}, \mathbf{T}_{\mathit{shift}}, \mathbf{T}_\mathit{interval}) := \mathbf{f}_{\mathit{init}}(\mathbf{u}_{c+d}, \mathbf{t}_{start}, \mathbf{v}_{\mathit{initial=exact}})]
 |`fmi3Get{VariableType}`, <<fmi3GetDerivatives>>, <<fmi3GetContinuousStates>>, <<fmi3GetEventIndicators>>, <<fmi3GetShift>>, <<fmi3GetInterval>>
 
 a|
 * Evaluate latexmath:[\mathbf{f}_{\mathit{init}}], if no `fmi3GetXXX` function was called
 * Deactivate initialization equations latexmath:[\mathbf{f}_{\mathit{init}}]
+* Update previous values of <<buffers>>: latexmath:[{}^\bullet\mathbf{b}:=\mathbf{b}]
 * Model Exchange:
   - Activate event equations latexmath:[\mathbf{f}_{\mathit{event}}]
   - latexmath:[\mathbf{t}:=(\mathbf{t}_{\mathit{start}}, 0)]
@@ -698,11 +700,17 @@ _[The following use cases are enabled:_
 _Note that the call to <<fmi3CallbackIntermediateUpdate>> and thus entering the *Intermediate Update Mode* can only be triggered by the FMU itself._
 _The importer cannot actively trigger this and hence for some use cases (e.g. cooperative multitasking and setting of intermediate input values) it relies on the callbacks from the FMUs to be able to realize these use cases properly.]_
 
-A Co-Simulation FMU can provide values for its <<output>> variables at intermediate points between two consecutive communication points, and is able to accept new values for <<input>> variables at these intermediate points.
+A Co-Simulation FMU can provide values for its <<output>> variables at intermediate points between two consecutive communication points, and is able to receive new values for <<input>> variables at these intermediate points.
 This is typically required when the FMU uses a numerical solver to integrate the FMU's internal state between communication points in <<fmi3DoStep>>.
 This numerical solver assumes that the inputs are continuous in the integration interval, dictated by <<fmi3DoStep>>.
 In FMI 2.0 Co-simulation, the intermediate inputs are provided by the use of extrapolations.
 The intermediate update functions allow FMUs to receive inputs, and provide outputs, directly to the co-simulation algorithm, in those intermediate time points.
+
+Intermediate values for <<continuous>> inputs are computed by the importer for example by an extrapolation polynomial build with the output derivatives of connected FMUs.
+FMUs can signal with the optional attribute <<recommendedIntermediateInputSmoothness>> of value latexmath:[k] to the co-simulation algorithm that best convergence rates can be achieved if these approximation functions are of smoothness latexmath:[C^{k}([\mathbf{t}_i, \mathbf{t}_{i+1}\])], that is k-time continuously differentiable, with latexmath:[C^{0}] meaning continuous. +
+_[This can increase simulation speed for higher order multi-step solvers that in this case do not have to reset at communication points.]_
+
+The importer must ensure that the input approximation function latexmath:[\mathbf{u}_u] is consistent with the values of the input variable (latexmath:[\mathbf{u}_u(\mathbf{t}_{i+1})= \mathbf{u}(\mathbf{t}_{i+1})]).
 
 // TODO for Irina/Matthias: what is Intermediate Update Mode used for in Scheduled Execution: Please provide small paragraph like previous paragraph
 
@@ -724,7 +732,6 @@ The co-simulation algorithm signals the support for *Intermediate Update Mode* b
 The FMU enters *Intermediate Update Mode* by calling <<fmi3CallbackIntermediateUpdate>> within *Step Mode* (CS) or *Clock Activation Mode* (SE) and leaves the state towards *Step Mode* (CS) or *Clock Activation Mode* (SE) when the function returns.
 
 [[fmi3CallbackIntermediateUpdate,`fmi3CallbackIntermediateUpdate`]]
-+
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tag=CallbackIntermediateUpdate]
