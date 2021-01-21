@@ -1,28 +1,15 @@
 === Concepts [[concepts-model-exchange]]
 
-==== Providing Independent Variables and Re-initialization of Caching [[providing-independent-variables-and-re-initialization]]
+==== Selective Computation of FMU Variables [[providing-independent-variables-and-re-initialization]]
 
-Depending on the situation, different variables need to be computed.
-In order to be efficient, it is important that the interface requires only the computation of variables that are needed in the present context.
+Depending on the phase of the solver algorithm, different FMU variables need to be computed.
+The FMI for Model Exchange was designed to allow selective retrieval of FMU variables with specific functions (e.g. `fmi3Get{VariableType}`, <<fmi3GetEventIndicators>>, <<fmi3GetDerivatives>>).
+This enables computation on demand.
+
 For example, during the iteration of an integrator step, only the state derivatives need to be computed, provided the <<output>> of a model is not connected.
-It might be that at the same time instant other variables are needed.
-For example, if an integrator step is completed, the event indicator functions need to be computed as well.
-If the state derivatives have already been computed at the present time instant, then it is important for efficiency that they are not newly computed in the call to compute the event indicator functions.
-This means, the state derivatives shall be reused from the previous call.
-This feature is called "caching of variables" in the sequel. +
-Caching requires that the model evaluation can detect when the input arguments, like time or states, have changed.
-This is achieved by setting them explicitly with a function call, since every such function call signals precisely a change of the corresponding variables.
-For this reason, this section contains functions to set the input arguments of the equation evaluation functions.
-This is unproblematic for time and states, but is more involved for <<parameter,`parameters`>> and <<input,`inputs`>>, since the latter may have different data types.
+When localizing of <<state-event,state events>>, only the computation of event indicators might be required.
 
-
-[source, C]
-----
-fmi3Status fmi3Set{VariableType}(..);
-----
-
-Set new values for <<parameter,`parameters`>>, <<start>> values and <<input,`inputs`>> and re-initialize caching of variables that depend on these variables.
-The details of these functions are defined in <<get-and-set-variable-values>>.
+Because specific set functions exist (`fmi3Set{VariableType}`, <<fmi3SetTime>>, <<fmi3SetContinuousStates>>), caching algorithms can be applied to reuse already computed values.
 
 _[The functions above have the slight drawback that values must always be copied._
 _For example, a call to_ <<fmi3SetContinuousStates>> _will provide the actual states in a vector, and this function has to copy the values in to the internal model data structure so that subsequent evaluation calls can utilize these values._
@@ -160,12 +147,7 @@ _An FMU of this type should be implemented in FMI 3.0 with <<clock,`clocks`>>._
 _However, just like in FMI 2.0, it could in principle also be implemented by activating the model equations only at the first event iteration and returning always `discreteStatesNeedUpdate == fmi3False` from <<fmi3UpdateDiscreteStates>>._
 _Furthermore, the discrete-time states are not updated by <<fmi3UpdateDiscreteStates>>, but as first action before the discrete-time equations are evaluated, in order that_ latexmath:[^{\bullet}\mathbf{x}_d] _(= value at the previous Lucid Synchrone/Modelica 3.3 clock tick) and_ latexmath:[\mathbf{x}_d] _(value at the latest Lucid Synchrone/Modelica 3.3 clock tick) have reasonable values between Lucid Synchrone/Modelica 3.3 clock ticks._
 
-State machines with one memory location for a state::
-_In such a system there is only one memory location for a discrete-time state and not two, and therefore a discrete-time state is updated in the statement where it is assigned (and not in <<fmi3UpdateDiscreteStates>>)._
-_As a result, <<fmi3UpdateDiscreteStates>> is basically just used to start a new (super-dense) time instant._
-_This is unproblematic, as long as no algebraic loops occur._
-_FMUs of this type can therefore not be used in real algebraic loops if the involved variables depend on a discrete-time state._
-_This restriction is communicated to the environment of the FMU by the `ScalarVariable` definition of the corresponding <<input>> with flag <<canHandleMultipleSetPerTimeInstant>> `= false` (so an <<input>> with this flag is not allowed to be called in an algebraic loop)._
+// TODO: link to <<canHandleMultipleSetPerTimeInstant>> where appropriate
 
 [[Remark3]]
 _Remark 3 - Event Indicators / Frozen Relations:_
