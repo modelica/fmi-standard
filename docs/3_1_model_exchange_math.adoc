@@ -3,7 +3,7 @@
 ==== Selective Computation of FMU Variables [[providing-independent-variables-and-re-initialization]]
 
 Depending on the phase of the solver algorithm, different FMU variables need to be computed.
-The FMI for Model Exchange was designed to allow selective retrieval of FMU variables with specific functions (e.g. `fmi3Get{VariableType}`, <<fmi3GetEventIndicators>>, <<fmi3GetDerivatives>>).
+FMI allows selective retrieval of FMU variables with specific get functions (e.g. `fmi3Get{VariableType}`, <<fmi3GetEventIndicators>>, <<fmi3GetDerivatives>>).
 This enables computation on demand.
 
 For example, during the iteration of an integrator step, only the state derivatives need to be computed, provided the <<output>> of a model is not connected.
@@ -11,18 +11,20 @@ When localizing of <<state-event,state events>>, only the computation of event i
 
 Because specific set functions exist (`fmi3Set{VariableType}`, <<fmi3SetTime>>, <<fmi3SetContinuousStates>>), caching algorithms can be applied to reuse already computed values.
 
+In all tables describing the mathematical model of a state (e.g. <<table-math-model-exchange,*Continuous-Time Mode*>>), for notational convenience one function (e.g. latexmath:[\mathbf{f}_\mathit{cont}]) is defined to compute all output arguments from all inputs arguments.
+In an FMU, every output argument can be computed by its specific get function.
+Additionally, the output argument need not be a function of all input arguments, but of only a subset from it, as defined in the <<modelDescription.xml>> under `<ModelStructure>`.
+
 _[The functions above have the slight drawback that values must always be copied._
 _For example, a call to_ <<fmi3SetContinuousStates>> _will provide the actual states in a vector, and this function has to copy the values in to the internal model data structure so that subsequent evaluation calls can utilize these values._
 _If this turns out to be an efficiency issue, a future release of FMI might provide additional functions to provide the address of a memory area where the variable values are present.]_
 
-==== Model Evaluations, Dependencies, Algebraic Loops and Call Sequence [[algebraic-loops]]
+==== Algebraic Loops [[algebraic-loops]]
 
-// TODO: Move this section to General Mechanisms and generalize for both ME and CS
-
-When connecting FMUs, loop structures can occur that lead to particular difficulties because linear or non-linear algebraic systems of equations in floating point variables but also in Boolean or Integer variables might be present.
-In order to solve such systems of equations over FMUs efficiently, the dependency information is needed stating, for example, which <<output,`outputs`>> depend directly on <<input,`inputs`>>.
-This data is optionally provided in the XML file under element `<ModelStructure>`.
-If this data is not provided, the worst case must be assumed, that is, all <<output>> variables depend algebraically on all <<input>> variables.
+When connecting FMUs, loop structures can occur that might lead to linear or non-linear algebraic systems of equations, involving continuous and discrete-time variables.
+In order to detect and solve such systems of equations efficiently, information which <<output,`output`>> depends directly on which <<input,`inputs`>> is needed.
+This data is optionally provided in the <<modelDescription.xml>> under element `<ModelStructure>`.
+If this data is not provided, the worst case must be assumed: all <<output>> variables depend algebraically on all <<input>> variables.
 
 _[Example: In <<figure-connected-fmus>> two different types of connected FMUs are shown (the "dotted lines" characterize the dependency information):_
 
@@ -52,8 +54,8 @@ fmi3GetFloat64(FMU2, &vr_FMU2_y1, 1, &FMU2_y2,  1);
 
 _In the right diagram, FMU3 and FMU4 are connected in such a way that a real algebraic loop is present._
 _This loop might be solved iteratively with a Newton method._
-_In every iteration the iteration variable latexmath:[u_4] is provided by the solver, and via the shown sequence of `fmi3Set{VariableType}` and `fmi3Get{VariableType}` calls, the residual is computed and is provided back to the solver._
-_Based on the residual a new value of latexmath:[u_4] is provided._
+_In every iteration the iteration variable FMU4_u is provided by the solver, and via the shown sequence of `fmi3Set{VariableType}` and `fmi3Get{VariableType}` calls, the residual is computed and is provided back to the solver._
+_Based on the residual a new value of FMU4_u is provided._
 _The iteration is terminated when the residual is close to zero._
 
 [source, C]
@@ -61,7 +63,7 @@ _The iteration is terminated when the residual is close to zero._
 fmi3Instance FMI1, FMI2;
 fmi3ValueReference vr_FMU3_u, vr_FMU3_y, vr_FMU4_u, vr_FMU4_y;
 fmi3Float64 s, FMU3_y, FMU4_y, residual;
-bool converged;
+bool converged = false;
 
 // Newton iteration
 while (!converged)
@@ -73,6 +75,7 @@ while (!converged)
   fmi3SetFloat64(FMU1, &vr_FMU3_u, 1, &FMU4_y,  1);
   fmi3GetFloat64(FMU1, &vr_FMU3_y, 1, &FMU3_y,  1);
   residual=s-FMU3_y; // provided to the solver
+  converged=residual<tolerance;
 }
 
 ----
@@ -80,52 +83,7 @@ while (!converged)
 _These types of artificial or real algebraic loops can occur in all the different modes, such as *Initialization Mode*, *Event Mode*, and *Continuous-Time Mode*._
 _Since different variables are computed in every mode and the causality of variable computation can be different in *Initialization Mode* as with respect to the other two modes, it might be necessary to solve different kinds of loops in the different modes.]_
 
-_[Remark 1 - Calling Sequences:_
-
-_In <<table-math-model-exchange>>, for notational convenience in every mode one function call is defined to compute all output arguments from all inputs arguments._
-_In reality, every scalar output argument can be computed by one `fmi3Get{VariableType}` function call._
-_Additionally, the output argument need not be a function of all input arguments, but of only a subset from it, as defined in the XML file under `<ModelStructure>`._
-_This is essential when FMUs are connected in a loop, as shown in <<figure-connected-fmus>>._
-_For example, since_ latexmath:[y_{\mathit{2a}}] _depends only on_ latexmath:[u_{\mathit{1a}}] _, but not on_ latexmath:[u_{\mathit{1b}}]_, it is possible to call_ `fmi3Set{VariableType}` _to set_ latexmath:[u_{\mathit{1a}}] _, and then inquire_ latexmath:[y_{\mathit{2a}}] _with_ `fmi3Get{VariableType}` _without setting_ latexmath:[u_{\mathit{1b}}] _beforehand._
-
-_It is non-trivial to provide code for `fmi3Set{VariableType}`, `fmi3Get{VariableType}`, if the environment can call `fmi3Set{VariableType}` on the <<input,`inputs`>> in quite different orders._
-_A simple remedy is to provide the dependency information, not according to the real functional dependency, but according to the sorted equations in the generated code._
-_Example:_
-
-_Assume an FMU is described by the following equations (`u1`, `u2` are <<input,`inputs`>>, `y1`, `y2` are <<output,`outputs`>>,`w1`, `w2` are internal variables):_
-
------
-w1 = w2 + u1
-w2 = u2
-y1 = w1
-y2 = w2
------
-
-_Sorting of the equations might result in (this ordering is not unique):_
-
------
-w2 := u2
-y2 := w2
-w1 := w2 + u1
-y1 := w1
------
-
-_With this ordering, the dependency should be defined as `y2 = f(u2), y1 = f(u1,u2)`._
-_When `y2` is called first with `fmi3Get{VariableType}`, then only `u2` must be set first (since `y2 = f(u2)`), and the first two equations are evaluated._
-_If later `y1` is inquired as well, then the first two equations are not evaluated again and only the last two equations are evaluated._
-_On the other hand, if `y1` is inquired first, then `u1` and `u2` must be set first (since `y1 = f(u1,u2)`) and then all equations are computed._
-_When `y2` is inquired afterwards, the cached value is returned._
-
-_If sorting of the equations in this example would instead result in the following code:_
-
-----
-w2 := u2
-w1 := w2 + u1
-y1 := w1
-y2 := w2
-----
-
-_then the dependency should be defined as `y2 = f(u1,u2)`, `y1 = f(u1,u2)`, because `u1` and `u2` must be first set, before `y2` can be inquired with `fmi3Get{VariableType}` when executing this code._
+// XXX
 
 _Remark 2 - Mathematical Model of Discrete-Time FMUs:_
 
