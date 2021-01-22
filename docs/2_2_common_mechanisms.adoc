@@ -442,9 +442,111 @@ This function deserializes the byte vector `serializedState` of length `size`, c
 These functions are only supported by the FMU, if the optional capability flags `canGetAndSetFMUState` and `canSerializeFMUState` in `<fmiModelDescription><ModelExchange|CoSimulation|ScheduledExecution>` in the XML file are explicitly set to `true` (see <<fmi-for-model-exchange>>, <<fmi-for-co-simulation>>, <<fmi-for-scheduled-execution>>).
 --
 
+==== Selective Computation of Variables [[selectiv-computation]]
+
+Depending on the phase of the solver algorithm, different FMU variables need to be computed.
+FMI allows selective retrieval of FMU variables with specific get functions (e.g. `fmi3Get{VariableType}`, <<fmi3GetEventIndicators>>, <<fmi3GetDerivatives>>).
+This enables computation on demand.
+
+For example, during the iteration of an integrator step, only the state derivatives need to be computed, provided the <<output>> of a model is not connected.
+When localizing of <<state-event,state events>>, only the computation of event indicators might be required.
+
+Because specific set functions exist (`fmi3Set{VariableType}`, <<fmi3SetTime>>, <<fmi3SetContinuousStates>>), caching algorithms can be applied to reuse already computed values.
+
+In all tables describing the mathematical model of a state (e.g. <<table-math-model-exchange,*Continuous-Time Mode*>>), for notational convenience one function (e.g. latexmath:[\mathbf{f}_\mathit{cont}]) is defined to compute all output arguments from all inputs arguments.
+In an FMU, every output argument can be computed by its specific get function.
+Additionally, the output argument need not be a function of all input arguments, but of only a subset from it, as defined in the <<modelDescription.xml>> under `<ModelStructure>`.
+
+_[The functions above have the slight drawback that values must always be copied._
+_For example, a call to_ <<fmi3SetContinuousStates>> _will provide the actual states in a vector, and this function has to copy the values in to the internal model data structure so that subsequent evaluation calls can utilize these values._
+_If this turns out to be an efficiency issue, a future release of FMI might provide additional functions to provide the address of a memory area where the variable values are present.]_
+
+==== Algebraic Loops [[algebraic-loops]]
+
+When connecting FMUs, loop structures can occur that might lead to linear or non-linear algebraic systems of equations, involving continuous and discrete-time variables.
+In order to detect and solve such systems of equations efficiently, information which <<output,`output`>> depends directly on which <<input,`inputs`>> is needed.
+This data is optionally provided in the <<modelDescription.xml>> under element `<ModelStructure>`.
+If this data is not provided, the worst case must be assumed: all <<output>> variables depend algebraically on all <<input>> variables.
+
+_[Example: In <<figure-connected-fmus>> two different types of connected FMUs are shown (the "dotted lines" characterize the dependency information):_
+
+.Calling sequences for FMUs that are connected in a loop.
+[#figure-connected-fmus]
+image::images/ArtificialAlgebraicLoops.svg[width=80%, align="center"]
+
+_Since different variables are computed in every mode and the causality of variable computation can be different in *Initialization Mode* as with respect to the other two modes, it might be necessary to solve different kinds of loops in the different modes._
+_Artificial algebraic loops (see left diagram of <<figure-connected-fmus>>) can be solved in the modes *Initialization Mode*, *Event Mode*, and *Continuous-Time Mode* by an appropriate sequence of `fmi3Set{VariableType}` and `fmi3Get{VariableType}` calls:_
+
+[source, C]
+----
+fmi3Instance FMI1, FMI2;
+fmi3ValueReference vr_FMU1_u, vr_FMU1_y, vr_FMU2_u1, vr_FMU2_u2, vr_FMU2_y1, vr_FMU2_y2;
+fmi3Float64 s=0.1, FMU2_y1, FMU1_y, FMU2_y2;
+...
+fmi3SetFloat64(FMU2, &vr_FMU2_u1, 1, &s,        1);
+fmi3GetFloat64(FMU2, &vr_FMU2_y1, 1, &FMU2_y1,  1);
+fmi3SetFloat64(FMU1, &vr_FMU1_u,  1, &FMU2_y1,  1);
+fmi3GetFloat64(FMU1, &vr_FMU1_y,  1, &FMU1_y,   1);
+fmi3SetFloat64(FMU2, &vr_FMU2_u2, 1, &FMU1_y,   1);
+fmi3GetFloat64(FMU2, &vr_FMU2_y1, 1, &FMU2_y2,  1);
+...
+----
+
+_In the right diagram, FMU3 and FMU4 are connected in such a way that a real algebraic loop is formed._
+_This loop might be solved iteratively, for example with a Newton method._
+_In every iteration the iteration variable FMU4_u is provided by the solver, and via the shown sequence of `fmi3Set{VariableType}` and `fmi3Get{VariableType}` calls, the residual is computed and used by the solver to determine a new value of FMU4_u._
+_The iteration is terminated when the residual is small enough._
+_This method works for *Initialization Mode*, *Event Mode*, and *Continuous-Time Mode*._
+
+[source, C]
+----
+fmi3Instance FMU3, FMU4;
+fmi3ValueReference vr_FMU3_u, vr_FMU3_y, vr_FMU4_u, vr_FMU4_y;
+fmi3Float64 s, FMU3_y, FMU4_y, residual;
+bool converged = false;
+
+while (!converged) { // start iteration
+  // s determined by the solver
+  ...
+  fmi3SetFloat64(FMU4, &vr_FMU4_u, 1, &s,   1);
+  fmi3GetFloat64(FMU4, &vr_FMU4_y, 1, &FMU4_y,  1);
+  fmi3SetFloat64(FMU3, &vr_FMU3_u, 1, &FMU4_y,  1);
+  fmi3GetFloat64(FMU3, &vr_FMU3_y, 1, &FMU3_y,  1);
+  residual=s-FMU3_y; // provided to the solver
+  converged=residual<tolerance;
+}
+----
+
+_In *Step Mode*, <<fmi3SetFMUState>> is required to restore the FMU state before the next iteration with `fmi3Set{VariableType}`, <<fmi3DoStep>>, and `fmi3Get{VariableType}` is executed._
+
+_In *Event Mode*, the algorithms from above must be embedded in an event iteration:_
+[source, C]
+----
+fmi3Instance FMUx, FMUy;
+bool newDiscreteStatesNeededx;
+bool newDiscreteStatesNeededy;
+
+fmi3EnterEventMode(FMUx,...);
+fmi3EnterEventMode(FMUy,...);
+do { // start event iteration
+    // solve algebraic loop as described in the sample codes above
+
+    // introduce new instant of super-dense time
+    fmi3NewDiscreteStates(FMUx, newDiscreteStatesNeededx, ...);
+    fmi3NewDiscreteStates(FMUy, newDiscreteStatesNeededy, ...);
+} while (newDiscreteStatesNeededx || newDiscreteStatesNeededy);
+
+fmi3EnterStepMode(FMUx); // for CS
+fmi3EnterStepMode(FMUy); // for CS
+// or for ME: fmi3EnterContinuousTimeMode(FMUx);
+// or for ME: fmi3EnterContinuousTimeMode(FMUy);
+----
+
+_When solving algebraic loops in *Event Mode*, limitations to variable manipulations declared with XML attribute <<canHandleMultipleSetPerTimeInstant>> must be considered.]_
+
 ==== Clocks [[clocks,clocks]]
 
-FMI 3.0 specifies clearly the behavior of a clocked FMU.
+FMI 3.0 specifies the behavior of a clocked FMU.
 FMI 3.0 does not specify how the importer uses this functionality.
 This allows different use cases to be implemented with different semantics.
 

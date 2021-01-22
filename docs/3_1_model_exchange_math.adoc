@@ -1,156 +1,59 @@
 === Concepts [[concepts-model-exchange]]
 
-==== Selective Computation of FMU Variables [[providing-independent-variables-and-re-initialization]]
+==== Event Handling
 
-Depending on the phase of the solver algorithm, different FMU variables need to be computed.
-FMI allows selective retrieval of FMU variables with specific get functions (e.g. `fmi3Get{VariableType}`, <<fmi3GetEventIndicators>>, <<fmi3GetDerivatives>>).
-This enables computation on demand.
+Integration algorithms for differential equations assume continuous behavior of variables.
+In hybrid ODEs, there are points during the simulation, when this assumption is violated.
+A hybrid ODE solver must therefore:
 
-For example, during the iteration of an integrator step, only the state derivatives need to be computed, provided the <<output>> of a model is not connected.
-When localizing of <<state-event,state events>>, only the computation of event indicators might be required.
+* locate exactly when such a discontinuity (event) happens and enter *Event Mode*.
+This is trivial for <<time-event,time events>>.
+For <<state-event,state events>> event indicators are used.
+* handle such events in *Event Mode*.
+* restart the integration algorithm when leaving *Event Mode*.
 
-Because specific set functions exist (`fmi3Set{VariableType}`, <<fmi3SetTime>>, <<fmi3SetContinuousStates>>), caching algorithms can be applied to reuse already computed values.
+[[state-event,state event]]An <<fmi3GetEventIndicators,event indicator>> signals a <<state-event>> with the change from latexmath:[\mathbf{z}_j > 0] to latexmath:[\mathbf{z}_j \leq 0] or vice versa. +
+_[This definition is slightly different from the usual standard definition of state events:_ latexmath:[\mathbf{z}(\mathbf{t}) \cdot \mathbf{z}(\mathbf{t}_\mathit{i-1}) \leq 0] _which has the severe drawback that the value of the event indicator at the previous event instant,_ latexmath:[\mathbf{z}(\mathbf{t}_\mathit{i-1}) \neq 0], _must be non-zero and this condition cannot be guaranteed._
+_The often used term "zero crossing function" for latexmath:[\mathbf{z}] is misleading (and is therefore not used in this document), since a state event is defined by a change of a domain and not by a zero crossing of a variable.]_
 
-In all tables describing the mathematical model of a state (e.g. <<table-math-model-exchange,*Continuous-Time Mode*>>), for notational convenience one function (e.g. latexmath:[\mathbf{f}_\mathit{cont}]) is defined to compute all output arguments from all inputs arguments.
-In an FMU, every output argument can be computed by its specific get function.
-Additionally, the output argument need not be a function of all input arguments, but of only a subset from it, as defined in the <<modelDescription.xml>> under `<ModelStructure>`.
+The FMU must guarantee that after leaving *Event Mode* latexmath:[\mathbf{z}_j \neq 0], for example, by shifting latexmath:[\mathbf{z}_j] with a small value. +
+_[All event indicators should be continuous between events._
+_Furthermore, latexmath:[\mathbf{z}_j] should be scaled in the FMU with its nominal value (so all elements of the returned vector `eventIndicators` should be in the order of 1).]_
 
-_[The functions above have the slight drawback that values must always be copied._
-_For example, a call to_ <<fmi3SetContinuousStates>> _will provide the actual states in a vector, and this function has to copy the values in to the internal model data structure so that subsequent evaluation calls can utilize these values._
-_If this turns out to be an efficiency issue, a future release of FMI might provide additional functions to provide the address of a memory area where the variable values are present.]_
+.An event occurs when the event indicator changes its domain from latexmath:[\mathbf{z}>0] to latexmath:[\mathbf{z} \leq 0] or vice versa.
+[#figure-events]
+image::images/Event.svg[width=60%, align="center"]
 
-==== Algebraic Loops [[algebraic-loops]]
+[[frozen-relations]]
+During event localization the FMU might be evaluated after the switch of an event indicator.
+Even when an event indicator switches, its corresponding relation must stay "frozen" to assure the continuity assumption of the integration algorithm.
+This allows an integration algorithm to properly finish the current integration step.
 
-When connecting FMUs, loop structures can occur that might lead to linear or non-linear algebraic systems of equations, involving continuous and discrete-time variables.
-In order to detect and solve such systems of equations efficiently, information which <<output,`output`>> depends directly on which <<input,`inputs`>> is needed.
-This data is optionally provided in the <<modelDescription.xml>> under element `<ModelStructure>`.
-If this data is not provided, the worst case must be assumed: all <<output>> variables depend algebraically on all <<input>> variables.
+In <<table-variable-types>>, vector_ latexmath:[\mathbf{r}] _is used to label all relations.
+In *Continuous-Time Mode* all these relations are "frozen".
+This is indicated in <<updateRelations, the mathematical description>> of *Event Mode* by computing_ latexmath:[{}^\bullet\mathbf{r}] when leaving *Event Mode* and using latexmath:[{}^\bullet\mathbf{r}] in the right-hand side of latexmath:[{\mathbf{f}_{\mathit{cont}}}] and latexmath:[{\mathbf{f}_{\mathit{comp}}}] in <<table-math-model-exchange,mathematical description>> of *Continuous-Time Mode*.
 
-_[Example: In <<figure-connected-fmus>> two different types of connected FMUs are shown (the "dotted lines" characterize the dependency information):_
-
-.Calling sequences for FMUs that are connected in a loop.
-[#figure-connected-fmus]
-image::images/ArtificialAlgebraicLoops.svg[width=80%, align="center"]
-
-_Since different variables are computed in every mode and the causality of variable computation can be different in *Initialization Mode* as with respect to the other two modes, it might be necessary to solve different kinds of loops in the different modes._
-_Artificial algebraic loops (see left diagram of <<figure-connected-fmus>>) can be solved in the modes *Initialization Mode*, *Event Mode*, and *Continuous-Time Mode* by an appropriate sequence of `fmi3Set{VariableType}` and `fmi3Get{VariableType}` calls:_
-
-[source, C]
-----
-fmi3Instance FMI1, FMI2;
-fmi3ValueReference vr_FMU1_u, vr_FMU1_y, vr_FMU2_u1, vr_FMU2_u2, vr_FMU2_y1, vr_FMU2_y2;
-fmi3Float64 s=0.1, FMU2_y1, FMU1_y, FMU2_y2;
-...
-fmi3SetFloat64(FMU2, &vr_FMU2_u1, 1, &s,        1);
-fmi3GetFloat64(FMU2, &vr_FMU2_y1, 1, &FMU2_y1,  1);
-fmi3SetFloat64(FMU1, &vr_FMU1_u,  1, &FMU2_y1,  1);
-fmi3GetFloat64(FMU1, &vr_FMU1_y,  1, &FMU1_y,   1);
-fmi3SetFloat64(FMU2, &vr_FMU2_u2, 1, &FMU1_y,   1);
-fmi3GetFloat64(FMU2, &vr_FMU2_y1, 1, &FMU2_y2,  1);
-...
-----
-
-_In the right diagram, FMU3 and FMU4 are connected in such a way that a real algebraic loop is formed._
-_This loop might be solved iteratively, for example with a Newton method._
-_In every iteration the iteration variable FMU4_u is provided by the solver, and via the shown sequence of `fmi3Set{VariableType}` and `fmi3Get{VariableType}` calls, the residual is computed and used by the solver to determine a new value of FMU4_u._
-_The iteration is terminated when the residual is small enough._
-_This method works for *Initialization Mode*, *Event Mode*, and *Continuous-Time Mode*._
-
-[source, C]
-----
-fmi3Instance FMU3, FMU4;
-fmi3ValueReference vr_FMU3_u, vr_FMU3_y, vr_FMU4_u, vr_FMU4_y;
-fmi3Float64 s, FMU3_y, FMU4_y, residual;
-bool converged = false;
-
-while (!converged) { // start iteration
-  // s determined by the solver
-  ...
-  fmi3SetFloat64(FMU4, &vr_FMU4_u, 1, &s,   1);
-  fmi3GetFloat64(FMU4, &vr_FMU4_y, 1, &FMU4_y,  1);
-  fmi3SetFloat64(FMU3, &vr_FMU3_u, 1, &FMU4_y,  1);
-  fmi3GetFloat64(FMU3, &vr_FMU3_y, 1, &FMU3_y,  1);
-  residual=s-FMU3_y; // provided to the solver
-  converged=residual<tolerance;
-}
-----
-
-_In *Step Mode*, <<fmi3SetFMUState>> is required to restore the FMU state before the next iteration with `fmi3Set{VariableType}`, <<fmi3DoStep>>, and `fmi3Get{VariableType}` is executed._
-
-_In *Event Mode*, the algorithms from above must be embedded in an event iteration:_
-[source, C]
-----
-fmi3Instance FMUx, FMUy;
-bool newDiscreteStatesNeededx;
-bool newDiscreteStatesNeededy;
-
-fmi3EnterEventMode(FMUx,...);
-fmi3EnterEventMode(FMUy,...);
-do { // start event iteration
-    // solve algebraic loop as described in the sample codes above
-
-    // introduce new instant of super-dense time
-    fmi3NewDiscreteStates(FMUx, newDiscreteStatesNeededx, ...);
-    fmi3NewDiscreteStates(FMUy, newDiscreteStatesNeededy, ...);
-} while (newDiscreteStatesNeededx || newDiscreteStatesNeededy);
-
-fmi3EnterStepMode(FMUx); // for CS
-fmi3EnterStepMode(FMUy); // for CS
-// or for ME: fmi3EnterContinuousTimeMode(FMUx);
-// or for ME: fmi3EnterContinuousTimeMode(FMUy);
-----
-
-_When solving algebraic loops in *Event Mode*, limitations to variable manipulations declared with XML attribute <<canHandleMultipleSetPerTimeInstant>> must be considered.]_
-
-[[Remark3]]
-_Remark 3 - Event Indicators / Frozen Relations:_
-
-_In <<table-variable-types>>, vector_ latexmath:[\mathbf{r}] _is used to label all relations in_ latexmath:[{\mathbf{f}_{\mathit{cont}}}] _and_ latexmath:[{\mathbf{f}_{\mathit{comp}}}] _._
-_In *Continuous-Time Mode* all these relations are "frozen"._
-_This is indicated in <<updateRelations, the mathematical description>> of *Event Mode* by computing_ latexmath:[{}^\bullet\mathbf{r}] _when entering the *Continuous-Time Mode* and providing_ latexmath:[{}^\bullet\mathbf{r}] _as part of the right-hand side of_ latexmath:[{\mathbf{f}_{\mathit{cont}}}] _and_ latexmath:[{\mathbf{f}_{\mathit{comp}}}] _in <<table-math-model-exchange,mathematical description>> of *Continuous-Time Mode*._
-
-_Example:_
-
-_An equation of the form_
+_[Example:_
+_An assignment of the form_
 
 ----
-y = if x1 > x2 or x1 < x3 then +1 else -1;
+y = ((x1 > x2) || (x1 < x3)) ? +1 : -1;
 ----
 
 _can be implemented in the FMU as:_
 
 ----
-z1 := x1 - x2;
-z2 := x3 - x1;
-if *Initialization Mode* or *Event Mode* then
-  r1 := z1 > 0;
-  r2 := z2 > 0;
-end if;
-y = if r1 or r2 then +1 else -1
+// event indicator computation:
+z1 = x1 - x2;
+z2 = x3 - x1;
+
+// relations do not change in *Continuous-Time Mode*
+if *Initialization Mode* || *Event Mode* {
+  r1 = z1 > 0;
+  r2 = z2 > 0;
+}
+y = (r1 || r2) ? +1 : -1;
 ----
 
 _Therefore, the original if-clause is evaluated in this form only during *Initialization Mode* and *Event Mode*._
-_In *Continuous-Time Mode* this equation is evaluated as:_
-
-----
-z1 = x1 - x2;
-z2 = x3 - x1
-y = if r1 or r2 then +1 else -1;
-----
-
-_and when entering *Continuous-Time Mode* r1 and r2 are computed as_
-
-----
-r1 = z1 > 0
-r2 = z2 > 0
-----
-
-_When z1 changes from z1 > 0 to z1 <= 0 or vice versa, or z2 correspondingly, the integration is halted, and the environment must call <<fmi3EnterEventMode>>._
-
-_An actual implementation will pack the code into a function with side effects, say Greater(...), resulting in:_
-
-----
-y = if Greater(x1-x2,...) or Greater(x3-x1,...) then +1 else -1;
-----
-
-_Furthermore, a hysteresis should be added for the event indicators.]_
+_A hysteresis should be added for the event indicators to stabilize the event localization.]_
