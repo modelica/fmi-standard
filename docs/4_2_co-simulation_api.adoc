@@ -67,21 +67,19 @@ Function <<fmi3GetOutputDerivatives>>::
 See <<getting-output-derivatives>>.
 
 Function <<fmi3DoStep>>::
-
 The importer requests the computation of the next time step with the following function:
-
++
 [[fmi3DoStep,`fmi3DoStep`]]
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=DoStep]
 ----
+Only <<fmi3DoStep>> can change the time of a Co-Simulation FMU from the outside (<<advancing-time,time advances internally during `fmi3DoStep`>>).
 
-[[currentCommunicationPoint,`currentCommunicationPoint`]]
-* `currentCommunicationPoint` is the current communication point of the importer (latexmath:[\mathbf{t}_\mathit{i}]) with the unit of the <<independent>> variable.
+* [[currentCommunicationPoint,`currentCommunicationPoint`]] `currentCommunicationPoint` is the current communication point of the importer (latexmath:[\mathbf{t}_\mathit{i}]) with the unit of the <<independent>> variable.
 At the first call of <<fmi3DoStep>>, <<currentCommunicationPoint>> must be equal to the argument <<startTime>> of <<fmi3EnterInitializationMode>>.
 
-[[communicationStepSize,`communicationStepSize`]]
-* `communicationStepSize` is the expected communication step size (latexmath:[\mathbf{h}_\mathit{i}]) with the unit of the <<independent>> variable.
+* [[communicationStepSize,`communicationStepSize`]] `communicationStepSize` is the expected communication step size (latexmath:[\mathbf{h}_\mathit{i}]) with the unit of the <<independent>> variable.
 `communicationStepSize` must be latexmath:[> 0.0].
 The FMU is expected to compute until time latexmath:[\mathbf{t}_{i+1} = \mathbf{t}_\mathit{i} + \mathbf{h}_\mathit{i}].
 See <<canHandleVariableCommunicationStepSize>> for restrictions.
@@ -90,43 +88,33 @@ _[Formally, argument <<currentCommunicationPoint>> is not needed._
 _It is present in order to handle a potential mismatch between the importer's and the FMU's time representations and/or computations._
 _Both arguments <<currentCommunicationPoint>> and <<communicationStepSize>> allow computing of_ latexmath:[\mathbf{t}_\mathit{i+1}] _by one addition, avoiding accumulation of numerical errors.]_
 
-[[noSetFMUStatePriorToCurrentPoint,`noSetFMUStatePriorToCurrentPoint`]]
-* `noSetFMUStatePriorToCurrentPoint == fmi3True` if `fmi3SetFMUState` will no longer be called for time instants prior to <<currentCommunicationPoint>> in this simulation run.
+* [[noSetFMUStatePriorToCurrentPoint,`noSetFMUStatePriorToCurrentPoint`]] `noSetFMUStatePriorToCurrentPoint == fmi3True` if `fmi3SetFMUState` will no longer be called for time instants prior to <<currentCommunicationPoint>> in this simulation run.
 +
 _[The FMU can use this flag to flush a result buffer.]_
 
-[[eventEncountered,`eventEncountered`]]
-* <<eventEncountered,`eventEncountered == fmi3True`>> indicates that an event was encountered at <<lastSuccessfulTime>> and the importer has to enter *Event Mode* by calling <<fmi3EnterEventMode>>.
+* [[eventEncountered,`eventEncountered`]] <<eventEncountered,`eventEncountered == fmi3True`>> indicates that an event was encountered at <<lastSuccessfulTime>> and the importer has to enter *Event Mode* by calling <<fmi3EnterEventMode>>.
 <<eventEncountered,`eventEncountered == fmi3True`>> must not be signaled, if the importer indicates to not support *Event Mode* by <<eventModeUsed,`eventModeUsed == fmi3False`>>.
 
-[[clocksAboutToTick,`clocksAboutToTick`]]
-* <<clocksAboutToTick,`clocksAboutToTick == fmi3True`>> indicates that one or more clocks will tick at <<lastSuccessfulTime>> and, after calling <<fmi3EnterEventMode>>, <<fmi3GetClock>> must be called to inquire the status of all <<outputClock,`output clocks`>>.
+* [[clocksAboutToTick,`clocksAboutToTick`]] <<clocksAboutToTick,`clocksAboutToTick == fmi3True`>> indicates that one or more clocks will tick at <<lastSuccessfulTime>> and, after calling <<fmi3EnterEventMode>>, <<fmi3GetClock>> must be called to inquire the status of all <<outputClock,`output clocks`>>.
 <<clocksAboutToTick,`clocksAboutToTick == fmi3True`>> must not be signaled, if the importer indicates to not support *Event Mode* by <<eventModeUsed,`eventModeUsed == fmi3False`>>.
 
-[[terminateSimulationDS,`terminateSimulation`]]
-* When <<terminateSimulationDS,`terminateSimulation == fmi3True`>>, the FMU requests to stop the simulation and the importer must call <<fmi3Terminate>>.
+* [[terminateSimulationDS,`terminateSimulation`]] When <<terminateSimulationDS,`terminateSimulation == fmi3True`>>, the FMU requests to stop the simulation and the importer must call <<fmi3Terminate>>.
 
-[[earlyReturn,`earlyReturn`]]
-* `earlyReturn` signals to the importer that the FMU returns at latexmath:[\mathbf{t}_\mathit{i+1} < \mathbf{t}_i +]<<communicationStepSize>> from the <<fmi3DoStep>>. The time reached is specified in <<lastSuccessfulTime>>.
+* [[earlyReturn,`earlyReturn`]] `earlyReturn` signals to the importer that the FMU returns at latexmath:[\mathbf{t}_\mathit{i+1} < \mathbf{t}_i +]<<communicationStepSize>> from the <<fmi3DoStep>>.
+<<earlyReturn, `earlyReturn == fmi3True`>> is only allowed if <<earlyReturnAllowed,`earlyReturnAllowed == fmi3True`>> in <<fmi3InstantiateCoSimulation>>.
+The time reached is specified in <<lastSuccessfulTime>>.
 Reasons for <<earlyReturn, `earlyReturn == fmi3True`>> are
 ** expressed by the return arguments of <<fmi3DoStep>> <<eventEncountered>>, <<clocksAboutToTick>>, <<terminateSimulationDS>>, or
 ** the FMU's reaction to the importers request for <<earlyReturn>> by the return argument <<earlyReturnRequested, `earlyReturnRequested == fmi3True`>> of <<fmi3CallbackIntermediateUpdate>>, or
 ** the FMU's request for a communication point at <<lastSuccessfulTime>> for any other reason.
 
-+
-<<earlyReturn, `earlyReturn == fmi3True`>> is only allowed if <<earlyReturnAllowed,`earlyReturnAllowed == fmi3True`>> in <<fmi3InstantiateCoSimulation>>.
-
-[[lastSuccessfulTime,`lastSuccessfulTime`]]
-* `lastSuccessfulTime` represents the internal time latexmath:[\mathbf{t}_\mathit{i+1}] of the FMU when <<fmi3DoStep>> returns, for any value of <<earlyReturn>>. Even if the FMU returns from <<fmi3DoStep>> with <<fmi3OK>> and <<earlyReturn, `earlyReturn == fmi3False`>>, it is allowed that <<lastSuccessfulTime>> deviates from the expected <<currentCommunicationPoint>> `+` <<communicationStepSize>>. +
+* [[lastSuccessfulTime,`lastSuccessfulTime`]] `lastSuccessfulTime` represents the internal time latexmath:[\mathbf{t}_\mathit{i+1}] of the FMU when <<fmi3DoStep>> returns, for any value of <<earlyReturn>>.
+It is possible that the <<lastSuccessfulTime>> is equal to <<currentCommunicationPoint>> when <<earlyReturn,`earlyReturn == fmi3True`>> to indicate, for example, the detection of an event at <<currentCommunicationPoint>>.
+Even if the FMU returns from <<fmi3DoStep>> with <<fmi3OK>> and <<earlyReturn, `earlyReturn == fmi3False`>>, it is allowed that <<lastSuccessfulTime>> deviates from the expected <<currentCommunicationPoint>> `+` <<communicationStepSize>>.
 _[Examples:_
 ** _A fixed-step integrator inside the FMU cannot reach the requested time exactly._
-_<<fixedInternalStepSize>> was introduced to reduces these effects._
+_<<fixedInternalStepSize>> was introduced to reduce these effects._
 ** _A variable-step integrator with minimal step size is not able to land exactly at_ latexmath:[\mathbf{t}_\mathit{i+1}]_.]_
-
-+
-It is possible that the <<lastSuccessfulTime>> is equal to <<currentCommunicationPoint>> when <<earlyReturn,`earlyReturn == fmi3True`>> to indicate, for example, the detection of an event at <<currentCommunicationPoint>>.
-
-Only <<fmi3DoStep>> can change the time of a Co-Simulation FMU from the outside (<<advancing-time,time advances internally during `fmi3DoStep`>>).
 
 Function <<fmi3CallbackIntermediateUpdate>>::
 <<fmi3CallbackIntermediateUpdate>> switches the FMU itself into the *Intermediate Update Mode*.
