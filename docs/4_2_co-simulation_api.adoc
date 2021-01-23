@@ -6,11 +6,11 @@ The state machine in <<figure-co-simulation-state-machine>> defines the allowed 
 [#figure-co-simulation-state-machine]
 image::images/state-machine-co-simulation.svg[width=80%, align="center"]
 
-Common states are defined in <<common-state-machine>>, such as super states <<FMUStateSetable,*FMU State Setable*>> and  <<Initialized,*Initialized*>>, states <<Instantiated,*Instantiated*>>, <<ConfigurationMode,*Configuration Mode*>>, <<ReconfigurationMode,*Reconfiguration Mode*>>, <<InitializationMode,*Initialization Mode*>>, <<EventMode,*Event Mode*>>, <<Terminated,*Terminated*>> and <<IntermediateUpdateMode,*Intermediate Update Mode*>>.
+Common states are defined in <<common-state-machine>>, such as super states <<FMUStateSetable>> and  <<Initialized>>, states <<Instantiated>>, <<ConfigurationMode>>, <<ReconfigurationMode>>, <<InitializationMode>>, <<EventMode>>, <<Terminated>> and <<IntermediateUpdateMode>>.
 
-==== State: Step Mode [[state-step-mode-co-simulation]]
+==== State: Step Mode [[StepMode,*Step Mode*]]
 
-The state *Step Mode* is used to compute the values of all variables between communication points and events and to advance time in the FMU.
+The state <<StepMode>> is used to compute the values of all variables between communication points and events and to advance time in the FMU.
 If the FMU is connected in loops with other models, iterations over the FMU equations requires setting the FMU to a previous communication point and repeating the <<fmi3DoStep>>.
 
 [cols="2,1",options="header",]
@@ -58,7 +58,7 @@ at time latexmath:[\mathbf{t}].
 Function `fmi3Get{VariableType}`::
 returns values for all variables at latexmath:[\mathbf{t}].
 `fmi3Get{VariableType}` does not trigger an evaluation of latexmath:[\mathbf{f}_\mathit{doStep}].
-Therefore, <<algebraic-loops,algebraic loops>> at communication points cannot be handled by an appropriate sequence of `fmi3Get{VariableType}` and `fmi3Set{VariableType}` calls _[contrary to *Initialization Mode*, *Event Mode* and *Continuous-Time Mode*]_.
+Therefore, <<algebraic-loops,algebraic loops>> at communication points cannot be handled by an appropriate sequence of `fmi3Get{VariableType}` and `fmi3Set{VariableType}` calls _[contrary to <<InitializationMode>>, <<EventMode>> and <<ContinuousTimeMode>>]_.
 Repeating a communication step requires to reset the FMU state to the previous communication point with <<fmi3SetFMUState>> and repeating the <<fmi3DoStep>> with new input values.
 +
 Calling `fmi3Get{VariableType}` for outputs will return the same values, regardless of what `fmi3Set{VariableType}` calls where made, as long as no <<fmi3DoStep>> was called.
@@ -92,11 +92,11 @@ _Both arguments <<currentCommunicationPoint>> and <<communicationStepSize>> allo
 +
 _[The FMU can use this flag to flush a result buffer.]_
 
-* [[eventEncountered,`eventEncountered`]] <<eventEncountered,`eventEncountered == fmi3True`>> indicates that an event was encountered at <<lastSuccessfulTime>> and the importer has to enter *Event Mode* by calling <<fmi3EnterEventMode>>.
-<<eventEncountered,`eventEncountered == fmi3True`>> must not be signaled, if the importer indicates to not support *Event Mode* by <<eventModeUsed,`eventModeUsed == fmi3False`>>.
+* [[eventEncountered,`eventEncountered`]] <<eventEncountered,`eventEncountered == fmi3True`>> indicates that an event was encountered at <<lastSuccessfulTime>> and the importer has to enter <<EventMode>> by calling <<fmi3EnterEventMode>>.
+<<eventEncountered,`eventEncountered == fmi3True`>> must not be signaled, if the importer indicates to not support <<EventMode>> by <<eventModeUsed,`eventModeUsed == fmi3False`>>.
 
 * [[clocksAboutToTick,`clocksAboutToTick`]] <<clocksAboutToTick,`clocksAboutToTick == fmi3True`>> indicates that one or more clocks will tick at <<lastSuccessfulTime>> and, after calling <<fmi3EnterEventMode>>, <<fmi3GetClock>> must be called to inquire the status of all <<outputClock,`output clocks`>>.
-<<clocksAboutToTick,`clocksAboutToTick == fmi3True`>> must not be signaled, if the importer indicates to not support *Event Mode* by <<eventModeUsed,`eventModeUsed == fmi3False`>>.
+<<clocksAboutToTick,`clocksAboutToTick == fmi3True`>> must not be signaled, if the importer indicates to not support <<EventMode>> by <<eventModeUsed,`eventModeUsed == fmi3False`>>.
 
 * [[terminateSimulationDS,`terminateSimulation`]] When <<terminateSimulationDS,`terminateSimulation == fmi3True`>>, the FMU requests to stop the simulation and the importer must call <<fmi3Terminate>>.
 
@@ -117,12 +117,12 @@ _<<fixedInternalStepSize>> was introduced to reduce these effects._
 ** _A variable-step integrator with minimal step size is not able to land exactly at_ latexmath:[\mathbf{t}_\mathit{i+1}]_.]_
 
 Function <<fmi3CallbackIntermediateUpdate>>::
-<<fmi3CallbackIntermediateUpdate>> switches the FMU itself into the *Intermediate Update Mode*.
+<<fmi3CallbackIntermediateUpdate>> switches the FMU itself into the <<IntermediateUpdateMode>>.
 
 Function <<fmi3EnterEventMode>>::
-Changes state to *Event Mode*.
+Changes state to <<EventMode>>.
 This function must not be called, if <<fmi3InstantiateCoSimulation>> signaled <<eventModeUsed,`eventModeUsed = fmi3False`>>, which can be forced by the FMU with <<hasEventMode,`hasEventMode == false`>>.
 
 Function <<fmi3EnterConfigurationMode>>::
-<<fmi3EnterConfigurationMode>> changes state to *Reconfiguration Mode*.
+<<fmi3EnterConfigurationMode>> changes state to <<ReconfigurationMode>>.
 <<fmi3EnterConfigurationMode>> must not be called if the FMU contains no <<tunable>> <<structuralParameter,`structural parameters`>> (i.e. with <<causality>>= <<structuralParameter>> and <<variability>> = <<tunable>>).

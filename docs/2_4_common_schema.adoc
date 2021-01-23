@@ -195,7 +195,7 @@ These definitions are used in the XML element `<ModelVariables>`.
 
 |`<ModelStructure>`
 |Defines the structure of the model.
-Especially, the ordered lists of <<output,`outputs`>>, continuous-time <<state,`states`>>, initial unknowns (the unknowns during *Initialization Mode*) and the event indicators are defined here.
+Especially, the ordered lists of <<output,`outputs`>>, continuous-time <<state,`states`>>, initial unknowns (the unknowns during <<InitializationMode>>) and the event indicators are defined here.
 For more details on `<ModelStructure>`, see <<ModelStructure>>.
 Furthermore, the dependency of the unknowns from the knowns can be optionally defined for <<output,`outputs`>>, continuous-time <<state,`states`>> and initial unknowns.
 _[This information can be, for example, used to compute efficiently a sparse Jacobian for simulation, or to utilize the <<input>> / <<output>> dependency in order to detect that in some cases there are actually no algebraic loops when connecting FMUs together]_.
@@ -314,7 +314,7 @@ Calling of `fmi3GetOutputDerivatives` is allowed up to the order defined by `max
 This flag is ignored in `ModelExchange`.
 
 |`providesIntermediateUpdate`
-|The FMU supports *Intermediate Update Mode* and will call <<fmi3CallbackIntermediateUpdate>>, if provided.
+|The FMU supports <<IntermediateUpdateMode>> and will call <<fmi3CallbackIntermediateUpdate>>, if provided.
 This flag is ignored in `ModelExchange`.
 
 |[[recommendedIntermediateInputSmoothness,`recommendedIntermediateInputSmoothness`]]`recommendedIntermediateInputSmoothness`
@@ -843,13 +843,13 @@ _The rationale for requiring positive start values for <<structuralParameter, `s
 _If we allowed 0 dimension sizes for initial values, tools that do not even care about changing dimension sizes must be prepared to handle vanishing dimensions.]_
 
 Changes to dimension sizes are constrained by the `min`/`max` attributes of the referenced <<structuralParameter,`structural parameters`>>, which can be any non-negative integer, including zero.
-Specifying a minimum size of zero on a <<structuralParameter,`structural parameter`>> allows any related dimension sizes to be changed to zero in *Configuration Mode* or *Reconfiguration Mode*, thus causing the respective array size to go to zero, which leaves the respective array variable without any active elements.
+Specifying a minimum size of zero on a <<structuralParameter,`structural parameter`>> allows any related dimension sizes to be changed to zero in <<ConfigurationMode>> or <<ReconfigurationMode>>, thus causing the respective array size to go to zero, which leaves the respective array variable without any active elements.
 
 The actual dimension sizes of arrays are also constrained by the FMU platform, due to memory and addressing constraints:
 Since the API functions to access variables and their values are constrained to `size_t` individual elements, platforms with addresses of less than 64-bit width will not be able to access elements beyond their addressing limits, neither will they be able to allocate enough memory or address space to represent such arrays.
-For these reasons implementations must take platform-specific constraints into account when changing dimension sizes, and must be prepared to handle the inability of the FMU to adjust to the desired sizes during *Configuration Mode* or *Reconfiguration Mode*.
+For these reasons implementations must take platform-specific constraints into account when changing dimension sizes, and must be prepared to handle the inability of the FMU to adjust to the desired sizes during <<ConfigurationMode>> or <<ReconfigurationMode>>.
 
-Changing any dimension of a variable in *Configuration Mode* or *Reconfiguration Mode* invalidates the variable's current value (including its <<start>> value).
+Changing any dimension of a variable in <<ConfigurationMode>> or <<ReconfigurationMode>> invalidates the variable's current value (including its <<start>> value).
 It should be noted that changing a <<structuralParameter,`structural parameter`>> might affect dimension sizes of several variables.
 
 [[alias,`alias`]]
@@ -926,9 +926,9 @@ These variables are listed in the `<fmiModelDescription><ModelStructure>`. +
 
 Setting of local variables: +
 
-* In *Initialization Mode* and before, local variables need to be set if they do have start values or are listed as `InitialUnknown`.
+* In <<InitializationMode>> and before, local variables need to be set if they do have start values or are listed as `InitialUnknown`.
 
-* In super state *Initialized*, `fmi3Set{VariableType}` must not be called on any of the local variables.
+* In super state <<Initialized>>, `fmi3Set{VariableType}` must not be called on any of the local variables.
 Only in Model Exchange, continuous <<state,`states`>> can be set with <<fmi3SetContinuousStates>>.
 Local variable values must not be used as input to another model or FMU.
 
@@ -949,7 +949,7 @@ Instead, its value is initialized with <<fmi3EnterInitializationMode>> and after
 _[The actual value can be inquired with `fmi3Get{VariableType}`.]_
 
 [[structuralParameter,`structuralParameter`]]
-`= structuralParameter`: Parameters that can only be changed in *Configuration Mode* or *Reconfiguration Mode*.
+`= structuralParameter`: Parameters that can only be changed in <<ConfigurationMode>> or <<ReconfigurationMode>>.
 These parameters may be referenced in `<Dimension>` elements.
 <<variability>> must be <<fixed>> or <<tunable>>.
 <<initial>> must be <<exact>> or not present (meaning <<exact>>).
@@ -1014,7 +1014,7 @@ _[Note that the information about continuous <<state,`states`>> is defined with 
 |`initial`
 |
 [[initial,`initial`]]
-Enumeration that defines how the variable is initialized, i.e. if a `fmi3Set{VariableType}` is allowed and how the FMU internally treats this value in *Instantiated* and *Initialization Mode*.
+Enumeration that defines how the variable is initialized, i.e. if a `fmi3Set{VariableType}` is allowed and how the FMU internally treats this value in <<Instantiated>> and <<InitializationMode>>.
 
 For the variable with <<causality>> = <<independent>>, the attribute <<initial>> must not be provided, because its start value is set with the `startTime` parameter of <<fmi3EnterInitializationMode>>.
 
@@ -1039,7 +1039,7 @@ Examples: (a) automatic tests of FMUs are performed, and the FMU is tested by pr
 If the <<input>> variable is iteration variable of this algebraic loop, then initialization starts with its <<start>> value.]_
 
 If <<causality>> = <<input>> and <<variability>> = <<clock>>, that is, the variable is an <<inputClock>>, it is required to provide a <<start>> value for describing the expected initial condition of the <<inputClock>> for that FMU.
-If an <<inputClock>> has `fmi3True` as a <<start>> value, the environment should activate the <<clock>> the first time it enters *Event Mode*.
+If an <<inputClock>> has `fmi3True` as a <<start>> value, the environment should activate the <<clock>> the first time it enters <<EventMode>>.
 The environment can nevertheless choose different <<start>> values if it is not possible to fulfill the conditions in a simulation setup.
 
 If <<causality>> = <<output>> the <<initial>> attribute value is set to <<calculated>> and no <<start>> value is provided.
@@ -1051,7 +1051,7 @@ If `fmi3Set{VariableType}` is not called on a variable with <<causality>> = <<in
 [[canHandleMultipleSetPerTimeInstant,`canHandleMultipleSetPerTimeInstant`]]
 Only for variables with <<variability>> = <<input>>. +
 The default value is `true`.
-If `canHandleMultipleSetPerTimeInstant = false`, then only one `fmi3Set{VariableType}` call is allowed for this variable per super-dense time instant in *Event Mode*.
+If `canHandleMultipleSetPerTimeInstant = false`, then only one `fmi3Set{VariableType}` call is allowed for this variable per super-dense time instant in <<EventMode>>.
 _[This flag can be set to `false` for variables where discrete-time states are directly updated when assigned (_ latexmath:[\mathbf{x}_\mathit{d} := f(\mathbf{x}_\mathit{d},\mathbf{u}_\mathit{c+d})] _instead of_ latexmath:[\mathbf{x}_\mathit{d} := f({}^\bullet\mathbf{x}_\mathit{d},\mathbf{u}_\mathit{c+d})] _)._
 _If an <<output>> depends on this <<input>> and on discrete-time states, then an algebraic loop could be formed with such an <<input>>._
 _Such loops cannot be solved iteratively because of the limitation on `fmi3Set{VariableType}`._
@@ -1076,7 +1076,7 @@ For scalar clock variables this attribute must not be specified or must be speci
 |`intermediateUpdate`
 |
 [[intermediateUpdate,`intermediateUpdate`]]
-If this boolean attribute is `true`, the variable can be accessed in *Intermediate Update Mode*.
+If this boolean attribute is `true`, the variable can be accessed in <<IntermediateUpdateMode>>.
 Variables with <<causality>> <<parameter>> must not be marked with <<intermediateUpdate,`intermediateUpdate = true`>>.
 
 This attribute is ignored in Model Exchange.
@@ -1155,8 +1155,8 @@ If <<initial>> is not present, its value is defined by <<table-definition-initia
 ^|--
 |====
 
-_[Note: For local and output variables and <<initial>> = <<exact>>, then the variable is explicitly set in *Initialization Mode*._
-_The value of the variable is either the <<start>> value stored in a variable element `<XXX start=YYY/>` or the value set with `fmi3Set{VariableType}` during *Initialization Mode*.]_
+_[Note: For local and output variables and <<initial>> = <<exact>>, then the variable is explicitly set in <<InitializationMode>>._
+_The value of the variable is either the <<start>> value stored in a variable element `<XXX start=YYY/>` or the value set with `fmi3Set{VariableType}` during <<InitializationMode>>.]_
 
 <<table-allowed-variability-causality-combinations>> shows the combinations of <<variability>>/<<causality>> settings that are allowed.
 
@@ -1336,11 +1336,11 @@ _Usually, this is `time`._
 
 >|_(16)_
 |_<<fixed>> <<structuralParameter>>_
-|_<<parameter,`Parameter`>> used in  `<Dimension>` element;  can be changed before initialization in *Configuration Mode*._
+|_<<parameter,`Parameter`>> used in  `<Dimension>` element;  can be changed before initialization in <<ConfigurationMode>>._
 
 >|_(17)_
 |_<<tunable>> <<structuralParameter>>_
-|_<<parameter,`Parameter`>> used in  `<Dimension>` element;  can be changed before initialization in *Configuration Mode* and in *Reconfiguration Mode*._
+|_<<parameter,`Parameter`>> used in  `<Dimension>` element;  can be changed before initialization in <<ConfigurationMode>> and in <<ReconfigurationMode>>._
 
 >|_(18)_
 |_<<clock>>_
@@ -1365,7 +1365,7 @@ _Instead, this is a short hand notation for:_
 . _Stop the simulation at an event instant (usually, a <<step event>>, in other words, after a successful integration step)._
 
 . _Change the values of the <<tunable>> (structural) <<parameter,`parameters`>>._
-_For <<tunable>> <<structuralParameter,`structural parameters`>>, the *Reconfiguration Mode* must be entered before and left afterwards._
+_For <<tunable>> <<structuralParameter,`structural parameters`>>, the <<ReconfigurationMode>> must be entered before and left afterwards._
 
 . _Compute all <<parameter,`parameters`>> (and sizes of variables, <<state,`states`>>, <<derivative,`derivatives`>>, event indicators, ...) that depend on the <<tunable>> (structural) <<parameter,`parameters`>>._
 
@@ -1375,7 +1375,7 @@ _Basically this means that a new simulation run is started from the previous FMU
 _With this interpretation, changing <<parameter,`parameters`>> online is "clean", as long as these changes appear at an event instant._
 
 _FMI for Co-Simulation:_
-_Changing of <<tunable>> <<parameter,`parameters`>> is allowed before an <<fmi3DoStep>> call (so, whenever an <<input>> can be set with `fmi3Set{VariableType}`) and before <<fmi3ExitInitializationMode>> is called (that is before and during *Initialization Mode*)._
+_Changing of <<tunable>> <<parameter,`parameters`>> is allowed before an <<fmi3DoStep>> call (so, whenever an <<input>> can be set with `fmi3Set{VariableType}`) and before <<fmi3ExitInitializationMode>> is called (that is before and during <<InitializationMode>>)._
 _The FMU internally carries out event handling if necessary.]_
 
 Type specific properties are defined in the required choice element, where exactly one float, integer or enumeration must be present in the XML file:
@@ -1650,10 +1650,10 @@ _[Note that all <<output>> variables are listed here, especially <<discrete>> an
 _The ordering of the variables in this list is defined by the exporting tool._
 _Usually, it is best to order according to the declaration order in the source model, since then the `<Output>` list does not change if the declaration order of <<output,`outputs`>> in the source model is not changed._
 _This is for example, important for linearization, in order that the interpretation of the output vector does not change for a re-exported FMU.]_
-Attribute <<dependencies>> defines the dependencies of the <<output,`outputs`>> from the knowns at the current super-dense time instant in Event and in *Continuous-Time Mode* (ME) and at the current communication point (CS and SE).
+Attribute <<dependencies>> defines the dependencies of the <<output,`outputs`>> from the knowns at the current super-dense time instant in Event and in <<ContinuousTimeMode>> (ME) and at the current communication point (CS and SE).
 Attribute <<dependencies>> for output clocks (variables with <<causality>> = <<output>> and <<variability>> = <<clock>>) lists all known variables (including input clocks) that contribute to trigger a clock tick for that output clock.
 Beside the knowns, the <<output,`outputs`>> also depend on "frozen" variables (= variables which cannot be changed in the current mode) but these "frozen" variables are not listed as <<dependencies>>.
-The functional dependency is defined as (dependencies of variables that are fixed in Event and *Continuous-Time Mode* and at communication points are not shown): +
+The functional dependency is defined as (dependencies of variables that are fixed in Event and <<ContinuousTimeMode>> and at communication points are not shown): +
 latexmath:[{(\mathbf{y}_c, \mathbf{y}_d) := \mathbf{f}_{\mathit{output}}(\mathbf{x}_c, \mathbf{u}_c, \mathbf{u}_d, t, \mathbf{p}_{\mathit{tune}})}]
 
 |`Derivative`
@@ -1672,15 +1672,15 @@ _[This is the default._
 _If an FMU supports more than Model Exchange , then the `<Derivative>` elements might be present, since it is needed for Model Exchange._
 _If the above flag is set to `false` for the Co-Simulation cases, then the `<Derivative>` elements are ignored for Co-Simulation._
 _If "inline integration" is used for a co-simulation FMU, then the model still has continuous-time <<state,`states`>> and just a special solver is used (internally the implementation results in a discrete-time system, but from the outside, it is still a continuous-time system).]_ +
-Attribute <<dependencies>> defines the dependencies of the state derivatives from the knowns at the current super-dense time instant in Event and in *Continuous-Time Mode* (ME) and at the current communication point (CS and SE).
+Attribute <<dependencies>> defines the dependencies of the state derivatives from the knowns at the current super-dense time instant in Event and in <<ContinuousTimeMode>> (ME) and at the current communication point (CS and SE).
 Beside the knowns the derivatives also depend on the "frozen" variables (= variables which cannot be changed in the current mode) but these "frozen" variables are not listed as <<dependencies>>.
-The functional dependency is defined as (dependencies of variables that are fixed in Event and *Continuous-Time Mode* and at communication points are not shown): +
+The functional dependency is defined as (dependencies of variables that are fixed in Event and <<ContinuousTimeMode>> and at communication points are not shown): +
 latexmath:[{\dot{\mathbf{x}_c} := \mathbf{f}_{\mathit{der}}(\mathbf{x}_c, \mathbf{u}_c, \mathbf{u}_d, t, \mathbf{p}_{\mathit{tune}})}]
 
 |`InitialUnknown`
 |
 [[InitialUnknown,`<InitialUnknown>`]]
-Ordered list of all exposed unknowns in *Initialization Mode*.
+Ordered list of all exposed unknowns in <<InitializationMode>>.
 This list consists of all variables with
 
 - <<causality>> = <<output>> and (<<initial>> = <<approx>> or <<calculated>>), and
@@ -1690,13 +1690,13 @@ This list consists of all variables with
 - all continuous-time <<state,`states`>> and all state derivatives (defined with elements `<ModelStructure><Derivative>`) with <<initial>> = <<approx>> or <<calculated>> _[if a Co-Simulation FMU does not define the `<ModelStructure><Derivative>` elements, (3) cannot be present]_.
 
 The resulting list is not allowed to have duplicates (for example, if a <<state>> is also an <<output>>, it is included only once in the list). +
-Attribute <<dependencies>> defines the dependencies of the unknowns from the knowns in *Initialization Mode* at the initial time.
+Attribute <<dependencies>> defines the dependencies of the unknowns from the knowns in <<InitializationMode>> at the initial time.
 Beside the knowns the initial unknowns also depend on the "frozen" variables (= variables which cannot be changed in the current mode) but these "frozen" variables are not listed as <<dependencies>>.
 The functional dependency is defined as:
 
 latexmath:[{\mathbf{v}_{\mathit{initialUnknowns}} := \mathbf{f}_{\mathit{init}}(\mathbf{u}_c, \mathbf{u}_d, t_0, \mathbf{v}_{\mathit{initial=exact}})}]
 
-Since, <<output,`outputs`>>, continuous-time <<state,`states`>> and state derivatives are either present as knowns (if <<initial>> = <<exact>>) or as unknowns (if <<initial>> = <<approx>> or <<calculated>>), they can be inquired with `fmi3Get{VariableType}` in *Initialization Mode*.
+Since, <<output,`outputs`>>, continuous-time <<state,`states`>> and state derivatives are either present as knowns (if <<initial>> = <<exact>>) or as unknowns (if <<initial>> = <<approx>> or <<calculated>>), they can be inquired with `fmi3Get{VariableType}` in <<InitializationMode>>.
 
 _[Example: Assume an FMU is defined in the following way:_
 
@@ -1740,7 +1740,7 @@ Optional attribute defining the dependencies of the unknown latexmath:[{v_{\math
 If not present, it must be assumed that the unknown depends on all knowns.
 If present as empty list, the unknown depends on none of the knowns.
 Otherwise the unknown depends on the knowns defined by the given value references. +
-Knowns latexmath:[{\mathbf{v}_{\mathit{known}}}] in *Event Mode* and *Continuous-Time Mode* (ME) and at communication points (CS and SE) for `<Output>` and `<Derivative>` elements:
+Knowns latexmath:[{\mathbf{v}_{\mathit{known}}}] in <<EventMode>> and <<ContinuousTimeMode>> (ME) and at communication points (CS and SE) for `<Output>` and `<Derivative>` elements:
 
 - inputs (variables with <<causality>> = <<input>>)
 
@@ -1751,9 +1751,9 @@ Knowns latexmath:[{\mathbf{v}_{\mathit{known}}}] in *Event Mode* and *Continuous
 _[<<parameter,`parameters`>> and <<tunable>> <<parameter,`parameters`>> must not be listed as knowns in this mode._
 _This may change in a future FMI version which implies the possibility to calculate derivatives with respect to parameters._
 _The list of dependencies may include input clocks (variables with <<causality>> = <<input>> and <<variability>> = <<clock>>)._
-_If an <<outputClock>> depends on an <<inputClock>>, then clock ticks of the <<inputClock>> in *Event Mode* may create <<outputClock>> ticks during this event handling.]_
+_If an <<outputClock>> depends on an <<inputClock>>, then clock ticks of the <<inputClock>> in <<EventMode>> may create <<outputClock>> ticks during this event handling.]_
 
-`Knowns` latexmath:[{\mathbf{v}_{\mathit{known}}}] in *Initialization Mode* (for elements <<InitialUnknown>>):
+`Knowns` latexmath:[{\mathbf{v}_{\mathit{known}}}] in <<InitializationMode>> (for elements <<InitialUnknown>>):
 
 - inputs (variables with <<causality>> = <<input>>)
 
@@ -1777,13 +1777,13 @@ Only for floating point type unknowns latexmath:[{v_{\mathit{unknown}}}]:
 
 `=` <<constant>>: constant factor, latexmath:[{c \cdot v_{\mathit{known},i}}] where latexmath:[{c}] is an expression that is evaluated before <<fmi3EnterInitializationMode>> is called.
 
-Only for floating point type unknowns latexmath:[{v_{\mathit{unknown}}}] in Event and *Continuous-Time Mode* (ME) and at communication points (CS and SE), and not for <<InitialUnknown>> for *Initialization Mode*:
+Only for floating point type unknowns latexmath:[{v_{\mathit{unknown}}}] in Event and <<ContinuousTimeMode>> (ME) and at communication points (CS and SE), and not for <<InitialUnknown>> for <<InitializationMode>>:
 
 `=` <<fixed>>: fixed factor, latexmath:[{p \cdot v_{\mathit{known},i}}] where latexmath:[{p}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called.
 
-`=` <<tunable>>: tunable factor, latexmath:[{p \cdot v_{\mathit{known},i}}] where latexmath:[{p}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called and in *Event Mode* due to event handling (ME) or at a communication point (CS and SE)
+`=` <<tunable>>: tunable factor, latexmath:[{p \cdot v_{\mathit{known},i}}] where latexmath:[{p}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called and in <<EventMode>> due to event handling (ME) or at a communication point (CS and SE)
 
-`=` <<discrete>>: discrete factor, latexmath:[{d \cdot v_{\mathit{known},i}}] where latexmath:[{d}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called and in *Event Mode* due to an external or internal event or at a communication point (CS and SE).
+`=` <<discrete>>: discrete factor, latexmath:[{d \cdot v_{\mathit{known},i}}] where latexmath:[{d}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called and in <<EventMode>> due to an external or internal event or at a communication point (CS and SE).
 |====
 
 _[Example 1:_
@@ -1859,7 +1859,7 @@ _The definition of the model structure is then:_
 include::examples/model_structure_example2.xml[tags=ModelStructure]
 ----
 
-_[Note that_ latexmath:[{y = d \cdot u}] _where_ latexmath:[{d}] _changes only during *Event Mode* (_ latexmath:[{d = 2 \cdot u}] _or_ latexmath:[{3 \cdot u\ }] _depending on relation_ latexmath:[{u > 0}] _that changes only at *Event Mode*)._
+_[Note that_ latexmath:[{y = d \cdot u}] _where_ latexmath:[{d}] _changes only during <<EventMode>> (_ latexmath:[{d = 2 \cdot u}] _or_ latexmath:[{3 \cdot u\ }] _depending on relation_ latexmath:[{u > 0}] _that changes only at <<EventMode>>)._
 _Therefore <<dependenciesKind>> = <<discrete>>.]_
 
 _Example 3:_
@@ -1880,7 +1880,7 @@ _The definition of the model structure is then:_
 include::examples/model_structure_example3.xml[tags=ModelStructure]
 ----
 
-_[Note that_ latexmath:[{y = c}] _where_ latexmath:[{c}] _changes only during *Event Mode* (_ latexmath:[{c = 2}] _or_ latexmath:[{3\ }] _depending on relation_ latexmath:[{u > 0}] _that changes only at *Event Mode*)._
+_[Note that_ latexmath:[{y = c}] _where_ latexmath:[{c}] _changes only during <<EventMode>> (_ latexmath:[{c = 2}] _or_ latexmath:[{3\ }] _depending on relation_ latexmath:[{u > 0}] _that changes only at <<EventMode>>)._
 _Therefore <<dependenciesKind>> = <<dependenciesKind,`dependent`>> because it is not a linear relationship on_ latexmath:[{u}]. _]_
 
 _Example 4:_
@@ -1903,12 +1903,12 @@ _Defining FMU features with the_ <<dependencies>> _list:_
 _[Note that via the <<dependencies>> list the supported features of the FMU can be defined._
 _Examples:_
 
-- _If a state derivative `der_x` is a function of a <<parameter>> p (so of a <<start>> value of a variable with <<causality>> = <<parameter>> and <<variability>> = <<fixed>>), and the FMU does not support an iteration over `p` during *Initialization Mode* (for example, to iterate over p such that the state derivative `der_x` is zero), then the <<dependencies>> list of `der_x` should not include `p`._
+- _If a state derivative `der_x` is a function of a <<parameter>> p (so of a <<start>> value of a variable with <<causality>> = <<parameter>> and <<variability>> = <<fixed>>), and the FMU does not support an iteration over `p` during <<InitializationMode>> (for example, to iterate over p such that the state derivative `der_x` is zero), then the <<dependencies>> list of `der_x` should not include `p`._
 _If an FMU is imported in an environment and such an iteration is set up, then the tool can figure out that the resulting algebraic system of equations is structurally singular and therefore can reject such a definition._
 
 - _For Co-Simulation FMUs, it is common that no algebraic loops over the <<input>> / <<output>> variables nor over <<start>> values is supported._
 _In such a case, all <<dependencies>> lists for <<output>> variables under the <<InitialUnknown>> element should be defined as empty lists defining that the setting of <<input,`inputs`>> and/or of <<start>> values does not influence the <<output,`outputs`>>._
-_As a result, it is not possible to formulate algebraic loops of connected FMUs during *Initialization Mode*.]_
+_As a result, it is not possible to formulate algebraic loops of connected FMUs during <<InitializationMode>>.]_
 
 ==== Definition of Terminals and Icons [[fmiTerminalsAndIcons]]
 
