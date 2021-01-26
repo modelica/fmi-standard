@@ -308,16 +308,16 @@ If this is the case, then flag <<canGetAndSetFMUState>> must be `true` as well.
 |`providesPerElementDependencies`
 |The FMU is able to provide detailed dependency information at run time using <<fmi3GetNumberOfVariableDependencies>> and <<fmi3GetVariableDependencies>>.
 
-|`maxOutputDerivativeOrder`
+|[[maxOutputDerivativeOrder,`maxOutputDerivativeOrder`]] `maxOutputDerivativeOrder`
 |The FMU is able to provide <<derivative,`derivatives`>> of <<output,`outputs`>> with maximum order.
 Calling of `fmi3GetOutputDerivatives` is allowed up to the order defined by `maxOutputDerivativeOrder`.
 This flag is ignored in `ModelExchange`.
 
-|[[providesIntermediateUpdate,`providesIntermediateUpdate`]]`providesIntermediateUpdate`
+|[[providesIntermediateUpdate,`providesIntermediateUpdate`]] `providesIntermediateUpdate`
 |The FMU supports <<IntermediateUpdateMode>> and will call <<fmi3CallbackIntermediateUpdate>>, if provided.
 This flag is ignored in `ModelExchange`.
 
-|[[recommendedIntermediateInputSmoothness,`recommendedIntermediateInputSmoothness`]]`recommendedIntermediateInputSmoothness`
+|[[recommendedIntermediateInputSmoothness,`recommendedIntermediateInputSmoothness`]] `recommendedIntermediateInputSmoothness`
 |A value of latexmath:[k] with latexmath:[k>0] signals to the co-simulation algorithm, that it is beneficial for the solver to receive intermediate inputs that are k-time continuously differentiable (latexmath:[C^k]) on the current communication interval.
 latexmath:[k=0] means continuous (see <<smoothness>>). +
 This flag is not supported in `ModelExchange`.
@@ -1084,22 +1084,6 @@ _If an <<output>> depends on this <<input>> and on discrete-time states, then an
 _Such loops cannot be solved iteratively because of the limitation on `fmi3Set{VariableType}`._
 _Therefore, such an <<input>> should not appear in an algebraic loop.]_
 
-|`clockReference`
-|
-[[clockReference,`clockReference`]]
-
-The optional attribute <<clockReference>> is used, in conjunction with the <<clockElementIndex>> attribute, to reference the <<clock,`clocks`>> this variable is assigned to.
-The <<clockReference>> holds only <<valueReference>> information for variables with base type `fmi3Clock`.
-
-If <<causality>> = <<output>> and <<variability>> = <<clock>> the <<outputClock>> activation can occur only in the model partition that is related to the referenced <<inputClock>>, i.e. the <<outputClock>> value (active/inactive) can only change in this model partition.
-
-|`clockElementIndex`
-|
-[[clockElementIndex,`clockElementIndex`]]
-The optional attribute <<clockElementIndex>> is used in conjunction with the <<clockReference>> attribute to define the element index of the <<clock,`clocks`>> this variable is assigned to for array clock variables.
-The element index is the 1-based index of the element (with serialization of indices for multi-dimensional arrays in the usual row-major order).
-For scalar clock variables this attribute must not be specified or must be specified as 0.
-
 |`intermediateUpdate`
 |
 [[intermediateUpdate,`intermediateUpdate`]]
@@ -1638,21 +1622,14 @@ _[FMI 3.0 introduces arrays of variables to improve handling of arrays.]_
 ==== Definition of the Model Structure [[ModelStructure]]
 
 The structure of the model is defined in element `<fmiModelDescription><ModelStructure>`.
-This structure is with respect to the underlying model equations, independently how these model equations are solved.
-_[For example, when exporting a model in more than one FMI format; then the model structure is identical in all cases._
-_E.g. a Co-Simulation FMU has either an integrator included that solves the model equations, or the discretization formula of the integrator and the model equations are solved together ("inline integration")._
-_In all cases the model has the same continuous-time <<state,`states`>>._
-_In the case of a Model Exchange FMU, the internal implementation is a discrete-time system, but from the outside this is still a continuous-time model that is solved with an integration method.]_
+It defines the <<model-dependencies,dependencies>> between variables.
 
-The required part defines an ordering of the <<output,`outputs`>>, the (exposed) <<derivative,`derivatives`>>, the event indicators, and the unknowns that are available during Initialization _[Therefore, when linearizing an FMU, every tool will use the same ordering for the <<output,`outputs`>>, <<state,`states`>>, and <<derivative,`derivatives`>> for the linearized model.
-The ordering of the <<input,`inputs`>> should be performed in this case according to the ordering in `<ModelVariables>`.]_
-A Model Exchange FMU must expose all <<derivative,`derivatives`>> of its continuous-time <<state,`states`>> in elements `<ModelStructure><Derivative>` and must expose all event indicators in elements `<EventIndicator>`.
-A Co-Simulation FMU does not need to expose these state derivatives and event indicators.
-_[If a Co-Simulation FMU exposes its state derivatives, they are usually not utilized for the co-simulation, but, for example, to linearize the FMU at a communication point.]_
+The required part of the model structure defines an ordering of the <<output,`outputs`>>, the (exposed) <<derivative,`derivatives`>>, the event indicators, and the unknowns that are available during Initialization.
+A Model Exchange FMU must expose all <<derivative,`derivatives`>> of its continuous-time <<state,`states`>> in `<ModelStructure><Derivative>` elements and must expose all event indicators in `<EventIndicator>` elements.
 
-The optional part defines in which way <<derivative,`derivatives`>>, <<output,`outputs`>>, and initial unknowns, depend on <<input,`inputs`>>, and continuous-time <<state,`states`>>, at the current super-dense time instant (ME) or at the current communication point (CS and SE).
-_[The listed <<dependencies>> declare the dependencies between whole (multi-dimensional-)variables and not individual elements of the variables.]_
-_[A simulation environment can utilize this information to improve the efficiency, for example, when connecting FMUs together, or when computing the partial derivative of the <<derivative,`derivatives`>> with respect to the <<state,`states`>> in the simulation engine.]_
+The optional part of the model structure defines in which way <<derivative,`derivatives`>>, <<output,`outputs`>>, and initial unknowns depend on <<input,`inputs`>> and/or <<parameter,`parameters`>>, and continuous-time <<state,`states`>>, at the current super-dense time instant (ME) or at the current communication point (CS and SE).
+The listed <<dependencies>> declare the dependencies between whole (multi-dimensional-)variables and not individual elements of the variables.
+_[Dependencies of individual array elements can be retrieved during runtime using <<fmi3GetVariableDependencies>>.]_
 
 <<figure-schema-ModelStructure>> shows the definition of `<ModelStructure>`.
 

@@ -561,13 +561,11 @@ The first point solves the issue that an FMU must know exactly which event happe
 
 The second point solves the issue that computing exactly when an event happens is impossible to guarantee across importer and FMUs when using floating point computations.
 
-===== Concepts
-
-This section introduces concepts related to FMI clocks.
-<<table-overview-clocks>> shows how these concepts relate.
-These concepts are described in detail after the table.
+===== Clock Types
 
 Clocks are <<discrete>> <<fmu-variables,variables>> with a special semantic.
+
+The following clock types are described in detail after the table.
 
 Input clocks::
 [[inputClock, `input clock`]]All clocks with <<causality>> <<input>> are collectively called <<inputClock, `input clocks`>>.
@@ -723,7 +721,22 @@ There are two mechanisms for an FMU to communicate to the importer that a trigge
  * <<early-return,early return>> from a <<fmi3DoStep>> with <<clocksAboutToTick, `clocksAboutToTick == fmi3True`>>, and
  * calling <<fmi3CallbackIntermediateUpdate>> with <<clocksTicked, `clocksTicked == fmi3True`>>.
 
-// TODO: definition clocked partition and clocked variables with the equations (1) and (2) --> Event Mode
+===== Model Partitions and Clocked Variables [[clocked-variable]]
+
+A <<clock>> activates its specific model partition.
+
+_[Such a model partition may represent a task or an interrupt service routine of an embedded system, or a discretized part of a plant model.]_
+
+Discrete-time variables computed in such a model partition are called <<clocked-variable,clocked variables>>.
+Therefore, the value of a <<clocked-variable,clocked variable>> changes only when its clock is active.
+Model partitions are initialized at their first clock activation, not in <<InitializationMode>>.
+
+In some clock semantics (e.g. <<MLS12>>), a clocked variable has a value only when its associated clock is active.
+However, `fmi3Get{VariableType}` will return the value computed at the last clock activation time.
+Before the first clock tick, clocked variables have their initial value.
+
+The association between <<clocked-variable,clocked variables>> and their <<clock,clocks>> is defined by the <<model-dependencies,model dependencies>>.
+<<clocked-variable,Clocked variables>> can only depend on one clock.
 
 ===== Scheduled Execution
 
@@ -806,52 +819,81 @@ include::../headers/fmi3FunctionTypes.h[tag=GetShiftFraction]
 
 * `shift` and `shiftCounter` define the time of the first clock activation, as defined in <<shiftCounter>>.
 
-==== Getting Derivatives of Continuous Output [[getting-output-derivatives]]
+==== Dependencies of Variables [[model-dependencies]]
 
-Function <<fmi3GetOutputDerivatives>>::
+Dependencies between variables of an FMU:
 
---
-The n-th <<derivative,`derivatives`>> with respect to time of continuous <<output,`outputs`>> can be retrieved with <<fmi3GetOutputDerivatives>> to allow interpolation/extrapolation of connected input variables between communication points by the importer using <<fmi3CallbackIntermediateUpdate>>. +
-_[This enables the same functionality as `fmi2SetInputDerivatives` did in FMI1.0 and FMI2.0.]_
+* are helpful to classify <<algebraic-loops,algebraic loops>> across inputs and outputs when connecting FMUs.
+* associate continuous states and derivatives with each other and variables.
+* associate event indicators with variables.
+* define the sparseness when computing <<partial-derivatives,partial derivatives>>, avoiding unnecessary calls to <<fmi3GetDirectionalDerivative>> and <<fmi3GetAdjointDerivative>>.
+* assign <<clocked-variable,clocked variables>> to <<clock,clocks>>.
 
-Whether the FMU is able to provide the <<derivative,`derivatives`>> of <<output,`outputs`>> is given by the unsigned integer capability flag `maxOutputDerivativeOrder` that represents the maximum order of the <<output>> <<derivative, `derivatives`>>.
-If the actual order is lower (because the order of integration algorithm is low), the retrieved value is 0.
+The dependencies are encoded in the <<modelDescription.xml>> with the element <<ModelStructure,`<ModelStructure>`>> up to <<valueReference>> resolution.
 
-Restrictions on calling the function are the same as for the `fmi3Get{VariableType}` function for <<continuous>> <<output,`outputs`>>.
-The returned values correspond to the current time of the FMU.
-For example, after a successful call to <<fmi3DoStep>>, the returned values are related to the end of the communication step.
---
+The variable dependency information in the XML description:
 
-[[fmi3GetOutputDerivatives,`fmi3GetOutputDerivatives`]]
+* does not resolve to dependencies of individual array elements,
+* does not take changing dependencies due to resizing of arrays via <<structuralParameter,`structural parameters`>> into account,
+* is independent of the FMUs current operating point and parameter settings.
+
+An FMU can indicate via the `providesPerElementDependencies` capability flag that it is able to provide detailed dependency information at runtime through the following C-API.
+The dependency information returned by these functions depend on the current operating point and parameter settings.
+
+The number of dependencies of a given variable, which may change if <<structuralParameter,`structural parameters`>> are changed, can be retrieved by calling the following function:
+
+[[fmi3GetNumberOfVariableDependencies,`fmi3GetNumberOfVariableDependencies`]]
 [source, C]
 ----
-include::../headers/fmi3FunctionTypes.h[tags=GetOutputDerivatives]
+include::../headers/fmi3FunctionTypes.h[tags=GetNumberOfVariableDependencies]
 ----
 
---
-* `valueReferences` is a vector of value references that define the variables whose <<derivative,`derivatives`>> shall be retrieved.
-If multiple derivatives of a variable shall be retrieved, list the value reference multiple times.
+This function returns the number of <<dependencies>> for a given variable.
 
-* `nValueReferences` is the dimension of the arguments `valueReferences` and `orders`.
+* `valueReference` specifies the <<valueReference>> of the variable for which the number of <<dependencies>> should be returned.
 
-* `orders` contains the orders of the respective <<derivative>> (1 means the first <<derivative>>, 2 means the second <<derivative>>, ..., 0 is not allowed).
-If multiple derivatives of a variable shall be retrieved, provide a list of them in the `orders` array, corresponding to a multiply occurring value reference in the `valueReferences` array.
+* `nDependencies` points to the `size_t` variable that will receive the number of <<dependencies>>.
 
-* `values` is a vector with the values of the <<derivative,`derivatives`>>.
-The order of the `values` elements is derived from a twofold serialization: the outer level corresponds to the combination of a value reference (e.g., `valueReferences[k]`) and order (e.g., `orders[k]`), and the inner level to the serialization of variables as defined in <<serialization-of_variables>>.
-The inner level does not exist for scalar variables.
+[[fmi3GetVariableDependencies,`fmi3GetVariableDependencies`]]
+The actual <<dependencies>> (of type `fmi3DependencyKind`) can be retrieved by calling the function `fmi3GetVariableDependencies`:
 
-* `nValues` is the size of the argument `values`.
-`nValues` only equals `nValueReferences` if all corresponding output variables are scalar variables.
---
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=DependencyKind]
 
-_[ Example:_ +
-_Assuming an FMU has outputs latexmath:[y_1][2*3] with value reference 1, latexmath:[y_2] with value reference 2, latexmath:[ y_3][2] value reference 3, latexmath:[y_4] with value reference 4 and `maxOutputDerivativeOrder`=2._ +
-_With `valueReferences`= [1, 1, 3, 3, 4, 4], and `orders`= [1, 2, 1, 2, 1, 2], <<fmi3GetOutputDerivatives>> will provide first and second time derivatives of the outputs y1, y3, y4, which in `values` are serialized in the following way:_
-_((array serialization of latexmath:[\dot y_1]), (array serialization of latexmath:[\ddot y_1]), (array serialization of latexmath:[\dot y_3]), (array serialization of latexmath:[\ddot y_3]), latexmath:[\dot y_4], latexmath:[\ddot y_4])_ +
-_If the internal polynomial is of order 1 and the importer inquires the second <<derivative>> of an <<output>>, the FMU will return zero.]_
+include::../headers/fmi3FunctionTypes.h[tags=GetVariableDependencies]
+----
 
-==== Getting Partial Derivatives
+This function returns the dependency information for a single variable.
+
+* `dependent` specifies the <<valueReference>> of the variable for which the dependencies should be returned.
+
+* `nDependencies` specifies the number of dependencies that the calling environment allocated space for in the result buffers, and should correspond to value obtained by calling <<fmi3GetNumberOfVariableDependencies>>.
+
+* `elementIndicesOfDependent` must point to a buffer of `size_t` values of size `nDependencies` allocated by the calling environment.
+It is filled in by this function with the element index of the dependent variable that dependency information is provided for.
+The element indices start with 1. Using the element index 0 means all elements of the variable.
+(Note: If an array has more than one dimension the indices are serialized in the same order as defined for values in <<serialization-of_variables>>.)
+
+* `independents` must point to a buffer of <<fmi3ValueReference>> values of size `nDependencies` allocated by the calling environment.
+It is filled in by this function with the value reference of the <<independent>> variable that this dependency entry is dependent upon.
+
+* `elementIndicesIndependents` must point to a buffer of `size_t` values of size `nDependencies` allocated by the calling environment.
+It is filled in by this function with the element index of the <<independent>> variable that this dependency entry is dependent upon.
+The element indices start with 1.
+Using the element index 0 means all elements of the variable.
+(Note: If an array has more than one dimension the indices are serialized in the same order as defined for values in <<serialization-of_variables>>.)
+
+* `dependencyKinds` must point to a buffer of `fmi3DependencyKind` values of size `nDependencies` allocated by the calling environment.
+It is filled in by this function with the enumeration value describing the dependency of this dependency entry.
+
+If this function is called before the <<fmi3ExitInitializationMode>> call, it returns the initial dependencies.
+If this function is called after the <<fmi3ExitInitializationMode>> call, it returns the run-time dependencies.
+The retrieved dependency information of one variable becomes invalid as soon as a <<structuralParameter,`structural parameter`>> linked to the variable or to any of its depending variables are set.
+As a consequence, if you change <<structuralParameter,`structural parameters`>> affecting B or A, the dependency of B becomes invalid.
+The dependency information must change only if <<structuralParameter,`structural parameters`>> are changed.
+
+==== Getting Partial Derivatives [[partial-derivatives]]
 
 Partial derivatives can be used:
 
@@ -1102,66 +1144,44 @@ include::Reference-FMUs/examples/jacobian.c[tags=GetJacobianAdjoint]
 
 _]_
 
-==== Getting Number of Variable Dependencies and Variable Dependencies
+==== Getting Derivatives of Continuous Outputs [[getting-output-derivatives]]
 
-The sparseness information within arrays is not given in the xml description.
-The sparseness muss be retrieved during run-time using the C-API functions.
-Zeros in the Jacobian are not necessarily due to the structure of the model.
-Zero in the Jacobian might be due to the current operating point (current <<state>>, current <<input,`inputs`>>) and not due to a structural independence.
+In FMI for Co-Simulation, the n-th <<derivative,`derivatives`>> with respect to time of continuous <<output,`outputs`>> can be retrieved with <<fmi3GetOutputDerivatives>> to allow interpolation/extrapolation of connected input variables between communication points by the importer in <<IntermediateUpdateMode>>. +
 
-The variable dependency information in the XML description does not resolve to dependencies of individual array elements, nor does it take into account changing dependencies due to resizing of arrays via <<structuralParameter,`structural parameters`>>.
-An FMU can indicate via the `providesPerElementDependencies` capability flag that it is able to provide detailed dependency information at runtime through the following C-API.
-Note that these functions are only defined if the capability flag `providesPerElementDependencies = true`.
+Whether the FMU is able to provide the <<derivative,`derivatives`>> of <<output,`outputs`>> is given by the unsigned integer capability flag <<maxOutputDerivativeOrder>> that represents the maximum order of the <<output>> <<derivative, `derivatives`>>.
+If the actual order is lower (because the order of integration algorithm is low), the retrieved value is 0.
 
-The number of dependencies of a given variable, which may change if <<structuralParameter,`structural parameters`>> are changed, can be retrieved by calling the following function:
+Restrictions on calling the function are the same as for the `fmi3Get{VariableType}` function for <<continuous>> <<output,`outputs`>>.
+The returned values correspond to the current time of the FMU.
+For example, after a successful call to <<fmi3DoStep>>, the returned values are related to the end of the communication step.
 
-[[fmi3GetNumberOfVariableDependencies,`fmi3GetNumberOfVariableDependencies`]]
+Function <<fmi3GetOutputDerivatives>>::
+
+[[fmi3GetOutputDerivatives,`fmi3GetOutputDerivatives`]]
 [source, C]
 ----
-include::../headers/fmi3FunctionTypes.h[tags=GetNumberOfVariableDependencies]
+include::../headers/fmi3FunctionTypes.h[tags=GetOutputDerivatives]
 ----
 
-This function returns the number of <<dependencies>> for a given variable.
+--
+* `valueReferences` is a vector of value references that define the variables whose <<derivative,`derivatives`>> shall be retrieved.
+If multiple derivatives of a variable shall be retrieved, list the value reference multiple times.
 
-* `valueReference` specifies the <<valueReference>> of the variable for which the number of <<dependencies>> should be returned.
+* `nValueReferences` is the dimension of the arguments `valueReferences` and `orders`.
 
-* `nDependencies` points to the `size_t` variable that will receive the number of <<dependencies>>.
+* `orders` contains the orders of the respective <<derivative>> (1 means the first <<derivative>>, 2 means the second <<derivative>>, ..., 0 is not allowed).
+If multiple derivatives of a variable shall be retrieved, provide a list of them in the `orders` array, corresponding to a multiply occurring value reference in the `valueReferences` array.
 
-[[fmi3GetVariableDependencies,`fmi3GetVariableDependencies`]]
-The actual <<dependencies>> (of type `fmi3DependencyKind`) can be retrieved by calling the function `fmi3GetVariableDependencies`:
+* `values` is a vector with the values of the <<derivative,`derivatives`>>.
+The order of the `values` elements is derived from a twofold serialization: the outer level corresponds to the combination of a value reference (e.g., `valueReferences[k]`) and order (e.g., `orders[k]`), and the inner level to the serialization of variables as defined in <<serialization-of_variables>>.
+The inner level does not exist for scalar variables.
 
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=DependencyKind]
+* `nValues` is the size of the argument `values`.
+`nValues` only equals `nValueReferences` if all corresponding output variables are scalar variables.
+--
 
-include::../headers/fmi3FunctionTypes.h[tags=GetVariableDependencies]
-----
-
-This function returns the dependency information for a single variable.
-
-* `dependent` specifies the <<valueReference>> of the variable for which the dependencies should be returned.
-
-* `nDependencies` specifies the number of dependencies that the calling environment allocated space for in the result buffers, and should correspond to value obtained by calling <<fmi3GetNumberOfVariableDependencies>>.
-
-* `elementIndicesOfDependent` must point to a buffer of `size_t` values of size `nDependencies` allocated by the calling environment.
-It is filled in by this function with the element index of the dependent variable that dependency information is provided for.
-The element indices start with 1. Using the element index 0 means all elements of the variable.
-(Note: If an array has more than one dimension the indices are serialized in the same order as defined for values in <<serialization-of_variables>>.)
-
-* `independents` must point to a buffer of <<fmi3ValueReference>> values of size `nDependencies` allocated by the calling environment.
-It is filled in by this function with the value reference of the <<independent>> variable that this dependency entry is dependent upon.
-
-* `elementIndicesIndependents` must point to a buffer of `size_t` values of size `nDependencies` allocated by the calling environment.
-It is filled in by this function with the element index of the <<independent>> variable that this dependency entry is dependent upon.
-The element indices start with 1.
-Using the element index 0 means all elements of the variable.
-(Note: If an array has more than one dimension the indices are serialized in the same order as defined for values in <<serialization-of_variables>>.)
-
-* `dependencyKinds` must point to a buffer of `fmi3DependencyKind` values of size `nDependencies` allocated by the calling environment.
-It is filled in by this function with the enumeration value describing the dependency of this dependency entry.
-
-If this function is called before the <<fmi3ExitInitializationMode>> call, it returns the initial dependencies.
-If this function is called after the <<fmi3ExitInitializationMode>> call, it returns the run-time dependencies.
-The retrieved dependency information of one variable becomes invalid as soon as a <<structuralParameter,`structural parameter`>> linked to the variable or to any of its depending variables are set.
-As a consequence, if you change <<structuralParameter,`structural parameters`>> affecting B or A, the dependency of B becomes invalid.
-The dependency information must change only if <<structuralParameter,`structural parameters`>> are changed.
+_[ Example:_ +
+_Assuming an FMU has outputs latexmath:[y_1][2*3] with value reference 1, latexmath:[y_2] with value reference 2, latexmath:[ y_3][2] value reference 3, latexmath:[y_4] with value reference 4 and `maxOutputDerivativeOrder`=2._ +
+_With `valueReferences`= [1, 1, 3, 3, 4, 4], and `orders`= [1, 2, 1, 2, 1, 2], <<fmi3GetOutputDerivatives>> will provide first and second time derivatives of the outputs y1, y3, y4, which in `values` are serialized in the following way:_
+_((array serialization of latexmath:[\dot y_1]), (array serialization of latexmath:[\ddot y_1]), (array serialization of latexmath:[\dot y_3]), (array serialization of latexmath:[\ddot y_3]), latexmath:[\dot y_4], latexmath:[\ddot y_4])_ +
+_If the internal polynomial is of order 1 and the importer inquires the second <<derivative>> of an <<output>>, the FMU will return zero.]_

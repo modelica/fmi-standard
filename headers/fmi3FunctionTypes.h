@@ -61,12 +61,12 @@ typedef enum {
 
 /* tag::DependencyKind[] */
 typedef enum {
-    /* fmi3Independent = 0, not needed but reserved for future use */
-    fmi3Constant  = 1,
-    fmi3Fixed     = 2,
-    fmi3Tunable   = 3,
-    fmi3Discrete  = 4,
-    fmi3Dependent = 5
+    fmi3Independent = 0,
+    fmi3Constant    = 1,
+    fmi3Fixed       = 2,
+    fmi3Tunable     = 3,
+    fmi3Discrete    = 4,
+    fmi3Dependent   = 5
 } fmi3DependencyKind;
 /* end::DependencyKind[] */
 
