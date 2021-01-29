@@ -200,7 +200,7 @@ The output argument values are defined.
 `fmi3Warning`::
 A non-critical problem was detected, but the computation can continue.
 The output argument values are defined.
-Function <<logMessage>> was called by the FMU and the user is expected to handle the problem.
+Function <<logMessage>> was called by the FMU and the user is expected to handle the problem. +
 _[In certain applications, e.g. in a prototyping environment, warnings may be acceptable._
 _For production environments warnings should be treated like errors unless they can be safely ignored.]_
 
@@ -210,7 +210,10 @@ The call was not successful and the FMU is in the same state as before the call.
 The output argument values are not defined, but the computation can continue.
 When debug logging is enabled (`loggingOn == fmi3True`) the function <<logMessage>> was called by the FMU.
 Advanced simulation algorithms can try alternative approaches to drive the simulation by calling the function with different arguments or calling another function.
-Otherwise the simulation algorithm has to treat this return code like <<fmi3Error>> and has to terminate the simulation.
+Otherwise the simulation algorithm has to treat this return code like <<fmi3Error>> and has to terminate the simulation. +
+_[Examples for usage of <<fmi3Discard>> are_
+ * _handling of <<min-max-violations,min/max violation>>, or_
+ * _signal numerical problems during model evaluation forcing smaller step sizes.]_
 
 [[fmi3Error,`fmi3Error`]]
 `fmi3Error`::
@@ -305,7 +308,7 @@ _]_
 Restrictions for setting and getting of variables with certain types, causalities and variabilities are described in the state machine and state descriptions (see <<common-state-machine>>, <<state-machine-model-exchange>> in case of Model Exchange, <<state-machine-co-simulation>> for Co-Simulation and <<state-machine-scheduled-execution>> for Scheduled Execution).
 
 The value of a variable must be accessed with the respective `fmi3Get/Set{VariableType}` for the <<definition-of-model-variables,type defined>> in the <<modelDescription.xml>>.
-For variables of type <<Enumeration>>, `fmi3SetInt64` and `fmi3GetInt64` must be used.
+For variables of type <<figure-schema-Enumeration,`Enumeration`>>, `fmi3SetInt64` and `fmi3GetInt64` must be used.
 
 The current values of the variables can be inquired with the following functions:
 
@@ -346,6 +349,33 @@ Exceptions:
 . By setting the complete <<get-set-fmu-state,FMU state>> using <<fmi3SetFMUState>>, all variables are potentially changed.
 
 All strings passed as arguments to `fmi3SetString`, as well as all binary values passed as arguments to `fmi3SetBinary`, must be copied during these function calls, because there is no guarantee of the lifetime of strings or binary values, when these functions return.
+
+===== Handling min/max Range Violations [[min-max-violations]]
+
+<<min-max,Attributes `min` and `max`>> can be defined for variables of float, integer or enumeration types.
+The question is how `fmi3Set{VariableType}`, `fmi3Get{VariableType}` shall utilize this definition.
+There are several conflicting requirements: +
+Avoiding forbidden regions (for example, if `u` is an <<input>> and "sqrt(u)" is computed in the FMU, `min = 0` on `u` shall guarantee that only values of `u` in the allowed regions are provided).
+Numerical algorithms (solvers or optimizers) do not guarantee constraints.
+If a variable is outside of the bounds, the solver tries to bring it back into the bounds.
+As a consequence, calling `fmi3Get{VariableType}` during an iteration of such a solver might return values that are not in the defined min/max region.
+After the iteration is finalized, it is only guaranteed that a value is within its bounds up to a certain numerical precision. +
+During system creation and prototyping, checks on min/max should be performed.
+For maximum performance on production or real-time systems, these checks might not be performed. +
+The approach in FMI is therefore that min/max definitions are an information from the FMU to the environment defining the region in which the FMU is designed to operate.
+In any case, it is expected that the FMU handles variables appropriately where the region definition is critical.
+For example, dividing by an <<input>> (so the <<input>> should not be in a small range of zero) or taking the square root of an <<input>> (so the <<input>> should not be negative) may either result in returning <<fmi3Discard>> or <<fmi3Error>>, or the FMU is able to handle this situation in other ways.
+
+If the FMU is generated so that min/max shall be checked whenever meaningful (for example, for debug purposes), then the following strategy should be used:
+
+If `fmi3Set{VariableType}` is called violating the min/max attribute settings of the corresponding variable, the following actions are performed:
+
+* On a <<fixed>> or <<tunable>> <<parameter>> <<fmi3Discard,`fmi3Status == fmi3Discard`>> is returned.
+* On an <<input>>, the FMU decides what to return (If no computation is possible, it could return <<fmi3Discard,`fmi3Status == fmi3Discard`>>, in other situations it may return <<fmi3Warning>> or <<fmi3Error>>, or <<fmi3OK>>, if it is uncritical).
+
+If an FMU defines min/max values for integer types and `<Enumeration>` variables (<<local>> and <<output>> variables), then the expected behavior of the FMU is that `fmi3Get{VariableType}` functions return values in the defined range.
+
+If an FMU defines min/max values, then the expected behavior of the FMU is that `fmi3Get{VariableType}` returns values at the solution (accepted steps of the integrators) in the defined range with a certain uncertainty related to the tolerances of the numerical algorithms.]
 
 ===== Getting and Setting the Complete FMU State [[get-set-fmu-state]]
 

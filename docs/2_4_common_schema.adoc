@@ -735,31 +735,6 @@ This attribute is allowed if <<supportsFraction,`supportsFraction = true`>> and 
 
 |====
 
-_[Attributes `min` and `max` can be defined for variables of float, integer or enumeration types._
-_The question is how `fmi3Set{VariableType}`, `fmi3Get{VariableType}` shall utilize this definition._
-_There are several conflicting requirements:_ +
-_Avoiding forbidden regions (for example, if `u` is an <<input>> and "sqrt(u)" is computed in the FMU, `min = 0` on `u` shall guarantee that only values of `u` in the allowed regions are provided)._
-_Numerical algorithms (solvers or optimizers) do not guarantee constraints._
-_If a variable is outside of the bounds, the solver tries to bring it back into the bounds._
-_As a consequence, calling `fmi3Get{VariableType}` during an iteration of such a solver might return values that are not in the defined min/max region._
-_After the iteration is finalized, it is only guaranteed that a value is within its bounds up to a certain numerical precision._ +
-_During system creation and prototyping, checks on min/max should be performed._
-_For maximum performance on production or real-time systems, these checks might not be performed._ +
-_The approach in FMI is therefore that min/max definitions are an information from the FMU to the environment defining the region in which the FMU is designed to operate._
-_In any case, it is expected that the FMU handles variables appropriately where the region definition is critical._
-_For example, dividing by an <<input>> (so the <<input>> should not be in a small range of zero) or taking the square root of an <<input>> (so the <<input>> should not be negative) may either result in returning <<fmi3Discard>> or <<fmi3Error>>, or the FMU is able to handle this situation in other ways._
-
-_If the FMU is generated so that min/max shall be checked whenever meaningful (for example, for debug purposes), then the following strategy should be used:_
-
-_If `fmi3Set{VariableType}` is called violating the min/max attribute settings of the corresponding variable, the following actions are performed:_
-
-- _On a <<fixed>> or <<tunable>> <<parameter>> <<fmi3Discard,`fmi3Status == fmi3Discard`>> is returned._
-- _On an <<input>>, the FMU decides what to return (If no computation is possible, it could return <<fmi3Discard,`fmi3Status == fmi3Discard`>>, in other situations it may return <<fmi3Warning>> or <<fmi3Error>>, or <<fmi3OK>>, if it is uncritical)._
-
-_If an FMU defines min/max values for integer types and `<Enumeration>` variables (<<local>> and <<output>> variables), then the expected behavior of the FMU is that `fmi3Get{VariableType}` functions return values in the defined range._
-
-_If an FMU defines min/max values, then the expected behavior of the FMU is that `fmi3Get{VariableType}` returns values at the solution (accepted steps of the integrators) in the defined range with a certain uncertainty related to the tolerances of the numerical algorithms.]_
-
 ==== Definition of Log Categories [[definition-of-log-categories]]
 
 Element `<fmiModelDescription><LogCategories>` is defined as:
@@ -1480,8 +1455,8 @@ If `true`, <<state>> can be reinitialized at an event by the FMU. +
 If `false`, <<state>> will not be reinitialized at an event by the FMU.
 
 |`min / max`
-|The optional attributes `min` and `max` in element `<Enumeration>` restrict the allowed values of the enumeration.
-The `min/max` definitions are information from the FMU to the environment defining the region in which the FMU is designed to operate, see also comment in <<definition-of-types>>.
+|[[min-max,`min / max`]]
+The `min / max` definitions are information from the FMU to the environment defining the region in which the FMU is designed to operate (see <<min-max-violations>>). +
 _[If, for example, an `<Enumeration>` is defined with `name1 = -4`, `name2 = 1`, `name3 = 5`, `name4 = 11` and `min = -2`, `max = 5`, then only `name2` and `name3` are allowed.]_
 |====
 
