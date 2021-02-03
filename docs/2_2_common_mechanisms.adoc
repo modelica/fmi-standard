@@ -680,12 +680,7 @@ All time-based clocks are defined to be input clocks because the importer calls 
 The importer queries the FMU about when a time-based clock should be activated.
 The importer will then activate the clock by calling <<fmi3SetClock>> with `values == fmi3ClockActive`.
 +
-The next <<clock>> activation at time instant latexmath:[t_i] is defined as: +
-latexmath:[\begin{align*}
-\mathbf{t}_0 &:= \mathbf{t}_{\mathit{start}} + \mathbf{T}_{\mathit{shift}} \\
-\mathbf{t}_i &:= \mathbf{t}_{i-1} + \mathbf{T}_{interval, i} \qquad i = 1,2,3,{...}
-\end{align*}] +
-where:
+The mathematical descriptions of <<time-based-clocks>> will use the following notations:
 
 +
 .Mathematical Notation Description.
@@ -695,24 +690,44 @@ where:
 |latexmath:[\mathbf{t}_0]
 |The time instant at which the <<clock>> is activated the first time.
 
+|latexmath:[\mathbf{t}_\mathit{i-1}]
+|The previous time instant, where the <<clock>> ticked.
+
 |latexmath:[\mathbf{T}_{\mathit{shift}}]
 |Delay for the first clock activation relative to latexmath:[\mathbf{t}_{\mathit{start}}], defined differently for the different clock types.
 latexmath:[\mathbf{T}_{\mathit{shift}}] can be retrieved from the FMU with <<fmi3GetShiftDecimal>> as floating point value, or with <<fmi3GetShiftFraction>> as rational number: latexmath:[\mathit{shiftCounter} / \mathit{resolution}] (see <<resolution>>).
 
-|latexmath:[\mathbf{t}_\mathit{i-1}]
-|The previous time instant, where the <<clock>> ticked.
+|latexmath:[\mathbf{T}_{interval, i}]
+|The time interval until the next <<clock>> tick, defined differently for the different clock types.
+latexmath:[\mathbf{T}_{interval, i}] can be set with <<fmi3SetIntervalDecimal>>) or get with <<fmi3GetIntervalDecimal>> as floating point value, or as rational number using <<fmi3SetIntervalFraction>> or <<fmi3GetIntervalFraction>>: latexmath:[\mathit{intervalCounter} / \mathit{resolution}] (see <<resolution>>).
 
-|latexmath:[\mathbf{T}_{interval, i} > 0]
-|The time interval from the previous <<clock>> tick to the current <<clock>> tick, defined differently for the different clock types.
-latexmath:[\mathbf{T}_{interval, i} > 0] can be set with <<fmi3SetIntervalDecimal>>) or get with <<fmi3GetIntervalDecimal>> as floating point value, or as rational number using <<fmi3SetIntervalFraction>> or <<fmi3GetIntervalFraction>>: latexmath:[\mathit{intervalCounter} / \mathit{resolution}] (see <<resolution>>).
+|latexmath:[\mathbf{t}_\mathit{event}]
+|Current event time.
+
 |===
 
 [[periodic-clock-ticks]]Periodic clocks::
 are time-based clocks which have a constant interval, except `interval = tunable` which indicates changes when <<tunable>> parameters change this clock interval depends on.
 The time instant of the first clock activation is defined by a <<shift>>.
++
+The next <<clock>> activation at time instant latexmath:[t_i] is defined as: +
+latexmath:[\begin{align*}
+\mathbf{t}_0 &:= \mathbf{t}_{\mathit{start}} + \mathbf{T}_{\mathit{shift}} \\
+\mathbf{t}_i &:= \mathbf{t}_{i-1} + \mathbf{T}_{interval, i} \qquad i = 1,2,3,{...}
+\end{align*}]
+
++
+.Restrictions.
+[#periodic-clock-restrictions]
+[cols="1,2"]
+|===
+
+|latexmath:[\mathbf{T}_{interval, i} > 0]
+|The time interval from the previous <<clock>> tick to the current <<clock>> tick, specified differently for the different clock types.
+|===
 
 Constant periodic clocks::
-are time-based periodic clocks that define their interval and <<shift>> in the <<modelDescription.xml>>.
+are time-based periodic clocks that define their <<interval>> and <<shift>> in the <<modelDescription.xml>>.
 
 [[fixed-periodic-clocks,fixed periodic clocks]]Fixed periodic clocks::
 are time-base periodic clocks which can be activated by the importer with an arbitrary, but constant interval starting after an arbitrary <<shift>>.
@@ -735,11 +750,53 @@ Calling <<fmi3GetShift>> is not allowed.
 
 [[changing-aperiodic-clocks,changing aperiodic clocks]]Changing aperiodic clocks::
 are time-based clocks where the next interval is unchangeably known right after the clock just ticked.
-<<fmi3GetInterval>> must be called to retrieve the next interval in every <<EventMode>> if and only if the corresponding clock ticked.
++
+The next <<clock>> activation at time instant latexmath:[t_i] is defined as: +
+latexmath:[\begin{align*}
+\mathbf{t}_0 &:= \mathbf{t}_{\mathit{start}} + \mathbf{T}_{interval, 0} \\
+\mathbf{t}_i &:= \mathbf{t}_{i-1} + \mathbf{T}_{interval, i} \qquad i = 1,2,3,{...}
+\end{align*}]
+
++
+.Restrictions.
+[#changing-clock-restrictions]
+[cols="1,2"]
+|===
+
+|latexmath:[\mathbf{T}_{interval, 0} \geq 0]
+|The time interval from latexmath:[\mathbf{t}_{\mathit{start}}] to first <<clock>> tick.
+Must be retrieved in <<InitializationMode>>.
+
+|latexmath:[\mathbf{T}_{interval, i} > 0, \qquad i = 1,2,3,{...}]
+|The time interval from the current <<clock>> tick to the next <<clock>> tick.
+Must be retrieved in <<EventMode>> if and only if the corresponding clock ticked.
+
+|===
 
 [[countdown-aperiodic-clocks,countdown aperiodic clocks]]Countdown aperiodic clocks::
 are time-based clocks where the next interval is not yet known right after the clock just ticked, forcing the importer to call <<fmi3GetInterval>> in every <<EventMode>>.
 The return argument <<qualifier>> of <<fmi3GetInterval>> is used to indicate if the next interval is already known.
++
+The next <<clock>> activation at time instant latexmath:[t_i] is defined as: +
+latexmath:[\begin{align*}
+\mathbf{t}_0 &:= \mathbf{t}_{\mathit{start}} + \mathbf{T}_{interval, 0} \\
+\mathbf{t}_i &:= \mathbf{t}_{event} + \mathbf{T}_{interval, i} \qquad i = 1,2,3,{...}
+\end{align*}]
+
++
+.Restrictions.
+[#countdown-clock-restrictions]
+[cols="1,2"]
+|===
+
+|latexmath:[\mathbf{T}_{interval, 0} \geq 0]
+|The time interval from latexmath:[\mathbf{t}_\mathit{start}] to the first <<clock>> tick.
+Must be retrieved in <<InitializationMode>>.
+
+|latexmath:[\mathbf{T}_{interval, i} \geq 0, \qquad i = 1,2,3,{...}]
+|The time interval from the event time at which the argument <<qualifier,`qualifier == fmi3NewInterval`>> of <<fmi3GetInterval>> to the next <<clock>> tick.
+
+|===
 
 Triggered clocks::
 tick unpredictably.
