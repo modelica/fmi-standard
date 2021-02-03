@@ -35,9 +35,58 @@ The FMU enters this state when the simulation algorithm calls <<fmi3ExitInitiali
 
 In this state the simulation algorithm can create multiple concurrent tasks related to an FMU and in each task the simulation algorithm can activate one or multiple <<inputClock,`input clocks`>> of an FMU based on the defined <<clock>> properties via a <<fmi3ActivateModelPartition>> call for each <<clock>>.
 
+[cols="2,1",options="header",]
+|====
+|Equations and Actions
+|Functions Influencing Equations
+
+|Set <<tunable>> <<parameter,`parameters`>> latexmath:[\mathbf{p}_{\mathit{variability == tunable}}] .
+|`fmi3Set{VariableType}`
+
+|Set discrete-time <<input,`inputs`>> latexmath:[\mathbf{u}_{d}(\mathbf{t})].
+|`fmi3Set{VariableType}`
+
+|Get values of variables latexmath:[\mathbf{v}(\mathbf{t})].
+|`fmi3Get{VariableType}`
+
+a|When an input clock latexmath:[\mathbf{k}_i] is active, activate the corresponding model partition:
+
+* latexmath:[(\mathbf{y}_\mathit{d,k_i}, \mathbf{x}_\mathit{d,k_i}, \mathbf{w}_\mathit{d,k_i}) := \mathbf{f}_{\mathit{activate}}({}^{\bullet}\mathbf{x}_\mathit{d}, \mathbf{w}_d, \mathbf{u}_\mathit{d}, \mathbf{p}, \mathbf{k_i})] +
+* Update previous values of discrete states of the corresponding model partition: latexmath:[{}^\bullet\mathbf{x}_\mathit{d,k_i}:=\mathbf{x}_\mathit{d,k_i}].
+|<<fmi3ActivateModelPartition>>
+
+|latexmath:[(\mathbf{v}_{u}) := \mathbf{f}_{\mathit{inter}}({}^{\bullet}\mathbf{x}_d, \mathbf{u}_{d}, {}^{\bullet}\mathbf{u}_{u}, \mathbf{p} )]
+|<<fmi3CallbackIntermediateUpdateSE>>
+
+|====
+
 Allowed Function Calls::
 
- [[fmi3ActivateModelPartition, `fmi3ActivateModelPartition`]] Function <<fmi3ActivateModelPartition>>::
+Function <<get-and-set-variable-values,`fmi3Set{VariableType}`>>::
+This function can be called before scheduling a model partition for variables assigned to that model partition via its associated <<clock>> and all variables not associated to a <<clock>> (global variables).
+
+Function <<get-and-set-variable-values,`fmi3Get{VariableType}>>`::
+These functions can be called after the computation of a model partition for variables assigned to that model partition via its associated <<clock>> and all variables not associated to a <<clock>> (global variables).
+
++
+Set/get operations must be atomic for a single variable.
+
++
+_[Because of real-time constraints, the computational effort has to be predictable for all operations in Scheduled Execution._
+_Therefore, all computationally expensive operations to compute a model partition have to be contained within the <<fmi3ActivateModelPartition>> function._
+_The simulation algorithm can assume that `fmi3Get{VariableType}` and `fmi3Set{VariableType}` operations are not computationally expensive._
+_It is recommended, to call `fmi3Set{VariableType}` and `fmi3Get{VariableType}` in the same task as <<fmi3ActivateModelPartition>>.]_
+
++
+The restrictions related to variable <<causality>> and <<variability>> defined for <<StepMode>> in <<fmi-for-co-simulation,`Co-Simulation`>> apply.
+
++
+It is not allowed to call `fmi3Get{VariableType}` functions after `fmi3Set{VariableType}` functions without an <<fmi3ActivateModelPartition>> call in between.
+
++
+_[The reason is to avoid different interpretations of the caching, since contrary to <<fmi-for-model-exchange, `FMI for Model Exchange`>>, <<fmi3ActivateModelPartition>> will perform the actual calculation instead of `fmi3Get{VariableType}`, and therefore, dummy algebraic loops at communication points cannot be handled by an appropriate sequence of `fmi3Get{VariableType}` and `fmi3Set{VariableType}` calls as for Model Exchange.]_
+
+[[fmi3ActivateModelPartition, `fmi3ActivateModelPartition`]] Function <<fmi3ActivateModelPartition>>::
 
 Each <<fmi3ActivateModelPartition>> call is now associated to the computation of a (publicly disclosed, externally controlled) model partition of the model and therefore to a single defined <<inputClock>>.
 +
@@ -64,61 +113,17 @@ These <<inputClock>> activations can be based on <<clock>> activations from FMU 
 The <<inputClock>> activations can also be based on <<outputClock>> ticks of the same FMU.
 The <<fmi3ActivateModelPartition>> function must not be called on <<outputClock,`output clocks`>> of an FMU.
 
++
 This is a different timing concept compared to <<fmi3DoStep>> calls for Co-Simulation FMUs or the <<fmi3SetTime>> for Model Exchange FMUs.
 An <<fmi3ActivateModelPartition>> call will compute the results of the model partition defined by <<clockReference>> and <<clockElementIndex>> (i.e. <<valueReference>> of the variable that defines a <<clock>> and an element index into that for arrays) for the current <<clock>> tick latexmath:[\mathbf{t}_i].
 
++
 If required, the FMU can internally derive the <<clock>> interval latexmath:[\mathbf{T}_\mathit{interval, i}] based on the last <<clock>> tick time latexmath:[\mathbf{t}_\mathit{i-1}] i.e. last `activationTime` for this <<clockReference>> and <<clockElementIndex>> (based on last <<fmi3ActivateModelPartition>> call).
 
++
 Consecutive calls to <<fmi3ActivateModelPartition>> for a <<clockReference>> and <<clockElementIndex>> (i.e. <<valueReference>> of <<clock>> variable and element index into that for arrays) must have strictly monotonically increasing `activationTime` latexmath:[\mathbf{t}_i].
 
-Function <<get-and-set-variable-values,`fmi3Set{VariableType}`>>::
-This function can be called before scheduling a model partition for variables assigned to that model partition via its associated <<clock>> and all variables not associated to a <<clock>> (global variables).
-
-
-Function <<get-and-set-variable-values,`fmi3Get{VariableType}>>`, `fmi3GetOutputDerivatives`, <<fmi3GetDirectionalDerivative>>::
-These functions can be called after the computation of a model partition for variables assigned to that model partition via its associated <<clock>> and all variables not associated to a <<clock>> (global variables).
-
-Set/get operations must be atomic for a single variable.
-
-_[Because of real-time constraints, the computational effort has to be predictable for all operations in Scheduled Execution._
-_Therefore, all computationally expensive operations to compute a model partition have to be contained within the <<fmi3ActivateModelPartition>> function._
-_The simulation algorithm can assume that `fmi3Get{VariableType}` and `fmi3Set{VariableType}` operations are not computationally expensive._
-_It is recommended, to call `fmi3Set{VariableType}` and `fmi3Get{VariableType}` in the same task as <<fmi3ActivateModelPartition>>.]_
-
-The restrictions related to variable <<causality>> and <<variability>> defined for <<StepMode>> in <<fmi-for-co-simulation,`Co-Simulation`>> apply.
-
-It is not allowed to call `fmi3Get{VariableType}` functions after `fmi3Set{VariableType}` functions without an <<fmi3ActivateModelPartition>> call in between.
-
-_[The reason is to avoid different interpretations of the caching, since contrary to <<fmi-for-model-exchange, `FMI for Model Exchange`>>, <<fmi3ActivateModelPartition>> will perform the actual calculation instead of `fmi3Get{VariableType}`, and therefore, dummy algebraic loops at communication points cannot be handled by an appropriate sequence of `fmi3Get{VariableType}` and `fmi3Set{VariableType}` calls as for Model Exchange._
-
-_Example:_
-
-.Example calling sequences.
-[[table-example-calling-sequence-SE]]
-[cols="3,4",options="header"]
-|====
-|_Correct calling sequence for a model partition_
-|_Illegal calling sequence_
-
-|_fmi3Set{VariableType} on inputs_ +
-fmi3ActivateModelPartition +
-_fmi3Get{VariableType} on outputs_ +
-_fmi3Set{VariableType} on inputs_ +
-fmi3ActivateModelPartition +
-_fmi3Get{VariableType} on outputs_ +
-
-|_fmi3Set{VariableType} on inputs_ +
-fmi3ActivateModelPartition +
-_fmi3Get{VariableType} on outputs_ +
-_fmi3Set{VariableType} on inputs_ +
-_fmi3Get{VariableType} on outputs // not allowed_ +
-fmi3ActivateModelPartition +
-_fmi3Get{VariableType} on outputs_ +
-|====
-
-_]_
-
-Function <<fmi3CallbackIntermediateUpdate>>::
+[[fmi3CallbackIntermediateUpdateSE,`fmi3CallbackIntermediateUpdate`]] Function <<fmi3CallbackIntermediateUpdate>>::
 <<fmi3CallbackIntermediateUpdate>> switches the FMU itself into the <<IntermediateUpdateMode>>.
 The callback may be called from concurrent tasks within <<fmi3ActivateModelPartition>>.
 

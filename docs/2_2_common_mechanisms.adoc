@@ -382,7 +382,7 @@ If an FMU defines min/max values, then the expected behavior of the FMU is that 
 
 --
 The FMU has an internal state consisting of all values that are needed to continue a simulation.
-This internal state consists especially of the values of the continuous-time states, iteration variables, <<parameter>> values, <<input>> values, delay buffers, file identifiers, and FMU internal status information.
+This internal state consists especially of the values of the continuous states, iteration variables, <<parameter>> values, <<input>> values, delay buffers, file identifiers, and FMU internal status information.
 With the functions of this section, the internal FMU state can be copied and the pointer to this copy is returned to the environment.
 The FMU state copy can be set as actual FMU state, in order to continue the simulation from it.
 
@@ -625,35 +625,43 @@ The importer calls <<fmi3GetClock>> to inquire the clock activation state.
 .4+|`input`
 |`constant`
 |[[constantClock,`constant`]]<<fmi3SetClock>> in <<EventMode>>,
+<<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
 <<fmi3GetInterval>> and <<fmi3GetShift>> in <<InitializationMode>>
 |clocked PI-controller with a defined constant interval
 
 |`fixed`
 |[[fixedClock,`fixed`]]<<fmi3SetClock>> in <<EventMode>>,
+<<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
 <<fmi3SetInterval>> in <<InitializationMode>>
 |clocked PI-controller with an adaptable interval
 
 |`calculated`
 |[[calculateClock,`calculated`]]<<fmi3SetClock>> in <<EventMode>>,
+<<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
 <<fmi3GetInterval>> and <<fmi3GetShift>> in <<InitializationMode>>
 |clocked PI-controller with interval defined by fixed parameter(s) of the FMU
 
 |`tunable`
 |[[tunableClock,`tunable`]]<<fmi3SetClock>> in <<EventMode>>,
+<<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
 <<fmi3GetShift>> in <<InitializationMode>>,
-<<fmi3GetInterval>> in <<EventMode>>
+<<fmi3GetInterval>> in <<EventMode>> and in <<ClockActivationMode>>
 |clocked PI-controller with interval defined by tunable parameter(s) of the FMU
 
 .2+|[[aperiodic]]aperiodic clock
 .2+|`input`
 |`changing`
 |[[changing,`changing`]]<<fmi3SetClock>> in <<EventMode>>,
-<<fmi3GetInterval>> in <<InitializationMode>> and in <<EventMode>> if and only if this clock ticked
+<<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
+<<fmi3GetInterval>> in <<InitializationMode>>,
+<<fmi3GetInterval>> in both <<EventMode>> and <<ClockActivationMode>> if and only if this clock ticked
 |simulation of the behavior of a control algorithm with variable execution time, generation of pulse sequences
 
 |`countdown`
 |[[countdown,`countdown`]]<<fmi3SetClock>> in <<EventMode>>,
-<<fmi3GetInterval>> in <<InitializationMode>> and in every <<EventMode>>
+<<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
+<<fmi3GetInterval>> in <<InitializationMode>> and in every <<EventMode>>,
+<<fmi3GetInterval>> in <<ClockActivationMode>> after every call to <<fmi3ActivateModelPartition>>
 |time-delayed actions after and event, for example, ignition signal some time after specific crank shaft angle
 
 .2+|triggered
@@ -661,13 +669,14 @@ The importer calls <<fmi3GetClock>> to inquire the clock activation state.
 |`input`
 |`triggered`
 |[[triggered,`triggered`]]<<fmi3SetClock>> in <<EventMode>>,
+<<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
 arguments <<clocksAboutToTick>> (<<fmi3DoStep>>) and <<clocksTicked>> (<<fmi3CallbackIntermediateUpdate>>)
 |triggered by a hardware interrupt of an embedded system, e.g. a control algorithm, triggered by a crankshaft angle
 
 |output clock
 |`output`
 |`triggered`
-|<<fmi3GetClock>> in <<EventMode>>,
+|<<fmi3GetClock>> in both <<EventMode>> and <<IntermediateUpdateMode>>,
 arguments <<clocksAboutToTick>> (<<fmi3DoStep>>) and <<clocksTicked>> (<<fmi3CallbackIntermediateUpdate>>),
 |crankshaft angle sensor ticking several times per revolution
 
@@ -676,7 +685,7 @@ arguments <<clocksAboutToTick>> (<<fmi3DoStep>>) and <<clocksTicked>> (<<fmi3Cal
 [[time-based-clocks,time-based clocks]]Time-based clocks::
 
 are in a sense predictable and help the importer to take these clock ticks into account a priori.
-All time-based clocks are defined to be input clocks because the importer calls <<fmi3SetClock>> on these clocks.
+All time-based clocks are defined to be input clocks because the importer calls <<fmi3SetClock>> or <<fmi3ActivateModelPartition>> on these clocks.
 The importer queries the FMU about when a time-based clock should be activated.
 The importer will then activate the clock by calling <<fmi3SetClock>> with `values == fmi3ClockActive`.
 +
@@ -739,7 +748,7 @@ The importer must use <<fmi3GetInterval>> and <<fmi3GetShift>> to retrieve the c
 
 Tunable periodic clocks::
 are time-base periodic clocks where the interval depends on <<tunable>> <<parameter, parameters>>.
-The importer must use <<fmi3GetInterval>> to retrieve the clock interval in <<EventMode>>, if any of the <<tunable>> <<parameter, parameters>> it depends on was changed.
+The importer must use <<fmi3GetInterval>> to retrieve the clock interval in <<EventMode>> or <<ClockActivationMode>>, if any of the <<tunable>> <<parameter, parameters>> it depends on was changed.
 <<shift>> may only depend on <<fixed>> <<parameter, parameters>>.
 The importer must use <<fmi3GetShift>> to retrieve the clock <<shift>> in <<InitializationMode>>.
 
@@ -769,12 +778,12 @@ Must be retrieved in <<InitializationMode>>.
 
 |latexmath:[\mathbf{T}_{interval, i} > 0, \qquad i = 1,2,3,{...}]
 |The time interval from the current <<clock>> tick to the next <<clock>> tick.
-Must be retrieved in <<EventMode>> if and only if the corresponding clock ticked.
+Must be retrieved in <<EventMode>> or <<ClockActivationMode>> if and only if the corresponding clock ticked.
 
 |===
 
 [[countdown-aperiodic-clocks,countdown aperiodic clocks]]Countdown aperiodic clocks::
-are time-based clocks where the next interval is not yet known right after the clock just ticked, forcing the importer to call <<fmi3GetInterval>> in every <<EventMode>>.
+are time-based clocks where the next interval is not yet known right after the clock just ticked, forcing the importer to call <<fmi3GetInterval>> in every <<EventMode>> and after every call to <<fmi3ActivateModelPartition>> in <<ClockActivationMode>>.
 The return argument <<qualifier>> of <<fmi3GetInterval>> is used to indicate if the next interval is already known.
 +
 The next <<clock>> activation at time instant latexmath:[t_i] is defined as: +
@@ -802,10 +811,10 @@ Triggered clocks::
 tick unpredictably.
 
 Triggered input clocks::
-are activated with <<fmi3SetClock>> by the importer in <<EventMode>>.
+are activated with <<fmi3SetClock>> by the importer in <<EventMode>>, or with <<fmi3ActivateModelPartition>> in <<ClockActivationMode>>.
 
 Triggered output clocks::
-are activated within the FMU and the importer must call <<fmi3GetClock>> in <<EventMode>>.
+are activated within the FMU and the importer must call <<fmi3GetClock>> in <<EventMode>> or in <<IntermediateUpdateMode>>.
 There are two mechanisms for an FMU to communicate to the importer that a triggered output clock is about to tick:
  * <<early-return,early return>> from a <<fmi3DoStep>> with <<clocksAboutToTick, `clocksAboutToTick == fmi3True`>>, and
  * calling <<fmi3CallbackIntermediateUpdate>> with <<clocksTicked, `clocksTicked == fmi3True`>>.
@@ -945,7 +954,7 @@ This function returns the number of <<dependencies>> for a given variable.
 * `nDependencies` points to the `size_t` variable that will receive the number of <<dependencies>>.
 
 [[fmi3GetVariableDependencies,`fmi3GetVariableDependencies`]]
-The actual <<dependencies>> (of type `fmi3DependencyKind`) can be retrieved by calling the function `fmi3GetVariableDependencies`:
+The actual <<dependencies>> (of type <<dependenciesKind>>) can be retrieved by calling the function <<fmi3GetVariableDependencies>>:
 
 [source, C]
 ----
@@ -974,7 +983,7 @@ The element indices start with 1.
 Using the element index 0 means all elements of the variable.
 (Note: If an array has more than one dimension the indices are serialized in the same order as defined for values in <<serialization-of_variables>>.)
 
-* `dependencyKinds` must point to a buffer of `fmi3DependencyKind` values of size `nDependencies` allocated by the calling environment.
+* `dependencyKinds` must point to a buffer of <<dependenciesKind>> values of size `nDependencies` allocated by the calling environment.
 It is filled in by this function with the enumeration value describing the dependency of this dependency entry.
 
 If this function is called before the <<fmi3ExitInitializationMode>> call, it returns the initial dependencies.
@@ -1000,12 +1009,12 @@ In every state, the general form of the FMU equations are:
 
 [latexmath]
 ++++
-\mathbf{v}_{\mathit{unknown}} = \mathbf{h}(\mathbf{v}_{\mathit{known}}, \mathbf{v}_{\mathit{rest}}),
+\mathbf{v}_{\mathit{unknown}} = \mathbf{f}(\mathbf{v}_{\mathit{known}}, \mathbf{v}_{\mathit{rest}}),
 ++++
 
 where
 
-* latexmath:[\mathbf{v}_{\mathit{unknonwn}}] is the vector of unknown floating point variables computed in the actual state:
+* latexmath:[\mathbf{v}_{\mathit{unknonwn}}] is the vector of unknown variables computed in the actual state:
 
 ** <<InitializationMode>>: The exposed unknowns listed as elements <<InitialUnknown>> in `<ModelStructure>` that have a floating point type.
 
@@ -1016,10 +1025,10 @@ where
 ** <<StepMode>> (Co-Simulation): The variables listed as elements <<Output>> of `<ModelStructure>` with a floating point type and <<variability>> = <<continuous>> or <<discrete>>.
 Each state derivative variable listed as elements <<StateDerivative>> in `<ModelStructure>`, if present.
 
-* latexmath:[\mathbf{v}_{\mathit{known}}] is the vector of known floating point <<input>> variables of function *h* that changes its value in the actual state.
+* latexmath:[\mathbf{v}_{\mathit{known}}] is the vector of known <<input>> variables of function *f* that changes its value in the actual state.
 Details about which variables are in latexmath:[\mathbf{v}_{\mathit{known}}] are given in the description of element <<dependencies>> in <<ModelStructure>>.
 
-* latexmath:[{\mathbf{v}_{\mathit{rest}}}] is the set of <<input>> variables of function *h* that either changes its value in the actual state but are non-floating point variables, or do not change their values in this state, but change their values in other states _[for example, discrete-time <<input,`inputs`>> in <<ContinuousTimeMode>>]_.
+* latexmath:[{\mathbf{v}_{\mathit{rest}}}] is the set of <<input>> variables of function *f* that either changes its value in the actual state, or do not change their values in this state, but change their values in other states _[for example, discrete-time <<input,`inputs`>> in <<ContinuousTimeMode>>]_.
 
 _[The variable relationships are different in different states._
 _For example, during <<ContinuousTimeMode>>, a continuous-time output y does not depend on discrete-time <<input,`inputs`>> (because they are held constant between events)._

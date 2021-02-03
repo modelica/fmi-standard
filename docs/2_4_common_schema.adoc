@@ -925,7 +925,7 @@ The algebraic relationship to the <<input,`inputs`>> can be defined via the <<de
 [[local,`local`]]
 `= local`: Local variables are: +
 
-* continuous-time <<state,`states`>> and their <<StateDerivative,`StateDerivative`pass:[s]>>, <<DiscreteTimeState,`DiscreteTimeState`pass:[s]>>, <<EventIndicator,`EventIndicator`pass:[s]>> or <<InitialUnknown,`InitialUnknown`pass:[s]>>.
+* continuous <<state,`states`>> and their <<StateDerivative,`StateDerivative`pass:[s]>>, <<DiscreteTimeState,`DiscreteTimeState`pass:[s]>>, <<EventIndicator,`EventIndicator`pass:[s]>> or <<InitialUnknown,`InitialUnknown`pass:[s]>>.
 These variables are listed in the `<fmiModelDescription><ModelStructure>`. +
 * [[localClock,`local clock`]] internal, intermediate variables or local clocks which can be read for debugging purposes and are not listed in the `<fmiModelDescription><ModelStructure>`.
 
@@ -1659,7 +1659,8 @@ latexmath:[{\dot{\mathbf{x}_c} := \mathbf{f}_{\mathit{der}}(\mathbf{x}_c, \mathb
 |`DiscreteTimeState`
 |
 [[DiscreteTimeState,`<DiscreteTimeState>`]]
-XXX // TODO add description, see #1287 on github.
+XXX // TODO: Add description, see #1287 on github. +
+XXX // TODO: This should likely be Locals (ask ZIrina), to allow dependency definitions for modelPartitions (to input clocks) for all local variables
 
 |`InitialUnknown`
 |
@@ -1716,7 +1717,6 @@ Elements <<Output>>, <<StateDerivative>>, <<DiscreteTimeState>> and <<InitialUnk
 |`valueReference`
 |The value reference of the unknown latexmath:[{v_{\mathit{unknown}}}].
 
-
 |`dependencies`
 |
 [[dependencies,`dependencies`]]
@@ -1726,24 +1726,24 @@ If present as empty list, the unknown depends on none of the knowns.
 Otherwise the unknown depends on the knowns defined by the given value references. +
 Knowns latexmath:[{\mathbf{v}_{\mathit{known}}}] in <<EventMode>> and <<ContinuousTimeMode>> (ME) and at communication points (CS and SE) for <<Output>> and <<StateDerivative>> elements:
 
-- inputs (variables with <<causality>> = <<input>>)
+* inputs (variables with <<causality>> = <<input>>),
 
-- continuous-time states
+* continuous states and discrete-time states,
 
-- <<independent>> variable (usually time; <<causality>> = <<independent>>).
+* parameters (variables with <<causality>> = <<parameter>>),
 
-_[<<parameter,`parameters`>> and <<tunable>> <<parameter,`parameters`>> must not be listed as knowns in this mode._
-_This may change in a future FMI version which implies the possibility to calculate derivatives with respect to parameters._
-_The list of dependencies may include input clocks (variables with <<causality>> = <<input>> and <<variability>> = <<clock>>)._
+* <<independent>> variable (usually time; <<causality>> = <<independent>>).
+
+_[The list of dependencies may include input clocks (variables with <<causality>> = <<input>> and <<variability>> = <<clock>>)._
 _If an <<outputClock>> depends on an <<inputClock>>, then clock ticks of the <<inputClock>> in <<EventMode>> may create <<outputClock>> ticks during this event handling.]_
 
 Knowns latexmath:[{\mathbf{v}_{\mathit{known}}}] in <<InitializationMode>> (for elements <<InitialUnknown>>):
 
-- inputs (variables with <<causality>> = <<input>>)
+* inputs (variables with <<causality>> = <<input>>),
 
-- variables with <<initial>> = <<exact>> _[for example, <<parameter,`parameters`>> or initial <<state,`states`>>]_
+* variables with <<initial>> = <<exact>>, _[for example, <<parameter,`parameters`>> or initial <<state,`states`>>]_
 
-- <<independent>> variable (usually time; <<causality>> = <<independent>>).
+* <<independent>> variable (usually time; <<causality>> = <<independent>>).
 
 For Co-Simulation, if the capability flag <<providesDirectionalDerivatives>> has a value of `false`, then <<dependencies>> does not list the dependency on continuous-time.
 In other words, the respective partial derivatives cannot be computed.
@@ -1752,22 +1752,22 @@ In other words, the respective partial derivatives cannot be computed.
 |
 [[dependenciesKind, `dependenciesKind`]]
 If <<dependenciesKind>> is present, <<dependencies>> must be present and must have the same number of list elements.
-If not present, it must be assumed that the unknown latexmath:[{v_{\mathit{unknow}}}}] depends on the knowns latexmath:[{\mathbf{v}_{\mathit{known}}}] without a particular structure.
-Otherwise, the corresponding known latexmath:[{v_{\mathit{known},i}}] enters the equation as:
+If not present, it must be assumed that the unknown latexmath:[{\mathbf{v}_{\mathit{unknow}}}] depends on the knowns latexmath:[{\mathbf{v}_{\mathit{known}}}] without a particular structure.
+Otherwise, the corresponding known latexmath:[{\mathbf{f}_{\mathit{known},i}}] enters the equation as:
 
-`= dependent`: no particular structure, latexmath:[{{h(..,\ v}_{\mathit{known},i}}],..)
+`= dependent`: no particular structure, latexmath:[{{\mathbf{f}(..,\ v}_{\mathit{known},i}}],..)
 
-Only for floating point type unknowns latexmath:[{v_{\mathit{unknown}}}]:
+Only for floating point type unknowns latexmath:[{\mathbf{v}_{\mathit{unknown}}}]:
 
-`=` <<constant>>: constant factor, latexmath:[{c \cdot v_{\mathit{known},i}}] where latexmath:[{c}] is an expression that is evaluated before <<fmi3EnterInitializationMode>> is called.
+`=` <<constant>>: constant factor, latexmath:[{c \cdot \mathbf{v}_{\mathit{known},i}}] where latexmath:[{c}] is an expression that is evaluated before <<fmi3EnterInitializationMode>> is called.
 
-Only for floating point type unknowns latexmath:[{v_{\mathit{unknown}}}] in Event and <<ContinuousTimeMode>> (ME) and at communication points (CS and SE), and not for <<InitialUnknown>> for <<InitializationMode>>:
+Only for floating point type unknowns latexmath:[{\mathbf{v}_{\mathit{unknown}}}] in Event and <<ContinuousTimeMode>> (ME) and at communication points (CS and SE), and not for <<InitialUnknown>> for <<InitializationMode>>:
 
-`=` <<fixed>>: fixed factor, latexmath:[{p \cdot v_{\mathit{known},i}}] where latexmath:[{p}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called.
+`=` <<fixed>>: fixed factor, latexmath:[{p \cdot \mathbf{v}_{\mathit{known},i}}] where latexmath:[{p}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called.
 
-`=` <<tunable>>: tunable factor, latexmath:[{p \cdot v_{\mathit{known},i}}] where latexmath:[{p}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called and in <<EventMode>> due to event handling (ME) or at a communication point (CS and SE)
+`=` <<tunable>>: tunable factor, latexmath:[{p \cdot \mathbf{v}_{\mathit{known},i}}] where latexmath:[{p}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called and in <<EventMode>> due to event handling (ME) or at a communication point (CS and SE)
 
-`=` <<discrete>>: discrete factor, latexmath:[{d \cdot v_{\mathit{known},i}}] where latexmath:[{d}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called and in <<EventMode>> due to an external or internal event or at a communication point (CS and SE).
+`=` <<discrete>>: discrete factor, latexmath:[{d \cdot \mathbf{v}_{\mathit{known},i}}] where latexmath:[{d}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called and in <<EventMode>> due to an external or internal event or at a communication point (CS and SE).
 |====
 
 _[Example 1:_
