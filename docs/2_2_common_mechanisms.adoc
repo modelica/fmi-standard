@@ -248,10 +248,11 @@ The standard header file as documented in this specification has version `"3.0"`
 ==== Advancing Time [[advancing-time]]
 
 This section highlights the differences of the concept of time (in general the independent variable) for the three different FMI types, ME, CS and SE.
+Depending on the instantiated FMI type, the importer is restricted in what functions it is allowed to call in order to drive the simulation.
 
 In Model Exchange, time is under the sole control of the importer and its integration algorithm.
 The model itself receives the current time to be used in its computation with <<fmi3SetTime>>.
-In fact, time is not necessarily advancing linearly as solvers might need to jump back and forth in time to localize events using zero-crossings of <<eventIndicator, event indicators>>.
+In fact, time is not necessarily always advancing as solvers might need to jump back and forth in time to localize events using zero-crossings of <<eventIndicator, event indicators>>.
 
 In Co-Simulation, time advances in (possibly variable) steps negotiated between the co-simulation algorithm of the importer and the FMU.
 The importer calls <<fmi3DoStep>> with the <<currentCommunicationPoint>> and a target <<communicationStepSize>> (required to be larger than 0.0).
@@ -262,8 +263,6 @@ The output argument <<lastSuccessfulTime>> of <<fmi3DoStep>> allows the FMU to s
 In Scheduled Execution, time has a more discrete form.
 The scheduler of the importer activates specific tasks according to the time of the importer.
 The time itself is communicated to the FMU as <<activationTime>> argument of <<fmi3ActivateModelPartition>>.
-
-Depending on the instantiated FMI type, the importer is restricted in what functions it is allowed to call in order to drive the simulation.
 
 ==== Variables [[fmu-variables]]
 
@@ -612,7 +611,6 @@ There is only one such <<clock>> type.
 We still refer to it as <<outputClock>> for simplicity.
 The importer calls <<fmi3GetClock>> to inquire the clock activation state.
 
-+
 .Overview of Clock Types.
 [[table-overview-clocks]]
 [cols="9,9,16,9,40,40",options="header"]
@@ -665,7 +663,7 @@ The importer calls <<fmi3GetClock>> to inquire the clock activation state.
 <<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
 <<fmi3GetInterval>> in <<InitializationMode>> and in every <<EventMode>>,
 <<fmi3GetInterval>> in <<ClockActivationMode>> after every call to <<fmi3ActivateModelPartition>>
-|time-delayed actions after and event, for example, ignition signal some time after specific crank shaft angle
+|time-delayed actions after an event, for example, ignition signal some time after specific crank shaft angle
 
 .2+|triggered
 |input clock
@@ -713,7 +711,7 @@ The mathematical descriptions of <<time-based-clocks>> will use the following no
 latexmath:[\mathbf{T}_{interval, i}] can be set with <<fmi3SetIntervalDecimal>> or retrieved with <<fmi3GetIntervalDecimal>> as floating point value, or as rational number using <<fmi3SetIntervalFraction>> or <<fmi3GetIntervalFraction>>: latexmath:[\mathit{intervalCounter} / \mathit{resolution}] (see <<resolution>>).
 
 |latexmath:[\mathbf{t}_\mathit{event}]
-|Current event time.
+|Current event time in <<EventMode>>, or the current time in <<ClockActivationMode>> in SE.
 
 |===
 
@@ -838,7 +836,7 @@ There are two mechanisms for an FMU to communicate to the importer that a trigge
 
 ===== Model Partitions and Clocked Variables [[clocked-variable]]
 
-A <<clock>> activates its specific model partition.
+A <<clock>> activates its specific <<model-partition>>.
 
 _[Such a model partition may represent a task or an interrupt service routine of an embedded system, or a discretized part of a plant model.]_
 
@@ -855,11 +853,11 @@ The association between <<clocked-variable,clocked variables>> and their <<clock
 
 ===== Scheduled Execution
 
-An external scheduler needs to know when a <<triggered>> <<inputClock>> depends on a <<triggered>> <<outputClock>> of the same FMU.
+An FMU may inform the external scheduler that a <<triggered>> <<inputClock>> depends on a <<triggered>> <<outputClock>> of the same FMU.
 When the <<outputClock>> ticks, the scheduler will trigger the corresponding <<inputClock>> according to all other scheduling constraints.
 The <<triggeredBy>> attribute of an <<inputClock>> defines such a relationship.
 
-In case more than one clock have to be activated at the same time instant, the scheduler needs a priority to define the activation sequence.
+In case more than one clock has to be activated at the same time instant, the scheduler needs a priority to define the activation sequence.
 This ordering is defined by the <<priority>> attributes of the <<inputClock>>.
 
 _[For real-time computation use cases, the priority information is used also for task preemption configurations._
@@ -945,7 +943,7 @@ Dependencies between variables of an FMU:
 * define the sparseness when computing <<partial-derivatives,partial derivatives>>, avoiding unnecessary calls to <<fmi3GetDirectionalDerivative>> and <<fmi3GetAdjointDerivative>>.
 * assign <<clocked-variable,clocked variables>> to <<clock,clocks>>.
 
-The dependencies are encoded in the <<modelDescription.xml>> with the element <<ModelStructure,`<ModelStructure>`>> up to <<valueReference>> resolution.
+The dependencies are encoded in the <<modelDescription.xml>> with the element <<ModelStructure,`<ModelStructure>`>> up to <<valueReference>> resolution, not individual elements of array variables.
 
 The variable dependency information in the XML description:
 
