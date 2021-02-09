@@ -1,339 +1,216 @@
-=== Application Programming Interface
+=== State Machine for Model Exchange [[state-machine-model-exchange]]
 
-This section contains the interface description to evaluate different model parts from a C program.
+The state machine in <<figure-model-exchange-state-machine>> defines the allowed calling sequences for FMI for Model Exchange.
 
-==== Providing Independent Variables and Re-initialization of Caching [[providing-independent-variables-and-re-initialization]]
+.Calling sequence of Model Exchange C functions.
+[#figure-model-exchange-state-machine]
+image::images/state-machine-model-exchange.svg[width=60%, align="center"]
 
-Depending on the situation, different variables need to be computed.
-In order to be efficient, it is important that the interface requires only the computation of variables that are needed in the present context.
-For example, during the iteration of an integrator step, only the state derivatives need to be computed, provided the <<output>> of a model is not connected.
-It might be that at the same time instant other variables are needed.
-For example, if an integrator step is completed, the event indicator functions need to be computed as well.
-If the state derivatives have already been computed at the present time instant, then it is important for efficiency that they are not newly computed in the call to compute the event indicator functions.
-This means, the state derivatives shall be reused from the previous call.
-This feature is called "caching of variables" in the sequel. +
-Caching requires that the model evaluation can detect when the input arguments, like time or states, have changed.
-This is achieved by setting them explicitly with a function call, since every such function call signals precisely a change of the corresponding variables.
-For this reason, this section contains functions to set the input arguments of the equation evaluation functions.
-This is unproblematic for time and states, but is more involved for <<parameter,`parameters`>> and <<input,`inputs`>>, since the latter may have different data types.
+Common states are defined in <<common-state-machine>>, such as super states <<FMUStateSetable>> and  <<Initialized>>, states <<Instantiated>>, <<ConfigurationMode>>, <<ReconfigurationMode>>, <<InitializationMode>>, <<EventMode>> and <<Terminated>>.
+
+==== State: Continuous-Time Mode [[ContinuousTimeMode,*Continuous-Time Mode*]]
+
+The <<ContinuousTimeMode>> is used to compute the values of all continuous-time variables between events by numerically solving ordinary differential and algebraic equations.
+All discrete-time variables are fixed during this phase and the corresponding discrete-time equations are not evaluated.
+
+In this state, the continuous-time equations are active and integrator steps are performed.
+
+[#table-math-model-exchange]
+[cols="7,3",options="header"]
+|====
+|Equations and Actions
+|Functions Influencing Equations
+
+|latexmath:[\mathbf{t} := (]<<time>>latexmath:[, 0)]
+|<<fmi3SetTime>>
+
+|Set continuous-time <<input,`inputs`>> latexmath:[\mathbf{u}_{c}(\mathbf{t})]
+|`fmi3Set{VariableType}`
+
+|Set continuous-time <<state,`states`>> latexmath:[\mathbf{x}_{c}(\mathbf{t})]
+|`fmi3SetFloat64`, <<fmi3SetContinuousStates>>
+
+a|latexmath:[(\mathbf{y}_{c}, \mathbf{\dot{x}}_c, \mathbf{z}, \mathbf{w}_{c}) := \mathbf{f}_{\mathit{cont}}(\mathbf{x}_{c}, {}^\bullet\mathbf{x}_{d}, \mathbf{u}_{c}, {}^\bullet\mathbf{u}_{d}, \mathbf{p}, {}^\bullet\mathbf{r}, {}^\bullet\mathbf{b}, \mathbf{t})]
+a|
+`fmi3Get{VariableType}`,
+<<fmi3GetDerivatives>>,
+<<fmi3GetEventIndicators>>
+
+a|
+* Evaluate model equations with valid values for the right-hand side: +
+latexmath:[(\mathbf{y}_{c}, \mathbf{\dot{x}}_c, \mathbf{z}, \mathbf{w}_{c}, \mathbf{b},]<<enterEventMode>>latexmath:[) := \mathbf{f}_{\mathit{comp}}(\mathbf{x}_{c}, {}^\bullet\mathbf{x}_{d}, \mathbf{u}_{c}, {}^\bullet\mathbf{u}_{d}, \mathbf{p}, {}^\bullet\mathbf{r}, {}^\bullet\mathbf{b}, \mathbf{t})]
+* Update previous values of <<buffers>>: latexmath:[{}^\bullet\mathbf{b}:=\mathbf{b}]
+
+|<<fmi3CompletedIntegratorStep>>
+
+a|
+* Evaluate latexmath:[\mathbf{f}_{\mathit{cont}}], if no `fmi3GetXXX` function was called
+* Deactivate continuous-time equations latexmath:[\mathbf{f}_{\mathit{cont}}]
+* Activate event equations latexmath:[\mathbf{f}_{\mathit{event}}]
+* latexmath:[\mathbf{t}:=(\mathbf{t}_\mathit{R}, 0)]
+|<<fmi3EnterEventMode>>
+
+|====
+
+Allowed Function Calls::
 
 [[fmi3SetTime,`fmi3SetTime`]]
+Function <<fmi3SetTime>>::
++
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=SetTime]
 ----
++
+Set a new value for the independent variable (typically a time instant).
++
+* [[time,`time`]] Argument `time` is the new value for the real part latexmath:[\mathbf{t}_\mathit{R}] of latexmath:[\mathbf{t} := (\mathbf{t}_\mathit{R}, 0)].
+It refers to the unit of the <<independent>> variable.
+<<time>> must be larger or equal to:
+** <<startTime>>,
+** the time at the second last call to <<fmi3CompletedIntegratorStep>>,
+** the time at the last call to <<fmi3EnterEventMode>>.
 
-Set a new value for the independent variable (typically a time instant) and re-initialize caching of variables that depend on time, provided the newly provided time value is different to the previously set time value (variables that depend solely on <<constant,`constants`>> or <<parameter,`parameters`>> need not to be newly computed in the sequel, but the previously computed values can be reused).
+Function `fmi3Set{VariableType}`::
+Only for variables with <<causality>> = <<input>> and <<variability>> = <<continuous>>.
+
+Functions <<get-and-set-variable-values,`fmi3Get{VariableType}`>>::
+Getting variables might trigger <<selectiv-computation,computations>>.
 
 [[fmi3SetContinuousStates,`fmi3SetContinuousStates`]]
+Function <<fmi3SetContinuousStates>>::
++
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=SetContinuousStates]
 ----
++
+Set new continuous state values.
++
+* Argument `continuousStates` contains the new values for each <<state,continuous state>>.
+The order of the `continuousStates` vector must be the same as the ordered list of elements <<StateDerivative>> in `<ModelStructure>`.
+Array variables are serialized as defined in <<serialization-of_variables>>.
+This order is also used in the arguments of the following functions: <<fmi3GetNominalsOfContinuousStates>>, <<fmi3GetContinuousStates>>, and <<fmi3GetDerivatives>>.
++
+* Argument `nContinuousStates` is the size of the `continuousStates` vector.
++
+_[<<fmi3Discard,`fmi3Status == fmi3Discard`>> should be returned if the FMU rejects any of the state values because they, for example, violate min/max value restrictions.]_
 
-Set a new (continuous) state vector and re-initialize caching of variables that depend on the <<state,`states`>>.
+Functions <<get-and-set-variable-values,`fmi3Get{VariableType}`>>::
+Getting variables might trigger <<selectiv-computation,computations>>.
 
-* Argument `nContinuousStates` is the length of
-
-* argument `continuousStates`
-
-and is provided for checking purposes (variables that depend solely on<<constant,`constants`>>, <<parameter,`parameters`>>, time, and <<input,`inputs`>> do not need to be newly computed in the sequel, but the previously computed values can be reused).
-Note that the continuous <<state,`states`>> might also be changed in *Event Mode*.
-Note that <<fmi3Discard,`fmi3Status == fmi3Discard`>> is possible.
-
-[source, C]
-----
-fmi3Status fmi3Set{VariableType}(..);
-----
-
-Set new values for <<parameter,`parameters`>>, <<start>> values and <<input,`inputs`>> and re-initialize caching of variables that depend on these variables.
-The details of these functions are defined in <<get-and-set-variable-values>>.
-
-_[The functions above have the slight drawback that values must always be copied._
-_For example, a call to_ <<fmi3SetContinuousStates>> _will provide the actual states in a vector, and this function has to copy the values in to the internal model data structure so that subsequent evaluation calls can utilize these values._
-_If this turns out to be an efficiency issue, a future release of FMI might provide additional functions to provide the address of a memory area where the variable values are present.]_
-
-==== Evaluation of Model Equations [[evaluation-of-model-equations]]
-
-This section contains the core functions to evaluate the model equations.
-Before one of these functions can be called, the appropriate functions from the previous section have to be used, to set the input arguments to the current model evaluation.
-
-[[fmi3EnterEventMode,`fmi3EnterEventMode`]]
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=EnterEventMode]
-----
-
-The model enters *Event Mode* from the *Continuous-Time Mode* and discrete-time equations may become active (and relations are not "frozen").
-
-The followings function arguments have to be given to inform the FMU why *Event Mode* was entered.
-
-_[These arguments are not mutually exclusive.]_
-
-* `stepEvent` signals with `fmi3True` that a <<step event>> occurred.
-
-* `rootsFound` is an array of length `nEventIndicators` that signals if a <<state event>> occurred.
-For `i = 1, ..., nEventIndicators, rootsFound[i-1] != 0` if the event indicator latexmath:[z_i] has a root, and `rootsFound[i-1] == 0` if not.
-For the components latexmath:[z_i] for which a root was found, the sign of `rootsFound[i-1]` indicates the direction of the zero-crossing.
-A value of `+1` indicates that latexmath:[z_i] is increasing, while a value of `-1` indicates a decreasing latexmath:[z_i].
-If `nEventIndicators == 0` the value of `rootsFound` is not defined.
-
-* `nEventIndicators` contains the number of event indicators (length of `rootsFound`) or `0` if the caller cannot provide this information.
-
-* `timeEvent` signals with `fmi3True` that a <<time event>> occurred.
-
-_[An <<input-event>> can be detected by the FMU by keeping track of the calls of `fmi3Set{VariableType}` in *Event Mode*.]_
-
-[[fmi3UpdateDiscreteStates,`fmi3UpdateDiscreteStates`]]
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=UpdateDiscreteStates]
-----
-
-The FMU is in *Event Mode*.
-If the super-dense time before a call to <<fmi3UpdateDiscreteStates>> was latexmath:[(t_R,t_I)], then the time instant after the call is latexmath:[(t_R,t_{I + 1})]. +
-
-* If output argument `discreteStatesNeedUpdate == fmi3True`, the FMU should stay in *Event Mode*, and the FMU requires to set new inputs to the FMU (`fmi3Set{VariableType}` on <<input,`inputs`>>) to compute and get the <<output,`outputs`>> (`fmi3Get{VariableType}` on <<output,`outputs`>>) and to call <<fmi3UpdateDiscreteStates>> again.
-
-[[terminateSimulation,`terminateSimulation`]]
-* If output argument `terminateSimulation == fmi3True`, the FMU signals it needs to terminate the simulation.
-
-* If argument `nominalsOfContinuousStatesChanged == fmi3True`, then the nominal values of the <<state,`states`>> have changed due to the function call and can be inquired with <<fmi3GetNominalsOfContinuousStates>>.
-
-* If argument `valuesOfContinuousStatesChanged == fmi3True`, then at least one element of the continuous state vector has changed its value due to the function call.
-
-[[state,`state`]]
-The new values of the <<state,`states`>> can be inquired with <<fmi3GetContinuousStates>> or individually for each state for which <<reinit, `reinit = true`>> by calling `fmi3GetFloat*`.
-If no element of the continuous state vector has changed its value, `valuesOfContinuousStatesChanged` must return `fmi3False`.
-_[If `fmi3True` would be returned in this case, an infinite event loop may occur.]_
-
-[[nextEventTimeDefined,`nextEventTimeDefined`]]
-* If argument `nextEventTimeDefined == fmi3True`, then the simulation shall integrate at most until `time` reaches value of
-
-[[nextEventTime,`nextEventTime`]]
-* argument <<nextEventTime>>, and shall call <<fmi3EnterEventMode>> at this time instant.
-If a (e.g. <<state event>>) event happens before <<nextEventTime>>, the definition of <<nextEventTime>> becomes obsolete.
-
-With multiple connected FMUs, the environment shall
-
-* call <<fmi3Terminate>>, if <<terminateSimulation,`terminateSimulation == fmi3True`>> is returned by at least one FMU,
-
-* call <<fmi3EnterContinuousTimeMode>> if all FMUs return `discreteStatesNeedUpdate == fmi3False`, and
-
-* stay in *Event Mode* otherwise.
-
-When the FMU is terminated, it is assumed that an appropriate message is printed by the <<logMessage>> function (see <<FMUStateSetable>>) to explain the reason for the termination.
-
-[[fmi3CompletedIntegratorStep,`fmi3CompletedIntegratorStep`]]
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=CompletedIntegratorStep]
-----
-
-This function must be called by the environment after every completed step of the integrator provided the capability flag `completedIntegratorStepNotNeeded = false`.
-Argument `noSetFMUStatePriorToCurrentPoint == fmi3True` if `fmi3SetFMUState` will no longer be called for time instants prior to current time in this simulation run [the FMU can use this flag to flush a result buffer]. +
-The function returns `enterEventMode` to signal to the environment that the environment shall call <<fmi3EnterEventMode>>, and it returns <<terminateSimulation>> to signal if the simulation shall be terminated.
-If `enterEventMode == fmi3False` and <<terminateSimulation,`terminateSimulation == fmi3False`>> the FMU stays in *Continuous-Time Mode* without the environment having to call <<fmi3EnterContinuousTimeMode>> again.
-When the integrator step is completed and the <<state,`states`>> are modified by the integrator afterwards (for example, correction by a BDF method),
-then <<fmi3SetContinuousStates>> has to be called with the updated states before <<fmi3CompletedIntegratorStep>> is called. +
-When the integrator step is completed and one or more event indicators change sign (with respect to the previously completed integrator step), then the integrator or the environment has to determine the time instant of the sign change that is closest to the previous completed step up to a certain precision (usually a small multiple of the machine epsilon).
-This is usually performed by an iteration where time is varied and <<state>> variables needed during the iteration are determined by interpolation.
-Function <<fmi3CompletedIntegratorStep>> must be called after this <<state event>> location procedure and not after the successful computation of the time step by the integration algorithm.
-The intended purpose of the function call is to indicate to the FMU that at this stage all <<input,`inputs`>> and <<state>> variables have valid (accepted) values.
-After <<fmi3CompletedIntegratorStep>> is called, it is still allowed to go back in time (calling <<fmi3SetTime>>) and inquire values of variables at previous time instants with `fmi3Get{VariableType}` _[for example, to determine values of non-state variables at output points]_.
-However, it is not allowed to go back in time over the previous <<fmi3CompletedIntegratorStep>> or the previous <<fmi3EnterEventMode>> call.
-
-_[This function might be used, for example, for the following purposes:_
-
-_Delays:_ +
-_All variables that are used in a "delay(..)" operator are stored in an appropriate buffer and the function returns with `enterEventMode == fmi3False`, and <<terminateSimulation,`terminateSimulation == fmi3False`>>._
-
-. _Dynamic state selection:_ +
-_It is checked whether the dynamically selected states are still numerically appropriate._
-_If yes, the function returns with `enterEventMode == fmi3False`  otherwise with `enterEventMode == fmi3True`._
-_In the latter case, <<fmi3EnterEventMode>> has to be called and the states are dynamically changed by a subsequent <<fmi3UpdateDiscreteStates>>._
-
-_Note that this function is not used to detect time or <<state event,`state events`>>, for example, by comparing event indicators of the previous with the current call of <<fmi3CompletedIntegratorStep>>._
-_These types of events are detected in the environment, and the environment has to call <<fmi3EnterEventMode>> independently in these cases, whether the return argument `enterEventMode` of <<fmi3CompletedIntegratorStep>> is `fmi3True` or `fmi3False`.]_
+Function <<fmi3GetContinuousStates>>::
+Returns the current continuous state vector.
 
 [[fmi3GetDerivatives,`fmi3GetDerivatives`]]
+Function <<fmi3GetDerivatives>>::
++
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=GetDerivatives]
 ----
++
+Returns the first-order derivatives with respect to the independent variable (usually time) of the continuous states.
++
+* Return argument `derivatives` contains the derivatives for each <<state,continuous state>> with the same convention for the order as defined for <<fmi3SetContinuousStates>>.
+
+* Argument `nContinuousStates` is the size of the `derivatives` vector.
++
+_[<<fmi3Discard,`fmi3Status == fmi3Discard`>> should be returned if the FMU was not able to compute the derivatives according to_ latexmath:[\mathbf{f}_{\mathit{cont}}] _because, for example, a numerical issue, such as division by zero, occurred.]_
 
 [[fmi3GetEventIndicators,`fmi3GetEventIndicators`]]
+Function <<fmi3GetEventIndicators>>::
++
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=GetEventIndicators]
 ----
++
+Returns the event indicators signaling <<state-event,state events>> by their sign changes.
++
+* [[eventIndicators,`eventIndicators`]]Return argument `eventIndicators` contains the values for the event indicators in the order defined by the ordered list of elements <<EventIndicator>>.
 
-Compute state derivatives (that is derivatives w.r.t. to the <<independent>> variable also taking into account its unit) and event indicators at the current instant of the <<independent>> variable _[typically: time]_ and for the current <<state,`states`>>.
-Note that <<fmi3Discard,`fmi3Status == fmi3Discard`>> is possible for both functions.
+* Argument `nEventIndicators` is the size of the `eventIndicators` vector.
 
-The <<derivative,`derivatives`>> are returned as a vector with `nContinuousStates` elements.
-The ordering of the elements of the `derivatives` vector must be identical to the ordering of the `continuousStates` vector (for example, `derivatives[2]` is the <<derivative>> of `continuousStates[2]`).
-The order of the `continuousStates` and `derivatives` vector must be the same as the ordered list of elements `<ModelStructure><Derivative>`.
-_[Array variables are serialized as defined in <<serialization-of_variables>>.]_
++
+_[<<fmi3Discard,`fmi3Status == fmi3Discard`>> should be returned if the FMU was not able to compute the event indicators according to_ latexmath:[\mathbf{f}_{\mathit{cont}}] _because, for example, a numerical issue, such as division by zero, occurred.]_
 
-The event indicators are returned as a vector with `nEventIndicators` elements.
-The order of the `eventIndicators` vector must be the same as the ordered list of elements `<ModelStructure><EventIndicator>`.
-_[Array variables are serialized as defined in <<serialization-of_variables>>.]_
-A <<state event>> is triggered when the domain of an event indicator changes from latexmath:[z_j > 0] to latexmath:[z_j \leq 0] or vice versa.
-The FMU must guarantee that at an event restart latexmath:[z_j \neq 0], for example, by shifting latexmath:[z_j] with a small value.
-Furthermore, latexmath:[z_j] should be scaled in the FMU with its nominal value (so all elements of the returned vector `eventIndicators` should be in the order of "one").
-
-[[fmi3GetContinuousStates,`fmi3GetContinuousStates`]]
+[[fmi3CompletedIntegratorStep,`fmi3CompletedIntegratorStep`]]
+Function <<fmi3CompletedIntegratorStep>>::
++
 [source, C]
 ----
-include::../headers/fmi3FunctionTypes.h[tags=GetContinuousStates]
+include::../headers/fmi3FunctionTypes.h[tags=CompletedIntegratorStep]
 ----
++
+This function is called after every completed step of the integrator provided the capability flag `completedIntegratorStepNotNeeded = false`.
+The importer must have set valid values for <<time>>, <<continuous>> <<input,`inputs`>> and <<continuous>> <<state,`states`>> prior to calling this function to evaluate latexmath:[\mathbf{f}_{\mathit{comp}}] with valid right-hand side data.
 
-Return the new continuous state vector `continuousStates`.
-The order of the states is also the same as the ordered list of elements `<ModelStructure><Derivative>`.
-_[Array variables are serialized as defined in <<serialization-of_variables>>.]
+* Argument `noSetFMUStatePriorToCurrentPoint == fmi3True` if <<fmi3SetFMUState>> will no longer be called for time instants prior to current time in this simulation run.
 
-[[fmi3GetNominalsOfContinuousStates,`fmi3GetNominalsOfContinuousStates`]]
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=GetNominalsOfContinuousStates]
-----
+* [[enterEventMode,`enterEventMode`]] The return argument `enterEventMode` signals that the importer must call <<fmi3EnterEventMode>> to handle a <<step-event>>.
 
-Return the nominal values of the continuous <<state,`states`>> with the some convention for the order as above.
-This function should always be called after calling function <<fmi3UpdateDiscreteStates>>, if `nominalsOfContinuousStatesChanged == fmi3True`, since then the nominal values of the continuous <<state,`states`>> have changed _[for example, because the association of the continuous <<state,`states`>> to variables has changed due to internal dynamic state selection]_.
-If the FMU does not have information about the nominal value of a continuous <<state>> i, a nominal value `nominals[i] == 1.0` should be returned.
-Note that it is required that `nominals[i] > 0.0`.
-_[Typically, the nominal values of the continuous <<state,`states`>> are used to compute the absolute tolerance required by the integrator._
-_Example:_ +
-`absoluteTolerance[i] = 0.01 * tolerance * nominals[i];` _]_
+* [[terminateSimulationCIS,`terminateSimulation`]] When <<terminateSimulationUDS,`terminateSimulation == fmi3True`>>, the FMU requests to stop the simulation and the importer must call <<fmi3Terminate>>.
 
-Note that simulation backward in time is only allowed over continuous time intervals.
-As soon as an event occurs (<<fmi3EnterEventMode>> was called), going back in time is forbidden, because <<fmi3EnterEventMode>> / <<fmi3UpdateDiscreteStates>> can only compute the next discrete state, not the previous one.
 
-Note that during *Initialization*, *Event Mode*, and *Continuous-Time Mode*, <<input>> variables can be set with `fmi3Set{VariableType}` and output variables can be retrieved with `fmi3Get{VariableType}` interchangeably according to the model structure defined under element `<ModelStructure>` in the XML file.
-_[For example, if one <<output>> `y1` depends on two <<input,`inputs`>> `u1`, `u2`, then these two <<input,`inputs`>> must be set, before `y1` can be retrieved._
-_If additionally an <<output>> `y2` depends on an <<input>> `u3`, then `u3` can be set and `y2` can be retrieved afterwards._
-_As a result, artificial or `real` algebraic loops over connected FMUs in any of these three modes can be handled by using appropriate numerical algorithms.]_
++
+When the importer has reached valid values for the current integration step and one or more event indicators change sign (with respect to the previously completed integrator step), then the importer has to determine the time instant of the sign change that is closest to the previously completed integrator step.
+This is usually performed by an iteration where time is varied and <<state>> variables are determined by interpolation.
+Function <<fmi3CompletedIntegratorStep>> must be called after this <<state event>> location procedure.
+The intended purpose of the function call is to indicate to the FMU that at this stage all <<input,`inputs`>> and <<state>> variables have valid (accepted) values.
+After <<fmi3CompletedIntegratorStep>> is called, it is still allowed to go back in time (calling <<fmi3SetTime>>) and inquire values of variables at previous time instants with `fmi3Get{VariableType}` _[for example, to determine values of non-state variables at output points]_.
+However, it is not allowed to go back in time over the previous <<fmi3CompletedIntegratorStep>> or the last <<fmi3EnterEventMode>> call.
 
-==== State Machine for Model Exchange [[state-machine-model-exchange]]
++
+_[This function might be used, for example, for the following purposes:_
+* _Update delay buffers_
+* _Detect <<step-event,step events>> and request handling of <<step-event,step events>> for <<dynamic-state-selection,dynamic state selection>>:_ +
+_The FMU checks whether the dynamically selected states are still numerically appropriate._
+_If not, the function returns with `enterEventMode == fmi3True`, the importer will call <<fmi3EnterEventMode>> and in <<EventMode>> the new mapping is computed by the FMU._
+_This new mapping might require a reinitialization of continuous states, which must be signaled to the importer by returning from <<fmi3UpdateDiscreteStates>> with <<valuesOfContinuousStatesChanged,`valuesOfContinuousStatesChanged == fmi3True`>>._
 
-Every implementation of the FMI must support calling sequences of the functions according to the state machine in <<figure-model-exchange-state-machine>>.
++
+_The function <<fmi3CompletedIntegratorStep>> is not used to detect <<time-event,time events>> or <<state-event,state events>>, for example, by comparing event indicators of the previous with the current call of <<fmi3CompletedIntegratorStep>>._
+_<<time-event,Time events>> and <<state-event,state events>> must be detected by the importer, which has to call <<fmi3EnterEventMode>> in these cases, even if the returning from <<fmi3CompletedIntegratorStep>> with `enterEventMode == fmi3False`.]_
 
-.Calling sequence of Model Exchange C functions.
-[#figure-model-exchange-state-machine]
-image::images/state-machine-model-exchange.svg[width=80%, align="center"]
-
-The objective of the state machine is to define the allowed calling sequences for functions of the FMI: Calling sequences not accepted by the state machine are not supported by the FMI.
-The behavior of an FMU is undefined for such a calling sequence.
-The state machine is given here as UML 2.0 state machine.
-If a transition is labelled with one or more function names (for example, <<fmi3EnterEventMode>>, <<fmi3EnterContinuousTimeMode>>), this means that the transition is taken if any of these functions is successfully called.
-Note that the FMU can always determine in which state it is since every state is entered by a particular function call (such as <<fmi3EnterEventMode>>), or a particular return value (such as <<fmi3Fatal>>).
-
-The transition conditions <<time event>>, and <<state event>> are defined in <<math-model-exchange>>.
-
-Each state of the state machine corresponds to a certain phase of a simulation.
-Common states are defined in <<common-state-machine>>, such as super states <<FMUStateSetable,*FMU State Setable*>> and  <<Initialized,*Initialized*>>, states <<Instantiated,*Instantiated*>>, <<ConfigurationMode,*Configuration Mode*>>, <<ReconfigurationMode,*Reconfiguration Mode*>>, <<InitializationMode,*Initialization Mode*>>, and <<Terminated,*Terminated*>>.
-
-===== State: Continuous-Time Mode
-
-In this state, the continuous-time model equations are active and integrator steps are performed.
-
-*Continuous-Time Mode* is entered from *Event Mode* with calling `fmi3EnterContinuousTimeMode`.
-
-Allowed Function Calls::
-
+[[fmi3EnterEventMode,`fmi3EnterEventMode`]]
 Function <<fmi3EnterEventMode>>::
-When an event is detected, the importer must call this function to move the FMU into *Event Mode*.
++
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=EnterEventMode]
+----
++
+This function changes the state to <<EventMode>>.
 
-Function <<fmi3EnterConfigurationMode>>::
-If the environment wants to change <<structuralParameter,`structural parameters`>>, it must move the FMU into *Reconfiguration Mode* using <<fmi3EnterConfigurationMode>>.
+* Model Exchange only: `stepEvent == fmi3True` signals that a <<step-event>> occurs.
+
+* Model Exchange only: `stateEvent == fmi3True` signals that a <<state-event>> occurs.
+
+* Model Exchange only: `rootsFound` is an array of length `nEventIndicators` that informs the FMU which event indicator has a root. +
+For `i = 0, ... nEventIndicators-1, rootsFound[i]` informs about event indicator latexmath:[{\mathbf{z}_{\mathit{i}}}]:
+** `rootsFound[i] == 0` no root,
+** `rootsFound[i] == +1` indicates the direction of the zero-crossing from negative to positive,
+** `rootsFound[i] == -1` indicates the direction of the zero-crossing from positive to negative.
+
++
+If `nEventIndicators == 0` the value of `rootsFound` is not defined.
+The order in the `rootsFound` array is the same as in <<eventIndicators>> of <<fmi3GetEventIndicators>>.
+
+* Model Exchange only: `nEventIndicators` contains the number of event indicators as deduced from the list <<EventIndicator>> or `0` if the importer cannot provide this information.
+
+* [[timeEvent,`timeEvent`]]`timeEvent == fmi3True` signals that this event is a <<time-event>> triggered by <<nextEventTime>> of <<fmi3UpdateDiscreteStates>>.
+
++
+_[An <<input-event>> can be detected by the FMU by keeping track of the calls of `fmi3Set{VariableType}` in <<EventMode>>.]_
 
 Function <<fmi3GetDirectionalDerivative>>::
 See <<fmi3GetDirectionalDerivative>>.
 
-==== Code Example
+Note that simulation backward in time is only allowed over continuous time intervals.
+As soon as an event occurs (<<fmi3EnterEventMode>> was called), going back in time is forbidden, because <<fmi3EnterEventMode>> / <<fmi3UpdateDiscreteStates>> can only compute the next discrete state, not the previous one.
 
-In the following example, the usage of the `fmi3XXX` functions is sketched in order to clarify the typical calling sequence of the functions in a simulation environment.
-Furthermore, it is assumed that one FMU is directly integrated in a simulation environment.
-If the FMU would be used inside another model, additional code is needed, especially initialization and event iteration has to be adapted.
-
-[source, c]
-----
-include::Reference-FMUs/examples/model_exchange.c[tags=ModelExchange]
-----
-
-In the code above errors are handled by the following definition:
-
-[source, C]
-----
-include::Reference-FMUs/examples/util.h[tags=CheckStatus]
-----
-
-==== Event Handling
-
-This concerns the following API calls: <<fmi3SetClock>>, <<fmi3GetClock>>, <<fmi3SetIntervalDecimal>>, <<fmi3SetIntervalFraction>>, <<fmi3GetIntervalDecimal>>, <<fmi3GetIntervalFraction>>
-
-A <<clock>> event is handled by the environment in the following way:
-
-_[TODO: Move this section into Common and there the Event Mode description.]_
-
-Enter event mode::
-The *Event Mode* is entered after initialization (call to function <<fmi3ExitInitializationMode>>) or during simulation with a call to the function <<fmi3EnterEventMode>>.
-The FMU activates <<outputClock,`output clocks`>>.
-
-Synchronize clock activation and intervals with the environment::
-
-_[TODO: remove usage of clock tick and use clock activation instead (Note to self: search also for "`clock` tick").]_
-
-The <<clock>> activation status can be inquired with the function <<fmi3GetClock>>.
-The environment calls the function <<fmi3SetClock>> for <<periodic>> <<clock,`clocks`>> and <<inputClock,`input clocks`>>.
-Moreover the current <<clock>> intervals may be inquired with the function <<fmi3GetIntervalDecimal>> or <<fmi3GetIntervalFraction>> and set with the function <<fmi3SetIntervalDecimal>> <<fmi3SetIntervalFraction>>.
-_[In the Modelica language this is the value returned by the interval() operator._
-_The initialization of intervals is needed for <<output>> and <<input>> sample times if a <<clock>> ticks the first time._
-_The FMU determines the interval itself at subsequent <<clock>> ticks.]_
-
-_[TODO: This should not be in Event Handling, merge into the other section for clock intervals with the table.]_
-
-_[TODO: Write here a few sentences about how clocks interact with the event iteration.]_
-
-Leave event mode::
-The function <<fmi3UpdateDiscreteStates>> evaluates the discrete-time equations, provided the corresponding <<clock>> is active and the discrete-time equations have not already been evaluated with calls to `fmi3Get{VariableType}` functions.
-Clocks are automatically deactivated by <<fmi3UpdateDiscreteStates>> and by <<fmi3Reset>>.
-_[This handling of discrete-time states and <<time event,`time events>> is forward compatible with FMI 2.0 for any model that could be treated with FMI 2.0 and is exported again using the new features._
-_The environment may ignore the new functions <<fmi3SetClock>>, <<fmi3GetClock>>, <<fmi3SetIntervalDecimal>>, <<fmi3SetIntervalFraction>>, <<fmi3GetIntervalDecimal>> and <<fmi3GetIntervalFraction>>._
-_The new functions are needed for FMUs with input sample times and to set discrete-time states in model-based control applications or if algebraic loops are present among discrete-time equations of multiple connected FMUs.]_
-
-==== Getting Number of Event Indicators
-
-The number of event indicators can change during simulation if it depends on one or more <<tunable>> <<structuralParameter,`structural parameters`>> and can be retrieved after instantiating the FMU by calling:
-
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=GetNumberOfEventIndicators]
-----
-
-This function returns the number of event indicators.
-The dependency of the number of event indicators on <<structuralParameter,`structural parameters`>> is implicitly given in the <<modelDescription.xml>> file.
-_[All event indicator variables are listed as elements `<EventIndicator>` in `<ModelStructure>`._
-_If the event indicator variable is an array variable and the `<Dimension>` element maps to a dependent variable, then this dependent variable is a dependency for the number of event indicators.]_
-If all <<structuralParameter,`structural parameters`>> are unchanged then this dependency information can be used to calculate the initial number of states just using information given in the XML file without the need to call this C-API function.
-
-* Argument `nEventIndicators` points to the `size_t` variable that will receive the number of event indicators.
-
-==== Getting Number of States
-
-The number of <<state,`states`>> can change during simulation if it depends on one or more <<tunable>> <<structuralParameter,`structural parameters`>> and can be retrieved after instantiating the FMU by calling:
-
-[source, C]
-----
-include::../headers/fmi3FunctionTypes.h[tags=GetNumberOfContinuousStates]
-----
-
-This function returns the number of <<state,`continuous states`>>.
-The dependency of the number of states on <<structuralParameter,`structural parameters`>> is implicitly given in the <<modelDescription.xml>> file.
-_[All state derivative variables are listed as elements `<Derivative>` in `<ModelStructure>`._
-_Each state derivative variable maps to the corresponding state variable by the `derivative` attribute._
-_If the state variable is an array variable and the `<Dimension>` element maps to a dependent variable, then this dependent variable is a dependency for the number of states.]_
-If all <<structuralParameter,`structural parameters`>> are unchanged then this dependency information can be used to calculate the initial number of states just using information given in the XML file without the need to call this C-API function.
-
-* Argument `nContinuousStates` points to the `size_t` variable that will receive the number of <<state,`states`>>.
+Note that during <<InitializationMode>>, <<EventMode>>, and <<ContinuousTimeMode>>, <<input>> variables can be set with `fmi3Set{VariableType}` and output variables can be retrieved with `fmi3Get{VariableType}` interchangeably according to the model structure defined under element `<ModelStructure>` in the XML file.
+_[For example, if one <<output>> `y1` depends on two <<input,`inputs`>> `u1`, `u2`, then these two <<input,`inputs`>> must be set, before `y1` can be retrieved._
+_If additionally an <<output>> `y2` depends on an <<input>> `u3`, then `u3` can be set and `y2` can be retrieved afterwards._
+_As a result, artificial or `real` algebraic loops over connected FMUs in any of these three modes can be handled by using appropriate numerical algorithms.]_

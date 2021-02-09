@@ -1,215 +1,32 @@
-=== Mathematical Description [[math-co-simulation]]
-
-
-This section contains a formal mathematical model of Co-Simulation FMUs.
-
-_[The following fundamental assumptions are made:_
-_The FMUs are seen by the co-simulation algorithm as purely sampled-data systems, with the exception, that the simulation algorithm can provide input data of a defined level of smoothness (with the flag <<recommendedIntermediateInputSmoothness>>) within a communication interval via the intermediate update mechanism (see <<IntermediateUpdateMode>>)._
-
-_Such a sampled-data system consists typically of a hybrid ODE that is integrated between communication points (known as "sampled access to time continuous systems") where internal events may occur and be handled, but events are not visible from the outside of the FMU._
-
-_Co-Simulation FMUs can also be used for real sampled-data systems (so a sampled discrete controller; the <<input,`inputs`>> and <<output,`outputs`>> could be of type `<Float{32|64}>`, `<[U]Int{8|16|32|64}>`, `<Boolean>`, `<String>`, `<Clock>` or `<Enumeration>` with <<variability>> = <<discrete>>.)_
-_However, in FMI 3.0, Co-Simulation (CS) and Scheduled Execution (SE) may likely be more suitable for this use-case._ +
-_And - at least without using intermediate update (see <<IntermediateUpdateMode>>), which is untypical for sampled data systems - with Co-Simulation there will always be a communication step delay for information going "through the FMU", so there cannot be an immediate reaction as in Co-Simulation (see <<fmi-for-co-simulation>>)._
-_]_
-
-The communication between the importer and a FMU takes place at
-
-- a discrete set of time instants, called communication points, where input variables may change in non-smooth or even non-continuous way.
-
-- intermediate time instances, where the simulation algorithm may get and set variables using <<IntermediateUpdateMode>>.
-
-When the transient simulation of the coupled system through Co-Simulation is completed, the sequence of evaluations is the following (here latexmath:[\mathbf{x} = {\lbrack \mathbf{x}_c; \mathbf{x}_d \rbrack}^T] is the combined vector of continuous-time and discrete-time states, and latexmath:[\mathbf{y} = {\lbrack \mathbf{y}_c; \mathbf{y}_d \rbrack}^T]) is the combined vector of continuous-time and discrete-time <<output,`outputs`>>):
-
-.Sequence of Co-Simulation evaluations
-[[equation-co-simulation-evaluations,Sequence of Co-Simulation evaluations]]
-[latexmath]
-++++
-\mathrm{\text{for}}\ i = 0, \cdots, n-1
-
-\begin{Bmatrix}
-
-\mathbf{x}_{i+1} = \Phi_i \left( \mathbf{x}_i,  \mathbf{u}(t_i), \mathbf{u}_u, \mathbf{p}_{\mathit{tune},i}, h_i  \right)
-
-\\
-
-\left( \left\{ \mathbf{y}^{(j)}_{i+1} \right\}_{j=0,\cdots,m_{odo}}, \mathbf{w}_{i+1}\right) = \Gamma_i \left( \mathbf{x}_i,  \mathbf{u}(t_i), \mathbf{u}_u, \mathbf{p}_{\mathit{tune},i}, h_i  \right)
-
-\end{Bmatrix}
-++++
-
-where latexmath:[\mathbf{\Phi}_i] and latexmath:[\mathbf{\Gamma}_i] define the system behavior for the time interval latexmath:[t_i < t \leq t_{i+1}],
-with latexmath:[t_i = t_0 + \sum_{k=0}^{i-1}h_k].
-
-_[For the part of the Co-Simulation FMU that is based on an ODE, a differential equation is solved between communication points:_
-
-[latexmath]
-++++
-\dot{\mathbf{x}}_c = \mathbf{\varphi} \left( \mathbf{x}_c(t), \mathbf{u}_c(t),
-\mathbf{p}_{\mathit{tune}} \right)
-++++
-
-_If the simulation algorithm implements an extrapolation method of order_ latexmath:[m_{extra}] _, it can provide intermediate inputs of the form:_
-
-
-[latexmath]
-++++
-\mathbf{u}_u(t)
-=
-\sum^{m_{\mathit{extra}}}_{j=0} \mathbf{C_{i, j}} \frac{(t-t_i)^j}{j!}
-++++
-_where_ latexmath:[\mathbf{C}_{i, j}] _are coefficients that can be equal to output derivatives of a connected FMU to realize a Taylor polynomial._
-
-_The function_ latexmath:[\mathbf{\varphi}]  _shall approximate the numerical integration of the underlying differential equation._
-
-_For example, for a stiff differential equation one could use a linear implicit Euler method (neglecting intermediate variable information):_
-
-[latexmath]
-++++
-\mathbf{\Phi}_i \left( \mathbf{x}_{c,i}, \left\{ \mathbf{u}_{c,i} \right\}_{j = 0,\cdots,m_{ido}},\ \mathbf{p}_{\mathit{tune},i}, t_i \right)
-=
-\mathbf{x}_{c,i} + \left( \mathbf{I} -
-h_i \frac{\partial \mathbf{\varphi}}{\partial \mathbf{x}_c} \right)^{- 1}  h_i \mathbf{\phi} \left( \mathbf{x}_{c,i}, \mathbf{u}_{c,i}, \mathbf{p}_{\mathit{tune},i} \right).
-++++
-
-_]_
-
-Definition <<equation-co-simulation-evaluations>> is consistent with the definition of co-simulation by <<KS00>>.
-
-* At the communication points, the simulation algorithm provides generalized inputs to the FMU:
-
-** The current <<input>> variables latexmath:[\mathbf{u}_i] of the FMU (in other words, the <<input>> variables of the model represented by the FMU, in the sense of system-level simulation).
-
-** Varying <<parameter,`parameters`>> latexmath:[\mathbf{p}_{\mathit{tune},i}], also known as <<tunable>> <<parameter,`parameters`>>.
-
-* The FMU provides generalized outputs to the simulation algorithm, which are:
-
-** The current output variables latexmath:[\mathbf{y}_{i+1}^{(0)}] of the FMU (same remark as above), along with some of their successive <<derivative,`derivatives`>> latexmath:[\left\{ \mathbf{y}_{i+1}^{(j)} \right\}_{j=1,\cdots,m_{odo}}] (in case of continuous-time variables).
-
-** Observation variables and <<calculated>> varying <<parameter,`parameters`>> latexmath:[\mathbf{w}_{i+1}], along with directional derivatives estimated at latexmath:[t = t_{i+1}] (in case of continuous-time variables).
-
-* At intermediate times latexmath:[t\in (t_i, t_{i+1})] the simulation algorithm and the FMU exchange values for latexmath:[\mathbf{u}_u(t)] and latexmath:[\mathbf{y}_u(t)].
-
-* Initialization: The FMU being a sampled-data system, its internal states (which can be either continuous-time or discrete-time) need to be initialized at latexmath:[t = t_0].
-This is performed through an auxiliary function _[this relationship is defined in the XML file under elements `<ModelStructure><InitialUnknown>`]_:
-
-Computing the solution of an FMI Co-Simulation model means to split the solution process in two phases and in every phase different equations and solution methods are utilized.
-The phases can be categorized according to the following modes:
-
-==== Initialization Mode
-This mode is used to compute at the start time latexmath:[t_0] initial values for all variables of the Co-Simulation FMU, especially for continuous-time <<state,`states`>> latexmath:[\mathbf{x}_c(t_0)], discrete-time states latexmath:[\mathbf{x}_d(t_0)], and for the previous discrete-time states latexmath:[^{\bullet}\mathbf{x}_d(t_0)] by utilizing extra equations only present in *Initialization Mode* _[for example, equations to set all <<derivative,`derivatives`>> to zero, that is, to initialize in steady-state]_.
-
-If the FMU is connected in loops with other models, iterations over the FMU equations are possible.
-Algebraic equations are solved in this mode.
-
-==== Step Mode
-This mode is used to compute the values of all continuous-time and discrete-time variables at communication points by numerically solving ordinary differential, algebraic and discrete equations.
-If the FMU is connected in loops with other models, no iterations over the FMU equations are possible for a given communication point.
-
-_[Note that for a Co-Simulation FMU, no super-dense time description is used at communication points.]_
-
-The equations are defined in <<table-math-co-simulation>> can be evaluated in the respective mode.
-The following color coding is used in the table:
-
-.Color coding for the following table.
-[[table-color-coding]]
-[cols="1,8"]
-|====
-|[silver]#*grey*# |If a variable in an argument list is marked in grey, then this variable is not changing in this mode and just the last calculated value from the previous mode is internally used.
-For an input argument it is not allowed to call `fmi3Set{VariableType}`.
-For an output argument, calling `fmi3Get{VariableType}` on such a variable returns always the same value in this mode.
-|[lime]#*green*# |Functions marked in [lime]#green# are special functions to enter or leave a mode.
-|[blue]#*blue*# |Equations and functions marked in [blue]#blue# define the actual computations to be performed in the respective mode.
-|====
-
-.Mathematical description of an FMU for Co-Simulation.
-[#table-math-co-simulation]
-[cols="2,1",options="header",]
-|====
-|Equations
-|FMI functions
-
-2+|Equations before *Initialization Mode* in state machine
-
-|Set variables and that have a start value (<<initial>> = <<exact>> or <<approx>>)
-|`fmi3Set{VariableType}`
-
-2+|Equations during *Initialization Mode* in state machine
-|[lime]#Enter *Initialization Mode* at (activate initialization, discrete-time and continuous-time equations). Set and set <<start>> value of <<independent>> variable latexmath:[t_{i=0}].#
-|[lime]#fmi3EnterInitializationMode#
-
-|Set variables latexmath:[v_{\mathit{initial=exact}}] and latexmath:[v_{\mathit{initial=approx}}] that have a <<start>> value with <<initial>> = <<exact>> (<<parameter,`parameters`>> latexmath:[\mathbf{p}] and continuous-time <<state,`states`>> with start values latexmath:[\mathbf{x}_{c,\mathit{initial=exact}}] are included here)
-|`fmi3Set{VariableType}`
-
-|Set continuous-time and discrete-time <<input,`inputs`>> latexmath:[\mathbf{u}_{c+d}(t_0)] of continuous-time <<input,`inputs`>> latexmath:[\mathbf{u}_{c}^{(j)}(t_0)]
-|`fmi3Set{VariableType}`
-
-|[blue]#latexmath:[\mathbf{v}_{\mathit{InitialUnknowns}} := \mathbf{f}_{\mathit{init}}(\mathbf{u}_c, \mathbf{u}_d, t_0, \mathbf{v}_{\mathit{initial=exact}})]#
-|`[blue]#fmi3Get{VariableType}#` +
-`[blue]#fmi3GetDirectionalDerivative#`
-
-|[lime]#Exit *Initialization Mode* (de-activate initialization equations)#
-|[lime]#fmi3ExitInitializationMode#
-
-2+|Equations during *Step Mode* in state machine
-
-|Set <<tunable>> <<parameter,`parameters`>> latexmath:[\mathbf{p}_{\mathit{tune}}] (and do not set other <<parameter,`parameters`>> latexmath:[\mathbf{p}_{\mathit{other}}])
-|`fmi3Set{VariableType}`
-
-|Set continuous-time and discrete-time <<input,`inputs`>> latexmath:[\mathbf{u}_{d+c}(t_i)]
-|`fmi3Set{VariableType}`
-
-|[blue]#latexmath:[\begin{matrix} t_{i+1} := t_i + h_i \\ (\mathbf{y}_{c+d}, \mathbf{y}_c^{(j)}, \mathbf{w}_{c+d}) := \mathbf{f}_{\mathit{doStep}}(\mathbf{u}_{c+d}, \mathbf{u}_u,  t_i, h_i, \mathbf{p}_{\mathit{tune}}, \mathbf{p}_{\mathit{other}})_{t_i} \\ t_i := t_{i+1} \end{matrix}]# +
-[blue]#latexmath:[\mathbf{f}_{\mathit{doStep}}] is also a function of the internal variables latexmath:[\mathbf{x}_c], latexmath:[^{\bullet}\mathbf{x}_d]#
-|`[blue]#fmi3DoStep#` +
-`[blue]#fmi3Get{VariableType}#` +
-`[blue]#fmi3GetOutputDerivatives#` +
-`[blue]#fmi3GetDirectionalDerivative#` +
-`[blue]#fmi3CallbackIntermediateUpdate#`
-
-
-2+|Equations during *Intermediate Update Mode* in state machine
-
-|Set continuous-time  <<input,`inputs`>> latexmath:[\mathbf{u}_u(t)]
-|`fmi3Set{VariableType}`
-
-
-| [blue]#latexmath:[\mathbf{y}_u(t):= \mathbf{f}_{\mathit{Intermediate}}(\mathbf{u}_{i, c+d}, \mathbf{u}_u (t \in [t_i, t_{i+1}) ),  t, h_i, \mathbf{p}_{\mathit{tune}}, \mathbf{p}_{\mathit{other}})]#
-|`[blue]#fmi3Get{VariableType}#`
-
-2+|*Data types*
-
-2+|latexmath:[t, t_i, h_i \in \mathbb{R}, \mathbf{p} \in \mathbb{P}^{np}, \mathbf{u}(t) \in \mathbb{P}^{nu}, \mathbf{y}(t) \in \mathbb{P}^{ny}, \mathbf{x}_c(t) \in \mathbb{R}^{nxc}, \mathbf{x}_d(t) \in \mathbb{P}^{nxd}, \mathbf{w}(t) \in \mathbb{P}^{nw}] +
-latexmath:[\mathbb{R}]: floating point variable, latexmath:[\mathbb{R}]: floating point or Boolean or integer or enumeration or string variable +
-latexmath:[\mathbf{f}_{\mathit{init}}, \mathbf{f}_{\mathit{out}} \in C^0] (=continuous functions with respect to all input parameters inside the respective mode).
-|====
-
-_[Remark - Calling Sequences:_
-
-_In <<table-math-co-simulation>>, for notational convenience in *Initialization Mode* one function call is defined to compute all output arguments from all inputs arguments._
-_In reality, every variable output argument is computed by one_ `fmi3Get{VariableType}` _function call._
-
-_In *Step Mode* the input arguments to_ latexmath:[\mathbf{f}_{\mathit{doStep}}] _are defined by calls to_ `fmi3Set{VariableType}` _functions._
-_The variables computed by_ latexmath:[\mathbf{f}_{\mathit{doStep}}] _can be inquired by_  `fmi3Get{VariableType}` _function calls.]_
+=== Concepts [[concepts-co-simulation]]
 
 ==== Smoothness, Continuity and Discontinuity [[smoothness]]
 
 Since inputs will be set at specific communication points by the importing tool, the FMU must make assumptions about the values between these communication points, including points of intermediate updates.
 
-Between communication points, even when intermediate updates are called, all changes must be assumed to be continuous.
-Changes to <<continuous>> variables are only considered discrete in *Event Mode*.
+Between communication points, even in <<IntermediateUpdateMode>>, all changes must be assumed to be continuous.
+Changes to <<continuous>> variables are only considered discrete in <<EventMode>>.
 
-<<continuous, Continuous>> inputs may change between communication points in case of <<intermediateVariableSetRequested, `intermediateVariableSetRequested == true`>>.
-These intermediate values are provided by the co-simulation algorithm for example by an extrapolation polynomial build with the output derivatives of connected FMUs (see <<recommendedIntermediateInputSmoothness>>).
-FMUs can signal with the optional flag <<recommendedIntermediateInputSmoothness>> of value latexmath:[k] to the co-simulation algorithm that best convergence rates can be achieved if the functions are of smoothness latexmath:[C^{k}([t_i, t_{i+1}\])], that is k-time continuously differentiable, with latexmath:[C^{0}] meaning continuous.
-It is therefore recommended that the function defined by the continuation of latexmath:[\mathbf{u}_{i, u}] with latexmath:[\mathbf{u}_{i+1, u}] is of smoothness latexmath:[C^{k}([t_i, t_{i+2}\])] with the optional flag <<recommendedIntermediateInputSmoothness>> of value latexmath:[k]. +
-_[This can increase simulation speed for higher order multi-step solvers that in this case do not have to reset at communication points.]_
-
-For <<continuous>> input variables, the importer must ensure that the input approximation function latexmath:[\mathbf{u}_u] is consistent with the values of the input variable (latexmath:[\mathbf{u}_u(t_{i+1})= \mathbf{u}(t_{i+1})]). +
-If a <<continuous>> input changes `discontinuously` (e.g. the actual input value deviates too much from the extrapolation polynomial), the co-simulation algorithm must raise an event (if supported) to indicate to the FMU a discontinuous change at an input.
-
-_[In the case of Co-Simulation without events, detecting discrete changes to continuous input variables (for instance to reset the integration algorithm) requires heuristics.]_
+If a <<continuous>> input changes discontinuously (e.g. the actual input value deviates too much from the extrapolation polynomial), the co-simulation algorithm must raise an event (if supported) to indicate to the FMU a discontinuous change at an <<continuous>> input.
+In the case of Co-Simulation without <<EventMode>> (see <<eventModeUsed>> and <<hasEventMode>>), detecting discrete changes to continuous input variables (for instance to reset the integration algorithm within the FMU) requires heuristics.
 
 <<discrete, `Discrete`>> inputs keep their values between communication points.
 Furthermore, changing <<discrete>> variables at communication points will likely require special handling within the FMU.
-Since the FMU itself can detect such changes, the co-simulation algorithm does not need to raise explicit events in such a case.
+Since the FMU itself can detect such changes, the co-simulation algorithm does not need to enter <<EventMode>> in such a case, but must do so, in case event iteration is required.
+
+==== Early Return [[early-return]]
+
+A Co-Simulation FMU is allowed to stop the execution of <<fmi3DoStep>> and return without reaching the predefined communication time, i.e. <<currentCommunicationPoint>> `+` <<communicationStepSize>>.
+This mechanism is called <<early-return,"early return">>.
+
+Early return can be used to shorten a communication step because of:
+
+* an event happened inside the FMU which influences its outputs non-continuously.
+* the importer requests the stop of the current communication step in <<IntermediateUpdateMode>>. _[E.g. the importer wants to stop a communication step because other parts of the simulation indicate the necessity.]_
+* the FMU requests an additional communication point. _[E.g. the FMU wants to communicate extrema of outputs or prevent model inconsistencies, like negative pressure values, caused by extrapolation of inputs.]_
+
+For details see <<earlyReturn>>.
+
+The following capability flags describe which features the FMU supports:  <<canReturnEarlyAfterIntermediateUpdate>> and <<hasEventMode>>.
+
+The argument <<earlyReturnAllowed>> of <<fmi3InstantiateCoSimulation>> signals to the FMU if the importer allows <<early-return,"early return">>.

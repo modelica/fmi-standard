@@ -8,9 +8,13 @@ Especially the ability to package control code into FMUs required some workaroun
 With FMI 3.0, virtual electronic control units (vECUs) can be exported as FMU in a more natural way.
 Concrete features to support vECU export are:
 
-* introduction of more integer types and a 32-bit float type (see <<fmi-description-schema>>) to communicate native controller types to the outside,
+* introduction of <<definitionOfTerminals,terminals>> to group variables semantically to ease connecting compatible signals,
 
-* introduction of two types of clocks to more exactly control timing of events and evaluation of model partitions across FMUs,
+* introduction of <<graphicalRepresentation,icons>> to define a graphical representation of the FMU and its terminals,
+
+* introduction of clocks to more exactly control timing of events and evaluation of model partitions across FMUs,
+
+* introduction of more integer types and a 32-bit float type (see <<fmi-description-schema>>) to communicate native controller types to the outside,
 
 * introduction of a binary type to support non-numeric data handling, such as complex sensor data interfaces,
 
@@ -27,7 +31,7 @@ New features, like
 
 * the <<IntermediateUpdateMode, intermediate update>>, or
 
-* <<connecting-clocked-fmus,clocked (synchronous) variables>>,
+* <<clocks,clocks and clocked variables>>,
 
 allow implementation of more robust and efficient co-simulation algorithms to handle the growing system simulations the community is facing.
 
@@ -43,26 +47,17 @@ Parallel to the new standard features, the FMI Design Community has worked on im
 
 While a number of desirable features had to be postponed, the resulting FMI 3.0 is certainly a significant step forward towards meeting the most important requirements of the system simulation community for the years to come.
 
+The asynchronous mode for FMUs known from FMI 2.0 has been removed since this mode was not supported by tools and it can be suitably replaced by Co-Simulation implementations that control the asynchronous computation of FMUs via separate tasks/threads created for each FMU.
+
 === Overview
 
 The FMI (Functional Mock-up Interface) defines an interface to be implemented by an executable called an FMU (Functional Mock-up Unit).
 The FMI functions are used (called) by a simulation environment to create one or more instances of the FMU and to simulate them, typically together with other models.
-An FMU may either have its own solvers (<<fmi-for-co-simulation,`FMI for Co-Simulation`>>), or require the simulation environment to perform numerical integration (FMI for Model Exchange, <<fmi-for-model-exchange>>), or require the simulation environment to trigger model partition execution (FMI for Scheduled Execution , <<fmi-for-scheduled-execution>>).
+An FMU may either have its own solvers (<<fmi-for-co-simulation,FMI for Co-Simulation>>), or require the simulation environment to perform numerical integration (<<fmi-for-model-exchange,FMI for Model Exchange>>), or require the simulation environment to trigger model partition execution (<<fmi-for-scheduled-execution,FMI for Scheduled Execution>>).
 The goal of this interface is that the calling of an FMU in a simulation environment is reasonably simple.
 This document does not describe how to generate an FMU from a modeling environment.
 
-The FMI for Model Exchange interface defines an interface to the model of a dynamic system described by differential, algebraic and discrete-time equations.
-It provides an interface to evaluate these equations as needed in different simulation environments, as well as in embedded control systems, with explicit or implicit integrators, and fixed or variable step-size.
-The interface is designed to allow the description of large models.
-
-The FMI for Co-Simulation interface are designed both for the coupling of simulation tools, and the coupling of subsystem models (which have been exported by their simulators together with its solvers as runnable code).
-The modular structure of these systems is exploited in all stages of the simulation process beginning with the separate model setup and pre-processing for the individual subsystems in different simulation tools.
-During time integration, the simulation is again performed independently for all subsystems restricting the data exchange between subsystems to discrete communication points.
-Finally, the visualization and post-processing of simulation data can be done individually for each subsystem in its own native simulation tool or by the simulation environment.
-
-_[TODO: add SE]_
-
-The interfaces have large parts in common, defined in <<fmi-common-concepts>>.
+The interfaces have large parts in common, defined in <<fmi-common-concepts,Common Concepts>>.
 In particular:
 
 * FMI Application Programming Interface \(C) -- <<general-mechanisms>> +
@@ -86,9 +81,7 @@ A schematic view of an FMU is shown in <<figure-data-flow>>.
 [#figure-data-flow]
 image::images/enclosing_model.svg[width=60%, align="center"]
 
-Publications for FMI are available from https://fmi-standard.org/literature/, especially <<BOA11>> and <<BOA12>>.
-
-A growing set of tools supporting FMI can be found here https://www.fmi-standard.org/tools.
+// TODO: synchronize and harmonize all these images
 
 ==== FMI for Model Exchange (ME)
 
@@ -99,36 +92,13 @@ That integration algorithm of the importing tool, usually a DAE solver, is respo
 
 ==== FMI for Co-Simulation (CS)
 
-The intention is to provide a standardized interface for coupling of simulation models or tools in a co-simulation environment.
-The data exchange between FMUs is largely restricted to discrete communication points.
-In the time between two communication points, the subsystems inside FMUs are solved independently by internal means.
-Co-simulation algorithms control the data exchange and the synchronization between FMUs (see <<fmi-for-co-simulation>>).
-
-Note that the co-simulation algorithm itself is not part of the FMI standard.
-
-The FMI 3.0 Co-Simulation interface adds a number of features compared to FMI 2.0 primarily to allow for more sophisticated co-simulation algorithms that aim at more efficient and robust simulations.
-Such additional features are raising events between communication points using synchronous and asynchronous clocks or sharing values between communication points to allow for improved interpolation of data.
-The co-simulation algorithm is responsible for:
-
-* advancing the overall simulation time,
-* triggering of periodic and aperiodic clocks, and
-* handling events (e.g. clock ticks) signaled by the FMUs.
-
-_[TODO: is this the definition that a clock tick is an event]_
-
-For FMI for Co-Simulation the co-simulation algorithm is shielded from how the subsystem FMU advances time internally.
-For example, FMUs containing ODEs and exposing either of the co-simulation interfaces require to include an ODE solver inside the FMU to internally advance time between the communication points.
-As another example, for FMU that represent controller code, an internal scheduling algorithm will trigger tasks at the correct time and order while advancing time to the next communication point or event.
+The FMI for Co-Simulation interface is designed both for the coupling of simulation tools, and the coupling of subsystem models, exported by their simulators together with its solvers as runnable code.
 (See <<fmi-for-co-simulation>>.)
 
 ==== FMI for Scheduled Execution (SE)
 
 The Scheduled Execution interface exposes individual model partitions (e.g. tasks of a control algorithm), to be called by a scheduler that acts as external scheduler.
-The scheduler is responsible for:
-
-* advancing the overall simulation time,
-* triggering of periodic and aperiodic clocks for all exposed model partitions of a set of FMUs, and
-* handling events (e.g. clock ticks) signaled by the FMUs.
+The scheduler is responsible for advancing the overall simulation time, triggering of time-based and triggered clocks for all exposed model partitions of a set of FMUs, and handling events (e.g. clock ticks) signaled by the FMUs.
 
 In many ways, the Scheduled Execution interface is the equivalent of the Model Exchange interface: the first externalizes a scheduling algorithm usually found in a controller algorithm and the second interface externalizes the ODE solver.
 (See <<fmi-for-scheduled-execution>>.)
@@ -179,10 +149,10 @@ image::images/fmi-types-overview.svg[width=50%, align="center"]
 |Signal output clock ticks: icon:check[] +
 Inputs/Outputs: icon:times[]
 
-|<<operation-on-clocks,Clocks>>
-|Only <<SynchronousClocks,Synchronous Clocks>>
-|Only <<SynchronousClocks,Synchronous Clocks>>
-|Only <<CommunicationPointClocks,Communication Point Clocks>>
+|<<clocks,Clocks>>
+|icon:check[]
+|icon:check[]
+|icon:check[]
 
 |Direct Feedthrough
 |icon:check[]
@@ -324,7 +294,16 @@ Properties that might be additionally needed for trajectory optimization, for ex
 
 * No explicit definition of the variable hierarchy in the XML file.
 
-=== Conventions Used in This Document
+=== How to Read This Document
+
+The core of this document is the description of the state machines and their states for each of the three FMI interface types, each interface type in its own section.
+Each state description starts with a brief state's purpose, then the mathematical model in a table linking formulas with C-API functions, and finally descriptions of all allowed functions for this particular state.
+
+To keep the descriptions brief and redundancy low, <<fmi-common-concepts,common concepts>> are described in the central section, including <<common-state-machine,common parts of the state machines>>, <<fmi-description-schema,XML schema>> and <<fmu-distribution,ZIP-file content description>>.
+
+The standard document is in HTML allowing heavy use of in-document links: all state names, function names, many function arguments, XML elements and attributes are links to definitions or descriptions.
+
+Conventions used in this document:
 
 * Non-normative text is given in square brackets in italic font: _[Especially examples are defined in this style.]_
 
@@ -332,4 +311,4 @@ Properties that might be additionally needed for trajectory optimization, for ex
 
 * `{VariableType}` is used as a placeholder for all variable type names without the `fmi3` prefix (e.g. `fmi3Get{VariableType}` stands for `fmi3GetUInt8`, `fmi3GetBoolean`, `fmi3GetFloat64`, etc.).
 
-* State machine states be formatted in *bold*.
+* State machine states are formatted in *bold*, e.g. <<InitializationMode>>.
