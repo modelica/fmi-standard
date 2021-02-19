@@ -661,8 +661,7 @@ The importer calls <<fmi3GetClock>> to inquire the clock activation state.
 |`countdown`
 |[[countdown,`countdown`]]<<fmi3SetClock>> in <<EventMode>>,
 <<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
-<<fmi3GetInterval>> in <<InitializationMode>> and in every <<EventMode>>,
-<<fmi3GetInterval>> in <<ClockActivationMode>> after every call to <<fmi3ActivateModelPartition>>
+<<fmi3GetInterval>> in <<InitializationMode>>, in every <<EventMode>>, and in <<IntermediateUpdateMode>>
 |time-delayed actions after an event, for example, ignition signal some time after specific crank shaft angle
 
 .2+|triggered
@@ -783,7 +782,7 @@ Must be retrieved in <<EventMode>> or <<ClockActivationMode>> if and only if the
 |===
 
 [[countdown-aperiodic-clocks,countdown aperiodic clocks]]Countdown aperiodic clocks::
-are time-based clocks where the next interval is not yet known right after the clock just ticked, forcing the importer to call <<fmi3GetInterval>> in every <<EventMode>> and after every call to <<fmi3ActivateModelPartition>> in <<ClockActivationMode>>.
+are time-based clocks where the next interval is not yet known right after the clock just ticked, forcing the importer to call <<fmi3GetInterval>> in every <<EventMode>> and in <<IntermediateUpdateMode>> if <<clocksTicked, `clocksTicked == fmi3True`>> in <<fmi3CallbackIntermediateUpdate>>.
 The return argument <<qualifier>> of <<fmi3GetInterval>> is used to indicate if the next interval is already known.
 +
 The next <<clock>> activation at time instant latexmath:[t_i] is defined as: +
@@ -819,7 +818,7 @@ There are two mechanisms for an FMU to communicate to the importer that a trigge
  * <<early-return,early return>> from a <<fmi3DoStep>> with <<clocksAboutToTick, `clocksAboutToTick == fmi3True`>>, and
  * calling <<fmi3CallbackIntermediateUpdate>> with <<clocksTicked, `clocksTicked == fmi3True`>>.
 
-_[Output clocks are intended to enable an FMU to provide a trigger to the outside world. Note, that if intended to activate model partitions or a clock of the same FMU calling <<fmi3GetInterval>> and evaluating the <<qualifier>> is recommended. An example is provided in <<example-scheduled-execution>>]_
+_[Output clocks are intended to enable an FMU to provide a trigger to the outside world e.g. to a <<triggered, `triggered input clock`>> of another FMU. Note, that if intended to activate model partitions or a clock of the same FMU calling <<fmi3GetInterval>> for a <<countdown, `countdown clock`>> and evaluating the <<qualifier>> is recommended. An example is provided in <<example-scheduled-execution>>]_
 
 ===== Model Partitions and Clocked Variables [[clocked-variable]]
 
@@ -840,12 +839,12 @@ The association between <<clocked-variable,clocked variables>> and their <<clock
 
 ===== Scheduled Execution
 
-During <<ClockActivationMode>> an FMU may inform the external scheduler that a model partition of the same FMU has to be scheduled. 
-To retrieve this information the importer calls <<fmi3GetInterval>> on all <<table-overview-clocks, `supporting clocks`>>.
-<<qualifier,`qualifier == fmi3NewInterval`>> indicates that the corresponding <<clock>> has to be scheduled.
-<<countdown, `countdown clocks`>> allow to define a delay for the trigger indicated by the returned <<interval>>.
+During <<ClockActivationMode>> after <<fmi3ActivateModelPartition>> has been called for a <<calculated>>, <<tunable>> or <<changing>> input clock the FMU provides the information on when the input clock will tick again i.e. when the corresponding model partition has to be scheduled the next time. 
+To retrieve this information the importer calls <<fmi3GetInterval>> on the clock.
+	
 The FMU may request to schedule another model partition even while currently a model partition is being executed.
-In this case the FMU calls <<fmi3CallbackIntermediateUpdate>> and allows the importer to call <<fmi3GetInterval>> and initiate the scheduling of a new task.
+<<countdown, `countdown clocks`>> can tick at any time during the execution of any model partition. The FMU signals their ticking by calling <<fmi3CallbackIntermediateUpdate>> with argument clocksTicked=True. The importer calls <<fmi3GetInterval>> for all countdown clocks. If a new interval is provided, the importer initiates the scheduling of the associated model partitions with the returned <<interval>>.
+<<qualifier,`qualifier == fmi3NewInterval`>> indicates that the corresponding <<clock>> has to be scheduled.
 
 In case more than one clock has to be activated at the same time instant, the scheduler needs a priority to define the activation sequence.
 This ordering is defined by the <<priority>> attributes of the <<inputClock>>.
