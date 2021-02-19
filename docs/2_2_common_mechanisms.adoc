@@ -306,8 +306,8 @@ _]_
 
 Restrictions for setting and getting of variables with certain types, causalities and variabilities are described in the state machine and state descriptions (see <<common-state-machine>>, <<state-machine-model-exchange>> in case of Model Exchange, <<state-machine-co-simulation>> for Co-Simulation and <<state-machine-scheduled-execution>> for Scheduled Execution).
 
-The value of a variable must be accessed with the respective `fmi3Get/Set{VariableType}` for the <<definition-of-model-variables,type defined>> in the <<modelDescription.xml>>.
-For variables of type <<figure-schema-Enumeration,`Enumeration`>>, `fmi3SetInt64` and `fmi3GetInt64` must be used.
+The value of a variable must be accessed with the respective <<get-and-set-variable-values,`fmi3Get/Set{VariableType}`>> (see also <<VariableType,`{VariableType}`>>) for the <<definition-of-model-variables,type defined>> in the <<modelDescription.xml>>.
+To set or inquire variables of type <<figure-schema-Enumeration,`Enumeration`>>, `fmi3SetInt64` and `fmi3GetInt64` must be used.
 
 The current values of the variables can be inquired with the following functions:
 
@@ -342,7 +342,7 @@ include::../headers/fmi3FunctionTypes.h[tags=Setters]
 
 * `nValues` provides the number of values in the `values` vector (and `sizes` vector, where applicable) which is only equal to `nValueReferences` if all <<valueReference>>pass:[s] point to scalar variables.
 
-With two exceptions, all variables that are allowed to be set with `fmi3Set{VariableType}` keep their respective values until the next call to `fmi3Set{VariableType}`.
+With two exceptions, all variables that are allowed to be set with <<get-and-set-variable-values,`fmi3Set{VariableType}`>> keep their respective values until the next call to <<get-and-set-variable-values,`fmi3Set{VariableType}`>>.
 Exceptions:
 
 . Variables of type clock must be deactivated during <<fmi3UpdateDiscreteStates>> by the FMU.
@@ -353,12 +353,12 @@ All strings passed as arguments to `fmi3SetString`, as well as all binary values
 ===== Handling min/max Range Violations [[min-max-violations]]
 
 <<min-max,Attributes `min` and `max`>> can be defined for variables of float, integer or enumeration types.
-The question is how `fmi3Set{VariableType}`, `fmi3Get{VariableType}` shall utilize this definition.
+The question is how <<get-and-set-variable-values,`fmi3Set{VariableType}`>>, <<get-and-set-variable-values,`fmi3Get{VariableType}`>> shall utilize this definition.
 There are several conflicting requirements: +
 Avoiding forbidden regions (for example, if `u` is an <<input>> and "sqrt(u)" is computed in the FMU, `min = 0` on `u` shall guarantee that only values of `u` in the allowed regions are provided).
 Numerical algorithms (solvers or optimizers) do not guarantee constraints.
 If a variable is outside of the bounds, the solver tries to bring it back into the bounds.
-As a consequence, calling `fmi3Get{VariableType}` during an iteration of such a solver might return values that are not in the defined min/max region.
+As a consequence, calling <<get-and-set-variable-values,`fmi3Get{VariableType}`>> during an iteration of such a solver might return values that are not in the defined min/max region.
 After the iteration is finalized, it is only guaranteed that a value is within its bounds up to a certain numerical precision. +
 During system creation and prototyping, checks on min/max should be performed.
 For maximum performance on production or real-time systems, these checks might not be performed. +
@@ -368,14 +368,14 @@ For example, dividing by an <<input>> (so the <<input>> should not be in a small
 
 If the FMU is generated so that min/max shall be checked whenever meaningful (for example, for debug purposes), then the following strategy should be used:
 
-If `fmi3Set{VariableType}` is called violating the min/max attribute settings of the corresponding variable, the following actions are performed:
+If <<get-and-set-variable-values,`fmi3Set{VariableType}`>> is called violating the min/max attribute settings of the corresponding variable, the following actions are performed:
 
 * On a <<fixed>> or <<tunable>> <<parameter>> <<fmi3Discard,`fmi3Status == fmi3Discard`>> is returned.
 * On an <<input>>, the FMU decides what to return (If no computation is possible, it could return <<fmi3Discard,`fmi3Status == fmi3Discard`>>, in other situations it may return <<fmi3Warning>> or <<fmi3Error>>, or <<fmi3OK>>, if it is uncritical).
 
-If an FMU defines min/max values for integer types and `<Enumeration>` variables (<<local>> and <<output>> variables), then the expected behavior of the FMU is that `fmi3Get{VariableType}` functions return values in the defined range.
+If an FMU defines min/max values for integer types and `<Enumeration>` variables (<<local>> and <<output>> variables), then the expected behavior of the FMU is that <<get-and-set-variable-values,`fmi3Get{VariableType}`>> functions return values in the defined range.
 
-If an FMU defines min/max values, then the expected behavior of the FMU is that `fmi3Get{VariableType}` returns values at the solution (accepted steps of the integrators) in the defined range with a certain uncertainty related to the tolerances of the numerical algorithms.]
+If an FMU defines min/max values, then the expected behavior of the FMU is that <<get-and-set-variable-values,`fmi3Get{VariableType}`>> returns values at the solution (accepted steps of the integrators) in the defined range with a certain uncertainty related to the tolerances of the numerical algorithms.]
 
 ===== Getting and Setting the Complete FMU State [[get-set-fmu-state]]
 
@@ -476,15 +476,15 @@ These functions are only supported by the FMU, if the optional capability flags 
 ==== Selective Computation of Variables [[selectiv-computation]]
 
 Depending on the phase of the solver algorithm, different FMU variables need to be computed.
-FMI allows selective retrieval of FMU variables with specific get functions (e.g. `fmi3Get{VariableType}`, <<fmi3GetEventIndicators>>, <<fmi3GetDerivatives>>).
+FMI allows selective retrieval of FMU variables with specific get functions (e.g. <<get-and-set-variable-values,`fmi3Get{VariableType}`>>, <<fmi3GetEventIndicators>>, <<fmi3GetDerivatives>>).
 This enables computation on demand with subsequent calls returning the same value until some set operation requires re-computation.
 
 For example, during the iteration of an integrator step, only the state derivatives need to be computed, provided the <<output>> of a model is not connected.
 When localizing <<state-event,state events>>, only the computation of event indicators might be required.
 
-Because specific set functions exist (`fmi3Set{VariableType}`, <<fmi3SetTime>>, <<fmi3SetContinuousStates>>), caching algorithms can be applied to reuse already computed values.
+Because specific set functions exist (<<get-and-set-variable-values,`fmi3Set{VariableType}`>>, <<fmi3SetTime>>, <<fmi3SetContinuousStates>>), caching algorithms can be applied to reuse already computed values.
 
-In all tables describing the mathematical model of a state (e.g. <<table-math-model-exchange,<<ContinuousTimeMode>>>>), for notational convenience one function (e.g. latexmath:[\mathbf{f}_\mathit{cont}]) is defined to compute all output arguments from all inputs arguments.
+In all tables describing the mathematical model of a state (e.g. <<table-math-model-exchange,ContinuousTimeMode>>), for notational convenience one function (e.g. latexmath:[\mathbf{f}_\mathit{cont}]) is defined to compute all output arguments from all inputs arguments.
 In an FMU, every output argument can be computed by its specific get function.
 Additionally, the output argument need not be a function of all input arguments, but of only a subset from it, as defined in the <<modelDescription.xml>> under `<ModelStructure>`.
 
@@ -506,7 +506,7 @@ _[Example: In <<figure-connected-fmus>> two different types of connected FMUs ar
 image::images/ArtificialAlgebraicLoops.svg[width=80%, align="center"]
 
 _Since different variables are computed in every mode and the causality of variable computation can be different in <<InitializationMode>> as with respect to the other two modes, it might be necessary to solve different kinds of loops in the different modes._
-_Artificial algebraic loops (see left diagram of <<figure-connected-fmus>>) can be solved in the modes <<InitializationMode>>, <<EventMode>>, and <<ContinuousTimeMode>> by an appropriate sequence of `fmi3Set{VariableType}` and `fmi3Get{VariableType}` calls:_
+_Artificial algebraic loops (see left diagram of <<figure-connected-fmus>>) can be solved in the modes <<InitializationMode>>, <<EventMode>>, and <<ContinuousTimeMode>> by an appropriate sequence of <<get-and-set-variable-values,`fmi3Set{VariableType}`>> and <<get-and-set-variable-values,`fmi3Get{VariableType}`>> calls:_
 
 [source, C]
 ----
@@ -525,7 +525,7 @@ fmi3GetFloat64(FMU2, &vr_FMU2_y1, 1, &FMU2_y2,  1);
 
 _In the right diagram, FMU3 and FMU4 are connected in such a way that a real algebraic loop is formed._
 _This loop might be solved iteratively, for example with a Newton method._
-_In every iteration the iteration variable FMU4_u is provided by the solver, and via the shown sequence of `fmi3Set{VariableType}` and `fmi3Get{VariableType}` calls, the residual is computed and used by the solver to determine a new value of FMU4_u._
+_In every iteration the iteration variable FMU4_u is provided by the solver, and via the shown sequence of <<get-and-set-variable-values,`fmi3Set{VariableType}`>> and <<get-and-set-variable-values,`fmi3Get{VariableType}`>> calls, the residual is computed and used by the solver to determine a new value of FMU4_u._
 _The iteration is terminated when the residual is small enough._
 _This method works for <<InitializationMode>>, <<EventMode>>, and <<ContinuousTimeMode>>._
 
@@ -548,7 +548,7 @@ while (!converged) { // start iteration
 }
 ----
 
-_In <<StepMode>>, <<fmi3SetFMUState>> is required to restore the FMU state before the next iteration with `fmi3Set{VariableType}`, <<fmi3DoStep>>, and `fmi3Get{VariableType}` is executed._
+_In <<StepMode>>, <<fmi3SetFMUState>> is required to restore the FMU state before the next iteration with <<get-and-set-variable-values,`fmi3Set{VariableType}`>>, <<fmi3DoStep>>, and <<get-and-set-variable-values,`fmi3Get{VariableType}`>> is executed._
 
 _In <<EventMode>>, the algorithms from above must be embedded in an event iteration:_
 [source, C]
@@ -845,7 +845,7 @@ Therefore, the value of a <<clocked-variable,clocked variable>> changes only whe
 Model partitions are initialized at their first clock activation, not in <<InitializationMode>>.
 
 In some clock semantics (e.g. <<MLS12>>), a clocked variable has a value only when its associated clock is active.
-However, `fmi3Get{VariableType}` will return the value computed at the last clock activation time.
+However, <<get-and-set-variable-values,`fmi3Get{VariableType}`>> will return the value computed at the last clock activation time.
 Before the first clock tick, clocked variables have their initial value.
 
 The association between <<clocked-variable,clocked variables>> and their <<clock,clocks>> is defined by the <<model-dependencies,model dependencies>>.
@@ -1265,7 +1265,7 @@ In FMI for Co-Simulation, the n-th <<derivative,`derivatives`>> with respect to 
 Whether the FMU is able to provide the <<derivative,`derivatives`>> of <<output,`outputs`>> is given by the unsigned integer capability flag <<maxOutputDerivativeOrder>> that represents the maximum order of the <<output>> <<derivative, `derivatives`>>.
 If the actual order is lower (because the order of integration algorithm is low), the retrieved value is 0.
 
-Restrictions on calling the function are the same as for the `fmi3Get{VariableType}` function for <<continuous>> <<output,`outputs`>>.
+Restrictions on calling the function are the same as for the <<get-and-set-variable-values,`fmi3Get{VariableType}`>> function for <<continuous>> <<output,`outputs`>>.
 The returned values correspond to the current time of the FMU.
 For example, after a successful call to <<fmi3DoStep>>, the returned values are related to the end of the communication step.
 
