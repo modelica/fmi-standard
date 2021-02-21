@@ -37,6 +37,8 @@ top = os.path.dirname(top)
 
 print("Linting *.adoc files in %s" % top)
 
+num_files = 0
+
 for root, _, files in os.walk(top):
 
     for file in files:
@@ -56,8 +58,9 @@ for root, _, files in os.walk(top):
                     print("line %d: %s" % (line + 1, message))
                     print()
 
+            num_files += 1
             total_problems += len(messages)
 
-print("Total problems found: %d" % total_problems)
+print("Total problems found in %d files: %d" % (num_files, total_problems))
 
 sys.exit(total_problems)
