@@ -1,4 +1,4 @@
-= NetworkingFMI: Network Communication and FMI 3.0
+= FMI4Networking: Network Communication and FMI 3.0
 :sectnums:
 :sectnumlevels: 5
 :toc: left
@@ -16,7 +16,7 @@
 :revnumber: 3.0
 :icons: font
 
-This layered standard defines on top of FMI 3.0, how to describe and simulate network signals as input and output variables of an FMU.
+This layered standard on top of FMI 3.0, defines how to describe and simulate network signals as input and output variables of an FMU.
 
 {empty} +
 {empty}
@@ -38,7 +38,7 @@ Virtualizing electronic control units (ECUs) and then simulating multiple such v
 Reusing standard network topology description formats, such as DBC, LDF, Fibex and ARXML, is required for efficiency and testing reasons alike.
 Files in these formats exist in validated form as part of the engineering process, tooling exists and these standards evolve to support new use cases.
 
-This document describes how to use standard description formats for automotive  topologies on top of the FMI 3.0 standard.
+This document describes how to use standard description formats for automotive topologies on top of the FMI 3.0 standard.
 vECUs following this standard can then easily be connected in importing tools because the network description files declare which signals have what properties and belong to what messages in which of the potentially multiple networks connected to each vECUs.
 The importer does not need to know about the special network semantics of certain signals of an FMU; it simply forwards signal values according to the FMI standard.
 
@@ -48,50 +48,34 @@ This document does not address potential open points of these description format
 This document does not address IP protection or copyright issues.
 These are technical and legal issues that need attention from standardization bodies of the referenced description formats, tool vendors and end users.
 
-=== The Basics of the Approach
+=== Basic Aspects of this Layered Standard
 
-The network description files will be placed into the `/extra/org.modelica.fmi.layered_BUS` folder.
+This standard supports two abstraction layers for network stacks:
 
-Bus signals will be input or output variables of the FMU with physical interpretation (units and numeric values) if possible, or binary types, if no numeric interpretation is possible.
-A clock variable defines when all the signals belonging to a network frame are sent.
-A frame may also have two variables associated with it representing the payload of the frame, or the entire frame.
+Signal abstraction layer (also "high cut"):: physical signals as exchanged between the application software (ASW) and the basic software (BSW), in AUTOSAR this would be the Virtual Function Bus, and
 
-FMI 3.0 terminals describe the structure of the network in more detail.
-There is one terminal for the entire network, grouping all frame terminals.
-There will be one terminal type for each network frame with the name `BusName::FrameName`.
-This frame terminal groups PDU terminals named `BusName::FrameName::PDUName`.
-PDU terminals group input or output variables of the FMU with their corresponding signal names `BusName::FrameName::PDUName::SignalName`.
-All variables of one terminal must be either input or output depending on the message being received or sent.
-This naming schema will create unique variable names as required by the FMI standard.
+Frame abstraction layer (also "low cut"):: binary signals which represent an entire frame/message as exchanged through the micro-controller abstraction layer (MCAL) between BSW and the hardware driver.
 
-`BusName::FrameName_CLOCK` is the clock variable for frame `BusName::FrameName`.
-This clock variable will be part of the terminal of the frame it belongs to.
-Optionally, it is allowed to also send the frame data as `fmi3Binary` variable `BusName::FrameName_DATA`.
-A further option allows to send the frame itself as `fmi3Binary` variable `BusName::FrameName_FRAME`, including start and stop sequence.
-All variables belonging to one frame are clocked variables.
-_[The output/input clock is active when a message is sent/received.]_
-Signal variables are generally of type `fmiFloat64`, except if conversion to physical requires other data types, e.g. `fmi3Int64`, or escapes numeric interpretation and is given the `fmi3Binary` type.
+Standardized network description files shipped with each FMU describe properties of signals and frames, such as signal units, frame composition and trigger conditions.
+These network description files are placed into the `/extra/org.modelica.fmi.networks4FMI` folder.
 
-_[For example, XCP over CAN or UDS over CAN will use all 64 bits in the CAN message payload, often defining a single "signal"._
-_While one could call this an `fmi3UInt64`, a numeric interpretation is clearly not intended and should use `fmi3Binary` instead.]_
+Both abstraction layers are nearly equivalent and can be translated into one another using the network description files.
+Depending on the export tool, one or the other abstraction layer is more "natural" to the FMU, while the other might have to be emulated with additional internal effort.
+Importers on the other hand rarely require both abstraction layers for system level compositions, because the engineering task defines the level of abstraction for the network communication.
+FMUs may choose to only support one abstraction layer providing only the corresponding variables.
 
-Each FMU defines hierarchically ordered FMI terminals: bus, frame and pdu.
-For each network connected to an FMU, there will be a bus terminal containing all frame terminals, which in turn reference all their PDUs, which in turn reference their signals.
-A bus terminal will specify which network node(s) this FMU embodies.
+If an FMU is capable of providing both abstraction layers (showing by the appropriate input and output variables), the FMU may allow the importer to indicate which abstraction layer it uses with the following fmi3Boolean, tunable, structural parameters:
+ * `BusName::SignalLayer_InputsUsed`:: indicates if the importer supplies the signal abstraction layer input variables values to the FMU
+ * `BusName::SignalLayer_OutputsUsed`:: indicates if the importer reads the output variables of the signal abstraction layer
+ * `BusName::FrameLayer_InputsUsed`:: indicates if the importer supplies the frame abstraction layer input variables values to the FMU
+ * `BusName::FrameLayer_OutputsUsed`:: indicates if the importer reads the output variables of the frame abstraction layer
 
-If an FMU specifies nodes that are both senders and receivers of a message, the receiver role will be removed from the FMU interface to allow the signals to have a unique role as output.
+Since network communication is not continuous but time discrete, FMI 3.0 clock variables are used to indicate when signals or frames are sent, which in turn are all clocked variables.
+
+System composition tools without knowledge of the network description format can semantically group signals using the FMI 3.0 terminal definition in the `modelDescription.xml` for each level of grouping: networks, frames and PDUs containing signals, also reflected in the variable names, e.g. `BusName::FrameName::PDUName::SignalName`.
+
+If an FMU specifies nodes that are both senders and receivers of a frame, the receiver role will be removed from the FMU interface to allow the signals to have a unique role as output.
 _[The FMI standard requires a variable to be either input or output.]_
-
-=== Comments about this Approach
-
-_[Splitting messages into signals to be transported as FMI variables cuts the communication stack at the top level (AUTOSAR: Virtual Function Bus)._
-_This is largely functionally equivalent to cutting below the communication stack where 64-bit messages are sent._
-_Given the presence of the ARXML or DBC description formats, one can translate one cut layer into the other._
-_Primarily exchanging signals as chosen here simplifies interaction with plant models and is intentionally kept simple._
-_Optionally, the message data can be transported as well for each network frame to eliminate the need for reconstruction of the message data from the signal values allowing for use cases that focus on the Basic Software._
-_Sending a binary frame object allows for very low level implementation validation._
-_Forcing the variables into a naming schema will allow simpler connection of FMUs with other simulation artifacts not aware of this layered standard._
-_The naming schema proposed here is already in use with MCD tools when measuring into networks.]_
 
 == Details
 
