@@ -94,6 +94,49 @@ This standard does not support composing one network architecture from multiple 
 
 It is recommended to use ARXML over DBC files for CAN whenever possible, because the DBC standard lacks some key message properties that were added only later using non-standard extensions with different dialects in use.
 
+=== Variables
+
+==== Signal Variables
+
+Each network signal must be listed as `<TerminalMemberVariable>` of its corresponding PDU terminal.
+
+Attribute definitions::
+ * `variableName` refers to the input or output variable name of the FMU and to enforce uniqueness is built as follows: `BusName::FrameName::PDUName::SignalName`.
+ * `memberName` is the `SignalName` as given in the network description file.
+ * `variableKind` is `signal_physical` for all variables that represent physical (numeric) variables.
+   For variables of type `fmi3Binary` the `variableKind` is set to `signal_binary`.
+
+In case multiplexed signals are present in a message: all signals are present, but only the active signal according to the multiplex switch signal contains a valid value, all inactive values must be ignored _[those values could even be outside their specified min-max range without fault]_.
+
+==== Frame Clock Variable [[ClockVariable]]
+
+// TODO check after clocks are fixed
+
+In order to use FMU input and output variables as transport layer for networks, aperiodic clock variables are used.
+Such a clock is activated by the sender to indicate the transmission of the corresponding frame.
+Each frame `BusName::FrameName` has its own dedicated clock variable named `BusName::FrameName_CLOCK`.
+All clocked variables triggered by this clock belonging to the same frame are then valid and can be read by the recipients of this frame.
+The value of the clocked variable must be a frame counter modulus 1024.
+
+_[Using a frame counter allows recipients to detect dropped messages._
+_These clocks must be aperiodic clocks to allow for non-ideal network communication patterns.]_
+
+==== Frame Payload Variable [[PayloadVariable]]
+
+There can be an optional `fmi3Binary` variable representing the payload of the frame.
+For a frame `BusName::FrameName` the name of the payload variable is `BusName::FrameName_PAYLOAD`.
+
+If one output frame has such a binary representation of the frame payload, all output frames must have such a binary representation of their payload.
+Any of the input frames may have such a binary representation of the frame payload as input variable.
+
+==== Frame Variable [[FrameVariable]]
+
+There can be an optional `fmi3Binary` variable representing the entire frame, from and including "Start of Frame" until and including "End of Frame".
+For network frame `BusName::FrameName`, the name of the network-frame variable is `BusName::FrameName_FRAME`.
+
+If one output frame has such a binary representation of the entire frame, all output frames must have such a binary representation of the frame.
+Any of the input frames may have such a binary representation of the entire frame as input variable.
+
 === Terminal Definitions
 
 ==== Bus Terminal
@@ -161,49 +204,6 @@ Element definitions::
  * There must be one `<TerminalMemberVariable>` per signal of this PDU.
 
 All `<TerminalMemberVariables>` must have the same type of either input or output, including the clock.
-
-=== Variables
-
-==== Signal Variables
-
-Each network signal must be listed as `<TerminalMemberVariable>` of its corresponding PDU terminal.
-
-Attribute definitions::
- * `variableName` refers to the input or output variable name of the FMU and to enforce uniqueness is built as follows: `BusName::FrameName::PDUName::SignalName`.
- * `memberName` is the `SignalName` as given in the network description file.
- * `variableKind` is `signal_physical` for all variables that represent physical (numeric) variables.
-   For variables of type `fmi3Binary` the `variableKind` is set to `signal_binary`.
-
-In case multiplexed signals are present in a message: all signals are present, but only the active signal according to the multiplex switch signal contains a valid value, all inactive values must be ignored _[those values could even be outside their specified min-max range without fault]_.
-
-==== Frame Clock Variable [[ClockVariable]]
-
-// TODO check after clocks are fixed
-
-In order to use FMU input and output variables as transport layer for networks, aperiodic clock variables are used.
-Such a clock is activated by the sender to indicate the transmission of the corresponding frame.
-Each frame `BusName::FrameName` has its own dedicated clock variable named `BusName::FrameName_CLOCK`.
-All clocked variables triggered by this clock belonging to the same frame are then valid and can be read by the recipients of this frame.
-The value of the clocked variable must be a frame counter modulus 1024.
-
-_[Using a frame counter allows recipients to detect dropped messages._
-_These clocks must be aperiodic clocks to allow for non-ideal network communication patterns.]_
-
-==== Frame Payload Variable [[PayloadVariable]]
-
-There can be an optional `fmi3Binary` variable representing the payload of the frame.
-For a frame `BusName::FrameName` the name of the payload variable is `BusName::FrameName_PAYLOAD`.
-
-If one output frame has such a binary representation of the frame payload, all output frames must have such a binary representation of their payload.
-Any of the input frames may have such a binary representation of the frame payload as input variable.
-
-==== Frame Variable [[FrameVariable]]
-
-There can be an optional `fmi3Binary` variable representing the entire frame, from and including "Start of Frame" until and including "End of Frame".
-For network frame `BusName::FrameName`, the name of the network-frame variable is `BusName::FrameName_FRAME`.
-
-If one output frame has such a binary representation of the entire frame, all output frames must have such a binary representation of the frame.
-Any of the input frames may have such a binary representation of the entire frame as input variable.
 
 === Known Limitations of this Standard
 
