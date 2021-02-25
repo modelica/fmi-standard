@@ -162,9 +162,12 @@ Element definitions::
  * There must be no `<TerminalStreamMemberVariable>` element.
  * There must be one `<Terminal>` element per PDU of this frame.
  * There must be one `<TerminalMemberVariable>` for the clock this frame is connected to.
-   This variable is composed as <<ClockVariable,`BusName::FrameName_CLOCK`>>, e.g. `POWERTRAIN::tcuSensors_CLOCK`.
- * Furthermore, there can be an optional variable of type `fmi3Binary` that represents the entire frame, including `Start-of-Frame` and `End-of-Frame`.
-   This variable is composed as <<FrameVariable,`BusName::FrameName_FRAME`>>, e.g. `POWERTRAIN::tcuSensors_FRAME`.
+   The name of this variable is composed as <<ClockVariable,`BusName::FrameName_CLOCK`>>, e.g. `POWERTRAIN::tcuSensors_CLOCK`.
+ * Furthermore, there can be a variable of type `fmi3Binary` that represents the entire frame, including `Start-of-Frame` and `End-of-Frame`.
+   The name of this variable is composed as <<FrameVariable,`BusName::FrameName_FRAME`>>, e.g. `POWERTRAIN::tcuSensors_FRAME`.
+   This variable represents the frame abstraction layer ("low cut").
+
+Both <<TerminalMemberVariables>> must have the same causality of either input or output, all <<PDUTerminal,PDU Terminals>> included here must reference <<TerminalMemberVariable>> with the same causality.
 
 ==== PDU Terminal [[PDUterminal,PDU Terminal]]
 
@@ -179,22 +182,26 @@ Attribute definitions::
 Element definitions::
  * There must be no `<TerminalStreamMemberVariable>` element.
  * There must be no `<Terminal>` element.
- * There must be one `<TerminalMemberVariable>` per signal of this PDU.
+ * There must be one `<TerminalMemberVariable>` per <<TerminalMemberVariable,signal>> of this PDU.
 
-All `<TerminalMemberVariables>` must have the same type of either input or output, including the clock.
+All <<TerminalMemberVariables>> must have the same causality of either input or output.
 
 For network types not natively referencing a "PDU", like CAN, a synthetic PDU with the same name as its frame is inserted.
 
-==== Terminal Member Variable [[TerminalMemberVariable,Terminal Member Variable]]
+==== Terminal Member Variable for Signals [[TerminalMemberVariable,Terminal Member Variable]]
 
 Attribute definitions::
  * `variableName` refers to the input or output variable name of the FMU and to enforce uniqueness is built as follows: `BusName::FrameName::PDUName::SignalName`, e.g. `POWERTRAIN::tcuSensors::tcuSensors::vCar`.
+    These variables represent the signal abstraction layer ("high cut").
  * `memberName` is the `SignalName` as given in the network description file, e.g. `vCar`.
  * `variableKind` is `signal`.
 
 === Example [[Example,Example]]
 
 The following excerpts from files are used throughout this document as examples.
+
+The partial DBC file here lists merely the CAN message (frame) structure.
+Signal trigger conditions are not included because they have no bearing on this standard.
 
 .Example POWERTRAIN.dbc file
 [#POWERTRAIN.dbc]
@@ -217,6 +224,8 @@ BO_ 512 ecuState: 4 ECU
  SG_ radiatorTemp : 18|9@1- (2,50)  [-50|150] "Grad C" TCU
 ...
 ----
+
+The `modelDescription.xml` excerpt listed below shows which variables would exist for the `POWERTRAIN.dbc` shown above.
 
 .Example modelDescription.xml for ECU node
 [#modelDescription.xml]
@@ -242,6 +251,10 @@ BO_ 512 ecuState: 4 ECU
   <Clock   name="POWERTRAIN::ecuState_CLOCK"                   valueReference="1014" causality="output" variability="clock" interval="triggered"/>
 </ModelVariables>
 ----
+
+// TODO add ModelDependency structure above
+
+The following file shows the `<Terminal>` definition representing the network and frame structure defined with `POWERTRAIN.dbc` above.
 
 .Example terminalsAndIcons.xml file
 [#terminalsAndIcon.xml]
@@ -306,3 +319,8 @@ Such an ideal network differs from physical networks in the following ways:
 
  * Network transmission errors: electrical errors which cause failed frame transmission.
    Here no such transmission errors can occur, unless explicitly added into the simulation.
+
+ * Network protocols allow frames to be sent from more than one node.
+   Here this is also possible, with output variables for frames (and their signals) that are sent by more than one FMU.
+   This requires the importer to handle the case when multiple source FMUs are sending the same frame.
+   Importers must know how to handle this, just like the must know how to handle flow variables according to Kirchhoff´s law.
