@@ -128,16 +128,14 @@ All clocked variables triggered by this clock belonging to the same frame are th
 
 ==== Bus Terminal [[BUSterminal,Bus Terminal]]
 
-Each network connected to the FMU must be described by a bus terminal named `BusName` in `icons/terminalsAndIcons.xml` as a `<Terminal>` element of `<fmiTerminalsAndIcons><Terminals>` that wraps all frame terminals.
+Each network connected to the FMU must be described by a bus terminal named `BusName` in `icons/terminalsAndIcons.xml` as a `<Terminal>` element of `<fmiTerminalsAndIcons><Terminals>` that wraps all <<FrameTerminals,frame terminals>>.
 The network name must match the root name of its description file
 _[e.g. `Powertrain`, if the file is `/extra/org.modelica.fmi.layered_BUS/Powertrain.dbc`]_.
-
-// TODO: EXAMPLE here
 
 Attribute definitions::
  * `terminalKind` must be set to `bus`.
  * `matchingRule` must be set to `bus`.
- * `name` is the network name, e.g. `Powertrain`, see example and constraints above.
+ * `name` is the network name, e.g. `POWERTRAIN`, see example and constraints above.
 
 Element definitions::
  * There must be no `<TerminalMemberVariable>` element.
@@ -149,11 +147,9 @@ Annotation element::
 If the combination of nodes specified for this FMU turns a message and its signals into both input and output because sending and receiving nodes are specified, only the sending (output) role will be defined in the FMU interface.
 Receiving messages must then be handled internal to the FMU.
 
-// TODO: how would that work in an annotation?
-
 // TODO: do we need to define what the graphical representation looks like? Or should we not allow it?
 
-==== Frame Terminal
+==== Frame Terminal [[FrameTerminals,Frame Terminal]]
 
 Each frame listed in the description file must be an element of its corresponding network terminal (see `<Terminal>` element of bus terminal).
 
@@ -164,14 +160,11 @@ Attribute definitions::
 
 Element definitions::
  * There must be no `<TerminalStreamMemberVariable>` element.
- * There must be no `<Terminal>` element.
- * There must be one `<TerminalMemberVariable>` per PDU of this frame.
- * There must be one `<TerminalMemberVariable>` for the clock referenced by all signals of this frame with their `clockReference` attribute (included via all PDU terminals, see below).
-   This variable is named <<ClockVariable,`BusName::FrameName_CLOCK`>>.
- * Furthermore, there can be an optional variable of type `fmi3Binary` that represents the entire frame.
-   This variable is named <<FrameVariable,`BusName::FrameName_FRAME`>>.
-
-For network types not natively referencing a "frame", like CAN, usually a trivial concept mapping exists, e.g. a CAN "message" is equivalent to a "frame" in the more general sense.
+ * There must be one `<Terminal>` element per PDU of this frame.
+ * There must be one `<TerminalMemberVariable>` for the clock this frame is connected to.
+   This variable is composed as <<ClockVariable,`BusName::FrameName_CLOCK`>>, e.g. `POWERTRAIN::tcuSensors_CLOCK`.
+ * Furthermore, there can be an optional variable of type `fmi3Binary` that represents the entire frame, including `Start-of-Frame` and `End-of-Frame`.
+   This variable is composed as <<FrameVariable,`BusName::FrameName_FRAME`>>, e.g. `POWERTRAIN::tcuSensors_FRAME`.
 
 ==== PDU Terminal [[PDUterminal,PDU Terminal]]
 
@@ -190,13 +183,14 @@ Element definitions::
 
 All `<TerminalMemberVariables>` must have the same type of either input or output, including the clock.
 
-==== Variables [[TerminalMemberVariables,Terminal Member Variables]]
+For network types not natively referencing a "PDU", like CAN, a synthetic PDU with the same name as its frame is inserted.
+
+==== Terminal Member Variable [[TerminalMemberVariable,Terminal Member Variable]]
 
 Attribute definitions::
- * `variableName` refers to the input or output variable name of the FMU and to enforce uniqueness is built as follows: `BusName::FrameName::PDUName::SignalName`.
- * `memberName` is the `SignalName` as given in the network description file.
- * `variableKind` is `signal_physical` for all variables that represent physical (numeric) variables.
-   For variables of type `fmi3Binary` the `variableKind` is set to `signal_binary`.
+ * `variableName` refers to the input or output variable name of the FMU and to enforce uniqueness is built as follows: `BusName::FrameName::PDUName::SignalName`, e.g. `POWERTRAIN::tcuSensors::tcuSensors::vCar`.
+ * `memberName` is the `SignalName` as given in the network description file, e.g. `vCar`.
+ * `variableKind` is `signal`.
 
 === Example [[Example,Example]]
 
@@ -219,8 +213,8 @@ BO_ 257 tcuState: 2 TCU
 BO_ 512 ecuState: 4 ECU
  SG_ accelPedal :    0|8@1+ (2,0)   [0|100]   "%" TCU
  SG_ k15 :           8|1@1+ (1,0)   [0|1]     "-" TCU
- SG_ oilTemp :       9|9@1- (2,50)  [-50|150] "°C" ECU
- SG_ radiatorTemp : 18|9@1- (2,50)  [-50|150] "°C" ECU
+ SG_ oilTemp :       9|9@1- (2,50)  [-50|150] "°C" TCU
+ SG_ radiatorTemp : 18|9@1- (2,50)  [-50|150] "°C" TCU
 ...
 ----
 
@@ -257,29 +251,30 @@ BO_ 512 ecuState: 4 ECU
 <fmiTerminalsAndIcons fmiVersion="3.0-alpha6">
   <Terminals>
     <Terminal terminalKind="bus" name="POWERTRAIN" matchingRule="bus" description="Powertrain CAN bus defined with dbc file">
+      <Annotation type="ECU" />
       <Terminal terminalKind="frame" name="tcuSensors" matchingRule="bus">
         <Terminal terminalKind="pdu" name="tcuSensors" matchingRule="bus">
-          <TerminalMemberVariable variableKind="signal" variableName="POWERTRAIN::tcuSensors::tcuSensors::vCar" />
-          <TerminalMemberVariable variableKind="signal" variableName="POWERTRAIN::tcuSensors::tcuSensors::oilTemp" />
+          <TerminalMemberVariable variableKind="signal" variableName="POWERTRAIN::tcuSensors::tcuSensors::vCar" memberName="vCar" />
+          <TerminalMemberVariable variableKind="signal" variableName="POWERTRAIN::tcuSensors::tcuSensors::oilTemp" memberName="oilTemp" />
         </Terminal>
         <TerminalMemberVariable variableKind="signal" variableName="POWERTRAIN::tcuSensors_FRAME" />
         <TerminalMemberVariable variableKind="signal" variableName="POWERTRAIN::tcuSensors_CLOCK" />
       </Terminal>
       <Terminal terminalKind="frame" name="tcuState" matchingRule="bus">
         <Terminal terminalKind="pdu" name="tcuState" matchingRule="bus">
-          <TerminalMemberVariable variableKind="signal" variableName="POWERTRAIN::tcuState::tcuState::state" />
-          <TerminalMemberVariable variableKind="signal" variableName="POWERTRAIN::tcuState::tcuState::gear" />
-          <TerminalMemberVariable variableKind="signal" variableName="POWERTRAIN::tcuState::tcuState::targetGear" />
+          <TerminalMemberVariable variableKind="signal" variableName="POWERTRAIN::tcuState::tcuState::state" memberName="state" />
+          <TerminalMemberVariable variableKind="signal" variableName="POWERTRAIN::tcuState::tcuState::gear" memberName="gear" />
+          <TerminalMemberVariable variableKind="signal" variableName="POWERTRAIN::tcuState::tcuState::targetGear" memberName="targetGear" />
         </Terminal>
         <TerminalMemberVariable variableKind="signal" variableName="POWERTRAIN::tcuState_FRAME" />
         <TerminalMemberVariable variableKind="signal" variableName="POWERTRAIN::tcuState_CLOCK" />
       </Terminal>
       <Terminal terminalKind="frame" name="ecuState" matchingRule="bus">
         <Terminal terminalKind="pdu" name="ecuState" matchingRule="bus">
-          <TerminalMemberVariable variableKind="signal" variableName="POWERTRAIN::ecuState::ecuState::accelPedal" />
-          <TerminalMemberVariable variableKind="signal" variableName="POWERTRAIN::ecuState::ecuState::k15" />
-          <TerminalMemberVariable variableKind="signal" variableName="POWERTRAIN::ecuState::ecuState::oilTemp" />
-          <TerminalMemberVariable variableKind="signal" variableName="POWERTRAIN::ecuState::ecuState::radiatorTemp" />
+          <TerminalMemberVariable variableKind="signal" variableName="POWERTRAIN::ecuState::ecuState::accelPedal" memberName="accelPedal" />
+          <TerminalMemberVariable variableKind="signal" variableName="POWERTRAIN::ecuState::ecuState::k15" memberName="k15" />
+          <TerminalMemberVariable variableKind="signal" variableName="POWERTRAIN::ecuState::ecuState::oilTemp" memberName="oilTemp" />
+          <TerminalMemberVariable variableKind="signal" variableName="POWERTRAIN::ecuState::ecuState::radiatorTemp" memberName="radiatorTemp" />
         </Terminal>
         <TerminalMemberVariable variableKind="signal" variableName="POWERTRAIN::ecuState_FRAME" />
         <TerminalMemberVariable variableKind="signal" variableName="POWERTRAIN::ecuState_CLOCK" />
@@ -309,5 +304,5 @@ Such an ideal network differs from physical networks in the following ways:
  * Incoming buffer overflow: when an ECU receives more frames than its buffer can hold.
    Here the FMU will receive all frames, regardless of buffer size.
 
- * network transmission errors: electrical errors which cause failed frame transmission.
+ * Network transmission errors: electrical errors which cause failed frame transmission.
    Here no such transmission errors can occur, unless explicitly added into the simulation.
