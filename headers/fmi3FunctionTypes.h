@@ -277,14 +277,15 @@ typedef fmi3Status fmi3GetBinaryTYPE (fmi3Instance instance,
                                       size_t sizes[],
                                       fmi3Binary values[],
                                       size_t nValues);
+/* end::Getters[] */
 
+/* tag::GetClock[] */
 typedef fmi3Status fmi3GetClockTYPE  (fmi3Instance instance,
                                       const fmi3ValueReference valueReferences[],
                                       size_t nValueReferences,
                                       fmi3Clock values[],
                                       size_t nValues);
-
-/* end::Getters[] */
+/* end::GetClock[] */
 
 /* tag::Setters[] */
 typedef fmi3Status fmi3SetFloat32TYPE(fmi3Instance instance,
@@ -365,13 +366,14 @@ typedef fmi3Status fmi3SetBinaryTYPE (fmi3Instance instance,
                                       const size_t sizes[],
                                       const fmi3Binary values[],
                                       size_t nValues);
-
+/* end::Setters[] */
+/* tag::SetClock[] */
 typedef fmi3Status fmi3SetClockTYPE  (fmi3Instance instance,
                                       const fmi3ValueReference valueReferences[],
                                       size_t nValueReferences,
                                       const fmi3Clock values[],
                                       size_t nValues);
-/* end::Setters[] */
+/* end::SetClock[] */
 
 /* Getting Variable Dependency Information */
 /* tag::GetNumberOfVariableDependencies[] */
