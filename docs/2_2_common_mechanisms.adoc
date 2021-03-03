@@ -665,8 +665,8 @@ The importer calls <<fmi3GetClock>> to inquire the clock activation state.
 |`countdown`
 |[[countdown,`countdown`]]<<fmi3SetClock>> in <<EventMode>>,
 <<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
-<<fmi3GetInterval>> in <<InitializationMode>> and in every <<EventMode>>,
-<<fmi3GetInterval>> in <<ClockActivationMode>> after every call to <<fmi3ActivateModelPartition>>
+<<fmi3GetInterval>> in <<InitializationMode>>, in every <<EventMode>>, and in <<IntermediateUpdateMode>>.
+In Scheduled Execution the FMU has to inform the importer by calling <<fmi3CallbackIntermediateUpdate>> that the clock is about to tick.
 |time-delayed actions after an event, for example, ignition signal some time after specific crank shaft angle
 
 .2+|triggered
@@ -787,7 +787,7 @@ Must be retrieved in <<EventMode>> or <<ClockActivationMode>> if and only if the
 |===
 
 [[countdown-aperiodic-clocks,countdown aperiodic clocks]]Countdown aperiodic clocks::
-are time-based clocks where the next interval is not yet known right after the clock just ticked, forcing the importer to call <<fmi3GetInterval>> in every <<EventMode>> and after every call to <<fmi3ActivateModelPartition>> in <<ClockActivationMode>>.
+are time-based clocks where the next interval is not yet known right after the clock just ticked, forcing the importer to call <<fmi3GetInterval>> in every <<EventMode>> and in <<IntermediateUpdateMode>> if <<clocksTicked, `clocksTicked == fmi3True`>> in <<fmi3CallbackIntermediateUpdate>>.
 The return argument <<qualifier>> of <<fmi3GetInterval>> is used to indicate if the next interval is already known.
 +
 The next <<clock>> activation at time instant latexmath:[t_i] is defined as: +
@@ -816,28 +816,17 @@ tick unpredictably.
 
 Triggered input clocks::
 are activated with <<fmi3SetClock>> by the importer in <<EventMode>>, or with <<fmi3ActivateModelPartition>> in <<ClockActivationMode>>.
-+
-The next <<clock>> activation at time instant latexmath:[t_i] is defined as: +
-latexmath:[\begin{align*}
-\mathbf{t}_i &:= \mathbf{t}_{event} + \mathbf{T}_{interval, i} \qquad i = 1,2,3,{...}
-\end{align*}]
-+
-.Restrictions.
-[#triggered-input-clock-restrictions]
-[cols="1,2"]
-|===
-
-|latexmath:[\mathbf{T}_{interval, i} \geq 0, \qquad i = 1,2,3,{...}]
-|The time interval from the event time to the next <<clock>> tick.
-
-|===
 
 Triggered output clocks::
 are activated within the FMU and the importer must call <<fmi3GetClock>> in <<EventMode>> or in <<IntermediateUpdateMode>>.
 
+_[Output clocks are intended to enable an FMU to provide a trigger to the outside world, e.g. to a <<triggered, `triggered input clock`>> of another FMU._
+_Note, that if intended to activate model partitions or a clock of the same FMU calling <<fmi3GetInterval>> for a <<countdown, `countdown clock`>> and evaluating the <<qualifier>> is recommended._
+_An example is provided in <<example-scheduled-execution>>.]_
+
 ===== Model Partitions and Clocked Variables [[clocked-variable]]
 
-A <<clock>> activates its specific <<model-partition>>.
+A <<clocks, `clock`>> with <<causality, `causality == input`>> activates its specific <<model-partition>>.
 
 _[Such a model partition may represent a task or an interrupt service routine of an embedded system, or a discretized part of a plant model.]_
 
@@ -854,14 +843,18 @@ The association between <<clocked-variable,clocked variables>> and their <<clock
 
 ===== Scheduled Execution
 
-An FMU may inform the external scheduler that a <<triggered>> <<outputClock>> ticked by calling <<fmi3CallbackIntermediateUpdate>> with <<clocksTicked, `clocksTicked == fmi3True`>>.
+During <<ClockActivationMode>> after <<fmi3ActivateModelPartition>> has been called for a <<calculated>>, <<tunable>> or <<changing>> <<clocks, `clock`>> the FMU provides the information on when the clock will tick again, i.e. when the corresponding model partition has to be scheduled the next time.
+To retrieve this information the importer calls <<fmi3GetInterval>> on the clock.
 
-An FMU may inform the external scheduler that a <<triggered>> <<inputClock>> depends on a <<triggered>> <<outputClock>> of the same FMU.
-When the <<outputClock>> ticks, the scheduler will trigger the corresponding <<inputClock>> according to all other scheduling constraints.
-The <<triggeredBy>> attribute of an <<inputClock>> defines such a relationship.
+The FMU may request to schedule another model partition even while currently a model partition is being executed.
+<<countdown, `countdown clocks`>> can tick at any time during the execution of any model partition.
+The FMU signals their ticking by calling <<fmi3CallbackIntermediateUpdate>> with argument <<clocksTicked,`clocksTicked == fmi3True`>>.
+The importer calls <<fmi3GetInterval>> for all countdown clocks.
+If a new interval is provided, the importer initiates the scheduling of the associated model partitions with the returned <<interval>>.
+<<qualifier,`qualifier == fmi3NewInterval`>> indicates that the corresponding <<clocks, `clock`>> has to be scheduled.
 
 In case more than one clock has to be activated at the same time instant, the scheduler needs a priority to define the activation sequence.
-This ordering is defined by the <<priority>> attributes of the <<inputClock>>.
+This ordering is defined by the <<priority>> attributes of the <<clocks, `clocks`>>.
 
 _[For real-time computation use cases, the priority information is used also for task preemption configurations._
 _It is therefore important to restrict the number of distinct priority levels for an FMU to available priority levels on the target platform and/or to avoid unnecessary computational overhead._
@@ -871,7 +864,7 @@ _[The clock priorities are local to an FMU._
 _It is not possible for an FMU exporting tool to know in advance the priorities of other FMUs that will be connected to an FMU in a simulation setup._
 _It is the task of the importer to derive a computational order for the computation of two or more distinct FMUs based on the local FMU clock priorities and input-output relationships of connected FMUs.]_
 
-_[For periodic <<clock,`clocks`>> it is recommended to derive the priorities based on a rate monotonic scheduling scheme (smallest period leads to highest priority, that is, has the smallest priority value.]_
+_[For periodic <<clocks, `clocks`>> it is recommended to derive the priorities based on a rate monotonic scheduling scheme (smallest period leads to highest priority, that is, has the smallest priority value.]_
 
 ===== [[fmi3SetInterval]] API
 
