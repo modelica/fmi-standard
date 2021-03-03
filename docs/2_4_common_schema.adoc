@@ -827,6 +827,7 @@ The <<variability>> of the dimension size is <<constant>> in this case.
 - If the <<valueReference>> attribute of the `<Dimension>` element is present, it defines the size of this dimension to be the value of the variable with the value reference given by the <<valueReference>> attribute.
 The referenced variable must be a variable of type `<UInt64>`, and must either be a constant (i.e. with <<variability>> = <<constant>>) or a <<structuralParameter,`structural parameter`>>(i.e. with <<causality>> = <<structuralParameter>>).
 The <<variability>> of the dimension size is in this case the <<variability>> of the referenced variable.
+A <<structuralParameter,`structural parameter`>> must be a variable of type `<UInt64>` only if it is referenced in `<Dimension>`.
 
 These two options are mutually exclusive, i.e., for each `<Dimension>` element either a <<start>> attribute or a <<valueReference>> attribute can be supplied, but not both.
 However different dimension sizes can be specified using different mechanisms and can have differing <<variability>> attributes.
@@ -836,6 +837,20 @@ All initial dimension sizes (i.e. prior to any configuration or reconfiguration)
 _[This allows importing tools to ignore <<structuralParameter,`structural parameters`>> because that <<start>> value reflects the internal default setting of that <<structuralParameter,`structural parameter`>>._
 _The rationale for requiring positive start values for <<structuralParameter, `structural parameters`>> is that this avoids importers having to deal with vanishing dimensions if they do not want to deal with them (or even with changing sizes at all)._
 _If we allowed 0 dimension sizes for initial values, tools that do not even care about changing dimension sizes must be prepared to handle vanishing dimensions.]_
+
+_[ Example:_
+_`V` is a floating point vector parameter._
+_The length of the vector depends on the <<structuralParameter,`structural parameter`>> `len`._
+_The default length of the vector is 7._
+_This length can be changed in <<ConfigurationMode>> because the <<variability>> of the <<structuralParameter,`structural parameter`>> `len` is <<fixed>>._
+_The values of `V` can be changed whenever <<tunable>> parameters can be changed._
+
+[source, xml]
+----
+include::examples/structural_parameter_example.xml[tags=structuralParameter]
+----
+
+_]_
 
 Changes to dimension sizes are constrained by the `min`/`max` attributes of the referenced <<structuralParameter,`structural parameters`>>, which can be any non-negative integer, including zero.
 Specifying a minimum size of zero on a <<structuralParameter,`structural parameter`>> allows any related dimension sizes to be changed to zero in <<ConfigurationMode>> or <<ReconfigurationMode>>, thus causing the respective array size to go to zero, which leaves the respective array variable without any active elements.
@@ -934,30 +949,21 @@ Local variable values must not be used as input to another model or FMU.
 All variables are a function of this <<independent>> variable.
 <<variability>> must be <<continuous>>.
 Exactly one variable of an FMU must be defined as <<independent>>.
-If the unit for the independent variable is not defined, it is implicitely`unit = s`.
+If the unit for the independent variable is not defined, it is implicitly`unit = s`.
 If one variable is defined as <<independent>>, it must be defined with a floating point type without a <<start>> attribute.
 It is not allowed to call function <<get-and-set-variable-values,`fmi3Set{VariableType}`>> on an <<independent>> variable.
 Instead, its value is initialized with <<fmi3EnterInitializationMode>> and after initialization set by <<fmi3SetTime>> for Model Exchange and by arguments <<currentCommunicationPoint>> and <<communicationStepSize>> of <<fmi3DoStep>> for Co-Simulation FMUs.
 _[The actual value can be inquired with <<get-and-set-variable-values,`fmi3Get{VariableType}`>>.]_
 
 [[structuralParameter,`structuralParameter`]]
-`= structuralParameter`: Parameters that can only be changed in <<ConfigurationMode>> or <<ReconfigurationMode>>.
-These parameters may be referenced in `<Dimension>` elements.
-<<variability>> must be <<fixed>> or <<tunable>>.
-<<initial>> must be <<exact>> or not present (meaning <<exact>>).
-A `structuralParameter` must not have a `<Dimension>` element.
-
-_[_
-_Example:_
-
-[source, xml]
-----
-include::examples/structural_parameter_example.xml[tags=structuralParameter]
-----
-
-_]_
-
-<<structuralParameter,`structural parameters`>> that are referenced in `<Dimension>` elements may have a `min` attribute with 0 but the <<start>> attribute, which is mandatory for <<structuralParameter,`structural parameters`>>, must have a value larger than 0 for <<structuralParameter,`structural parameters`>> used in `<Dimension>` elements.
+`= structuralParameter`: The variable value can only be changed in <<ConfigurationMode>> or <<ReconfigurationMode>>.
+The <<variability>> attribute must be <<fixed>> or <<tunable>>.
+The <<initial>> attribute must be <<exact>> or not present (meaning <<exact>>).
+The <<start>> attribute is mandatory.
+A <<structuralParameter,`structural parameter`>> must not have a `<Dimension>` element.
+A <<structuralParameter,`structural parameter`>> may be referenced in `<Dimension>` elements.
+If a <<structuralParameter,`structural parameters`>> is referenced in `<Dimension>` elements, it must be of type `<UInt64>` and its <<start>> attribute must be larger than 0.
+The `min` attribute might still be 0.
 
 The default of <<causality>> is <<local>>. +
 A continuous-time <<state>> or an event indicator must have <<causality>> = <<local>> or <<output>>, see also <<ModelStructure>>.
