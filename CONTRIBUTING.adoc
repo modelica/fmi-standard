@@ -93,7 +93,7 @@ Guidelines for bug reports:
 
 . *Use the GitHub issue search* -- check if the issue has already been reported.
 
-. *Check if the issue has been fixed* -- try to reproduce it using the latest `master` or development branch in the repository.
+. *Check if the issue has been fixed* -- try to reproduce it using the latest `develop` branch in the repository.
 
 . *Isolate the problem* -- create a reduced test case or example.
 
@@ -183,18 +183,18 @@ Follow this process if you'd like your work considered for inclusion in the proj
 . https://help.github.com/articles/fork-a-repo/[Fork] the project, clone your fork, and configure the remotes:
 
   # Clone your fork of the repo into the current directory
-  git clone https://github.com/<your-username>/<repo-name>
+  git clone https://github.com/<your-username>/fmi-standard
   # Navigate to the newly cloned directory
-  cd <repo-name>
+  cd fmi-standard
   # Assign the original repo to a remote called "upstream"
-  git remote add upstream https://github.com/<upstream-owner>/<repo-name>
+  git remote add upstream https://github.com/modelica/fmi-standard
 
 . If you cloned a while ago, get the latest changes from upstream:
 
-  git checkout <dev-branch>
-  git pull upstream <dev-branch>
+  git checkout develop
+  git pull upstream develop
 
-. Create a new topic branch (off the main project development branch) to contain your feature, change, or fix:
+. Create a new topic branch (off the `develop` branch) to contain your feature, change, or fix:
 
    git checkout -b <topic-branch-name>
 
@@ -204,7 +204,7 @@ Use Git's https://help.github.com/articles/about-git-rebase/[interactive rebase]
 
 . Locally merge (or rebase) the upstream development branch into your topic branch:
 
-  git pull [--rebase] upstream <dev-branch>
+  git pull [--rebase] upstream develop
 
 . Push your topic branch up to your fork:
 
@@ -216,23 +216,27 @@ Use Git's https://help.github.com/articles/about-git-rebase/[interactive rebase]
 
 == Branching and Versioning
 
-We use a branching scheme with _support_ and _feature_ branches that allows us to maintain multiple major and minor releases concurrently.
+We use a branching scheme inspired by https://nvie.com/posts/a-successful-git-branching-model/[GitFlow] with _support_ branches that allows us to maintain multiple major and minor releases concurrently.
 
-Main development branch `master`::
+Branch `main`::
+Holds the latest (pre-)release.
+
+Branch `develop`::
 Holds the latest development version.
 This is where the _next_ version of the standard is developed.
+All pull requests (PRs) should be made against this branch.
 
-Feature branches `feature/<name>`::
-New features are developed on feature branches that branch from and are merged back into `master`.
-+
-Example: `feature/scheduled-execution`
-
-Support branches `support/v<major>{.<minor>}.x`::
-Upon every major release the latest version of `master` is tagged `v<major>.0`.
-The maintenance of this release is performed on a support branch `v<major>.x` starting at this tag.
+Branch `support/v<major>{.<minor>}.x`::
+Upon every major release the latest version of `main` is tagged `v<major>.0`.
+The maintenance of this release is performed on a support branch `support/v<major>.x` starting at this tag.
 This process is repeated for minor and patch releases.
 +
-Examples: `support/v3.x`, `support/v2.0.x`
+Example: `support/v3.x`
+
+Branch `release/v<version>`::
+Temporary branch for the release engineering.
++
+Example: `release/v3.0-rc.1`
 
 Tags `v<major>.<minor>{.<patch>}{-{alpha|beta|rc}.<number>}`::
 Releases and pre-releases are tagged on the respective branches following the https://semver.org/[Semantic Versioning] when the API, schema or file structure of the FMU archive change.
@@ -240,39 +244,34 @@ Releases and pre-releases are tagged on the respective branches following the ht
 Examples: `v3.0-alpha.3`, `v3.0-beta.2`, `v3.0-rc.1`, `v3.0`
 
 ```
-master
-  |
-  +--->+ branch "support/v2.0.x", tag "v2.0.1"
-  |    |
-  |    + tag "v2.0.2"
-  |
-  +<--- merge PR "fix-typo-in-fmi-spec"
-  |
-  +--->+ branch "feature/arrays"
-  |    |
-  +<---+ merge "feature/arrays"
-  |
-  +--->+ branch "support/v3.x", tag "v3.0"
-  |    |
-  |    +--->+ branch "support/v3.0.x", tag "v3.0.1"
-  |    |    |
-  |    |    + tag "v3.0.1"
-  |    |
-  |    + tag "v3.1"
-  |    |
-  .    .
-  .    .
+     develop            main
+       |                  |
+PR --->o                  |
+       |   release/v3.0   |
+       +-----+            |
+       |     |            |
+       o<----+----------->o tag [v3.0]
+       |                  |
+       |                  |     support/v3.x
+       o<-----------------+-------+
+       |                  |       |
+PR --->o                  |       o<--- PR
+       |                  |       |
+       .                  .       .
+       .                  .       .
 ```
 
 == Release Checklist
 
 Follow these steps to create a (pre-)release:
 
+* create a release branch (e.g. `release/v3.0-rc.1`) to prepare the changes
 * update the FMI version in the XML examples, header files, and `index.adoc`
 * update <<CHANGELOG.adoc#,CHANGELOG.adoc>>
 * download the `fmi-standard.zip` artifact from https://circleci.com/gh/modelica/fmi-standard[CirleCI] and check for completeness
-* create a tag on `master` (e.g. `v3.0-rc.1`)
-* create a new https://github.com/modelica/fmi-standard/releases[release] on GitHub for the tag
+* merge the release branch into `main` and `develop`
+* create a tag on `main` (e.g. `v3.0-rc.1`)
+* create a new https://github.com/modelica/fmi-standard/releases[release] on GitHub
 ** check `This a pre-release` if it's not the final release
 ** add the text from `CHANGELOG.adoc`
 ** add the version to `fmi-standard.zip` (e.g. `fmi-standard-3.0-rc.1.zip`) and upload it to the release
