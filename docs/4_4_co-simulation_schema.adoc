@@ -5,61 +5,48 @@ Additional elements and attributes are defined subsequently.
 If the FMU implements the Co-Simulation interface type, the element `<CoSimulation>` must be present.
 It is defined as:
 
+.CoSimulation element.
+[[figure-schema-CoSimulation]]
 image::images/schema/CoSimulation.png[width=80%, align="center"]
 
-The attributes in the following table are defined on top of the <<common-capability-flags, common attributes>> and have the following meaning (all attributes are optional with exception of `modelIdentifier`):
+The attributes in the following table are defined on top of the <<common-capability-flags, common attributes>> and have the following meaning (all attributes are optional with exception of <<modelIdentifier>>):
 
-[cols="1,1",options="header"]
+.CoSimulation attribute details.
+[[table-CoSimulation-details]]
+[cols="4,6",options="header"]
 |====
 |Attribute
 |Description
 
-|`modelIdentifier`
+|<<modelIdentifier>>
 |Short class name according to C syntax, for example, `A_B_C`.
 Used as prefix for FMI functions if the functions are provided in C source code or in static libraries, but not if the functions are provided by a DLL/SharedObject.
-`modelIdentifier` is also used as name of the static library or DLL/SharedObject.
+<<modelIdentifier>> is also used as name of the static library or DLL/SharedObject.
 See also <<header-files-and-naming-of-functions>>.
 
-|[[canHandleVariableCommunicationStepSize,`canHandleVariableCommunicationStepSize`]]`canHandleVariableCommunicationStepSize`
-|The FMU can handle variable communication step size.
-The communication step size (argument <<communicationStepSize>> of <<fmi3DoStep>>) has not to be constant for each call.
+|[[canHandleVariableCommunicationStepSize,`canHandleVariableCommunicationStepSize`]] `canHandleVariableCommunicationStepSize`
+|If `canHandleVariableCommunicationStepSize = true`, then the communication step size (argument <<communicationStepSize>> of <<fmi3DoStep>>) can vary for each call.
 
-|<<canReturnEarlyAfterIntermediateUpdate>>
+|[[canReturnEarlyAfterIntermediateUpdate,`canReturnEarlyAfterIntermediateUpdate`]] `canReturnEarlyAfterIntermediateUpdate`
 |If `true`, the FMU is able to return early from <<fmi3DoStep>> if the co-simulation algorithm returns <<earlyReturnRequested,`earlyReturnRequested == fmi3True`>> from the callback <<intermediateUpdate>> and <<canReturnEarly,`canReturnEarly == fmi3True`>>.
-_[If set to `true`, a Co-Simulation FMU supports ending <<fmi3DoStep>> before the planned next communication point._
-_This can be used by the co-simulation algorithm to avoid unnecessary computations and roll backs of the FMU due to input clock activations known to the co-simulation algorithm.]_
+The default value of this capability flag is `false`.
 
-|`fixedInternalStepSize`
+|[[fixedInternalStepSize,`fixedInternalStepSize`]]`fixedInternalStepSize`
 |The fixed internal step size of the FMU (optional).
++
 _[This information can be used by the co-simulation algorithm to synchronize the communication interval with the internal step size of the FMU._
 _The co-simulation algorithm should calculate the communication points by multiplying (`number_of_steps * step_size`) instead of repeatedly incrementing (`time += step_size`) to avoid the accumulation of numerical errors.]_
 
-|`hasEventMode`
-|If `true` the FMU supports *Event Mode*.
-Even if this flag is `true`, the co-simulation algorithm can chose to delegate event handling to the FMU by calling <<fmi3InstantiateCoSimulation>> with `eventModeUsed == fmi3False`.
+|[[hasEventMode,`hasEventMode`]]`hasEventMode`
+|If `true` the FMU supports <<EventMode>>.
+Even if this flag is `true`, the co-simulation algorithm can chose to delegate event handling to the FMU by calling <<fmi3InstantiateCoSimulation>> with <<eventModeUsed,`eventModeUsed == fmi3False`>>.
 If `eventModeUsed == fmi3True`, the co-simulation algorithm will have to actively trigger event handling in the FMU using <<fmi3EnterEventMode>>.
-<<fmi3InstantiateCoSimulation>> must only be called with `eventModeUsed == fmi3True` if `hasEventMode == true`.
-If the FMU has synchronous clocks, then `eventModeUsed == fmi3True` and the importer must call <<fmi3InstantiateCoSimulation>> with `eventModeUsed == fmi3True`.
+<<fmi3InstantiateCoSimulation>> must only be called with `eventModeUsed == fmi3True` if <<hasEventMode,`hasEventMode == true`>>.
+If the FMU has synchronous clocks, then `eventModeUsed == fmi3True` and the importer must call <<fmi3InstantiateCoSimulation>> with <<eventModeUsed,`eventModeUsed == fmi3True`>>.
 |====
 
 Note that if `needsExecutionTool = true`, then it is required that the original tool is available to be executed during co-simulation.
 If `needsExecutionTool = false`, the FMU is completely contained inside the FMU in source code or binary format (DLL/SharedObject).
-
-==== Clocks in Co-Simulation [[clocks-in-co-simulation]]
-
-The co-simulation algorithm collects the information about the number and properties of <<clock,`clocks`>> supported by the FMU by analyzing the <<modelDescription.xml>>, see <<clock-type-definition>>.
-
-The definition of <<clock,`clocks`>> is optional.
-
-Each <<inputClock>> that ticks outside of the FMU, is activated for an FMU based on their <<valueReference>>.
-<<outputClock,`Output clocks`>> inside of an FMU signal their activation based on their <<valueReference>>.
-
-_[If <<dependencies>> (`fmi3Unknown`) are defined in the `<ModelStructure>` section of the <<modelDescription.xml>>, it is recommended to define such <<dependencies>> only within a model partition of a model (i.e. between variables that are assigned to the same <<clock>>).]_
-
-If <<dependencies>> are defined for variables across model partitions, such variables can not be assigned to a <<clock>> via <<clockReference>>.
-
-For FMI for Co-Simulation, variables that are assigned to a model partition of the model based on <<clockReference>> are not necessarily `clocked`.
-Such variables can be continuous-time or discrete-time variables if the <<clock>> is of `clockType = communicationPoint`.
 
 ==== Example XML Description File
 

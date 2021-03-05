@@ -1,19 +1,103 @@
-=== Mathematical Description [[math-scheduled-execution]]
+=== Concepts [[concepts-scheduled-execution]]
 
 The Scheduled Execution interface has a different timing concept compared to FMI for Co-Simulation.
-This is required to cover <<clock>> ticks for <<periodic,aperiodic>> <<inputClock,`input clocks`>> which may tick at time instances that are not predictable in advance for the simulation algorithm.
+This is required to handle activations of <<triggered, triggered input clocks>> which may tick at a time instant that is unpredictable for the simulation algorithm.
 Typically, hardware I/O or virtual ECU software events belong to this category.
 
-A simulation algorithm's call for computing a model partition will compute the results of the model partition defined by an <<inputClock>> for the current <<clock>> tick time latexmath:[t_i].
+A simulation algorithm's activation of a model partition will compute the results of the model partition defined by a <<triggered, triggered input clock>> for the current <<clocks, `clock`>> tick time latexmath:[\mathbf{t}_i].
+Refer to the clock time progress definition for <<periodic>> <<clocks>>.
 
-The result values will be computed for the current <<clock>> tick time (activation time) latexmath:[t_i] from the assigned <<inputClock>> (which is known to the simulation algorithm).
-Refer to the <<clock>> time progress definition (<<CommunicationPointClocks>>) for <<periodic>> <<clock,`clocks`>>.
+A model partition can only be activated once per activation time point latexmath:[\mathbf{t}_i].
 
-If required, the FMU can internally derive the <<clock>> interval latexmath:[\Delta T_i] based on the last <<clock>> tick time latexmath:[t_{i-1}] i.e. last activation time for this model partition.
-
-A model partition can only be activated once per activation time point latexmath:[t_i].
-
-Model partitions that are associated to <<outputClock,`output clocks`>> will accordingly provide the result values of the model partition's variables for the current <<outputClock>> tick time latexmath:[t_i] of the active <<outputClock>>.
+Model partitions that are associated to <<outputClock,`output clocks`>> will accordingly provide the result values of the model partition's variables for the current <<outputClock>> tick time latexmath:[\mathbf{t}_i] of the active <<outputClock>>.
 The activation of such an <<outputClock>> is not controlled by the simulation algorithm but internally by the FMU.
 
-More details can be found in <<operation-on-clocks>>, specifically <<CommunicationPointClocks>>.
+More details can be found in <<clocks>>.
+
+==== Preemption Support [[preemption-support]]
+
+For real-time applications the simulation time equals the real wall clock time, thus each <<fmi3ActivateModelPartition>> computation step has to be finished in real-time within its current period time length (computation time is not only defined by the runtime of <<fmi3ActivateModelPartition>> but also by the time for setting and getting variables and related operations).
+Usually a preemptive scheduling of the <<fmi3ActivateModelPartition>>, <<get-and-set-variable-values,`fmi3Get{VariableType}`>>, <<get-and-set-variable-values,`fmi3Set{VariableType}`>> calls is required to respect this constraint.
+
+The FMU's code has to be prepared for being able to correctly handle preemptive calls of <<fmi3ActivateModelPartition>>, <<get-and-set-variable-values,`fmi3Get{VariableType}`>>, <<get-and-set-variable-values,`fmi3Set{VariableType}`>>.
+That requires a secured internal and external access to global states and variable values.
+Thus in Scheduled Execution a support for a correct handling of the preemption of model partition computations is required.
+That also requires that the FMU reports the active state of a <<outputClock>> only with the first call of <<fmi3GetClock>> for a specific activation of this <<clocks, `clock`>> and sets the reported activation state immediately back to `false` for the following <<fmi3GetClock>> calls for that <<clocks, `clock`>> until this <<outputClock>> is internally activated again.
+
+If a preemptive multitasking regime is intended, an individual task (or thread -- task and thread are used synonymously here) for each model partition (associated to a <<clocks, `clock`>> with <<causality, `causality == input`>>) has to be created.
+The task for computing each <<fmi3ActivateModelPartition>> is created and controlled by the simulation algorithm, not by the FMU.
+So the FMU exporting tool does not need to take care for that (except for preparing its code to support preemption).
+
+_[If only one single model partition is available via the interface of an FMU, preemptive calls of the related <<fmi3ActivateModelPartition>> function are possible by default since there are no external cross dependencies within one model partition between communication points.]_
+
+Based on the settings defined in the XML for <<clocks, `clocks`>> with <<causality, `causality == input`>> the simulation algorithm calls <<get-and-set-variable-values,`fmi3Set{VariableType}`>>, <<fmi3ActivateModelPartition>>, <<get-and-set-variable-values,`fmi3Get{VariableType}`>> calls.
+Set/get calls for each task are only allowed for variables that are associated to the <<inputClock>> associated to that task or - here preemption issues become important - to variables that are associated to no <<clocks, `clock`>> (global variables), based on the XML information (see <<table-overview-clocks>>).
+
+_[The recommendation is to avoid global variable associations as much as possible in the XML._
+_It is also recommended to reduce dependencies (defined in XML model structure) between variables located in different model partitions of one FMU, since this also requires in most cases that the related variables have to be global variables.]_
+
+The simulation algorithm has no knowledge about the FMU internal communication between the model partitions of a single FMU and does not handle it.
+
+The simulation algorithm schedules the <<fmi3ActivateModelPartition>> (as well as related <<get-and-set-variable-values,`fmi3Get{VariableType}`>> and `fmi3Set{VariableType}`) calls based on given priorities for <<clocks, `clocks`>> with <<causality, `causality == input`>> defined in the <<modelDescription.xml>>.
+
+Priority (see <<priority>>):
+
+- Same priority: Model partitions (e.g. tasks) cannot preempt each other.
+Arbitrary evaluation order is possible for model partitions of the same priority.
+
+- Different priorities: Model partitions of a higher priority preempt partitions of a lower priority as soon as the higher priority partition needs to be computed.
+
+_[If multiple tasks are needed to be scheduled for computation at a certain time instant a simulation algorithm must schedule a task of a higher priority always before a task of a lower priority]_
+
+A <<clocks, `clock`>> with <<causality, `causality == input`>> can hold fixed or modifiable periods as well as being triggered unpredictably.
+Refer to chapter on <<clocks>> for details.
+
+Based on the period and priority definitions the exporting tool can restrict the code evaluation order.
+It nevertheless has to secure its code against concurrent evaluation _[not against parallel evaluation, as this is not supported for model partitions of an FMU in the interface description of this mode]_ along the defined priority restrictions.
+Mostly this is required for internal inter-model-partition communication and in general for the joint use of global variables within the FMU.
+The exporting tool has to consider the effect of <<triggered>> <<input>> <<clocks>> and the influences of computing speed, because the exact occurrence of preemption points cannot be foreseen (within the given priority and period restrictions).
+
+To guard certain code parts against preemption they must be enclosed with the callback functions `lockPreemption` and `unlockPreemption`.
+
+_[Such locks should be used with care and only for securing very short code parts that cannot be secured otherwise.]_
+
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tag=CallbackPreemptionLock]
+----
+
+Even if the scheduler does not support preemption, at least an empty implementation of these callback functions must be provided to allow the reuse of code for different modes together with an efficient preemption.
+_[This avoids checks for null function pointers._
+_A function call to a void-void function with an immediate return is hardly any overhead.]_
+
+Example for the use of `fmi3CallbackLockPreemption` and `fmi3CallbackUnlockPreemption` callback functions in the FMU code:
+
+[source, C]
+----
+Int16 DataBuffer[3];   // global buffer
+
+void Task1(void) //low priority
+{
+   ...
+   // write data to DataBuffer
+   fmi3CallbackLockPreemption();
+   DataBuffer[0] = internal_out_RootSys1_1;
+   DataBuffer[1] = internal_out_RootSys1_2;
+   DataBuffer[2] = internal_out_RootSys1_3;
+   fmi3CallbackUnlockPreemption();
+   ...
+ }
+
+...
+void Task2(void) //high priority
+{
+   ...
+   // read data from DataBuffer
+   fmi3CallbackLockPreemption();
+   internal_in_RootSys2_1 = DataBuffer[0];
+   internal_in_RootSys2_2 = DataBuffer[1];
+   internal_in_RootSys2_3 = DataBuffer[2];
+   fmi3CallbackUnlockPreemption();
+   ...
+}
+----

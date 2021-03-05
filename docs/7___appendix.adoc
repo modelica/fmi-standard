@@ -18,18 +18,20 @@ Not to be confused with _parameter_.
 |Capability flags are used to indicate to the importer what optional functionality the FMU supports.
 
 |_clock_
-|A signal to report events or trigger events or model partitions.
+|A variable to report events or trigger events or model partitions.
 
 |_clock tick_
-|When the <<clock>> ticks an event is present otherwise the event is absent.
-For FMI for Co-Simulation the ticking of a <<clock>> is interpreted as an activity of the associated model partition.
-The ticking of a <<outputClock>> may lead to an <<inputClock>> tick for another FMU (has to be defined via simulation algorithm) or for a model partition of the same FMU (is defined in <<modelDescription.xml>>).
+|When the <<clock>> ticks an event is present, otherwise the event is absent.
+This document calls a <<clock>> tick a <<clock>> activation.
 
 |_communication points_
 |Time grid for data exchange between importer and FMU(s) in a (co-)simulation environment.
 
 |_communication step size_
 |Distance between two subsequent _communication points_.
+
+|_continuous-time instant_
+|See <<time-instant>>.
 
 |_co-simulation_
 |Coupling of several _simulation programs_ in order to compute the global behavior of a system that consists of several subsystems.
@@ -39,6 +41,12 @@ Synonyms: dynamic mutual-exchange, simulator coupling, and coupled simulation.
 
 |_direct feedthrough_
 |Direct feedthrough describes that values of output variables depend directly on values of input variables.
+
+|[[dynamic-state-selection,dynamic state selection]]_dynamic state selection_
+|Dynamic State Selection is a method to solve differential algebraic equations (DAEs).
+The FMU checks whether the dynamically selected states are still numerically appropriate.
+If not, a new mapping between states and variables is computed.
+For details see <<MS93>>.
 
 |_ECU_
 |Electronic Control Unit (Microprocessor that is used to control a technical system).
@@ -50,8 +58,9 @@ Internal events occur inside the FMU and should be signaled to the environment w
 Input clocks are activated by the environment to inform the FMU about the exact moment an event across FMUs has to be handled.
 See <<state-event>>, <<step-event>> and <<time-event>>.
 
-|_event indicator_
+|[[eventIndicator,event indicator]]_event indicator_
 |A variable that changes sign exactly at an event.
+See <<state-event,event indicator>>.
 
 |_exporter_
 |A program that creates an FMU.
@@ -63,7 +72,7 @@ See <<state-event>>, <<step-event>> and <<time-event>>.
 |See _direct feedthrough_.
 
 |_FMI_
-|Functional Mock-up Interface: +
+|Functional Mock-Up Interface: +
 Interface of a functional mock-up in form of a model.
 In analogy to the term digital mock-up (see _mock-up_), functional mock-up describes a computer-based representation of the functional behaviour of a system for all kinds of analyses.
 
@@ -71,15 +80,15 @@ In analogy to the term digital mock-up (see _mock-up_), functional mock-up descr
 |The function of the FMI C-API.
 
 |_FMI for co-simulation_
-|Functional Mock-up Interface for Co-Simulation: +
-One of the MODELISAR _functional mock-up interface types._ It connects the _importer_ with one or more _FMU_.
+|Functional Mock-Up Interface for Co-Simulation: +
+One of the MODELISAR _Functional Mock-Up Interface types._ It connects the _importer_ with one or more _FMU_.
 
 |_FMI for model exchange_
-|Functional Mock-up Interface for Model Exchange: +
-One of the MODELISAR _functional mock-up interface types._ It consists of the _model description_ and the _C API_. +
+|Functional Mock-Up Interface for Model Exchange: +
+One of the MODELISAR _Functional Mock-Up Interface types._ It consists of the _model description_ and the _C API_. +
 
 |_FMU_
-|Functional Mock-up Unit: +
+|Functional Mock-Up Unit: +
 A "model class" following the interface type FMI for Model Exchange, or a model following the interface types FMI for Co-Simulation or FMI for Scheduled Execution).
 An FMU is one ZIP file as defined in <<fmu-distribution>>.
 The zip file comprises essentially an XML file that defines the model variables, and a set of C function implementations (see <<general-mechanisms>>).
@@ -96,7 +105,10 @@ Also called simulation environment, environment, calling environment, (co-)simul
 |All variables are a function of this <<independent>> variable, typically time.
 
 |[[input-event,input event]]_input event_
-|An input event occurs when a discrete input variable changes or a continuous input variable has a discontinuity.
+|An input event occurs when a discrete input variable changes, a continuous input variable has a discontinuity or a <<tunable>> <<parameter>> changes its value.
+_[Note that if an FMU A is connected to an FMU B, and an event is triggered for A, then potentially all <<output,`outputs`>> of A will be discontinuous at this time instant._
+_It is therefore advisable to move B into <<EventMode>> at this time instant too if an <<output>> of A is connected to B._
+_This means to call <<fmi3EnterEventMode>> on B.]_
 
 |_integration algorithm_
 |The numerical algorithm to solve differential equations.
@@ -107,9 +119,6 @@ Also called simulation environment, environment, calling environment, (co-)simul
 |_interface_
 |An abstraction of a _software component_ that describes its behavior without dealing with the internal implementation.
 _Software components_ communicate with each other via interfaces.
-
-|_interrupt_
-|_Event_ connected to the tick of an <<inputClock>> of an FMU that is caused by an external potentially random process, i.e. hardware interrupt, software interrupt.
 
 |_machine epsilon_
 |Smallest floating point value.
@@ -137,7 +146,7 @@ Most important, data for every variable is defined (variable name, handle, data 
 |Inverse of time interval between two communication points associated to an exposed model partition within the FMU (i.e. <<clock>> is defined in interface).
 In general multiple rates i.e. multiple model partitions can be defined for an Co-Simulation FMU.
 
-|_model partition_
+|[[model-partition,model partition]]_model partition_
 |Model partitions can be associated to a discrete or (piecewise) continuous part of the FMU.
 The computation of model partitions can be externally controlled based on <<clock>> ticks of associated <<inputClock,`input clocks`>>.
 
@@ -145,10 +154,6 @@ Not all FMU internal model partitions have to be exposed in the Co-Simulation in
 Nevertheless, it is assumed that the activation of all exposed <<inputClock,`input clocks`>> results in the computation of the complete FMU.
 
 As stated above, continuous parts of the FMU are also associated to model partitions that define the communication points for the <<continuous>> values.
-Please note that this is only possible for `CommunicationPointClocks`.
-
-|_Newtonian time instant_
-|TODO
 
 |_ODE_
 |see _Ordinary Differential Equation_
@@ -200,29 +205,26 @@ The software includes a _solver_, may include a user interface and methods for p
 |The continuous <<state,`states`>> of a model are all variables that appear differentiated in the model and are independent from each other. +
 The discrete-time states of a model are time-discrete variables that have two values in a model: The value of the variable from the previous _event_ instant, and the value of the variable at the actual event instant.
 
-|[[state-event,state event]]_state event_
-|_Event_ that is defined by the time instant where the domain latexmath:[z > 0] of an event indicator variable `z` is changed to latexmath:[z \leq 0], or vice versa. +
-This definition is slightly different from the usual standard definition of state events: "latexmath:[z(t)*z(t_{i-1}) \leq 0]" which has the severe drawback that the value of the event indicator at the previous event instant, latexmath:[z(t_{i-1}) \neq 0], must be non-zero and this condition cannot be guaranteed.
-The often used term "zero crossing function" for `z` is misleading (and is therefore not used in this document), since a state event is defined by a change of a domain and not by a zero crossing of a variable.
+|_state event_
+|The time of <<state-event,state _events_>> is not known apriori.
+<<fmi3GetEventIndicators,Event indicators>> are used to allow the importer finding the time of these state events precisely.
 
 |[[step-event,step event]]_step event_
-|_Event_ that might occur at a completed integrator step.
-Since this event type is not defined by a precise time or condition, it is usually not defined by a user.
-A program may use it, for example, to dynamically switch between different states.
-A step event is handled much more efficiently than a _state event_, because the event is just triggered after performing a check at a completed integrator step, whereas a search procedure is needed for a state event.
+|_Event_ that might occur at a completed integrator step signaled by calling <<fmi3CompletedIntegratorStep>>.
+Step events are, for example, used to change the mapping of the continuous states to variables (<<dynamic-state-selection>>).
 
 |_structural parameter_
 |A parameter influencing the size and/or dimensionality of an array variable of an FMU.
 
-|_synchronous clock theory_
-|TODO
-
-|_super-dense time_
+|[[super-dense-time,super-dense time]]_super-dense time_
 |A precise definition of time taking into account iterations at an event.
-For an _FMU_, the <<independent>> variable time latexmath:[t \in \mathbb{T}] is a tuple latexmath:[t = (t_R, t_I)] where latexmath:[t_R \in  \mathbb{R}, t_I \in \mathbb{N} = \{0,1,2,\ldots\}].
-The real part latexmath:[t_R] of this tuple is the <<independent>> variable of the FMU for describing the continuous-time behavior of the model between events.
-During continuous-time integration latexmath:[t_I = 0].
-The integer part latexmath:[t_I] of this tuple is a counter to enumerate (and therefore distinguish) the events at the same continuous-time instant latexmath:[t_R].
+For an _FMU_, the <<independent>> variable time latexmath:[\mathbf{t} \in \mathbb{T}] is a tuple latexmath:[\mathbf{t} = (\mathbf{t}_R, \mathbf{t}_I)] where latexmath:[\mathbf{t}_R \in  \mathbb{R}, \mathbf{t}_I \in \mathbb{N} = \{0,1,2,\ldots\}].
+The real part latexmath:[\mathbf{t}_R] of this tuple is the <<independent>> variable of the FMU for describing the continuous-time behavior of the model between events.
+During continuous-time integration latexmath:[\mathbf{t}_I = 0].
+The integer part latexmath:[\mathbf{t}_I] of this tuple is a counter to enumerate (and therefore distinguish) the events at the same continuous-time instant latexmath:[\mathbf{t}_R].
+
+|_super-dense time instant_
+|See <<time-instant>> and <<super-dense-time>>.
 
 |_task_
 |Special kind of _model partition_ that is used in control code.
@@ -231,6 +233,9 @@ The integer part latexmath:[t_I] of this tuple is a counter to enumerate (and th
 |_Event_ that is defined by a predefined time instant.
 Since the time instant is known in advance, the integrator can select its step size so that the event point is directly reached.
 Therefore, this event can be handled efficiently.
+
+|[[time-instant,time instant]]_time instant_
+|A moment in time, either a continuous-time instant latexmath:[\mathbf{t} = \mathbf{t}_R], or a super-dense time instant latexmath:[\mathbf{t} = (\mathbf{t}_R, \mathbf{t}_I)], see also <<super-dense-time>>.
 
 |_tick relationshipt_
 |_Event_ that is defined by a predefined time instant.
