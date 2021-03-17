@@ -514,18 +514,7 @@ _Artificial algebraic loops (see left diagram of <<figure-connected-fmus>>) can 
 
 [source, C]
 ----
-include::examples/dummy.c[tags=AlgebraicLoops1]
-fmi3Instance FMI1, FMI2;
-fmi3ValueReference vr_FMU1_u, vr_FMU1_y, vr_FMU2_u1, vr_FMU2_u2, vr_FMU2_y1, vr_FMU2_y2;
-fmi3Float64 s=0.1, FMU2_y1, FMU1_y, FMU2_y2;
-...
-fmi3SetFloat64(FMU2, &vr_FMU2_u1, 1, &s,        1);
-fmi3GetFloat64(FMU2, &vr_FMU2_y1, 1, &FMU2_y1,  1);
-fmi3SetFloat64(FMU1, &vr_FMU1_u,  1, &FMU2_y1,  1);
-fmi3GetFloat64(FMU1, &vr_FMU1_y,  1, &FMU1_y,   1);
-fmi3SetFloat64(FMU2, &vr_FMU2_u2, 1, &FMU1_y,   1);
-fmi3GetFloat64(FMU2, &vr_FMU2_y1, 1, &FMU2_y2,  1);
-...
+include::examples/dummy.c[tags=AlgebraicLoop1]
 ----
 
 _In the right diagram, FMU3 and FMU4 are connected in such a way that a real algebraic loop is formed._
@@ -536,21 +525,7 @@ _This method works for <<InitializationMode>>, <<EventMode>>, and <<ContinuousTi
 
 [source, C]
 ----
-fmi3Instance FMU3, FMU4;
-fmi3ValueReference vr_FMU3_u, vr_FMU3_y, vr_FMU4_u, vr_FMU4_y;
-fmi3Float64 s, FMU3_y, FMU4_y, residual;
-bool converged = false;
-
-while (!converged) { // start iteration
-  // s determined by the solver
-  ...
-  fmi3SetFloat64(FMU4, &vr_FMU4_u, 1, &s,   1);
-  fmi3GetFloat64(FMU4, &vr_FMU4_y, 1, &FMU4_y,  1);
-  fmi3SetFloat64(FMU3, &vr_FMU3_u, 1, &FMU4_y,  1);
-  fmi3GetFloat64(FMU3, &vr_FMU3_y, 1, &FMU3_y,  1);
-  residual=s-FMU3_y; // provided to the solver
-  converged=residual<tolerance;
-}
+include::examples/dummy.c[tags=AlgebraicLoop2]
 ----
 
 _In <<StepMode>>, <<fmi3SetFMUState>> is required to restore the FMU state before the next iteration with <<get-and-set-variable-values,`fmi3Set{VariableType}`>>, <<fmi3DoStep>>, and <<get-and-set-variable-values,`fmi3Get{VariableType}`>> is executed._
@@ -558,24 +533,7 @@ _In <<StepMode>>, <<fmi3SetFMUState>> is required to restore the FMU state befor
 _In <<EventMode>>, the algorithms from above must be embedded in an event iteration:_
 [source, C]
 ----
-fmi3Instance FMUx, FMUy;
-bool newDiscreteStatesNeededx;
-bool newDiscreteStatesNeededy;
-
-fmi3EnterEventMode(FMUx,...);
-fmi3EnterEventMode(FMUy,...);
-do { // start event iteration
-    // solve algebraic loop as described in the sample codes above
-
-    // introduce new instant of super-dense time
-    fmi3NewDiscreteStates(FMUx, newDiscreteStatesNeededx, ...);
-    fmi3NewDiscreteStates(FMUy, newDiscreteStatesNeededy, ...);
-} while (newDiscreteStatesNeededx || newDiscreteStatesNeededy);
-
-fmi3EnterStepMode(FMUx); // for CS
-fmi3EnterStepMode(FMUy); // for CS
-// or for ME: fmi3EnterContinuousTimeMode(FMUx);
-// or for ME: fmi3EnterContinuousTimeMode(FMUy);
+include::examples/dummy.c[tags=AlgebraicLoop3]
 ----
 
 _When solving algebraic loops in <<EventMode>>, limitations to variable manipulations declared with XML attribute <<canHandleMultipleSetPerTimeInstant>> must be considered.]_
