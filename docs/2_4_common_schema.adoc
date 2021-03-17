@@ -125,7 +125,7 @@ _Since the XML files are also required to be encoded in UTF-8, string variables 
 
 _[Note that child information items, such as elements in a sequence are ordered lists according to document order, whereas attribute information items are unordered sets (see http://www.w3.org/TR/XML-infoset/#infoitem.element)._
 _The FMI schema is based on ordered lists in a sequence and therefore parsing must preserve this order._
-_For example, the information stored in <<StateDerivative>> in `<ModelStructure>` is only correct if this property is fulfilled.]_
+_For example, the information stored in <<ContinuousStateDerivative>> in `<ModelStructure>` is only correct if this property is fulfilled.]_
 
 All XML-based file formats defined in this standard allow optional `Annotation` elements to be inserted in all XML elements that represent entities of the underlying data model.
 This is achieved through the `Annotations` element:
@@ -940,7 +940,7 @@ The algebraic relationship to the <<input,`inputs`>> can be defined via the <<de
 [[local,`local`]]
 `= local`: Local variables are: +
 
-* continuous <<state,`states`>> and their <<StateDerivative,`StateDerivative`pass:[s]>>, <<ClockedState,`ClockedState`pass:[s]>>, <<EventIndicator,`EventIndicator`pass:[s]>> or <<InitialUnknown,`InitialUnknown`pass:[s]>>.
+* continuous <<state,`states`>> and their <<ContinuousStateDerivative,`ContinuousStateDerivative`pass:[s]>>, <<ClockedState,`ClockedState`pass:[s]>>, <<EventIndicator,`EventIndicator`pass:[s]>> or <<InitialUnknown,`InitialUnknown`pass:[s]>>.
 These variables are listed in the `<fmiModelDescription><ModelStructure>`. +
 * [[localClock,`local clock`]] internal, intermediate variables or local clocks which can be read for debugging purposes and are not listed in the `<fmiModelDescription><ModelStructure>`.
 
@@ -1015,7 +1015,7 @@ Model Exchange: No restrictions on value changes (see <<smoothness>>).
 
 The default is <<continuous>> for variables of type `<Float32>` and `<Float64>`, and <<discrete>> for all other types.
 
-_[Note that the information about continuous <<state,`states`>> is defined with elements <<StateDerivative>> in `<ModelStructure>`.]_
+_[Note that the information about continuous <<state,`states`>> is defined with elements <<ContinuousStateDerivative>> in `<ModelStructure>`.]_
 
 |`initial`
 |
@@ -1476,7 +1476,7 @@ If present, this variable is the derivative of variable with value reference `de
 _[For example, if there are 10 variables and `derivative = 3` for variable 8, then variable 8 is the derivative of variable 3 with respect to the <<independent>> variable (usually time)._
 _This information might be especially used if an <<input>> or an <<output>> is the derivative of another <<input>> or <<output>>, or to define the <<state,`states`>>.]_
 
-The <<state>> <<derivative,`derivatives`>> of an FMU are listed as elements <<StateDerivative>> in `<ModelStructure>`.
+The <<state>> <<derivative,`derivatives`>> of an FMU are listed as elements <<ContinuousStateDerivative>> in `<ModelStructure>`.
 All variables listed in this element must have attribute `derivative` (in order that the continuous-time <<state,`states`>> are uniquely defined).
 
 |`reinit`
@@ -1628,7 +1628,7 @@ The structure of the model is defined in element `<fmiModelDescription><ModelStr
 It defines the <<model-dependencies,dependencies>> between variables.
 
 The required part of the model structure defines an ordering of the <<output,`outputs`>>, the (exposed) <<derivative,`derivatives`>>, the event indicators, and the unknowns that are available during Initialization.
-A Model Exchange FMU must expose all <<derivative,`derivatives`>> of its continuous-time <<state,`states`>> in <<StateDerivative>> in `<ModelStructure>` elements and must expose all event indicators in <<EventIndicator>> elements.
+A Model Exchange FMU must expose all <<derivative,`derivatives`>> of its continuous-time <<state,`states`>> in <<ContinuousStateDerivative>> in `<ModelStructure>` elements and must expose all event indicators in <<EventIndicator>> elements.
 
 The optional part of the model structure defines in which way <<derivative,`derivatives`>>, <<output,`outputs`>>, and initial unknowns depend on <<input,`inputs`>> and/or <<parameter,`parameters`>>, and continuous-time <<state,`states`>>, at the current super-dense time instant (ME) or at the current communication point (CS and SE).
 The listed <<dependencies>> declare the dependencies between whole (multi-dimensional-)variables and not individual elements of the variables.
@@ -1664,22 +1664,22 @@ Beside the knowns, the <<output,`outputs`>> also depend on "frozen" variables (=
 The functional dependency is defined as (dependencies of variables that are fixed in Event and <<ContinuousTimeMode>> and at communication points are not shown): +
 latexmath:[{(\mathbf{y}_c, \mathbf{y}_d) := \mathbf{f}_{\mathit{output}}(\mathbf{x}_c, \mathbf{u}_c, \mathbf{u}_d, t, \mathbf{p}_{\mathit{tune}})}]
 
-|`StateDerivative`
-|[[StateDerivative,`<StateDerivative>`]]
+|`ContinuousStateDerivative`
+|[[ContinuousStateDerivative,`<ContinuousStateDerivative>`]]
 Ordered list of all state derivatives, in other words, a list of value references where every corresponding variable must be a state derivative.
 _[Note that only <<continuous>> floating point variables are listed here._
 _If a <<state>> or a <<derivative>> of a <<state>> shall not be exposed from the FMU, or if states are not statically associated with a variable (due to <<dynamic-state-selection,dynamic state selection>>), then dummy variables have to be introduced, for example, `x[4]`, or `xDynamicStateSet2[5]`._
 _The ordering of the variables in this list is defined by the exporting tool._
-_Usually, it is best to order according to the declaration order of the <<state,`states`>> in the source model, since then the <<StateDerivative>> list does not change if the declaration order of states in the source model is not changed._
+_Usually, it is best to order according to the declaration order of the <<state,`states`>> in the source model, since then the <<ContinuousStateDerivative>> list does not change if the declaration order of states in the source model is not changed._
 _This is for example, important for linearization, in order that the interpretation of the state vector does not change for a re-exported FMU.]_
 
 The corresponding continuous-time <<state,`states`>> are defined by attribute <<derivative>> of the corresponding variable state derivative element.
 _[Note that higher order derivatives must be mapped to first order derivatives but the mapping definition can be preserved due to attribute <<derivative>>._
 _Example: if_ latexmath:[{\frac{\text{ds}}{\text{dt}} = v,\ \frac{\text{dv}}{\text{dt}} =f(..)}] _,then_ latexmath:[{\left\{ v,\ \frac{\text{dv}}{\text{dt}} \right\}}] _is the vector of state derivatives and attribute <<derivative>> of_ latexmath:[{v}] _references_ latexmath:[{s}] _, and attribute <<derivative>> of_ latexmath:[{\frac{\text{dv}}{\text{dt}}}] _references_ latexmath:[{v}] _.]_ +
-For Co-Simulation, elements <<StateDerivative>> are ignored if capability flag <<providesDirectionalDerivatives>> has a value of `false`, in other words, it cannot be computed.
+For Co-Simulation, elements <<ContinuousStateDerivative>> are ignored if capability flag <<providesDirectionalDerivatives>> has a value of `false`, in other words, it cannot be computed.
 _[This is the default._
-_If an FMU supports more than Model Exchange , then the <<StateDerivative>> elements might be present, since it is needed for Model Exchange._
-_If the above flag is set to `false` for the Co-Simulation cases, then the <<StateDerivative>> elements are ignored for Co-Simulation._
+_If an FMU supports more than Model Exchange , then the <<ContinuousStateDerivative>> elements might be present, since it is needed for Model Exchange._
+_If the above flag is set to `false` for the Co-Simulation cases, then the <<ContinuousStateDerivative>> elements are ignored for Co-Simulation._
 _If "inline integration" is used for a co-simulation FMU, then the model still has continuous-time <<state,`states`>> and just a special solver is used (internally the implementation results in a discrete-time system, but from the outside, it is still a continuous-time system).]_ +
 Attribute <<dependencies>> defines the dependencies of the state derivatives from the knowns at the current super-dense time instant in Event and in <<ContinuousTimeMode>> (ME) and at the current communication point (CS and SE).
 Beside the knowns the derivatives also depend on the "frozen" variables (= variables which cannot be changed in the current mode) but these "frozen" variables are not listed as <<dependencies>>.
@@ -1704,7 +1704,7 @@ This list consists of all variables with
 
 - <<causality>> = <<calculatedParameter>> and
 
-- all continuous-time <<state,`states`>> and all state derivatives (defined with elements <<StateDerivative>>) with <<initial>> = <<approx>> or <<calculated>> _[if a Co-Simulation FMU does not define the <<StateDerivative>> elements, (3) cannot be present]_.
+- all continuous-time <<state,`states`>> and all state derivatives (defined with elements <<ContinuousStateDerivative>>) with <<initial>> = <<approx>> or <<calculated>> _[if a Co-Simulation FMU does not define the <<ContinuousStateDerivative>> elements, (3) cannot be present]_.
 
 The resulting list is not allowed to have duplicates (for example, if a <<state>> is also an <<output>>, it is included only once in the list). +
 Attribute <<dependencies>> defines the dependencies of the unknowns from the knowns in <<InitializationMode>> at the initial time.
@@ -1745,9 +1745,9 @@ _[More rigorous importers requiring a variable to be dependent on a single clock
 
 |====
 
-Elements <<Output>>, <<StateDerivative>>, <<ClockedState>>, <<InitialUnknown>>, <<EventIndicator>> and <<ClockElement>> have (partially) the following attributes:
+Elements <<Output>>, <<ContinuousStateDerivative>>, <<ClockedState>>, <<InitialUnknown>>, <<EventIndicator>> and <<ClockElement>> have (partially) the following attributes:
 
-.<<Output>>, <<StateDerivative>>, <<ClockedState>>, <<InitialUnknown>>, <<EventIndicator>> and <<ClockElement>> attribute details.
+.<<Output>>, <<ContinuousStateDerivative>>, <<ClockedState>>, <<InitialUnknown>>, <<EventIndicator>> and <<ClockElement>> attribute details.
 [[table-output-der-initialUknown-details]]
 [cols="1,5", options="header"]
 |====
@@ -1764,7 +1764,7 @@ Optional attribute defining the dependencies of the unknown latexmath:[{v_{\math
 If not present, it must be assumed that the unknown depends on all knowns.
 If present as empty list, the unknown depends on none of the knowns.
 Otherwise the unknown depends on the knowns defined by the given value references. +
-Knowns latexmath:[{\mathbf{v}_{\mathit{known}}}] in <<EventMode>> and <<ContinuousTimeMode>> (ME) and at communication points (CS and SE) for <<Output>> and <<StateDerivative>> elements:
+Knowns latexmath:[{\mathbf{v}_{\mathit{known}}}] in <<EventMode>> and <<ContinuousTimeMode>> (ME) and at communication points (CS and SE) for <<Output>> and <<ContinuousStateDerivative>> elements:
 
 * inputs (variables with <<causality>> = <<input>>),
 
