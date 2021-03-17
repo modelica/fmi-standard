@@ -13,8 +13,8 @@ Therefore, the typical usage is:
   #define FMI3_FUNCTION_PREFIX MyModel_
   #include "fmi3Functions.h"
 
-As a result, a function that is defined as "fmi3GetDerivatives" in this header file,
-is actually getting the name "MyModel_fmi3GetDerivatives".
+As a result, a function that is defined as "fmi3GetContinuousStateDerivatives" in this header file,
+is actually getting the name "MyModel_fmi3GetContinuousStateDerivatives".
 
 This only holds if the FMU is shipped in C source code, or is compiled in a
 static link library. For FMUs compiled in a DLL/sharedObject, the "actual" function
@@ -185,7 +185,7 @@ Functions for Model Exchange
 #define fmi3SetContinuousStates           fmi3FullName(fmi3SetContinuousStates)
 
 /* Evaluation of the model equations */
-#define fmi3GetDerivatives                fmi3FullName(fmi3GetDerivatives)
+#define fmi3GetContinuousStateDerivatives fmi3FullName(fmi3GetContinuousStateDerivatives)
 #define fmi3GetEventIndicators            fmi3FullName(fmi3GetEventIndicators)
 #define fmi3GetContinuousStates           fmi3FullName(fmi3GetContinuousStates)
 #define fmi3GetNominalsOfContinuousStates fmi3FullName(fmi3GetNominalsOfContinuousStates)
@@ -292,7 +292,7 @@ FMI3_Export fmi3SetTimeTYPE             fmi3SetTime;
 FMI3_Export fmi3SetContinuousStatesTYPE fmi3SetContinuousStates;
 
 /* Evaluation of the model equations */
-FMI3_Export fmi3GetDerivativesTYPE                fmi3GetDerivatives;
+FMI3_Export fmi3GetContinuousStateDerivativesTYPE fmi3GetContinuousStateDerivatives;
 FMI3_Export fmi3GetEventIndicatorsTYPE            fmi3GetEventIndicators;
 FMI3_Export fmi3GetContinuousStatesTYPE           fmi3GetContinuousStates;
 FMI3_Export fmi3GetNominalsOfContinuousStatesTYPE fmi3GetNominalsOfContinuousStates;
