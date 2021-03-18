@@ -72,9 +72,9 @@ typedef enum {
 
 /* tag::IntervalQualifier[] */
 typedef enum {
-    fmi3NewInterval,
-    fmi3NoChange,
-    fmi3NotYetKnown,
+    fmi3IntervalNotYetKnown,
+    fmi3IntervalUnchanged,
+    fmi3IntervalChanged
 } fmi3IntervalQualifier;
 /* end::IntervalQualifier[] */
 
