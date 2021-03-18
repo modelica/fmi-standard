@@ -117,12 +117,12 @@ void CallbackIntermediateUpdate(/*..., */ fmi3Boolean clocksTicked /*, ...*/) {
         }
 
         // ask FMU if output clock has ticked
-        fmi3ValueReference outputClockReferences = { 7 };
-        fmi3Boolean clocksActivationState[1] = { fmi3ClockInactive };
+        fmi3ValueReference outputClockReferences[1] = { 7 };
+        fmi3Clock clockActivationStates[1] = { fmi3ClockInactive };
         
-        m->fmi3GetClock(m->instance, outputClockReferences, 1, clocksActivationState, 1);
+        m->fmi3GetClock(m->instance, outputClockReferences, 1, clockActivationStates, 1);
         
-        if (clocksActivationState[0]) {
+        if (clockActivationStates[0]) {
             // schedule some external task
             // Scheduler->ScheduleTask(SomeTask);
         }
@@ -154,7 +154,9 @@ fmi3Status fmi3ActivateModelPartition(fmi3Instance instance,
         activateModelPartition50ms(instance, activationTime);
         break;
     // ...
-   }
+    }
+    
+    return fmi3OK;
 }
 // end::Example7[]
 
@@ -205,6 +207,8 @@ fmi3Status fmi3GetIntervalDecimal(fmi3Instance instance,
         qualifiers[0] = CountdownClockQualifier;
         CountdownClockQualifier = fmi3NotYetKnown;
     }
+
+    return fmi3OK;
 }
 // end::Example9[]
 
@@ -221,6 +225,8 @@ fmi3Status fmi3GetClock(fmi3Instance instance,
         values[0] = OutClockActivationState;
         OutClockActivationState = fmi3ClockInactive;
     }
+    
+    return fmi3OK;
 }
 // end::Example10[]
 
