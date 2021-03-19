@@ -2,9 +2,9 @@
 
 This section contains the description of the Scheduled Execution interface for a C program.
 
-The direct scheduling of model partitions based on <<clocks, `clock`>> ticks requires an additional handling mode for FMUs.
+The direct scheduling of model partitions based on <<Clock>> ticks requires an additional handling mode for FMUs.
 The FMU signals its support for direct model partition scheduling in the <<modelDescription.xml>> via the element `<fmiModelDescription><ScheduledExecution>`.
-The simulation algorithm signals to the FMU that it supports and has recognized the <<clocks, `clocks`>> and model partition scheduling capabilities of the FMU by instantiating it as Scheduled Execution.
+The simulation algorithm signals to the FMU that it supports and has recognized the <<Clock,Clocks>> and model partition scheduling capabilities of the FMU by instantiating it as Scheduled Execution.
 
 Error, reset or terminate information is a global state of the FMU.
 If e.g. a function returns <<fmi3Discard>> or <<fmi3Error>> this is also assumed for all active or preempted model partitions.
@@ -33,7 +33,7 @@ After <<fmi3Terminate>> has been called no new tasks can be started (e.g. relate
 
 The FMU enters this state when the simulation algorithm calls <<fmi3ExitInitializationMode>> in state <<InitializationMode>> or <<fmi3ExitConfigurationMode>> in state <<ReconfigurationMode>>.
 
-In this state the simulation algorithm can create multiple concurrent tasks related to an FMU and in each task the simulation algorithm can activate one or multiple <<clocks, `clocks`>> with <<causality, `causality == input`>> of an FMU based on the defined <<clocks, `clock`>> properties via a <<fmi3ActivateModelPartition>> call for each clock.
+In this state the simulation algorithm can create multiple concurrent tasks related to an FMU and in each task the simulation algorithm can activate one or multiple <<Clock,Clocks>> with <<causality>> == <<input>> of an FMU based on the defined <<Clock>> properties via a <<fmi3ActivateModelPartition>> call for each clock.
 
 [cols="2,1",options="header",]
 |====
@@ -63,10 +63,10 @@ a|When an input clock latexmath:[\mathbf{k}_i] is active, activate the correspon
 Allowed Function Calls::
 
 Function <<get-and-set-variable-values,`fmi3Set{VariableTypeExclClock}`>>::
-This function can be called before scheduling a model partition for variables assigned to that model partition via its associated <<clocks, `clock`>> and all variables not associated to a <<clocks, `clock`>> (global variables).
+This function can be called before scheduling a model partition for variables assigned to that model partition via its associated <<Clock>> and all variables not associated to a <<Clock>> (global variables).
 
 Function <<get-and-set-variable-values,`fmi3Get{VariableTypeExclClock}`>>::
-These functions can be called after the computation of a model partition for variables assigned to that model partition via its associated <<clocks, `clock`>> and all variables not associated to a <<clocks, `clock`>> (global variables).
+These functions can be called after the computation of a model partition for variables assigned to that model partition via its associated <<Clock>> and all variables not associated to a <<Clock>> (global variables).
 
 +
 Set/get operations must be atomic for a single variable.
@@ -86,7 +86,7 @@ _[The reason is to avoid different interpretations of the caching, since contrar
 
 [[fmi3ActivateModelPartition, `fmi3ActivateModelPartition`]] Function <<fmi3ActivateModelPartition>>::
 
-Each <<fmi3ActivateModelPartition>> call is now associated to the computation of a (publicly disclosed, externally controlled) model partition of the model and therefore to a single defined <<clocks, `clock`>> with <<causality, `causality == input`>>.
+Each <<fmi3ActivateModelPartition>> call is now associated to the computation of a (publicly disclosed, externally controlled) model partition of the model and therefore to a single defined <<Clock>> with <<causality>> == <<input>>.
 +
 [source, C]
 ----
@@ -95,31 +95,31 @@ include::../headers/fmi3FunctionTypes.h[tag=ActivateModelPartition]
 +
 The <<fmi3ActivateModelPartition>> function has the following arguments:
 
-* [[clockReference,`clockReference`]] `clockReference`: <<valueReference>> of a <<clocks, `clock`>> with <<causality, `causality == input`>> which shall be activated
+* [[clockReference,`clockReference`]] `clockReference`: <<valueReference>> of a <<Clock>> with <<causality>> == <<input>> which shall be activated
 
-* [[clockElementIndex,`clockElementIndex`]] `clockElementIndex`: The element index of the <<clocks, `clock`>> variable which shall be activated.
-For a scalar <<clocks, `clock`>> variable this must be 0; for array <<clocks, `clock`>> variables, the element clock to activate is specified using the 1-based element index.
-Using the element index 0 means all elements of the <<clocks, `clock`>> variable.
+* [[clockElementIndex,`clockElementIndex`]] `clockElementIndex`: The element index of the <<Clock>> variable which shall be activated.
+For a scalar <<Clock>> variable this must be 0; for array <<Clock>> variables, the element clock to activate is specified using the 1-based element index.
+Using the element index 0 means all elements of the <<Clock>> variable.
 (Note: If an array has more than one dimension the indices are serialized in the same order as defined for values in <<serialization-of_variables>>).
 
-* [[activationTime, `activationTime`]] `activationTime`: value of the <<independent>> variable of the assigned <<clocks, `clock`>> tick time latexmath:[\mathbf{t}_i] _[typically: simulation (i.e. virtual) time]_ (which is known to the simulation algorithm).
+* [[activationTime, `activationTime`]] `activationTime`: value of the <<independent>> variable of the assigned <<Clock>> tick time latexmath:[\mathbf{t}_i] _[typically: simulation (i.e. virtual) time]_ (which is known to the simulation algorithm).
 
 +
 The importer schedules calls of <<fmi3ActivateModelPartition>> for each FMU.
-Calls are based on activations of <<clocks, `clocks`>> with <<causality, `causality == input`>>.
-These <<clocks, `clock`>> activations can be based on <<clocks, `clock`>> activations from FMU external sources (e.g. <<outputClock,`output clocks`>> of other FMUs).
+Calls are based on activations of <<Clock,Clocks>> with <<causality>> == <<input>>.
+These <<Clock>> activations can be based on <<Clock>> activations from FMU external sources (e.g. <<outputClock,`output clocks`>> of other FMUs).
 The <<inputClock>> activations can be based on <<outputClock>> ticks of another FMU.
 The <<fmi3ActivateModelPartition>> function must not be called on <<outputClock,`output clocks`>> of an FMU.
 
 +
 This is a different timing concept compared to <<fmi3DoStep>> calls for Co-Simulation FMUs or the <<fmi3SetTime>> for Model Exchange FMUs.
-An <<fmi3ActivateModelPartition>> call will compute the results of the model partition defined by <<clockReference>> and <<clockElementIndex>> (i.e. <<valueReference>> of the variable that defines a <<clocks, `clock`>> and an element index into that for arrays) for the current <<clocks, `clock`>> tick latexmath:[\mathbf{t}_i].
+An <<fmi3ActivateModelPartition>> call will compute the results of the model partition defined by <<clockReference>> and <<clockElementIndex>> (i.e. <<valueReference>> of the variable that defines a <<Clock>> and an element index into that for arrays) for the current <<Clock>> tick latexmath:[\mathbf{t}_i].
 
 +
-If required, the FMU can internally derive the <<clocks, `clock`>> interval latexmath:[\mathbf{T}_\mathit{interval, i}] based on the last <<clocks, `clock`>> tick time latexmath:[\mathbf{t}_\mathit{i-1}] i.e. last `activationTime` for this <<clockReference>> and <<clockElementIndex>> (based on last <<fmi3ActivateModelPartition>> call).
+If required, the FMU can internally derive the <<Clock>> interval latexmath:[\mathbf{T}_\mathit{interval, i}] based on the last <<Clock>> tick time latexmath:[\mathbf{t}_\mathit{i-1}] i.e. last `activationTime` for this <<clockReference>> and <<clockElementIndex>> (based on last <<fmi3ActivateModelPartition>> call).
 
 +
-Consecutive calls to <<fmi3ActivateModelPartition>> for a <<clockReference>> and <<clockElementIndex>> (i.e. <<valueReference>> of <<clocks, `clock`>> variable and element index into that for arrays) must have strictly monotonically increasing `activationTime` latexmath:[\mathbf{t}_i].
+Consecutive calls to <<fmi3ActivateModelPartition>> for a <<clockReference>> and <<clockElementIndex>> (i.e. <<valueReference>> of <<Clock>> variable and element index into that for arrays) must have strictly monotonically increasing `activationTime` latexmath:[\mathbf{t}_i].
 
 [[fmi3CallbackIntermediateUpdateSE,`fmi3CallbackIntermediateUpdate`]] Function <<fmi3CallbackIntermediateUpdate>>::
 <<fmi3CallbackIntermediateUpdate>> switches the FMU itself into the <<IntermediateUpdateMode>>.
