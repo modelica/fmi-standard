@@ -24,13 +24,13 @@ That requires a secured internal and external access to global states and variab
 Thus in Scheduled Execution a support for a correct handling of the preemption of model partition computations is required.
 That also requires that the FMU reports the active state of an <<outputClock>> only with the first call of <<fmi3GetClock>> for a specific activation of this <<Clock>> and sets the reported activation state immediately back to `false` for the following <<fmi3GetClock>> calls for that <<Clock>> until this <<outputClock>> is internally activated again.
 
-If a preemptive multitasking regime is intended, an individual task (or thread -- task and thread are used synonymously here) for each model partition (associated to a <<Clock>> with <<causality>> == <<input>>) has to be created.
+If a preemptive multitasking regime is intended, an individual task (or thread -- task and thread are used synonymously here) for each model partition (associated to an <<inputClock>>) has to be created.
 The task for computing each <<fmi3ActivateModelPartition>> is created and controlled by the simulation algorithm, not by the FMU.
 So the FMU exporting tool does not need to take care for that (except for preparing its code to support preemption).
 
 _[If only one single model partition is available via the interface of an FMU, preemptive calls of the related <<fmi3ActivateModelPartition>> function are possible by default since there are no external cross dependencies within one model partition between communication points.]_
 
-Based on the settings defined in the XML for <<Clock,`Clocks`>> with <<causality>> == <<input>> the simulation algorithm calls <<get-and-set-variable-values,`fmi3Set{VariableType}`>>, <<fmi3ActivateModelPartition>>, <<get-and-set-variable-values,`fmi3Get{VariableType}`>> calls.
+Based on the settings defined in the XML for <<inputClock,input Clocks>> the simulation algorithm calls <<get-and-set-variable-values,`fmi3Set{VariableType}`>>, <<fmi3ActivateModelPartition>>, or <<get-and-set-variable-values,`fmi3Get{VariableType}`>>.
 Set/get calls for each task are only allowed for variables that are associated to the <<inputClock>> associated to that task or - here preemption issues become important - to variables that are associated to no <<Clock>> (global variables), based on the XML information (see <<table-overview-clocks>>).
 
 _[The recommendation is to avoid global variable associations as much as possible in the XML._
@@ -38,7 +38,7 @@ _It is also recommended to reduce dependencies (defined in XML model structure) 
 
 The simulation algorithm has no knowledge about the FMU internal communication between the model partitions of a single FMU and does not handle it.
 
-The simulation algorithm schedules the <<fmi3ActivateModelPartition>> (as well as related <<get-and-set-variable-values,`fmi3Get{VariableType}`>> and `fmi3Set{VariableType}`) calls based on given priorities for <<Clock, `Clocks`>> with <<causality>> == <<input>> defined in the <<modelDescription.xml>>.
+The simulation algorithm schedules the <<fmi3ActivateModelPartition>> (as well as related <<get-and-set-variable-values,`fmi3Get{VariableType}`>> and `fmi3Set{VariableType}`) calls based on given priorities for <<inputClock, inputClocks>> defined in the <<modelDescription.xml>>.
 
 Priority (see <<priority>>):
 
@@ -49,7 +49,7 @@ Arbitrary evaluation order is possible for model partitions of the same priority
 
 _[If multiple tasks are needed to be scheduled for computation at a certain time instant a simulation algorithm must schedule a task of a higher priority always before a task of a lower priority]_
 
-A <<Clock>> with <<causality>> == <<input>> can hold fixed or modifiable periods as well as being triggered unpredictably.
+An <<inputClock>> can hold fixed or modifiable periods, or be triggered unpredictably.
 Refer to chapter on <<Clock,Clocks>> for details.
 
 Based on the period and priority definitions the exporting tool can restrict the code evaluation order.
