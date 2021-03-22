@@ -667,9 +667,9 @@ An `<Enumeration>` element must have at least one `<Item>`.
 
 |`priority`
 |[[priority,`priority`]]
-<<clock,`Clocks`>> that have to be activated at the same time instant are ordered according to this attribute.
+<<Clock,`Clocks`>> that have to be activated at the same time instant are ordered according to this attribute.
 Smaller values signal higher priorities.
-No ordering is defined for multiple <<clock,`clocks`>> with the same <<priority>>.
+No ordering is defined for multiple <<Clock,`Clocks`>> with the same <<priority>>.
 
 This attribute is only considered in Scheduled Execution.
 
@@ -683,7 +683,7 @@ The attribute `interval` declares the clock type, see <<table-overview-clocks>>.
 |`intervalDecimal`
 |
 [[intervalDecimal,`intervalDecimal`]]
-The time interval latexmath:[\mathbf{T}_{interval}] between consecutive <<clock>> ticks.
+The time interval latexmath:[\mathbf{T}_{interval}] between consecutive <<Clock>> ticks.
 
 This value must be greater than 0.0.
 
@@ -697,13 +697,13 @@ This value must be equal or greater than 0.0.
 |`supportsFraction`
 |
 [[supportsFraction,`supportsFraction`]]
-This attribute defines, if the functions `fmi3GetXXXFraction` and `fmi3SetXXXFraction` are allowed to be called for all <<time-based-clocks,time-based clocks>>.
+This attribute defines, if the functions `fmi3GetXXXFraction` and `fmi3SetXXXFraction` are allowed to be called for all <<time-based-clock,time-based Clocks>>.
 
 |[[resolution, `resolution`]]`resolution`
 |Instead of defining clock timing using floating point numbers, FMI allows the definition of rational numbers using <<intervalCounter,`intervalCounters`>> and <<shiftCounter,`shiftCounters`>>.
 The `resolution` defines the minimal quanta clock timing can be resolved by.
 
-This attribute is required for <<periodic-clock-ticks,time-based periodic clocks>> if <<supportsFraction,`supportsFraction = true`>> and either <<intervalCounter>> or <<shiftCounter>> is present.
+This attribute is required for <<periodic-clock,time-based periodic clocks>> if <<supportsFraction,`supportsFraction = true`>> and either <<intervalCounter>> or <<shiftCounter>> is present.
 
 |[[intervalCounter,`intervalCounter`]]`intervalCounter`
 |This attribute defines (together with <<resolution>>) the interval between consecutive clock ticks:
@@ -980,6 +980,8 @@ _[<<causality>> = <<calculatedParameter>> and <<causality>> = <<local>> with <<v
 _The difference is that a <<calculatedParameter>> can be used in another model or FMU, whereas a <<local>> variable cannot._
 _For example, when importing an FMU in a Modelica environment, a <<calculatedParameter>> should be imported in a `public` section as `final parameter`, whereas a <<local>> variable should be imported in a `protected` section of the model.]_
 
+The causality of variables of type <<Clock>> must be either <<input>> or <<output>>.
+
 |`variability`
 |
 [[variability,`variability`]]
@@ -1010,10 +1012,9 @@ _[If the simulation algorithm notices a change in a discrete variable during <<i
 `= continuous`: Only a variable of `type == fmi3GetFloat32` or `type == fmi3GetFloat64` can be <<continuous>>. +
 Model Exchange: No restrictions on value changes (see <<smoothness>>).
 
-[[clock,`clock`]]
-`= clock`: Only a variable of type `<Clock>` can have this variability.
-
 The default is <<continuous>> for variables of type `<Float32>` and `<Float64>`, and <<discrete>> for all other types.
+
+For variables of type `Clock` and <<clocked-variable,`clocked variables`>> the <<variability>> is always <<discrete>>.
 
 _[Note that the information about continuous <<state,`states`>> is defined with elements <<ContinuousStateDerivative>> in `<ModelStructure>`.]_
 
@@ -1044,8 +1045,8 @@ Examples: (a) automatic tests of FMUs are performed, and the FMU is tested by pr
 (b) For a Model Exchange FMU, the FMU might be part of an algebraic loop.
 If the <<input>> variable is iteration variable of this algebraic loop, then initialization starts with its <<start>> value.]_
 
-If <<causality>> = <<input>> and <<variability>> = <<clock>>, that is, the variable is an <<inputClock>>, it is required to provide a <<start>> value for describing the expected initial condition of the <<inputClock>> for that FMU.
-If an <<inputClock>> has `fmi3True` as a <<start>> value, the environment should activate the <<clock>> the first time it enters <<EventMode>>.
+If <<causality>> = <<input>> and <<variability>> = <<Clock>>, that is, the variable is an <<inputClock>>, it is required to provide a <<start>> value for describing the expected initial condition of the <<inputClock>> for that FMU.
+If an <<inputClock>> has `fmi3True` as a <<start>> value, the environment should activate the <<Clock>> the first time it enters <<EventMode>>.
 The environment can nevertheless choose different <<start>> values if it is not possible to fulfill the conditions in a simulation setup.
 
 If <<causality>> = <<output>> the <<initial>> attribute value is set to <<calculated>> and no <<start>> value is provided.
@@ -1146,7 +1147,7 @@ If <<initial>> is not present, its value is defined by <<table-definition-initia
 ^|[.underline]#calculated#, exact, approx
 ^|--
 
-^|<<clock,`clocks`>>
+^|<<Clock,`Clocks`>>
 ^|--
 ^|--
 ^|--
@@ -1221,7 +1222,7 @@ _The value of the variable is either the <<start>> value stored in a variable el
 ^|(14)
 ^|(15)
 
-^|<<clock,`clocks`>>
+^|<<Clock,`Clocks`>>
 ^|--
 ^|--
 ^|--
@@ -1344,8 +1345,8 @@ _Usually, this is `time`._
 |_<<parameter,`Parameter`>> used in  `<Dimension>` element;  can be changed before initialization in <<ConfigurationMode>> and in <<ReconfigurationMode>>._
 
 >|_(18)_
-|_<<clock>>_
-|_Variable that defines a <<clock>>._
+|_<<Clock>>_
+|_Variable that defines a <<Clock>>._
 
 |====
 
@@ -1659,7 +1660,7 @@ _The ordering of the variables in this list is defined by the exporting tool._
 _Usually, it is best to order according to the declaration order in the source model, since then the <<Output>> list does not change if the declaration order of <<output,`outputs`>> in the source model is not changed._
 _This is for example, important for linearization, in order that the interpretation of the output vector does not change for a re-exported FMU.]_
 Attribute <<dependencies>> defines the dependencies of the <<output,`outputs`>> from the knowns at the current super-dense time instant in Event and in <<ContinuousTimeMode>> (ME) and at the current communication point (CS and SE).
-Attribute <<dependencies>> for output clocks (variables with <<causality>> = <<output>> and <<variability>> = <<clock>>) lists all known variables (including input clocks) that contribute to trigger a clock tick for that output clock.
+Attribute <<dependencies>> for output clocks (variables with <<causality>> = <<output>> and <<variability>> = <<Clock>>) lists all known variables (including input clocks) that contribute to trigger a clock tick for that output clock.
 Beside the knowns, the <<output,`outputs`>> also depend on "frozen" variables (= variables which cannot be changed in the current mode) but these "frozen" variables are not listed as <<dependencies>>.
 The functional dependency is defined as (dependencies of variables that are fixed in Event and <<ContinuousTimeMode>> and at communication points are not shown): +
 latexmath:[{(\mathbf{y}_c, \mathbf{y}_d) := \mathbf{f}_{\mathit{output}}(\mathbf{x}_c, \mathbf{u}_c, \mathbf{u}_d, t, \mathbf{p}_{\mathit{tune}})}]
@@ -1774,7 +1775,7 @@ Knowns latexmath:[{\mathbf{v}_{\mathit{known}}}] in <<EventMode>> and <<Continuo
 
 * <<independent>> variable (usually time; <<causality>> = <<independent>>).
 
-_[The list of dependencies may include input clocks (variables with <<causality>> = <<input>> and <<variability>> = <<clock>>)._
+_[The list of dependencies may include input clocks (variables with <<causality>> = <<input>> and <<variability>> = <<Clock>>)._
 _If an <<outputClock>> depends on an <<inputClock>>, then clock ticks of the <<inputClock>> in <<EventMode>> or <<ClockActivationMode>> may create <<outputClock>> ticks during this event handling.]_
 
 Knowns latexmath:[{\mathbf{v}_{\mathit{known}}}] in <<InitializationMode>> (for elements <<InitialUnknown>>):
