@@ -22,26 +22,15 @@ fmi3Float64 AOutput[] = {0.0};
 fmi3ValueReference ClockReference10ms = 5;
 size_t ClockElementIndex = 0;
 
+/* tag::SE_Task10ms[] */
 void ExecuteModelPartition10ms()
 {
-	fmi3SetFloat64 (ModelInstance,
-					AInputReferences,
-					2,
-					AInput,
-					2);
-
-	fmi3ActivateModelPartition(ModelInstance,
-								ClockReference10ms,
-								ClockElementIndex,
-								ActivationTime);
-	fmi3GetFloat64 (ModelInstance,
-					AOutputReferences,
-					1,
-					AOutput,
-					1);
-	
+	fmi3SetFloat64 (ModelInstance, AInputReferences, 2,	AInput,	2);
+	fmi3ActivateModelPartition(ModelInstance, ClockReference10ms, ClockElementIndex, ActivationTime);
+	fmi3GetFloat64 (ModelInstance, AOutputReferences, 1, AOutput, 1);
 }
-
+/* end::SE_Task10ms[] */
+/* tag::SE_IntermediateUpdate[] */
 void CallbackIntermediateUpdate(fmi3InstanceEnvironment instanceEnvironment,
 								fmi3Float64  intermediateUpdateTime,
 								fmi3Boolean  clocksTicked,
@@ -85,3 +74,4 @@ void CallbackIntermediateUpdate(fmi3InstanceEnvironment instanceEnvironment,
 	  }
 	}
 }
+/* end::SE_IntermediateUpdate[] */

@@ -504,7 +504,7 @@ fmi3Float64 BOut = 0.0;
 fmi3IntervalQualifier CountdownClockQualifier = fmi3NotYetKnown;
 fmi3Float64 CountdownClockInterval = 0.0;
 fmi3Boolean OutputClockTicked = fmi3ClockInactive;
-
+/* tag::SE_ActivateMP10ms[] */
 void activateModelPartition10ms(ModelInstance *instance,
 								fmi3Float64 activationTime ){
 	
@@ -525,7 +525,7 @@ void activateModelPartition10ms(ModelInstance *instance,
 												NULL);
    }
    
-	fmi3Boolean conditionForOutputClockMet = (AIn2>42.0);;
+	fmi3Boolean conditionForOutputClockMet = (AIn2>42.0);
     if (conditionForOutputClockMet)
    {
       // outputClock ticks
@@ -542,11 +542,10 @@ void activateModelPartition10ms(ModelInstance *instance,
 												NULL,
 												NULL);
    }
-   
    AOut = AIn1 + AIn2;
-
 }
-
+/* end::SE_ActivateMP10ms[] */
+/* tag::SE_GetIntervalDecimal[] */
 fmi3Status fmi3GetIntervalDecimal(fmi3Instance instance,
 								  const fmi3ValueReference valueReferences[],
 								  size_t nValueReferences,
@@ -569,7 +568,8 @@ fmi3Status fmi3GetIntervalDecimal(fmi3Instance instance,
 	}
     return fmi3OK;
 }
-
+/* end::SE_GetIntervalDecimal[] */
+/* tag::SE_GetClock[] */
 fmi3Status fmi3GetClock  (fmi3Instance instance,
 						  const fmi3ValueReference valueReferences[],
 						  size_t nValueReferences,
@@ -590,7 +590,7 @@ fmi3Status fmi3GetClock  (fmi3Instance instance,
 	}
 	return fmi3OK;
 }
-
+/* end::SE_GetClock[] */
 void activateModelPartition50ms(ModelInstance *instance,
 								fmi3Float64 activationTime ){
 	BOut = 2.2*BIn;
@@ -601,7 +601,7 @@ void activateModelPartitionAperiodic    (ModelInstance *instance,
 										fmi3Float64 activationTime ){
 									
 }
-
+/* tag::SE_ActivateMP[] */
 fmi3Status fmi3ActivateModelPartition(fmi3Instance instance,
 									  fmi3ValueReference clockReference,
 									  size_t clockElementIndex,
@@ -621,7 +621,7 @@ fmi3Status fmi3ActivateModelPartition(fmi3Instance instance,
 	   }
     return fmi3Error;
 }
-
+/* end::SE_ActivateMP[] */
 
 fmi3Status fmi3GetFloat64(fmi3Instance instance,
 						  const fmi3ValueReference valueReferences[],
