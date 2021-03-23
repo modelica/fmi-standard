@@ -111,7 +111,7 @@ void CallbackIntermediateUpdate(/*..., */ fmi3Boolean clocksTicked /*, ...*/) {
         
         m->fmi3GetIntervalDecimal(m->instance, aperiodicClockReferences, 1, intervals, qualifiers, 1);
         
-        if (qualifiers[0] == fmi3NewInterval) {
+        if (qualifiers[0] == fmi3IntervalChanged) {
             // schedule task for AperiodicClock with a delay
             // Scheduler->ScheduleTask(TaskAperiodic, intervals[0]);
         }
@@ -172,7 +172,7 @@ void activateModelPartition10ms(fmi3Instance instance, fmi3Float64 activationTim
     FMU *m;
     
     if (condition1) {
-        CountdownClockQualifier = fmi3NewInterval;
+        CountdownClockQualifier = fmi3IntervalChanged;
         CountdownClockInterval = 0.0;
         // inform simulation algorithm that the countdown clock has ticked
         fmi3Boolean clocksTicked = fmi3True;
@@ -205,7 +205,7 @@ fmi3Status fmi3GetIntervalDecimal(fmi3Instance instance,
     if (valueReferences[0] == 8) {
         intervals[0] = CountdownClockInterval;
         qualifiers[0] = CountdownClockQualifier;
-        CountdownClockQualifier = fmi3NotYetKnown;
+        CountdownClockQualifier = fmi3IntervalChanged;
     }
 
     return fmi3OK;
