@@ -144,8 +144,7 @@ void CallbackIntermediateUpdate(fmi3InstanceEnvironment instanceEnvironment,
 	{
 		// ask FMU if countdown clock is about to tick
 		const fmi3ValueReference aperiodicClockReferences[] = { 6 };
-		fmi3GetIntervalDecimal(fmu, aperiodicClockReferences, 1, interval,
-			intervalQualifier, 1);
+		fmi3GetIntervalDecimal(fmu, aperiodicClockReferences, 1, interval, intervalQualifier, 1);
 		if (intervalQualifier[0] == fmi3IntervalChanged)
 		{
 			// schedule task for AperiodicClock with a delay
