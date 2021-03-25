@@ -17,6 +17,9 @@ xml_files = [
     'model_structure_example2.xml',
     'model_structure_example3.xml',
     'model_structure_example4.xml',
+    'se_example_modelDescription.xml',
+    'string_vector_example.xml',
+    'structural_parameter_example.xml',
     'unit_definition.xml',
     'variable_types.xml',
 ]
