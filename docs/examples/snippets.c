@@ -123,8 +123,7 @@ void activateModelPartition50ms(fmi3Instance* instance, fmi3Float64 activationTi
 void activateModelPartitionAperiodic(fmi3Instance* instance, fmi3Float64 activationTime) {}
 
 /*tag::SE_sa_task10ms[] */
-void ExecuteModelPartition10ms()
-{
+void ExecuteModelPartition10ms() {
 	fmi3SetFloat64(fmu, AInputReferences, 2, AInput, 2);
 	fmi3ActivateModelPartition(fmu, ClockReference10ms, ClockElementIndex, ActivationTime);
 	fmi3GetFloat64(fmu, AOutputReferences, 1, AOutput, 1);
@@ -136,17 +135,15 @@ void CallbackIntermediateUpdate(fmi3InstanceEnvironment instanceEnvironment,
 	fmi3Float64  intermediateUpdateTime, fmi3Boolean  clocksTicked,
 	fmi3Boolean  intermediateVariableSetRequested, fmi3Boolean  intermediateVariableGetAllowed,
 	fmi3Boolean  intermediateStepFinished, fmi3Boolean  canReturnEarly,
-	fmi3Boolean* earlyReturnRequested, fmi3Float64* earlyReturnTime)
-{
+	fmi3Boolean* earlyReturnRequested, fmi3Float64* earlyReturnTime) {
+
 	fmi3Float64 interval[] = { 0.0 };
 	fmi3IntervalQualifier intervalQualifier[] = { fmi3IntervalNotYetKnown };
-	if (clocksTicked == fmi3True)
-	{
+	if (clocksTicked == fmi3True) {
 		// ask FMU if countdown clock is about to tick
 		const fmi3ValueReference aperiodicClockReferences[] = { 6 };
 		fmi3GetIntervalDecimal(fmu, aperiodicClockReferences, 1, interval, intervalQualifier, 1);
-		if (intervalQualifier[0] == fmi3IntervalChanged)
-		{
+		if (intervalQualifier[0] == fmi3IntervalChanged) {
 			// schedule task for AperiodicClock with a delay
 			ScheduleAperiodicTask(interval[0]);
 		}
@@ -154,8 +151,7 @@ void CallbackIntermediateUpdate(fmi3InstanceEnvironment instanceEnvironment,
 		fmi3ValueReference outputClockReferences[] = { 7 };
 		fmi3Boolean clocksActivationState[] = { fmi3ClockInactive };
 		fmi3GetClock(fmu, outputClockReferences, 1, clocksActivationState, 1);
-		if (clocksActivationState[0])
-		{
+		if (clocksActivationState[0]) {
 			// schedule some external task
 			ScheduleExternalTask();
 		}
@@ -164,11 +160,10 @@ void CallbackIntermediateUpdate(fmi3InstanceEnvironment instanceEnvironment,
 /* end::SE_sa_intermediateUpdate[] */
 
 /* tag::SE_fmu_activateMP10ms[] */
-void activateModelPartition10ms(ModelInstance* instance, fmi3Float64 activationTime)
-{
+void activateModelPartition10ms(ModelInstance* instance, fmi3Float64 activationTime) {
+
 	fmi3Boolean conditionForCountdownClockMet = (AIn1 > AIn2);
-	if (conditionForCountdownClockMet)
-	{
+	if (conditionForCountdownClockMet) {
 		CountdownClockQualifier = fmi3IntervalChanged;
 		CountdownClockInterval = 0.0;
 		// inform simulation algorithm that the countdown clock has ticked
@@ -177,8 +172,7 @@ void activateModelPartition10ms(ModelInstance* instance, fmi3Float64 activationT
 			fmi3False, fmi3False, fmi3False, fmi3False, NULL, NULL);
 	}
 	fmi3Boolean conditionForOutputClockMet = (AIn2 > 42.0);
-	if (conditionForOutputClockMet)
-	{
+	if (conditionForOutputClockMet) {
 		// outputClock ticks
 		OutputClockTicked = fmi3ClockActive;
 		// inform simulation algorithm that output clock has ticked
@@ -192,10 +186,9 @@ void activateModelPartition10ms(ModelInstance* instance, fmi3Float64 activationT
 
 /* tag::SE_fmu_activateMP[] */
 fmi3Status fmi3ActivateModelPartition(fmi3Instance instance, fmi3ValueReference clockReference,
-	size_t clockElementIndex, fmi3Float64 activationTime)
-{
-	switch (clockReference)
-	{
+	size_t clockElementIndex, fmi3Float64 activationTime) {
+
+	switch (clockReference) {
 	case 5:
 		// Input clock 10msClock
 		activateModelPartition10ms(instance, activationTime);
@@ -216,18 +209,15 @@ fmi3Status fmi3ActivateModelPartition(fmi3Instance instance, fmi3ValueReference 
 
 /* tag::SE_fmu_getIntervalDecimal[] */
 fmi3Status fmi3GetIntervalDecimal(fmi3Instance instance, const fmi3ValueReference valueReferences[],
-	size_t nValueReferences, fmi3Float64 interval[], fmi3IntervalQualifier qualifier[], size_t nValues)
-{
-	for (int i = 0; i < nValues; i++)
-	{
-		if (valueReferences[i] == 6)
-		{
+	size_t nValueReferences, fmi3Float64 interval[], fmi3IntervalQualifier qualifier[], size_t nValues) {
+
+	for (int i = 0; i < nValues; i++) {
+		if (valueReferences[i] == 6) {
 			interval[i] = CountdownClockInterval;
 			qualifier[i] = CountdownClockQualifier;
 			CountdownClockQualifier = fmi3IntervalUnchanged;
 		}
-		else
-		{
+		else {
 			qualifier[i] = fmi3IntervalNotYetKnown;
 		}
 	}
@@ -237,17 +227,14 @@ fmi3Status fmi3GetIntervalDecimal(fmi3Instance instance, const fmi3ValueReferenc
 
 /* tag::SE_fmu_getClock[] */
 fmi3Status fmi3GetClock(fmi3Instance instance, const fmi3ValueReference valueReferences[],
-	size_t nValueReferences, fmi3Clock values[], size_t nValues)
-{
-	for (int i = 0; i < nValues; i++)
-	{
-		if (valueReferences[i] == 7)
-		{
+	size_t nValueReferences, fmi3Clock values[], size_t nValues) {
+
+	for (int i = 0; i < nValues; i++) {
+		if (valueReferences[i] == 7) {
 			values[i] = OutputClockTicked;
 			OutputClockTicked = fmi3ClockInactive;
 		}
-		else
-		{
+		else {
 			values[i] = fmi3ClockInactive;
 		}
 	}
