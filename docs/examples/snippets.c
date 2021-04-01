@@ -213,9 +213,11 @@ fmi3Status fmi3GetIntervalDecimal(fmi3Instance instance, const fmi3ValueReferenc
 
 	for (int i = 0; i < nValues; i++) {
 		if (valueReferences[i] == 6) {
+            env->lockPreemption(); // Optional: Preventing preemption is actually not needed here.
 			interval[i] = CountdownClockInterval;
 			qualifier[i] = CountdownClockQualifier;
 			CountdownClockQualifier = fmi3IntervalUnchanged;
+            env->unlockPreemption();
 		}
 		else {
 			qualifier[i] = fmi3IntervalNotYetKnown;
@@ -231,8 +233,10 @@ fmi3Status fmi3GetClock(fmi3Instance instance, const fmi3ValueReference valueRef
 
 	for (int i = 0; i < nValues; i++) {
 		if (valueReferences[i] == 7) {
+            env->lockPreemption(); // Optional: Preventing preemption is actually not needed here.
 			values[i] = OutputClockTicked;
 			OutputClockTicked = fmi3ClockInactive;
+            env->unlockPreemption();
 		}
 		else {
 			values[i] = fmi3ClockInactive;
