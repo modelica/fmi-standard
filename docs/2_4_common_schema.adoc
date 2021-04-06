@@ -607,7 +607,7 @@ The attributes and elements have the following meaning:
 [[table-type-details]]
 [cols="1,5",options="header"]
 |====
-|Attribute or Elements
+|Attribute or Element
 |Description
 
 |`quantity`
@@ -1077,12 +1077,19 @@ The default value of this attribute is `false`.
 |
 [[previous,`previous`]]
 If present, this variable is a <<ClockedState>> and this attribute is a value reference to the variable with the previous value.
-Only clocked variables (they are listed in at least one of the <<clockedVariables>> lists) may have the <<previous>> attribute.
+Only clocked variables (i.e. variables with the attribute <<clocks>>) may have the <<previous>> attribute.
 Only variables with <<variability,`variability == discrete`>> may have a previous value.
 
 _[For example, if `previous == 3` for variable `8`, then variable `3` is the previous value of variable `8`. See also <<fmi3UpdateDiscreteStates>>._
 _Note: This is reverse compared to the <<derivative>> attribute.]_
 
+|`clocks`
+|
+[[clocks,`clocks`]]
+If present, this variable is clocked.
+The value of <<clocks>> is a list of value references of <<Clock>> variables this variable depends on.
+Only discrete variables can have this attribute.
+_[More rigorous importers requiring a variable to be dependent on a single clock can reject FMUs violating this restriction.]_
 |====
 
 If <<initial>> is not present, its value is defined by <<table-definition-initial>> based on the values of <<causality>> and <<variability>> (default [.underline]#underlined#):
@@ -1690,8 +1697,8 @@ latexmath:[{\dot{\mathbf{x}_c} := \mathbf{f}_{\mathit{der}}(\mathbf{x}_c, \mathb
 |`ClockedState`
 |
 [[ClockedState,`<ClockedState>`]]
-A <<ClockedState>> is part of the discrete state of a model partition and represented by a <<ClockElement,clocked>> variable.
-To which clock or clocks it belongs is described in <<ClockElement>>.
+A <<ClockedState>> is part of the discrete state of a model partition and represented by a clocked variable.
+To which Clock or Clocks it belongs is described by the attribute <<clocks>>.
 Each <<ClockedState>> must have the attribute <<previous>> to represent the previous value of this <<ClockedState>>.
 All <<ClockedState,clocked states>> must have <<variability,`variability == discrete`>>.
 
@@ -1735,20 +1742,11 @@ _The ordering of the variables in this list is defined by the exporting tool.]_
 
 For Co-Simulation, elements <<EventIndicator>> are ignored.
 _[If an FMU supports both Model Exchange and Co-Simulation, then the <<EventIndicator>> elements might be present, since it is needed for Model Exchange.]_
-
-|`Clock`
-|
-[[ClockElement,`<Clock>`]]
-List of all clocks and their clocked variables.
-All variables referenced by these lists must have <<variability,`variability == discrete`>>.
-A clocked variable my depend on multiple clocks and may therefore be listed in multiple <<ClockElement>> elements.
-_[More rigorous importers requiring a variable to be dependent on a single clock can reject FMUs violating this restriction.]_
-
 |====
 
-Elements <<Output>>, <<ContinuousStateDerivative>>, <<ClockedState>>, <<InitialUnknown>>, <<EventIndicator>> and <<ClockElement>> have (partially) the following attributes:
+Elements <<Output>>, <<ContinuousStateDerivative>>, <<ClockedState>>, <<InitialUnknown>>, and <<EventIndicator>> have (partially) the following attributes:
 
-.<<Output>>, <<ContinuousStateDerivative>>, <<ClockedState>>, <<InitialUnknown>>, <<EventIndicator>> and <<ClockElement>> attribute details.
+.<<Output>>, <<ContinuousStateDerivative>>, <<ClockedState>>, <<InitialUnknown>>, and <<EventIndicator>> attribute details.
 [[table-output-der-initialUknown-details]]
 [cols="1,5", options="header"]
 |====
@@ -1809,12 +1807,6 @@ Only for floating point type unknowns latexmath:[{\mathbf{v}_{\mathit{unknown}}}
 `=` <<tunable>>: tunable factor, latexmath:[{p \cdot \mathbf{v}_{\mathit{known},i}}] where latexmath:[{p}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called and in <<EventMode>> due to event handling (ME) or at a communication point (CS and SE)
 
 `=` <<discrete>>: discrete factor, latexmath:[{d \cdot \mathbf{v}_{\mathit{known},i}}] where latexmath:[{d}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called and in <<EventMode>> due to an external or internal event or at a communication point (CS and SE).
-
-|`clockedVariables`
-|
-[[clockedVariables, `clockedVariables`]]
-This element is only available with the <<ClockElement>> element and is a list of value references indicating clocked variables depending on this clock.
-
 |====
 
 _[Example 1:_
@@ -1944,9 +1936,12 @@ _As a result, it is not possible to formulate algebraic loops of connected FMUs 
 ==== Definition of Terminals and Icons [[fmiTerminalsAndIcons]]
 
 Terminals define semantic groups of variables to ease connecting compatible signals on the system level.
+This definition adds an additional layer to the interface description of the FMUs.
+It does not change the <<causality>> of the variables (i.e. inputs and outputs), but enables the definition of physical and bus-like  connectors that require special handling on the system level by the importer (e.g. flow variables and bus frames).
 Icons define a graphical representation of an FMU and its terminals.
 
-Both can be defined in the separate XML file `icons/terminalsAndIcons.xml`:
+Both features are optional and can be defined in the separate XML file `icons/terminalsAndIcons.xml`. +
+_[The usage of a separate file enables backporting of this feature to previous FMI versions.]_
 
 .fmiTerminalsAndIcons element.
 [[terminals_and_icons_overview]]
@@ -1958,14 +1953,19 @@ On the top level, the schema consists of the following elements (see <<terminals
 [[table-terminal-and-icon-details]]
 [cols="1,3",options="header"]
 |====
-|Element
+|Attribute or Element
 |Description
+
+|`fmiVersion`
+|This attribute declares the FMI version defining the XSD of the `icons/terminalsAndIcons.xml` file.
+Starting with FMI 3.0, this `fmiVersion` attribute must match the `fmiVersion` attribute of element <<fmiModelDescription>> of the <<modelDescription.xml>> file.
+If used in previous FMI versions, this attribute points to the FMI version defining this `icons/terminalsAndIcons.xml` file (e.g. XSD, file location).
 
 |`<GraphicalRepresentation>`
 |If present, contains information for importers of FMUs to draw graphical representations of the FMU in a system view.
 
 |`<Terminals>`
-|If present, this allows combining input and output variables into logical groups to ease connections on a system level.
+|If present, this allows combining input and output variables into logical groups to ease connections on a system level and add semantic information required for system-level connections.
 |====
 
 ===== Definition of a Graphical Representation [[graphicalRepresentation]]
@@ -1973,15 +1973,15 @@ On the top level, the schema consists of the following elements (see <<terminals
 
 ====== Overview
 
-The graphical representation of the FMU and terminals are needed in order to more easily comprehend the meaning of connected FMUs and to help an importing tool to display the terminals and the FMU icon in the way the exporter intended.
+The graphical representation of the FMU and terminals are needed to more easily comprehend the meaning of connected FMUs and to help importers to display the terminals and the FMU icon in the way the exporter intended.
 
 The graphical representation is fully optional.
 The graphical representation of terminals is separate from the terminal definitions in the `<Terminals>` element.
 
 There are two optional elements in the `<GraphicalRepresentation>`:
 
-. The `<CoordinateSystem>` defines the extent of the whole icon (graphical items may exceed that rectangle).
-. The `<Icon>` defines an image source for the FMU.
+* The element `<CoordinateSystem>` defines the extent of the whole icon, graphical items may exceed that rectangle.
+* The element `<Icon>` defines the image position.
 
 .GraphicalRepresentation element.
 [[figure-schema-GraphicalRepresentation]]
@@ -1993,22 +1993,22 @@ image::images/schema/GraphicalRepresentation.png[width=100%, align="center"]
 [[figure-schema-CoordinateSystem]]
 image::images/schema/CoordinateSystem.png[width=70%, align="center"]
 
-The `<CoordinateSystem>` element and its defined extent is used as reference for other graphical items.
+The `<CoordinateSystem>` element and its extent is used as reference for other graphical items.
 It also provides a scaling factor to millimeter.
 
 The coordinate system is defined by the coordinates of two points, the lower left (`x1`, `y1`) corner and the upper right (`x2`, `y2`) corner, where the coordinates of the first point shall be less than the coordinates of the second point _[a first quadrant coordinate system]_.
 The x-axis is directed to the right, the y-axis is directed upwards.
 
-_[The exporting tool should define how the coordinate system unit relates to mm display or print out size._
+_[The exporting tool should define how the coordinate system unit relates to mm display or printout size._
 _However, an importing tool might choose to use the factor from the default coordinate system extent to the actual coordinate system extent to calculate a scaling factor, to match the default icon size in the importing tool._
 
-_The area defined by the coordinate system is suggested to be used as "clickable icon size" in other tools._
-_A `<Terminal>` might be placed outside of this area, so the visible bounding box has to be determined by the importing tool.]_
+_The area defined by the coordinate system is suggested to be used as "clickable icon size" in importers._
+_A `<Terminal>` might be placed outside of this area, therefore the visible bounding box has to be determined by the importing tool.]_
 
 The coordinate system default is `x1=-100, y1=-100, x2=100, y2=100`.
 This extent is used if the `<CoordinateSystem>` element is missing.
-The default `suggestedScalingFactorTo_mm` is 0.1.
-So the default coordinate system display size should be 20 mm width and 20 mm height.
+The default `suggestedScalingFactorTo_mm` is `0.1`.
+So the default coordinate system display size should be `20 mm` width and `20 mm` height.
 
 The FMU icon and all graphical representations provide the position and extent with the attributes `x1`, `y1`, `x2`, `y2`.
 The values of these attributes directly relate to this coordinate system and are not normalized.
@@ -2023,9 +2023,8 @@ image::images/schema/Icon.png[width=40%, align="center"]
 The extent and position of the FMU icon are defined in the `<Icon>` element.
 The optional image file of the FMU icon is placed at the path `icons/icon.png` in the ZIP archive of the FMU.
 The terminals should not be visible in the image.
-Optionally an SVG file can be provided if also the PNG file is present.
+Optionally an SVG file with path `icons/icon.svg` can be provided if also the PNG file is present.
 This enables high quality rendering and printing in importing tools.
-This SVG file has to be placed at the path `icons/icon.svg` in the ZIP archive.
 
 The point (`x1`, `y1`) maps to the left lower corner of the PNG image or SVG viewport.
 The point (`x2`, `y2`) maps to the right upper corner of the PNG image or SVG viewport.
@@ -2051,24 +2050,21 @@ _[So the FMU icon should be placed first in the XML file, terminal below.]_
 
 Terminals are fully optional and can be ignored by any importing tool.
 
-Definition `<Terminal>`: A terminal is...
+A terminal is:
 
-* a structured interface for connections to other models
-* intended to be used for signal flow between models, parameter propagation, and compatibility checks of the model configuration
-* a sequence of references to variables with connection meta data
+* a structured interface for connections to other models,
+* intended to be used for signal flow between models, parameter propagation, and compatibility checks of the model configuration, and
+* a sequence of references to variables with connection meta data.
 
 Predefined rules for variable matching in a connection are given in <<table-predefined-matching-rules>>.
-Predefined variable kinds are used to describe how the member variables have to be handled.
+Predefined variable kinds are used to describe how the terminal member variables have to be handled.
 Domain specific connection rules, terminals and their member variables can be provided by other standards.
 
-_[Co-simulation errors are not addressed by the terminals._
-_The co-simulation algorithm has to be chosen and implemented by the importing tool._
-_Features that might be required for specific co-simulation algorithms had to be implemented by the FMU exporting tool._
+_[Algebraic loops in systems of connected FMUs are not addressed or resolved by the terminals._
+_The FMU standard does not require that the <<causality>> of the terminal member variables in connected terminals match._
+_This must be handled by the importer._
 
-_Algebraic loops in systems of connected Model Exchange FMUs are not addressed or resolved by the terminals._
-_It is not required that the <<causality>> of the terminal member variables in connected terminals match._
-
-_The SSP standard refers to a `connectorKind`._
+_The https://ssp-standard.org/[System Structure & Parameterization Standard (SSP)] refers to a `connectorKind`._
 _This `connectorKind` is not related to the `terminalKind` or `variableKind` described in <<section-terminals>> and <<section-terminalvars>>.]_
 
 [[section-terminals]]
@@ -2080,21 +2076,14 @@ Element `<fmiTerminalsAndIcons><Terminals>` is defined as:
 [[figure-schema-Terminals]]
 image::images/schema/Terminals.png[width=80%, align="center"]
 
-All instances of `<Terminal>` have the type `fmi3Terminal` and are listed in the `<Terminals>` sequence.
-
 The normalized string attribute `name` of the `<Terminal>` element is the instance name of the terminal.
 The terminal name must be unique on each level.
-//_[The terminal name may contain dots, to enable structured terminals.]_
 
-The normalized string attribute `matchingRule` describes the rules for variable matching in a connection.
-As detailed in <<table-predefined-matching-rules>>, there are three predefined matching rules: plug, bus, and sequence.
+The normalized string attribute `matchingRule` describes the rules for variable matching in a connection of terminals.
+As detailed in <<table-predefined-matching-rules>>, there are three predefined matching rules: `plug`, `bus`, and `sequence`.
 Other standards may define new matching rules.
 In order to avoid ambiguities and conflicts, rule names must follow the reverse domain notation of a domain that is controlled by the entity defining the semantics and content of the additional entries.
-The rule names beginning with `org.modelica` and `org.fmi-standard` are explicitly reserved for use by MAP FMI-defined layered standards.
-
-There is a sequence of terminal member variables, terminal stream member variables, nested terminals, and an optional `<TerminalGraphicalRepresentation>` element in the `<Terminal>` element.
-The member variables are the exchanged variables.
-The type of the nested terminals is `fmi3Terminal`, and they can be used to implement structured terminals.
+The rule names beginning with `org.modelica` and `org.fmi-standard` are explicitly reserved for use by Modelica Association Project FMI-defined layered standards.
 
 .Predefined matching rules.
 [#table-predefined-matching-rules]
@@ -2124,7 +2113,7 @@ The normalized string `terminalKind` is an optional attribute.
 Other standards may define terminal kinds.
 It is intended that the `terminalKind` is used to define domain specific member variable sequences, member names and order, or high level restrictions for connections.
 
-_[Other terminal kinds should refer to the predefined `matchingRule`._
+_[Externally defined terminal kinds should refer to a predefined `matchingRule`, if possible._
 _Vendor specific terminal kinds should start with `_vendorName` or `_toolName` to avoid namespace clashes._
 
 _Examples for `terminalKind`: `StandardXXX_Mechanical_Translational`, `Modelica.Mechanics.Translational.Interfaces.Flange_a`, `vendorNameA_customTypeA`, `_vendorNameB_customLibrary_customTypeB`._
@@ -2142,13 +2131,10 @@ The `<TerminalMemberVariable>` is defined as:
 [[figure-schema-TerminalMemberVariable]]
 image::images/schema/TerminalMemberVariable.png[width=70%, pdfwidth=50%, align="center"]
 
-The normalized string `variableName` is used to identify the terminal member variable in the element `<ModelVariables>`.
-The information about minimum, maximum, and nominal values is available in there.
+The normalized string `variableName` identifies a variable in `<ModelVariables>` which is actually connected and for which <<get-and-set-variable-values,`fmi3Get{VariableType}`>> and <<get-and-set-variable-values,`fmi3Set{VariableType}`>> is called.
 
-One variable can be part of several terminals.
-
-If the `matchingRule` `plug` and `bus` are used, then the normalized string `memberName` is used for member variable matching.
-So the `memberName` attribute is required for `plug` and `bus` and it has to be unique for a terminal.
+If the `matchingRule` `plug` and `bus` are used, then `memberName` is used for variable matching.
+Therefore, the `memberName` attribute is required for `plug` and `bus` and must be unique per terminal.
 The `memberName` is not required for `matchingRule` `sequence`.
 
 The normalized string `variableKind` is used to provide general information about the variable.
