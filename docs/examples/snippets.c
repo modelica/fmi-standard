@@ -45,40 +45,6 @@ fmi3Status fmi3SetFloat64(fmi3Instance instance,
     return fmi3Error;
 }
 
-uint16_t internal_out_RootSys1_1, internal_out_RootSys1_2, internal_out_RootSys1_3;
-uint16_t internal_in_RootSys2_1, internal_in_RootSys2_2, internal_in_RootSys2_3;
-
-// tag::Example4[]
-Environment *env;
-uint16_t DataBuffer[3]; // global buffer
-
-void Task1(void) { // low priority
-
-    // ...
-    // write data to DataBuffer
-    env->lockPreemption();
-    DataBuffer[0] = internal_out_RootSys1_1;
-    DataBuffer[1] = internal_out_RootSys1_2;
-    DataBuffer[2] = internal_out_RootSys1_3;
-    env->unlockPreemption();
-    // ...
- }
-
-// ...
-
-void Task2(void) { // high priority
-
-    // ...
-    // read data from DataBuffer
-    env->lockPreemption();
-    internal_in_RootSys2_1 = DataBuffer[0];
-    internal_in_RootSys2_2 = DataBuffer[1];
-    internal_in_RootSys2_3 = DataBuffer[2];
-    env->unlockPreemption();
-    // ...
-}
-// end::Example4[]
-
 // SE variables
 fmi3Float64 AIn1 = 0.0;
 fmi3Float64 AIn2 = 0.0;
@@ -95,6 +61,7 @@ fmi3Float64 AInput[] = { 0.0, 0.0 };
 fmi3Float64 AOutput[] = { 0.0 };
 fmi3ValueReference ClockReference10ms = 5;
 size_t ClockElementIndex = 0;
+Environment* env;
 
 typedef struct {
 
