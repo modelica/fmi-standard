@@ -12,7 +12,7 @@ Concrete features to support vECU export are:
 
 * introduction of <<graphicalRepresentation,icons>> to define a graphical representation of the FMU and its terminals,
 
-* introduction of clocks to more exactly control timing of events and evaluation of model partitions across FMUs,
+* introduction of <<Clock,Clocks>> to more exactly control timing of events and evaluation of model partitions across FMUs,
 
 * introduction of more integer types and a 32-bit float type (see <<fmi-description-schema>>) to communicate native controller types to the outside,
 
@@ -22,7 +22,7 @@ Concrete features to support vECU export are:
 
 * introduction of structural parameters that allow description and changing of array sizes, even during runtime to support advanced online calibration of control code, and
 
-* addition of the new interface type FMI for Scheduled Execution (see <<fmi-for-scheduled-execution>>) that allows activation of individual model partitions (or tasks) from an external scheduler.
+* addition of the new interface type FMI for Scheduled Execution (see <<fmi-for-scheduled-execution>>) that allows activation of individual model partitions (or tasks) from an external scheduler, e.g. for realtime platforms.
 
 A second need of the simulation community was address by introducing the more advanced co-simulation interface <<fmi-for-co-simulation,FMI for Co-Simulation>>.
 New features, like
@@ -31,7 +31,7 @@ New features, like
 
 * the <<IntermediateUpdateMode, intermediate update>>, or
 
-* <<clocks,clocks and clocked variables>>,
+* <<Clocks,Clocks and clocked variables>>,
 
 allow implementation of more robust and efficient co-simulation algorithms to handle the growing system simulations the community is facing.
 
@@ -51,7 +51,7 @@ The asynchronous mode for FMUs known from FMI 2.0 has been removed since this mo
 
 === Overview
 
-The FMI (Functional Mock-Up Interface) defines an interface to be implemented by an executable called an FMU (Functional Mock-Up Unit).
+The FMI (Functional Mock-up Interface) defines an interface to be implemented by an executable called an FMU (Functional Mock-up Unit).
 The FMI functions are used (called) by a simulation environment to create one or more instances of the FMU and to simulate them, typically together with other models.
 An FMU may either have its own solvers (<<fmi-for-co-simulation,FMI for Co-Simulation>>), or require the simulation environment to perform numerical integration (<<fmi-for-model-exchange,FMI for Model Exchange>>), or require the simulation environment to trigger model partition execution (<<fmi-for-scheduled-execution,FMI for Scheduled Execution>>).
 The goal of this interface is that the calling of an FMU in a simulation environment is reasonably simple.
@@ -75,13 +75,6 @@ The selected approach allows a tool to store and access the variable definitions
 An FMU is distributed in one ZIP file.
 The ZIP file contains the FMI Description file (XML), the binaries and libraries required to execute the FMI functions (.dll or .so files), the sources of the FMI functions (optional), and other data used by the FMU (e.g., tables or maps).
 It is possible for an FMU to hide the source code to secure the contained know-how or to allow a fully automatic import of the FMU in another simulation environment.
-A schematic view of an FMU is shown in <<figure-data-flow>>.
-
-.Data flow between the environment and an FMU. [blue]#Blue# arrows denote the information provided by the FMU, and the [red]#Red# arrows denote the information provided to the FMU.
-[#figure-data-flow]
-image::images/enclosing_model.svg[width=60%, align="center"]
-
-// TODO: synchronize and harmonize all these images
 
 ==== FMI for Model Exchange (ME)
 
@@ -90,26 +83,38 @@ Models are described by differential, algebraic and discrete equations with time
 That integration algorithm of the importing tool, usually a DAE solver, is responsible for advancing time, setting states, handling events, etc.
 (See <<fmi-for-model-exchange>>.)
 
+.Schematic view of data flow between user, the solver of the importer and the FMU for Model Exchange
+[#figure-model-exchange-data-flow]
+image::images/model-exchange-data-flow.svg[width=40%, align="center"]
+
 ==== FMI for Co-Simulation (CS)
 
 The FMI for Co-Simulation interface is designed both for the coupling of simulation tools, and the coupling of subsystem models, exported by their simulators together with its solvers as runnable code.
 (See <<fmi-for-co-simulation>>.)
 
+.Schematic view of data flow between user, the co-simulation algorithm of the importer and the FMU for Co-Simulation
+[#figure-co-simulation-data-flow]
+image::images/co-simulation-data-flow.svg[width=40%, align="center"]
+
 ==== FMI for Scheduled Execution (SE)
 
 The Scheduled Execution interface exposes individual model partitions (e.g. tasks of a control algorithm), to be called by a scheduler that acts as external scheduler.
-The scheduler is responsible for advancing the overall simulation time, triggering of time-based and triggered clocks for all exposed model partitions of a set of FMUs, and handling events (e.g. clock ticks) signaled by the FMUs.
+The scheduler is responsible for advancing the overall simulation time, triggering of time-based and triggered <<Clock,Clocks>> for all exposed model partitions of a set of FMUs, and handling events (e.g. clock ticks) signaled by the FMUs.
 
 In many ways, the Scheduled Execution interface is the equivalent of the Model Exchange interface: the first externalizes a scheduling algorithm usually found in a controller algorithm and the second interface externalizes the ODE solver.
 (See <<fmi-for-scheduled-execution>>.)
+
+.Schematic view of data flow between user, the scheduler of the importer and tasks of the FMU for Scheduled Execution
+[#figure-scheduled-execution-data-flow]
+image::images/scheduled-execution-data-flow.svg[width=40%, align="center"]
 
 ==== Feature Overview of FMI Interface Types
 
 image::images/fmi-types-overview.svg[width=50%, align="center"]
 
-<<table-overview-features>> gives an overview of the features of the different interfaces.
+<<table-overview-features>> gives a non-normative overview of the features of the different interfaces.
 
-.Overview of features per interface.
+.Non-normative overview of features per interface.
 [[table-overview-features]]
 [cols=",^,^,^",options="header"]
 |====
@@ -128,9 +133,9 @@ image::images/fmi-types-overview.svg[width=50%, align="center"]
 |icon:check[]
 |Not applicable
 
-|Scheduler Included
+|Scheduler included
 |Not applicable
-|icon:check[]
+|Possibly
 |icon:times[]
 
 |Event Indicators
@@ -146,10 +151,10 @@ image::images/fmi-types-overview.svg[width=50%, align="center"]
 |<<IntermediateUpdateMode,Intermediate Update>>
 |Includes similar or better mechanism
 |icon:check[]
-|Signal output clock ticks: icon:check[] +
+|Signal output <<Clock>> ticks: icon:check[] +
 Inputs/Outputs: icon:times[]
 
-|<<clocks,Clocks>>
+|<<Clock,Clocks>>
 |icon:check[]
 |icon:check[]
 |icon:check[]
@@ -192,7 +197,7 @@ It is possible to compile, link and distribute an FMU without knowing the enviro
 Reason: The standard would be much less attractive otherwise, unnecessarily restricting the later use of an FMU at compile time and forcing users to maintain simulator specific variants of an FMU.
 To be simulator independent, the FMU must export its implementation in self-contained binary form.
 This requires that the target operating system and processor be known.
-Once exported with binaries, the FMU can be executed by any simulator running on the target platform (provided the necessary licenses are available, if required from the model or from the used run-time libraries).
+Once exported with binaries, the FMU can be executed by any simulator running on the target platform (provided the necessary licenses are available, if required from the model or from the used runtime libraries).
 
 Semantic versioning::
 The FMI standard uses semantic version numbers, as defined in <<PW13>>, where the standard version consists of a triple of version numbers, consisting of major version, minor version, and patch version numbers, see <<VersioningLayered>>.
@@ -204,8 +209,8 @@ Reason: A tool can always export the greatest minor version it supports.
 Such an FMU can be imported into all tools supporting this major version and arbitrary minor versions.
 This achieves maximal longevity of FMUs protecting its value for users.
 
-Small run-time overhead::
-Communication between an FMU and an importer through the FMI does not introduce significant run-time overhead.
+Small runtime overhead::
+Communication between an FMU and an importer through the FMI does not introduce significant runtime overhead.
 This can be achieved by enabling caching of the FMU outputs and by exchanging multiple quantities with one call.
 
 Small footprint::
@@ -265,7 +270,7 @@ Allocator must free::
 All memory (and other resources) allocated by the FMU are freed (released) by the FMU.
 Likewise, resources allocated by the importer are released by the importer.
 +
-Reason: this helps to prevent memory leaks and run-time errors due to incompatible run-time environments for different components.
+Reason: this helps to prevent memory leaks and runtime errors due to incompatible runtime environments for different components.
 
 Immutable strings::
 All strings passed as arguments or returned are read-only and must not be modified by the receiver.

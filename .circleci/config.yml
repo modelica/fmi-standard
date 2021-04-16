@@ -9,7 +9,7 @@ jobs:
           name: Install dependencies
           command: |
             apt-get update
-            apt-get install -y gcc git python3-lxml
+            apt-get install -y cmake gcc g++ git python3-lxml
       - run:
           name: Validate XML
           command: python3 .circleci/validate_xml.py
@@ -22,6 +22,14 @@ jobs:
       - run:
           name: Compile headers
           command: gcc ~/project/headers/fmi3Functions.h
+      - run:
+          name: Compile code snippets
+          command: |
+            mkdir build
+            cd build
+            cmake ../docs/examples
+            cmake --build .
+            cd ..
   build_spec:
     machine: true
     steps:
@@ -36,10 +44,13 @@ jobs:
             git submodule update --init --recursive
       - run:
           name: Generate HTML
-          command: docker run -v ~/project/:/documents/ --name asciidoc-to-html     asciidoctor/docker-asciidoctor asciidoctor --base-dir /documents/ --backend html5 --failure-level WARN --verbose docs/index.adoc
+          command: |
+            [[ $CIRCLE_TAG == v* ]] && REVNUMBER=${CIRCLE_TAG:1} || REVNUMBER=${CIRCLE_SHA1:0:7}
+            docker run -v ~/project/:/documents/ --name asciidoc-to-html asciidoctor/docker-asciidoctor asciidoctor --base-dir /documents/ --backend html5 --failure-level WARN --verbose --attribute=revnumber=$REVNUMBER --attribute=revdate=$(date +"%F") docs/index.adoc
       - run:
           name: Generate Layered NET HTML
-          command: docker run -v ~/project/:/documents/ --name asciidoc-to-html_NET asciidoctor/docker-asciidoctor asciidoctor --base-dir /documents/ --backend html5 --failure-level WARN --verbose docs/X_network4FMI.adoc
+          command:
+            docker run -v ~/project/:/documents/ --name asciidoc-to-html_NET asciidoctor/docker-asciidoctor asciidoctor --base-dir /documents/ --backend html5 --failure-level WARN --verbose docs/X_network4FMI.adoc
       - run:
           name: Generate Layered XCP HTML
           command: docker run -v ~/project/:/documents/ --name asciidoc-to-html_XCP asciidoctor/docker-asciidoctor asciidoctor --base-dir /documents/ --backend html5 --failure-level WARN --verbose docs/X_layered_XCP.adoc
@@ -76,5 +87,11 @@ workflows:
   version: 2
   validate_and_build:
     jobs:
-      - validate_files
-      - build_spec
+      - validate_files:
+          filters:
+            tags:
+              only: /^v.*/
+      - build_spec:
+          filters:
+            tags:
+              only: /^v.*/

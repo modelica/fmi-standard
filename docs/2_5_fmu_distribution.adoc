@@ -41,10 +41,6 @@ icons                         // FMU and terminal icons (optional)
    // all terminal and fmu icons referenced in the graphical representation
 sources                       // directory containing the C sources (optional)
    buildDescription.xml
-   // All needed C sources and header files to compile and link the FMU
-   // except fmi3PlatformTypes.h, fmi3FunctionTypes.h, and fmi3Functions.h.
-   // The files to be compiled (but not the files included from these files)
-   // have to be reported in the buildDescription.xml.
 binaries                      // directory containing the binaries (optional)
    x86_64-windows             // binaries for Windows on Intel 64-bit
       <modelIdentifier>.dll   // shared library of the FMI implementation
@@ -57,19 +53,8 @@ binaries                      // directory containing the binaries (optional)
       <modelIdentifier>.so    // shared library of the FMI implementation
    x86_64-darwin              // binaries for macOS
       <modelIdentifier>.dylib // shared library of the FMI implementation
-   // If an FMU is run through one of its binaries all items in that binary
-   // folder are recommended to be unpacked at the same location as the binary
-   // < modelIdentifier >.* is unpacked. If not it is likely that, if the FMU
-   // has dependencies on those items, it will not be able to find them.
 resources                     // resources used by the FMU (optional)
-   // data in FMU specific files which will be read during initialization;
-   // also more folders can be added under resources (tool/model specific).
-   // In order for the FMU to access these resource files, the resource directory
-   // shall be available in unzipped form and the absolute path to this directory
-   // should be reported via argument "resourceLocation" of fmi3InstantiateXXX.
 extra                         // Additional (meta-)data of the FMU (optional)
-   // additional (meta-)data that is supposed to travel with the FMU;
-   // see below for structure and content definition.
 ----
 
 ===== Directory Documentation [[documentation-directory]]
@@ -90,10 +75,18 @@ See <<fmiTerminalsAndIcons>> for a definition of the directory `icons`.
 ===== Directory Sources [[sources-directory]]
 
 [[BuildConfiguration,`<BuildConfiguration>`]]
+
 A source code FMU contains the sources of the model in the `sources` directory together with a `buildDescription.xml` that contains at least one <<BuildConfiguration>> element for the supported platforms.
+The header files `fmi3PlatformTypes.h`, `fmi3FunctionTypes.h` and `fmi3Functions.h` are supplied by the importer to potentially reflect their specific platform and compiler tool set.
+
 Each <<BuildConfiguration>> provides the necessary information to compile and link the sources of the model into a dynamic library or as part of an executable.
 An FMU importing tool may not regard more than one <<BuildConfiguration>> when building the FMU for a specific <<platform>>.
 The importer chooses the matching <<BuildConfiguration>> based on the <<platform>> and <<modelIdentifier>> attributes.
+
+In order to avoid symbol name conflicts when compiling and linking multiple source code FMUs, source files should keep the exported symbols to a minimum by declaring all symbols not needed for linking as `static`.
+If only a single <<SourceFile>> is provided in the <<BuildConfiguration>> all symbols except for the FMI functions should be defined as `static`.
+This source file may include other source files that are not listed in the <<BuildConfiguration>>.
+It is also recommended to use a descriptive name (e.g. `<model_identifier>.c`) for this single <<SourceFile>> instead of generic names (like `all.c`, or `model.c`) in order to aid readability and reduce integration effort.
 
 .BuildConfiguration attribute details.
 [[table-BuildConfiguration-details]]
@@ -143,7 +136,7 @@ An importer of the FMU has to regard every `<SourceFileSet>` of the matching <<B
 |The compiler flags that have to be used when compiling the sources (e.g. `-fno-rtti`, `/Od`)
 |====
 
-====== SourceFile
+====== SourceFile [[SourceFile,`<SourceFile>`]]
 
 .SourceFile attribute details.
 [[table-SourceFile-details]]
@@ -268,6 +261,8 @@ include::examples/build_description_complex.xml[]
 ----
 
 ===== Directory Binaries [[binaries-directory]]
+
+If an FMU is run through one of its binaries all items in that binary folder must be unpacked at the same location as the binary `<modelIdentifier>.*`.
 
 ====== Platform Tuple Definition [[platform-tupe-definition]]
 
@@ -396,7 +391,7 @@ Sub-ABI `<abi_sub>`::
 |Visual Studio with /MTd
 |====
 
-_[Typical scenarios are to provide binaries only for one machine type (for example, on the machine where the importer is running and for which licenses of run-time libraries are available) or to provide only sources (for example, for translation and download for a particular micro-processor).]_
+_[Typical scenarios are to provide binaries only for one machine type (for example, on the machine where the importer is running and for which licenses of runtime libraries are available) or to provide only sources (for example, for translation and download for a particular micro-processor).]_
 
 ====== Platform Tuple Examples [[platform-tuple-examples]]
 
@@ -408,49 +403,52 @@ The following table lists the most common platform tuples for shared libraries a
 |FMI 2.0
 |Description
 
-|darwin-x86_64
+|x86_64-darwin
 |darwin64
 |macOS on 64-bit x86
 
-|darwin-aarch64
+|aarch64-darwin
 |
 |macOS on Apple Silicon
 
-|linux-i386
+|i386-linux
 |linux32
 |Linux on 32-bit x86
 
-|linux-x86_64
+|x86_64-linux
 |linux64
 |Linux on 64-bit x86
 
-|linux-aarch64
+|aarch64-linux
 |
 |Linux on ARM64
 
-|windows-i386
+|i386-windows
 |win32
 |Windows on 32-bit x86
 
-|windows-x86_64
+|x86_64-windows
 |win64
 |Windows on 64-bit x86
 
-|windows-aarch64
+|aarch64-windows
 |
 |Windows on ARM64
 |====
 
 ====== External Libraries [[external-libraries]]
 
-If run-time libraries are needed by the FMU that have to be present on the target machine and cannot be shipped within the FMU (e.g., due to licensing issues), then automatic processing is likely impossible.
-In such cases special handling is needed, for example, by providing the run-time libraries at appropriate places by the receiver.
+If runtime libraries are needed by the FMU that have to be present on the target machine and cannot be shipped within the FMU (e.g., due to licensing issues), then automatic processing is likely impossible.
+In such cases special handling is needed, for example, by providing the runtime libraries at appropriate places by the receiver.
 The requirements and the expected processing should be documented in the `documentation` directory in this case. +
 
 ===== Directory Resources [[resources-directory]]
 
 In the optional directory `resources`, additional data can be provided in FMU specific formats, typically for tables and maps used in the FMU.
-This data must be read into the model at the latest during initialization (that is, before <<fmi3ExitInitializationMode>> is called).
+More folders can be added under resources (tool/model specific).
+For the FMU to access these resource files, the `resource` directory shall be available in unzipped form and the absolute path to this directory must be reported via argument `resourceLocation` of <<fmi3Instantiate>>.
+
+The `resource` data must be read into the model at the latest during initialization (that is, before <<fmi3ExitInitializationMode>> is called).
 The actual file names in the ZIP file to access the data files can either be hard-coded in the generated FMU functions, or the file names can be provided as string arguments via the `fmi3SetString` function.
 _[Note that an URI pointing to the resources directory is provided by the initialization functions._
 _If the environment is not able to do so, a NULL pointer will be provided instead, and the FMU can react with an error, if it requires access to the content of the resources folder.]_
