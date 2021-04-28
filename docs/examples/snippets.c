@@ -4,7 +4,7 @@
 
 // tag::ModelStruct1[]
 typedef struct {
-    
+
     fmi3Instance instance;
     fmi3GetFloat64TYPE* fmi3GetFloat64;
 // end::ModelStruct1[]
@@ -23,7 +23,7 @@ typedef struct {
 // end::ModelStruct2[]
 
 typedef struct {
-    
+
     fmi3CallbackLockPreemption lockPreemption;
     fmi3CallbackUnlockPreemption unlockPreemption;
 
@@ -65,11 +65,6 @@ Environment* env;
 
 typedef struct {
 
-	double time;
-	const char* instanceName;
-	const char* resourceLocation;
-
-	fmi3CallbackLogMessage logger;
 	fmi3CallbackIntermediateUpdate callbackIntermediateUpdate;
 	fmi3CallbackLockPreemption lockPreemption;
 	fmi3CallbackUnlockPreemption unlockPreemption;
@@ -77,9 +72,8 @@ typedef struct {
 	void* instanceEnvironment;
 	bool clocksTicked;
 
-	//ModelData *modelData;
-
 } ModelInstance;
+
 fmi3Instance fmu;
 
 
@@ -214,7 +208,7 @@ fmi3Status fmi3GetClock(fmi3Instance instance, const fmi3ValueReference valueRef
 /* end::SE_fmu_getClock[] */
 
 void algebraicLoop1() {
-    
+
     // tag::AlgebraicLoop1[]
     FMU *m1, *m2;
     fmi3ValueReference vr_M1_u, vr_M1_y, vr_M2_u1, vr_M2_u2, vr_M2_y1, vr_M2_y2;
@@ -255,17 +249,17 @@ void algebraicLoop3() {
     fmi3Boolean v1, v2, v5;
     fmi3Int32 *v3;
     size_t v4;
-    
+
     fmi3Boolean m1_DStatesNeedUpdate, m2_DStatesNeedUpdate, *p2, *p3, *p4, *p5;
     fmi3Float64 *p6;
     bool isCoSimulation;
-    
+
     // tag::AlgebraicLoop3[]
     FMU *m1, *m2;  // structures that hold the functions and instances of the FMUs
-    
+
     m1->fmi3EnterEventMode(m1->instance, v1, v2, v3, v4, v5);
     m2->fmi3EnterEventMode(m2->instance, v1, v2, v3, v4, v5);
-    
+
     // start event iteration
     do {
         // solve algebraic loop as described in the sample codes above
@@ -273,7 +267,7 @@ void algebraicLoop3() {
         // introduce new instant of super-dense time
         m1->fmi3UpdateDiscreteStates(m1->instance, &m1_DStatesNeedUpdate, p2, p3, p4, p5, p6);
         m2->fmi3UpdateDiscreteStates(m2->instance, &m2_DStatesNeedUpdate, p2, p3, p4, p5, p6);
-        
+
     } while (m1_DStatesNeedUpdate || m2_DStatesNeedUpdate);
 
     if (isCoSimulation) {
