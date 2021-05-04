@@ -109,22 +109,20 @@ If <<nRequiredIntermediateVariables>> is zero <<requiredIntermediateVariables>> 
 include::../headers/fmi3FunctionTypes.h[tags=CallbackLogMessage]
 ----
 +
-Pointer to a function that is called in the FMU _[usually if an `fmi3XXX` function does not behave as desired]_.
+Pointer to a function that is called by the FMU _[usually if an `fmi3XXX` function does not behave as desired]_.
 
-** `instanceName` is the instance name of the model that calls this function.
+** `instanceName` is the name of the FMU instance that calls this function.
 ** `status` contains the severity of the message, see `fmi3Status`.
-If <<logMessage>> is called with <<fmi3OK,`status == fmi3OK`>>, then the message is a pure information message.
+If <<fmi3OK,`status == fmi3OK`>>, the message is a pure information message.
 ** `category` is the category of the message.
-The meaning of `category` is defined by the modeling environment that generated the FMU.
-Depending on this modeling environment, none, some, or all, allowed values of `category` for this FMU are defined in the <<modelDescription.xml>> file via element `<fmiModelDescription><LogCategories>`, see <<definition-of-log-categories>>.
-Only messages are provided by function <<logMessage>> that have a category according to a call to <<fmi3SetDebugLogging>>.
-** `message` is a string that contains the message.
+The allowed values for `category` are defined in the <<modelDescription.xml>> file via the element <<definition-of-log-categories,`<LogCategories>`>>.
+<<logMessage>> should only be called for log categories that were enabled by a call to <<fmi3SetDebugLogging>> or via `loggingOn == fmi3True` in <<fmi3Instantiate>>.
+If the FMU does not define any log categories, `category` must be `NULL`.
+** `message` is a string that contains the message to log. It may contain line-breaks (`\n`), but should not have a trailing line break.
 
 +
 All string-valued arguments passed by the FMU to the <<logMessage>> may be deallocated by the FMU directly after function <<logMessage>> returns.
-The simulation environment must therefore create copies of these strings if it needs to access these strings later. +
-The <<logMessage>> function will append a line break to each message when writing messages after each other to a terminal or a file (the messages may also be shown in other ways, for example, as separate text-boxes in a GUI).
-The caller may include line-breaks (using "\n") within the message, but should avoid trailing line breaks. +
+_[The simulation environment must therefore create copies of these strings if it needs to access these strings later.]_ +
 Variables can be referenced in a message with `pass:[#]<ValueReference>pass:[#]`.
 If the character `pass:[#]` shall be included in the message, it has to be prefixed with `pass:[#]`, so `pass:[#]` is an escape character. +
 _[Example: The message `\#1365# must be larger than zero (used in IO channel ##4)` might be changed by the <<logMessage>> function to `body.m must be larger than zero (used in IO channel #4)` if `body.m` is the name of the variable with value reference 1365.]_
