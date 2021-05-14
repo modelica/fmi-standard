@@ -463,28 +463,26 @@ this is non-normative.
 The functions have the following meaning:
 
 Function *logger*:
-Pointer to a function that is called in the FMU, usually if an `fmi2XXX` function does not behave as desired.
-If `logger` is called with `"status = fmi2OK"`, then the message is a pure information message.
-`"instanceName"` is the instance name of the model that calls this function.
+Pointer to a function that is called by the FMU, usually if an `fmi2XXX` function does not behave as desired.
+If `"status = fmi2OK"`,  the message is a pure information message.
+`"instanceName"` is the name of the FMU instance that calls this function.
 `category` is the category of the message.
-The meaning of `category` is defined by the modeling environment that generated the FMU.
-Depending on this modeling environment, none,
-some or all allowed values of `category` for this FMU are defined in the
-`modelDescription.xml` file via element `"<fmiModelDescription><LogCategories>"`, see section 2.2.4.
-Only messages are provided by function `logger` that have a category according to
-a call to `fmi2SetDebugLogging` (see below).
-Argument `"message"` is provided in the same way and with the same format control as in
-function `"printf"` from the C standard library.
-_[Typically, this function prints the message and stores it optionally in a log file.]_
+
+
+The allowed values for `category` are defined in the `modelDescription.xml` file via the 
+element `<fmiModelDescription><LogCategories>`, see section 2.2.4. `logger` should 
+only be called for log categories that were enabled by a call to `fmi2SetDebugLogging` (see 
+below) or via `loggingOn = fmi2True` in `fmi2Instantiate`. 
+If the FMU does not define any log categories, `category` must be `NULL`.
+Argument `message` is a string that contains the message to log. It may contain line-breaks 
+(`\n`), but should not have a trailing line break and is provided in the same way and with the 
+same format control as in function `printf` from the C standard library. +
+[Typically, this function prints the message and stores it optionally in a log file.]
 
 All string-valued arguments passed by the FMU to the `logger` may be deallocated
 by the FMU directly after function `logger` returns.
-The environment must therefore create copies of these strings if it needs to access these strings later. +
-The `logger` function will append a line break to each message when writing messages
-after each other to a terminal or a file (the messages may also be shown in other ways,
-for example, as separate text-boxes in a GUI).
-The caller may include line-breaks (using "\n") within the message,
-but should avoid trailing line breaks. +
+The simulation environment must therefore create copies of these strings if it needs to access these strings later. +
+
 Variables are referenced in a message with `\#<Type><ValueReference>#` where <Type> is "r" for `fmi2Real`,
 "i" for `fmi2Integer`, "b" for `fmi2Boolean` and "s" for `fmi2String`.
 If character `pass:[#]` shall be included in the message,
@@ -542,18 +540,15 @@ fmi2Status fmi2SetDebugLogging(fmi2Component c, fmi2Boolean loggingOn,
                                size_t nCategories,
                                const fmi2String categories[]);
 ----
-The function controls debug logging that is output via the logger function callback.
+The function controls the debug logging that is output via the logger callback function by the FMU.
 
-If `loggingOn = fmi2True`, debug logging is enabled, otherwise it is switched off.
-If `loggingOn = fmi2True` and `nCategories = 0`, then all debug messages shall be output.
-If `loggingOn = fmi2True` and `nCategories > 0`,
-then only debug messages according to the `categories` argument shall be output.
-Vector `categories` has `nCategories` elements.
-The allowed values of `categories` are defined by the modeling environment that generated the FMU.
-Depending on the generating modeling environment, none,
-some or all allowed values for `categories` for this FMU are defined in the `modelDescription.xml`
-file via element `fmiModelDescription.LogCategories`, see section 2.2.4.
-
+If `loggingOn = fmi2True`, debug logging is enabled for the log categories specified in 
+categories, otherwise it is disabled. nCategories defines the length of the argument 
+categories.
+If `nCategories == 0`, `loggingOn` applies to all log categories and the value of 
+categories is undefined. 
+The allowed values of `categories` are defined in the `modelDescription.xml` file via 
+element `<LogCategories>`, see section 2.2.4.
 
 
 ==== Initialization, Termination, and Resetting an FMU
