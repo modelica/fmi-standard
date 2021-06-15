@@ -40,6 +40,12 @@ function Export-Schema() {
 	$out = Join-Path $pngOutDir $outName
 	Check-Existing $out
 	& $generator -o $out -r $element -e $expand -d -c -z 300 -a -no-gui -y (Resolve-Path (Join-Path $PSScriptRoot "..\schema\$schema"))
+
+	If ((Get-Item $out).length -eq 0kb) {
+		Write-Output "Error generating file $out"
+		exit 1
+	}
+
 	if ($preview) {
 		Start-Process $out
 	}
