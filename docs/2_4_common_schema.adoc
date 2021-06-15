@@ -884,13 +884,13 @@ _]_
 
 ===== Variable Attributes
 
-The attributes of variables are shown in <<figure-schema-fmi3VariableBase>>.
+The most common attributes of variables are shown in <<figure-schema-fmi3AbstractVariable>>.
 
-.fmi3VariableBase element.
-[[figure-schema-fmi3VariableBase]]
-image::images/schema/fmi3VariableBase.png[width=80%, align="center"]
+.fmi3AbstractVariable element.
+[[figure-schema-fmi3AbstractVariable]]
+image::images/schema/fmi3AbstractVariable.png[width=80%, align="center"]
 
-.fmi3VariableBase attribute details.
+.fmi3AbstractVariable attribute details.
 [[table-variableBase-attributes]]
 [cols="1,5a",options="header"]
 |====
@@ -1019,36 +1019,6 @@ For variables of type `Clock` and <<clocked-variable,`clocked variables`>> the <
 
 _[Note that the information about continuous <<state,`states`>> is defined with elements <<ContinuousStateDerivative>> in `<ModelStructure>`.]_
 
-|`initial`
-|
-[[initial,`initial`]]
-Enumeration that defines how the variable is initialized, i.e. if a <<get-and-set-variable-values,`fmi3Set{VariableType}`>> is allowed and how the FMU internally treats this value in <<Instantiated>> and <<InitializationMode>>.
-
-For the variable with <<causality>> = <<independent>>, the attribute <<initial>> must not be provided, because its start value is set with the <<startTime>> parameter of <<fmi3EnterInitializationMode>>.
-
-The attribute <<initial>> for other variables can have the following values and meanings:
-[[exact,`exact`]]
-`= exact`: The variable is initialized with the <<start>> value (provided under the variable type element).
-
-[[approx,`approx`]]
-`= approx`: The <<start>> value provides an approximation that may be modified during initialization, e.g., if the FMU is part of an algebraic loop where the variable might be an iteration variable and <<start>> value is taken as initial value for an iterative solution process.
-
-[[calculated,`calculated`]]
-`= calculated`: The variable is calculated from other variables during initialization.
-It is not allowed to provide a <<start>> value.
-
-If <<initial>> is not present, it is defined by <<table-definition-initial>> based on <<causality>> and <<variability>>.
-If <<initial>> = <<exact>> or <<approx>>, or <<causality>> = <<input>>, a <<start>> value must be provided.
-If <<initial>> = <<calculated>>, or <<causality>> = <<independent>>, it is not allowed to provide a <<start>> value.
-
-_[The environment decides when to use the <<start>> value of a variable with <<causality>> = <<input>>._
-_Examples:_
- * _Automatic tests of FMUs are performed, and the FMU is tested by providing the <<start>> value as <<constant>> <<input>>._
- * _For a Model Exchange FMU, the FMU might be part of an algebraic loop._
-_If the <<input>> variable is iteration variable of this algebraic loop, then initialization starts with its <<start>> value.]_
-
-If <<get-and-set-variable-values,`fmi3Set{VariableType}`>> is not called on a variable with <<causality>> = <<input>>, then the FMU must use the <<start>> value as value of this <<input>>.
-
 |`canHandleMultipleSetPerTimeInstant`
 |
 [[canHandleMultipleSetPerTimeInstant,`canHandleMultipleSetPerTimeInstant`]]
@@ -1086,75 +1056,6 @@ The value of <<clocks>> is a list of value references of <<Clock>> variables thi
 Only variables with <<variability,`variability == discrete`>> or <<variability,`variability == tunable`>> can have this attribute.
 _[More rigorous importers requiring a variable to be dependent on a single clock can reject FMUs violating this restriction.]_
 |====
-
-If <<initial>> is not present, its value is defined by <<table-definition-initial>> based on the values of <<causality>> and <<variability>> (default [.underline]#underlined#):
-
-.Definition of <<initial>>.
-[#table-definition-initial]
-[cols="1,1,1,1,1,1,1,1"]
-|====
-.2+^|<<variability>>
-7+^|<<causality>>
-
-^|<<structuralParameter,`structural Parameter`>>
-^|<<parameter>>
-^|<<calculatedParameter,`calculated Parameter`>>
-^|<<input>>
-^|<<output>>
-^|<<local>>
-^|<<independent>>
-
-^|<<constant>> data
-^|--
-^|--
-^|--
-^|--
-^|[.underline]#exact#
-^|[.underline]#exact#
-^|--
-
-^|<<fixed>> data
-^|[.underline]#exact#
-^|[.underline]#exact#
-^|[.underline]#calculated#, approx
-^|--
-^|--
-^|[.underline]#calculated#, approx
-^|--
-
-^|<<tunable>> data
-^|[.underline]#exact#
-^|[.underline]#exact#
-^|[.underline]#calculated#, approx
-^|--
-^|--
-^|[.underline]#calculated#, approx
-^|--
-
-^|<<discrete>> variables
-^|--
-^|--
-^|--
-^|[.underline]#exact#
-^|[.underline]#calculated#, exact, approx
-^|[.underline]#calculated#, exact, approx
-^|--
-
-^|<<continuous>> variables
-^|--
-^|--
-^|--
-^|[.underline]#exact#
-^|[.underline]#calculated#, exact, approx
-^|[.underline]#calculated#, exact, approx
-^|--
-^|--
-|====
-
-<<Clock>> variables must not have <<initial>> attributes.
-
-_[Note: For <<local>> and <<output>> variables and <<initial>> = <<exact>>, then the variable is explicitly set in <<InitializationMode>>._
-_The value of the variable is either the <<start>> value stored in a variable element `<XXX start=YYY/>` or the value set with <<get-and-set-variable-values,`fmi3Set{VariableType}`>> during <<InitializationMode>>.]_
 
 <<table-allowed-variability-causality-combinations>> shows the combinations of <<variability>>/<<causality>> settings that are allowed.
 
@@ -1365,7 +1266,7 @@ _Changing of <<tunable>> <<parameter,`parameters`>> is allowed before an <<fmi3A
 
 ===== Type specific properties
 
-Type specific properties are defined in the required choice element, where exactly one float, integer or enumeration must be present in the XML file:
+Type specific properties are defined in the required choice element, where exactly one float, integer, boolean, binary, enumeration, or Clock, must be present in the XML file:
 <<figure-schema-Float64>>, <<figure-schema-Int32>>, <<figure-schema-Boolean>>, <<figure-schema-Binary>>, <<figure-schema-Enumeration>> and <<figure-schema-Clock>>, are representative examples.
 
 .Float64 element.
@@ -1407,6 +1308,37 @@ The value defined in the corresponding `<TypeDefinition>` (see <<definition-of-t
 _[For example, if `min` is present both in variable type element of `<TypeDefinition>` and in the concrete variable type element of the variable, then the `min` of the variable is actually used.]_
 For `<Enumeration>` the attribute `declaredType` is required because the `<Enumeration>` items are defined in `<TypeDefinitions><TypeDefinition>`.
 For all other types, this attribute is optional.
+
+|`initial`
+|
+[[initial,`initial`]]
+Enumeration that defines how the variable is initialized, i.e. if a <<get-and-set-variable-values,`fmi3Set{VariableType}`>> is allowed and how the FMU internally treats this value in <<Instantiated>> and <<InitializationMode>>.
+
+For the variable with <<causality>> = <<independent>>, the attribute <<initial>> must not be provided, because its start value is set with the <<startTime>> parameter of <<fmi3EnterInitializationMode>>.
+
+The attribute <<initial>> for other variables can have the following values and meanings:
+[[exact,`exact`]]
+`= exact`: The variable is initialized with the <<start>> value (provided under the variable type element).
+
+[[approx,`approx`]]
+`= approx`: The <<start>> value provides an approximation that may be modified during initialization, e.g., if the FMU is part of an algebraic loop where the variable might be an iteration variable and <<start>> value is taken as initial value for an iterative solution process.
+
+[[calculated,`calculated`]]
+`= calculated`: The variable is calculated from other variables during initialization.
+It is not allowed to provide a <<start>> value.
+
+If <<initial>> is not present, it is defined by <<table-definition-initial>> based on <<causality>> and <<variability>>.
+If <<initial>> = <<exact>> or <<approx>>, or <<causality>> = <<input>>, a <<start>> value must be provided.
+If <<initial>> = <<calculated>>, or <<causality>> = <<independent>>, it is not allowed to provide a <<start>> value.
+
+_[The environment decides when to use the <<start>> value of a variable with <<causality>> = <<input>>._
+_Examples:_
+ * _Automatic tests of FMUs are performed, and the FMU is tested by providing the <<start>> value as <<constant>> <<input>>._
+ * _For a Model Exchange FMU, the FMU might be part of an algebraic loop._
+_If the <<input>> variable is iteration variable of this algebraic loop, then initialization starts with its <<start>> value.]_
+
+If <<get-and-set-variable-values,`fmi3Set{VariableType}`>> is not called on a variable with <<causality>> = <<input>>, then the FMU must use the <<start>> value as value of this <<input>>.
+
 
 |`start`
 |
@@ -1476,6 +1408,73 @@ If `false`, <<state>> will not be reinitialized at an event by the FMU.
 The `min / max` definitions are information from the FMU to the environment defining the region in which the FMU is designed to operate (see <<min-max-violations>>). +
 _[If, for example, an `<Enumeration>` is defined with `name1 = -4`, `name2 = 1`, `name3 = 5`, `name4 = 11` and `min = -2`, `max = 5`, then only `name2` and `name3` are allowed.]_
 |====
+
+If <<initial>> is not present in a type that can have that attribute, its value is defined by <<table-definition-initial>> based on the values of <<causality>> and <<variability>> (default [.underline]#underlined#):
+
+.Definition of <<initial>>.
+[#table-definition-initial]
+[cols="1,1,1,1,1,1,1,1"]
+|====
+.2+^|<<variability>>
+7+^|<<causality>>
+
+^|<<structuralParameter,`structural Parameter`>>
+^|<<parameter>>
+^|<<calculatedParameter,`calculated Parameter`>>
+^|<<input>>
+^|<<output>>
+^|<<local>>
+^|<<independent>>
+
+^|<<constant>> data
+^|--
+^|--
+^|--
+^|--
+^|[.underline]#exact#
+^|[.underline]#exact#
+^|--
+
+^|<<fixed>> data
+^|[.underline]#exact#
+^|[.underline]#exact#
+^|[.underline]#calculated#, approx
+^|--
+^|--
+^|[.underline]#calculated#, approx
+^|--
+
+^|<<tunable>> data
+^|[.underline]#exact#
+^|[.underline]#exact#
+^|[.underline]#calculated#, approx
+^|--
+^|--
+^|[.underline]#calculated#, approx
+^|--
+
+^|<<discrete>> variables
+^|--
+^|--
+^|--
+^|[.underline]#exact#
+^|[.underline]#calculated#, exact, approx
+^|[.underline]#calculated#, exact, approx
+^|--
+
+^|<<continuous>> variables
+^|--
+^|--
+^|--
+^|[.underline]#exact#
+^|[.underline]#calculated#, exact, approx
+^|[.underline]#calculated#, exact, approx
+^|--
+^|--
+|====
+
+_[Note: For <<local>> and <<output>> variables and <<initial>> = <<exact>>, then the variable is explicitly set in <<InitializationMode>>._
+_The value of the variable is either the <<start>> value stored in a variable element `<XXX start=YYY/>` or the value set with <<get-and-set-variable-values,`fmi3Set{VariableType}`>> during <<InitializationMode>>.]_
 
 ====== Variable Naming Conventions [[namingSection]]
 

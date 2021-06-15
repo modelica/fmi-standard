@@ -76,7 +76,7 @@ Export-Schema CoordinateSystem 2 -schema fmi3TerminalsAndIcons.xsd
 Export-Schema Icon 2 -schema fmi3TerminalsAndIcons.xsd
 Export-Schema TerminalGraphicalRepresentation 2 -schema fmi3Terminal.xsd
 Export-Schema ModelVariables 2
-Export-Schema fmi3VariableBase 1
+Export-Schema fmi3AbstractVariable 1
 Export-Schema Float64 1 -schema fmi3Variable.xsd
 Export-Schema Int32 1 -schema fmi3Variable.xsd
 Export-Schema Boolean 1 -schema fmi3Variable.xsd
