@@ -325,6 +325,7 @@ a|
 * Deactivate initialization equations latexmath:[\mathbf{f}_{\mathit{init}}]
 * Update previous values of <<buffers>>: latexmath:[{}^\bullet\mathbf{b}:=\mathbf{b}]
 * Model Exchange:
+  - Activate discrete state equations latexmath:[\mathbf{f}_{\mathit{disc}}]
   - Activate event equations latexmath:[\mathbf{f}_{\mathit{event}}]
   - latexmath:[\mathbf{t}:=(\mathbf{t}_{\mathit{start}}, 0)]
 
@@ -468,32 +469,35 @@ There are multiple kinds of events that require a transition to <<EventMode>>:
 |<<get-and-set-variable-values,`fmi3Set{VariableType}`>>
 
 a|
-* Activate clocks and respective model partitions in latexmath:[\mathbf{f}_{\mathit{event}}]
-* Deactivate clocks and
+* `fmi3Active`: Activate clocks and respective model partitions in latexmath:[\mathbf{f}_{\mathit{disc}}] and latexmath:[\mathbf{f}_{\mathit{event}}]
+* `fmi3Subctive`: Activate clocks and respective model partitions only in latexmath:[\mathbf{f}_{\mathit{event}}]
+* `fmi3Inactive`: Deactivate clocks and
   - Reset respective clocked variables to their previous values: latexmath:[\mathbf{v}_{\mathit{k}} := {}^\bullet\mathbf{v}_{\mathit{k}}]
-  - Deactivate respective model partitions in latexmath:[\mathbf{f}_{\mathit{event}}]
+  - Deactivate respective model partitions in latexmath:[\mathbf{f}_{\mathit{disc}}] and latexmath:[\mathbf{f}_{\mathit{event}}]
 |<<fmi3SetClockEM>>
 
 a|
-* Activate output clocks and respective model partitions in latexmath:[\mathbf{f}_{\mathit{event}}] +
-* latexmath:[(\mathbf{y}_{c+d}, \mathbf{\dot{x}}_c, \mathbf{x}_{c+d}, \mathbf{z}, \mathbf{r}, \mathbf{w}_{c+d}, \mathbf{b}, \mathbf{T}_{\mathit{next}}) := \mathbf{f}_{\mathit{event}}({}^\bullet\mathbf{x}_{c+d}, \mathbf{u}_{c+d}, \mathbf{p}, {}^\bullet\mathbf{b}, \mathbf{t})]
+* Activate output clocks and respective model partitions in latexmath:[\mathbf{f}_{\mathit{disc}}] and latexmath:[\mathbf{f}_{\mathit{event}}] +
+* latexmath:[(\mathbf{x}_{d}) := \mathbf{f}_{\mathit{disc}}({}^\bullet\mathbf{x}_{c+d}, \mathbf{u}_{c+d}, \mathbf{p}, {}^\bullet\mathbf{b}, \mathbf{t})]
+* latexmath:[(\mathbf{y}_{c+d}, \mathbf{\dot{x}}_c, \mathbf{x}_{c}, \mathbf{z}, \mathbf{r}, \mathbf{w}_{c+d}, \mathbf{b}, \mathbf{T}_{\mathit{next}}) := \mathbf{f}_{\mathit{event}}({}^\bullet\mathbf{x}_{c}, \mathbf{x}_{d}, \mathbf{u}_{c+d}, \mathbf{p}, {}^\bullet\mathbf{b}, \mathbf{t})]
 |<<get-and-set-variable-values,`fmi3Get{VariableType}`>>, +
 <<fmi3GetContinuousStateDerivatives>>, +
 <<fmi3GetContinuousStates>>, +
 <<fmi3GetEventIndicators>> +
 
 a|
-* Evaluate latexmath:[\mathbf{f}_{\mathit{event}}], if no `fmi3GetXXX` function was called in this instant of super-dense time
+* Evaluate latexmath:[\mathbf{f}_{\mathit{disc}}] and latexmath:[\mathbf{f}_{\mathit{event}}], if no `fmi3GetXXX` function was called in this instant of super-dense time
 * latexmath:[(\mathbf{T}_\mathit{interval}) := \mathbf{f}_{\mathit{update}}({}^\bullet\mathbf{x}_{c+d}, \mathbf{u}_{c+d}, \mathbf{p}, {}^\bullet\mathbf{b}, \mathbf{t})]
 * Update previous values of discrete states: latexmath:[{}^\bullet\mathbf{x}_d:=\mathbf{x}_d]
 * Update previous values of <<buffers>>: latexmath:[{}^\bullet\mathbf{b}:=\mathbf{b}]
-* Deactivate active clocks and respective model partitions in latexmath:[\mathbf{f}_{\mathit{event}}]
+* Deactivate active clocks and respective model partitions in latexmath:[\mathbf{f}_{\mathit{disc}}] and latexmath:[\mathbf{f}_{\mathit{event}}]
 * Increment super-dense time: latexmath:[\mathbf{t}:=(\mathbf{t}_\mathit{R}, \mathbf{t}_\mathit{I} + 1)]
 |<<fmi3UpdateDiscreteStates>>
 
 a|
 * [[updateRelations]]Update previous values of <<relations>>: latexmath:[{}^\bullet\mathbf{r}:=\mathbf{r}]
 * Deactivate event equations latexmath:[\mathbf{f}_\mathit{event}]
+* Deactivate discrete state equations latexmath:[\mathbf{f}_{\mathit{disc}}]
 * Model Exchange: Activate continuous-time equations latexmath:[\mathbf{f}_\mathit{cont}]
 
 |<<fmi3EnterContinuousTimeMode>>,
@@ -511,7 +515,7 @@ Getting variables might trigger <<selectiv-computation,computations>>.
 
 [[fmi3SetClockEM,`fmi3SetClock`]]
 Function <<fmi3SetClock>>::
-For <<inputClock,`input Clocks`>>, <<fmi3SetClock>> is called to set the activation status of <<Clock,`Clocks`>> to `fmi3ClockActive` or `fmi3ClockInactive`.
+For <<inputClock,`input Clocks`>>, <<fmi3SetClock>> is called to set the activation status of <<Clock,`Clocks`>> to `fmi3ClockActive`, `fmi3ClockInactive` or `fmi3ClockSubactive`.
 During the solution of algebraic loops, the activation condition of triggered input clocks may change and therefore <<fmi3SetClock>> can be called multiple times per super-dense time instant.
 When a Clock is deactivated, the FMU must reset all clocked states of this Clock to the values computed during the last <<fmi3UpdateDiscreteStates>> when this Clock was active (latexmath:[{}^\bullet\mathbf{v}_{\mathit{k}}]). +
 _[Rationale: a triggered output Clock latexmath:[c] may depend on some variable latexmath:[v] that is involved in an algebraic loop._
@@ -809,7 +813,7 @@ Function <<fmi3GetClock>>::
 The scheduling algorithm uses <<fmi3GetClock>> to determine which clock is active. +
 _[For efficiency, <<fmi3GetClock>> should only be called if <<clocksTicked, `clocksTicked == fmi3True`>>.]_ +
 Depending on the clock activation state, the scheduling algorithm can call <<get-and-set-variable-values,`fmi3Set{VariableType}`>> and <<get-and-set-variable-values,`fmi3Get{VariableType}`>> for variables associated with the corresponding <<Clock>>.
-For an <<outputClock>> only the first call of `fmi3GetClock` for a specific activation of this <<Clock>> signals `fmi3ClockActive`.
+For an <<outputClock>> only the first call of `fmi3GetClock` for a specific activation of this <<Clock>> signals `fmi3ClockActive` or `fmi3ClockSubactive`.
 The FMU sets the reported activation state immediately back to `fmi3ClockInactive` for following `fmi3GetClock` calls for that <<Clock>> until this <<outputClock>> is activated again.
 
 Functions <<fmi3GetIntervalDecimal>> & <<fmi3GetIntervalFraction>>::

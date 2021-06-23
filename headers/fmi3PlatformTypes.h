@@ -77,16 +77,17 @@ typedef         uint8_t fmi3Byte;     /* Smallest addressable unit of the machin
                                          (typically one byte) */
 typedef const fmi3Byte* fmi3Binary;   /* Data type for binary data
                                          (out-of-band length terminated) */
-typedef            bool fmi3Clock;    /* Data type to be used with fmi3ClockActive and
-                                         fmi3ClockInactive */
+typedef             int fmi3Clock;    /* Data type to be used with fmi3ClockActive,
+                                         fmi3ClockInactive and fmi3ClockSubactive*/
 
 /* Values for fmi3Boolean */
 #define fmi3True  true
 #define fmi3False false
 
 /* Values for fmi3Clock */
-#define fmi3ClockActive   true
-#define fmi3ClockInactive false
+#define fmi3ClockInactive  0
+#define fmi3ClockActive    1
+#define fmi3ClockSubactive 2
 /* end::VariableTypes[] */
 
 #endif /* fmi3PlatformTypes_h */
