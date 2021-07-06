@@ -43,7 +43,7 @@ for root, _, files in os.walk(top):
 
     for file in files:
 
-        if file.endswith('.adoc') or file.endswith('.xsd') or file.endswith('*.h'):
+        if file.endswith(('.adoc', '.xsd', '*.h')):
 
             filename = os.path.join(root, file)
 
