@@ -793,19 +793,39 @@ _An example is provided in <<example-scheduled-execution>>.]_
 
 ===== Model Partitions and Clocked Variables [[clocked-variable]]
 
-An input Clock tick activates its specific <<model-partition>>.
+Each clock latexmath:[C] induces a discrete system, whose state advances at each of latexmath:[C]'s tick.
+Such system, also called the <<model-partition>> of latexmath:[C], is commonly written as:
 
-_[Such a model partition may represent a task or an interrupt service routine of an embedded system, or a discretized part of a plant model.]_
+latexmath:[\begin{align*}
+x^C_d(k) &= f^C(x^C_d(k-1), u^C(k), t(k)) \\
+y^C_d(k) &= g^C(x^C_d(k), u^C(k), t(k))
+\end{align*}]
 
-Discrete-time variables computed in such a model partition are called <<clocked-variable,clocked variables>>.
+where:
 
-The value of a clocked variable can acquire a new value and can be queried only when its Clock is active, except during <<InitializationMode>>.
+. latexmath:[x^C_d] denotes the state vector
+. latexmath:[k] denotes the latexmath:[k]-th tick
+. latexmath:[f^C] denotes the state transition function
+. latexmath:[x^C_d(k-1)] denotes previous state vector
+. latexmath:[u^C] denotes input state vector
+. latexmath:[t] denotes the simulation time
+. latexmath:[y^C_d] denotes output vector
+. latexmath:[g^C] denotes the output function
+
+_[Such a model partition may represent a task or an interrupt service routine of an embedded system, or a discretized part of a plant model.
+The name "model partition" refers to the fact that an model inside an FMU may declare multiple clocks, each with its own partition of the overall model.]_
+
+When latexmath:[C] is active (i.e., ticking) invoking the FMI functions `fmi3Get{VariableType}` on variables in the output vector latexmath:[y^C_d] will trigger the execution of the output function latexmath:[g^C] to compute such variables.
+When FMI function <<fmi3EvaluateDiscreteStates>> is invoked, the state vector latexmath:[x^C_d] is updated according to state transition function latexmath:[f^C].
+The discrete-time variables (latexmath:[x^C_d] and latexmath:[y^C_d]) are called <<clocked-variable,clocked variables>>.
+
+A clocked variable can acquire a new value and can be queried only when its Clock is active, except during <<InitializationMode>>.
 _[This is common in clock semantics. See, e.g., <<MLS12>>.]_
 During <<InitializationMode>>, if a clocked variable is declared as an <<InitialUnknown>>, then it must be initialized as a discrete variable.
 Declaring a clocked variable as an <<InitialUnknown>> is optional.
 Uninitialized clocked variables must be initialized in the corresponding Clock's first tick.
 
-A <<ClockedState>> is a clocked variable whose value depends on its previous value (i.e., the value computed at the last clock tick).
+A <<ClockedState>> is a clocked variable belonging to the state vector latexmath:[x^C_d], whose value depends on its previous value (i.e., the value computed at the last clock tick).
 Clocked states declare the <<valueReference>> of their previous variable using the <<previous>> attribute.
 
 The association between <<clocked-variable,clocked variables>> and their <<Clock,Clocks>> is defined by the attribute <<clocks>>.
