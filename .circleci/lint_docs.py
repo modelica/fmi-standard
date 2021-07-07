@@ -35,7 +35,7 @@ top = os.path.abspath(__file__)
 top = os.path.dirname(top)
 top = os.path.dirname(top)
 
-print("Linting *.adoc files in %s" % top)
+print("Linting *.adoc, *.h, and *.xsd files in %s" % top)
 
 num_files = 0
 
@@ -43,7 +43,7 @@ for root, _, files in os.walk(top):
 
     for file in files:
 
-        if file.endswith('.adoc'):
+        if file.endswith(('.adoc', '.xsd', '*.h')):
 
             filename = os.path.join(root, file)
 
