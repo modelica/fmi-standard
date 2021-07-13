@@ -514,6 +514,10 @@ typedef fmi3Status fmi3SetIntervalFractionTYPE(fmi3Instance instance,
                                                size_t nIntervals);
 /* end::SetIntervalFraction[] */
 
+/* tag::EvaluateDiscreteStates[] */
+typedef fmi3Status fmi3EvaluateDiscreteStatesTYPE();
+/* end::EvaluateDiscreteStates[] */
+
 /* tag::UpdateDiscreteStates[] */
 typedef fmi3Status fmi3UpdateDiscreteStatesTYPE(fmi3Instance instance,
                                                 fmi3Boolean* discreteStatesNeedUpdate,
