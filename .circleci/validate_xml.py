@@ -22,6 +22,7 @@ xml_files = [
     'structural_parameter_example.xml',
     'unit_definition.xml',
     'variable_types.xml',
+    'X_network4FMI_modelDescription.xml',
 ]
 
 for xml_file in xml_files:
@@ -46,7 +47,9 @@ schema = etree.XMLSchema(file=os.path.join(pwd, 'schema', 'fmi3TerminalsAndIcons
 parser = etree.XMLParser(schema=schema)
 
 # TODO: parse "Terminals and Icons" examples
-xml_files = []
+xml_files = [
+    'X_network4FMI_terminalsAndIcons.xml',
+]
 
 for xml_file in xml_files:
     print("Parsing %s" % xml_file)
