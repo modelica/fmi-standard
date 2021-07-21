@@ -130,6 +130,7 @@ Common Functions
 #define fmi3GetBoolean               fmi3FullName(fmi3GetBoolean)
 #define fmi3GetString                fmi3FullName(fmi3GetString)
 #define fmi3GetBinary                fmi3FullName(fmi3GetBinary)
+#define fmi3GetClock                 fmi3FullName(fmi3GetClock)
 #define fmi3SetFloat32               fmi3FullName(fmi3SetFloat32)
 #define fmi3SetFloat64               fmi3FullName(fmi3SetFloat64)
 #define fmi3SetInt8                  fmi3FullName(fmi3SetInt8)
@@ -143,10 +144,11 @@ Common Functions
 #define fmi3SetBoolean               fmi3FullName(fmi3SetBoolean)
 #define fmi3SetString                fmi3FullName(fmi3SetString)
 #define fmi3SetBinary                fmi3FullName(fmi3SetBinary)
+#define fmi3SetClock                 fmi3FullName(fmi3SetClock)
 
 /* Getting Variable Dependency Information */
 #define fmi3GetNumberOfVariableDependencies fmi3FullName(fmi3GetNumberOfVariableDependencies)
-#define fmi3GetVariableDependencies  fmi3FullName(fmi3GetVariableDependencies)
+#define fmi3GetVariableDependencies         fmi3FullName(fmi3GetVariableDependencies)
 
 /* Getting and setting the internal FMU state */
 #define fmi3GetFMUState              fmi3FullName(fmi3GetFMUState)
@@ -165,14 +167,13 @@ Common Functions
 #define fmi3ExitConfigurationMode    fmi3FullName(fmi3ExitConfigurationMode)
 
 /* Clock related functions */
-#define fmi3GetClock                 fmi3FullName(fmi3GetClock)
-#define fmi3SetClock                 fmi3FullName(fmi3SetClock)
 #define fmi3GetIntervalDecimal       fmi3FullName(fmi3GetIntervalDecimal)
 #define fmi3GetIntervalFraction      fmi3FullName(fmi3GetIntervalFraction)
 #define fmi3GetShiftDecimal          fmi3FullName(fmi3GetShiftDecimal)
 #define fmi3GetShiftFraction         fmi3FullName(fmi3GetShiftFraction)
 #define fmi3SetIntervalDecimal       fmi3FullName(fmi3SetIntervalDecimal)
 #define fmi3SetIntervalFraction      fmi3FullName(fmi3SetIntervalFraction)
+#define fmi3EvaluateDiscreteStates   fmi3FullName(fmi3EvaluateDiscreteStates)
 #define fmi3UpdateDiscreteStates     fmi3FullName(fmi3UpdateDiscreteStates)
 
 /***************************************************
@@ -239,6 +240,7 @@ FMI3_Export fmi3GetUInt64TYPE  fmi3GetUInt64;
 FMI3_Export fmi3GetBooleanTYPE fmi3GetBoolean;
 FMI3_Export fmi3GetStringTYPE  fmi3GetString;
 FMI3_Export fmi3GetBinaryTYPE  fmi3GetBinary;
+FMI3_Export fmi3GetClockTYPE   fmi3GetClock;
 FMI3_Export fmi3SetFloat32TYPE fmi3SetFloat32;
 FMI3_Export fmi3SetFloat64TYPE fmi3SetFloat64;
 FMI3_Export fmi3SetInt8TYPE    fmi3SetInt8;
@@ -252,6 +254,7 @@ FMI3_Export fmi3SetUInt64TYPE  fmi3SetUInt64;
 FMI3_Export fmi3SetBooleanTYPE fmi3SetBoolean;
 FMI3_Export fmi3SetStringTYPE  fmi3SetString;
 FMI3_Export fmi3SetBinaryTYPE  fmi3SetBinary;
+FMI3_Export fmi3SetClockTYPE   fmi3SetClock;
 
 /* Getting Variable Dependency Information */
 FMI3_Export fmi3GetNumberOfVariableDependenciesTYPE fmi3GetNumberOfVariableDependencies;
@@ -274,13 +277,14 @@ FMI3_Export fmi3EnterConfigurationModeTYPE fmi3EnterConfigurationMode;
 FMI3_Export fmi3ExitConfigurationModeTYPE  fmi3ExitConfigurationMode;
 
 /* Clock related functions */
-FMI3_Export fmi3GetClockTYPE             fmi3GetClock;
-FMI3_Export fmi3SetClockTYPE             fmi3SetClock;
-FMI3_Export fmi3GetIntervalDecimalTYPE   fmi3GetIntervalDecimal;
-FMI3_Export fmi3GetIntervalFractionTYPE  fmi3GetIntervalFraction;
-FMI3_Export fmi3SetIntervalDecimalTYPE   fmi3SetIntervalDecimal;
-FMI3_Export fmi3SetIntervalFractionTYPE  fmi3SetIntervalFraction;
-FMI3_Export fmi3UpdateDiscreteStatesTYPE fmi3UpdateDiscreteStates;
+FMI3_Export fmi3GetIntervalDecimalTYPE     fmi3GetIntervalDecimal;
+FMI3_Export fmi3GetIntervalFractionTYPE    fmi3GetIntervalFraction;
+FMI3_Export fmi3GetShiftDecimalTYPE        fmi3GetShiftDecimal;
+FMI3_Export fmi3GetShiftFractionTYPE       fmi3GetShiftFraction;
+FMI3_Export fmi3SetIntervalDecimalTYPE     fmi3SetIntervalDecimal;
+FMI3_Export fmi3SetIntervalFractionTYPE    fmi3SetIntervalFraction;
+FMI3_Export fmi3EvaluateDiscreteStatesTYPE fmi3EvaluateDiscreteStates;
+FMI3_Export fmi3UpdateDiscreteStatesTYPE   fmi3UpdateDiscreteStates;
 
 /***************************************************
 Functions for Model Exchange
