@@ -25,41 +25,42 @@ Every FMU is distributed with its own ZIP file.
 [[figure-zip-structure]]
 ----
 // Structure of ZIP file of an FMU
-modelDescription.xml          // description of FMU (required file)
-documentation                 // directory containing the documentation (optional)
-   index.html                 // entry point of the documentation
-   diagram.png                // descriptive diagram view of the model (optional)
-   diagram.svg                // if existing the diagram.png is required (optional)
+modelDescription.xml                // description of FMU (required file)
+documentation                       // directory containing the documentation (optional)
+   index.html                       // entry point of the documentation
+   diagram.png                      // descriptive diagram view of the model (optional)
+   diagram.svg                      // if provided, diagram.png is also required (optional)
+   externalDependencies.{txt|html}  // documentation of external resources required to load or simulate the FMU
    <other documentation files>
-   licenses                   // directory for licenses (optional)
-      license.{txt|html}      // Entry point for license information
-      <license files>         // For example BSD licenses
-icons                         // FMU and terminal icons (optional)
-   terminalsAndIcons.xml      // description of terminals and icons (optional)
-   icon.png                   // image file of icon without terminals (optional)
-   icon.svg                   // if existing the icon.png is required (optional)
-   // all terminal and fmu icons referenced in the graphical representation
-sources                       // directory containing the C sources (optional)
+   licenses                         // directory for licenses (optional)
+      license.{txt|html}            // entry point for license information
+      <license files>               // for example BSD licenses
+   staticLinking.{txt|html}         // entry point for static linking information (optional)
+icons                               // FMU and terminal icons (optional)
+   terminalsAndIcons.xml            // description of terminals and icons (optional)
+   icon.png                         // image file of icon without terminals (optional)
+   icon.svg                         // if existing the icon.png is required (optional)
+                                    // all terminal and fmu icons referenced in the graphical representation
+sources                             // directory containing the C sources (optional)
    buildDescription.xml
-binaries                      // directory containing the binaries (optional)
-   x86_64-windows             // binaries for Windows on Intel 64-bit
-      <modelIdentifier>.dll   // shared library of the FMI implementation
-      <other DLLs>            // the DLL can include other DLLs
-   x86_64-windows-msvc140mt   // static libraries for 64-bit Windows generated
-      <modelIdentifier>.lib   // with Visual Studio 2015 with /MT flag
-   i686-linux                 // binaries for Linux on Intel 32-bit
-      <modelIdentifier>.so    // shared library of the FMI implementation
-   aarch32-linux              // binaries for Linux on ARM 32-bit
-      <modelIdentifier>.so    // shared library of the FMI implementation
-   x86_64-darwin              // binaries for macOS
-      <modelIdentifier>.dylib // shared library of the FMI implementation
-resources                     // resources used by the FMU (optional)
-extra                         // Additional (meta-)data of the FMU (optional)
+binaries                            // directory containing the binaries (optional)
+   x86_64-windows                   // binaries for Windows on Intel 64-bit
+      <modelIdentifier>.dll         // shared library of the FMI implementation
+      <other DLLs>                  // the DLL can include other DLLs
+   x86-linux                        // binaries for Linux on Intel 32-bit
+      <modelIdentifier>.so          // shared library of the FMI implementation
+   aarch32-linux                    // binaries for Linux on ARM 32-bit
+      <modelIdentifier>.so          // shared library of the FMI implementation
+   x86_64-darwin                    // binaries for macOS
+      <modelIdentifier>.dylib       // shared library of the FMI implementation
+resources                           // resources used by the FMU (optional)
+extra                               // Additional (meta-)data of the FMU (optional)
 ----
 
 ===== Directory Documentation [[documentation-directory]]
 
 <<figure-zip-structure>> defines the files expected in the `documentation` directory.
+If the FMU depends on external resources _[e.g. shared libraries, files, or servers]_ to be loaded or simulated `documentation/externalDependencies.{txt|html}` must be present to document these dependencies and how to provide them.
 
 ====== Directory Licenses [[license-information]]
 This optional subdirectory can be used to bundle all license texts for the code, binaries or other material (documentation, content of resources folder) contained in the FMU.
@@ -210,7 +211,7 @@ The `<IncludeDirectory>` element defines the include directories that need to be
 _[Note that the header files `fmi3PlatformTypes.h` and `fmi3FunctionTypes.h/fmi3Functions.h` are not included in the FMU because:_
 
 _pass:[]`fmi3PlatformTypes.h` makes no sense in the `sources` directory, because if sources are provided, then the importer defines this header file and not the FMU._ +
-_This header file is not included in the `binaries` directory, because it is implicitly defined by the platform directory (for example, `i686-windows` for a 32-bit machine or `x86_64-linux` for a 64-bit machine)._
+_This header file is not included in the `binaries` directory, because it is implicitly defined by the platform directory (for example, `x86-windows` for a 32-bit machine running Windows or `x86_64-linux` for a 64-bit machine running Linux)._
 
 _pass:[]`fmi3FunctionTypes.h` / `fmi3Functions.h` are not needed in the `sources` directory, because they are implicitly defined by attribute `fmiVersion` in file <<modelDescription.xml>>._
 _Furthermore, in order that the C compiler can check for consistent function arguments, the header file from the importer should be used when compiling the C sources._
@@ -262,16 +263,18 @@ include::examples/build_description_complex.xml[]
 
 ===== Directory Binaries [[binaries-directory]]
 
-If an FMU is run through one of its binaries all items in that binary folder must be unpacked at the same location as the binary `<modelIdentifier>.*`.
+If an FMU is run through one of its binaries all items in that binary folder must be unpacked at the same location as the binary `<modelIdentifier>.{dll|dylib|so}`.
 
 ====== Platform Tuple Definition [[platform-tupe-definition]]
 
 The names of the binary directories are standardized by the "platform tuple".
 Further names can be introduced by vendors.
-Dynamic link libraries must include all referenced resources that are not available on a standard target machine _[for example, DLLs on Windows that are built with Visual Studio should be compiled with the `/MT` option to include the required symbols from the Visual C runtime in the DLL, and not use the option `/MD` where this is not the case]_.
-When compiling a shared object on Linux, `RPATH="$ORIGIN"` has to be set when generating the shared object in order that shared objects used from it, can be dynamically loaded.
+FMUs should contain all resources that are required to load and execute a shared library, link against a static library, or compile from source.
+Shared libraries should be statically linked against their dependencies _[e.g. the Visual Studio C Runtime on Windows]_.
+`RPATH="$ORIGIN"` should be set when building ELF binaries to allow dynamic loading of dependencies on the target machine.
+All external dependencies must be documented (see <<documentation-directory>>).
 
-The binaries must be placed in the respective <platformTuple> directory with the general format `<arch>-<sys>{-<abi>{<abi_ver>}{<abi_sub>}}`.
+The binaries must be placed in the respective `<platformTuple>` directory with the general format `<arch>-<sys>`.
 
 Architecture `<arch>`::
 +
@@ -286,14 +289,8 @@ Architecture `<arch>`::
 |aarch64
 |ARM 64-bit Architecture
 
-|i386
-|Intel 3rd generation x86 32-bit
-
-|i586
-|Intel 5th generation x86 32-bit w/o SSE
-
-|i686
-|Intel 6th generation x86 32-bit with SSE2
+|x86
+|Intel/AMD x86 32-bit
 
 |x86_64
 |Intel/AMD x86 64-bit
@@ -316,82 +313,8 @@ Operating system `<sys>`::
 |Microsoft Windows
 |====
 
-Application Binary Interface (ABI) `<abi>`::
-+
-[width="50%",cols="1,5",options="header"]
-|====
-|Name
-|Description
-
-|elf
-|ELF file format
-
-|gnu
-|GNU
-
-|android
-|Android
-
-|macho
-|Mach object file format
-
-|msvc
-|Microsoft Visual C
-|====
-
-ABI version `<abi_ver>`::
-+
-[width="50%",cols="1,5",options="header"]
-|====
-|Name
-|Description
-
-|80
-|Visual Studio 2005 (MSVC++ 8.0)
-
-|90
-|Visual Studio 2008 (MSVC++ 9.0)
-
-|100
-|Visual Studio 2010 (MSVC++ 10.0)
-
-|110
-|Visual Studio 2012 (MSVC++ 11.0)
-
-|120
-|Visual Studio 2013 (MSVC++ 12.0)
-
-|140
-|Visual Studio 2015 (MSVC++ 14.0)
-
-|141
-|Visual Studio 2017 (MSVC++ 15.x)
-
-|142
-|Visual Studio 2019 (MSVC++ 16.x)
-|====
-
-Sub-ABI `<abi_sub>`::
-+
-[width="50%",cols="1,5",options="header"]
-|====
-|Name
-|Description
-
-|md
-|Visual Studio with /MD
-
-|mt
-|Visual Studio with /MT
-
-|mdd
-|Visual Studio with /MDd
-
-|mtd
-|Visual Studio with /MTd
-|====
-
-_[Typical scenarios are to provide binaries only for one machine type (for example, on the machine where the importer is running and for which licenses of runtime libraries are available) or to provide only sources (for example, for translation and download for a particular micro-processor).]_
+When shipping the implementation as a static library an optional ABI (Application Binary Interface) section `<arch>-<sys>{-<abi>}` may be added to separate binaries for different toolchains on the same platform and a description must be provided in `documentation/staticLinking.{txt|html}` that contains all necessary information to link against the provided library _[e.g. supported compilers]_.
+The ABI section must only contain lowercase characters `a...z`, digits `0...9`, and underscores `_` and start with a lowercase character `a...z` _[e.g. `x86_64-windows-msvc140mt` for a static library for 64-bit Windows generated with Visual Studio 2015 with `/MT` flag]_.
 
 ====== Platform Tuple Examples [[platform-tuple-examples]]
 
@@ -411,7 +334,7 @@ The following table lists the most common platform tuples for shared libraries a
 |
 |macOS on Apple Silicon
 
-|i386-linux
+|x86-linux
 |linux32
 |Linux on 32-bit x86
 
@@ -423,7 +346,7 @@ The following table lists the most common platform tuples for shared libraries a
 |
 |Linux on ARM64
 
-|i386-windows
+|x86-windows
 |win32
 |Windows on 32-bit x86
 

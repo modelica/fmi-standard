@@ -9,6 +9,8 @@ _[For example, if the functions of one instance of an FMU are accessed from more
 the multi-threaded simulation environment that uses the FMU must guarantee that there are no race conditions while invoking the FMI functions.
 The FMU itself does not implement any services to support this.]_
 
+* FMI callback functions are not allowed to call back into the FMU (<<logMessage,fmi3CallbackLogMessage>>, <<preemption-support,fmi3CallbackLockPreemption>>, <<preemption-support,fmi3CallbackUnlockPreemption>>), except <<intermediateUpdate,fmi3CallbackIntermediateUpdate>> which leads to the well-defined state <<IntermediateUpdateMode>> defining which function calls back into the FMU are allowed.
+
 * FMI functions must not change global settings which affect other processes/threads.
 An FMI function may change settings of the thread in which it is called (such as floating point control registers), provided these changes are restored before leaving the function or before a callback function is called. +
 _[This property ensures that functions of different FMU instances can be called safely in any order._
@@ -53,7 +55,7 @@ _[Example of a definition in this header file:_
 +
 [source, C]
 ----
-typedef fmi3Status fmi3SetTimeTYPE(fmi3Instance, fmi3Float64);
+typedef fmi3Status fmi3SetTimeTYPE(fmi3Instance instance, fmi3Float64 time);
 ----
 +
 _]_
@@ -210,7 +212,7 @@ The output argument values are defined.
 `fmi3Warning`::
 A non-critical problem was detected, but the computation can continue.
 The output argument values are defined.
-Function <<logMessage>> was called by the FMU and the user is expected to handle the problem. +
+Function <<logMessage>> should be called by the FMU with further information before returning this status, respecting the current logging settings. +
 _[In certain applications, e.g. in a prototyping environment, warnings may be acceptable._
 _For production environments warnings should be treated like errors unless they can be safely ignored.]_
 
@@ -218,7 +220,7 @@ _For production environments warnings should be treated like errors unless they 
 `fmi3Discard`::
 The call was not successful and the FMU is in the same state as before the call.
 The output argument values are not defined, but the computation can continue.
-When debug logging is enabled (`loggingOn == fmi3True`) the function <<logMessage>> was called by the FMU.
+Function <<logMessage>> should be called by the FMU with further information before returning this status, respecting the current logging settings.
 Advanced simulation algorithms can try alternative approaches to drive the simulation by calling the function with different arguments or calling another function.
 Otherwise the simulation algorithm has to treat this return code like <<fmi3Error>> and has to terminate the simulation. +
 _[Examples for usage of <<fmi3Discard>> are_
@@ -229,7 +231,7 @@ _[Examples for usage of <<fmi3Discard>> are_
 `fmi3Error`::
 The call failed.
 The output argument values are undefined and the simulation cannot be continued.
-Function <<logMessage>> was called by the FMU and the FMU is in state <<Terminated>>.
+Function <<logMessage>> should be called by the FMU with further information before returning this status, respecting the current logging settings.
 If a function returns <<fmi3Error>>, it is possible to restore a previously retrieved FMU state by calling <<fmi3SetFMUState>>.
 Otherwise <<fmi3FreeInstance>> or <<fmi3Reset>> must be called.
 When detecting illegal arguments or a function call not allowed in the current state according to the respective state machine, the FMU must return <<fmi3Error>>.
@@ -239,7 +241,7 @@ Other instances of this FMU are not affected by the error.
 `fmi3Fatal`::
 The state of all instances of the model is irreparably corrupted.
 _[For example, due to a runtime exception such as access violation or integer division by zero during the execution of an FMI function.]_
-Function <<logMessage>> was called by the FMU.
+Function <<logMessage>> should be called by the FMU with further information before returning this status, respecting the current logging settings, if still possible.
 It is not allowed to call any other function for any instance of the FMU.
 
 ==== Inquire Version Number of Header Files [[inquire-version-number]]
@@ -795,19 +797,37 @@ _An example is provided in <<example-scheduled-execution>>.]_
 
 ===== Model Partitions and Clocked Variables [[clocked-variable]]
 
-An input Clock tick activates its specific <<model-partition>>.
+Each Clock latexmath:[\mathbf{k}] induces a discrete system.
+It's state advances at each tick of latexmath:[\mathbf{k}].
+Such a system, also called the <<model-partition>> of latexmath:[\mathbf{k}], is written as:
 
-_[Such a model partition may represent a task or an interrupt service routine of an embedded system, or a discretized part of a plant model.]_
+latexmath:[\begin{align*}
+(\mathbf{x}_k) &:= \mathbf{f}_{disc}(^\bullet{\mathbf{x}_k}, \mathbf{u}, \mathbf{t}) \\
+(\mathbf{y}_k) &:= \mathbf{f}_{event}(\mathbf{x}_k, \mathbf{u}, \mathbf{t})
+\end{align*}]
 
-Discrete-time variables computed in such a model partition are called <<clocked-variable,clocked variables>>.
+where:
 
-The value of a clocked variable can acquire a new value and can be queried only when its Clock is active, except during <<InitializationMode>>.
+. latexmath:[\mathbf{f}_{disc}] denotes the state transition function and
+. latexmath:[\mathbf{f}_{event}] denotes the output function of the <<model-partition>> of latexmath:[\mathbf{k}].
+
+_[Such a model partition may represent a task or an interrupt service routine of an embedded system, or a discretized part of a plant model._
+_The name "model partition" refers to the fact that an model inside an FMU may declare multiple Clocks, each with its own partition of the overall model.]_
+
+When latexmath:[\mathbf{k}] is active (i.e., ticking) invoking the FMI functions `fmi3Get{VariableType}` on variables in the output vector latexmath:[\mathbf{y}_k] will trigger the execution of the output function latexmath:[\mathbf{f}_{event}] to compute such variables.
+If <<providesEvaluateDiscreteStates>> is `false`, then latexmath:[\mathbf{f}_{disc}] cannot be called explicitly using <<fmi3EvaluateDiscreteStates>>, but will be implicitly executed during latexmath:[\mathbf{f}_{event}].
+When <<fmi3EvaluateDiscreteStates>> is called, the state vector latexmath:[\mathbf{x}_k] is updated according to state transition function latexmath:[\mathbf{f}_{disc}].
+
+_[Separating_ latexmath:[\mathbf{f}_{disc}] _from_ latexmath:[\mathbf{f}_{event}] _allows manipulation of the current (discrete) state and compute the corresponding outputs.]_
+
+The discrete-time variables latexmath:[\mathbf{x}_k] and latexmath:[\mathbf{y}_k] are called <<clocked-variable,clocked variables>>.
+A clocked variable latexmath:[\mathbf{v}_k] can acquire a new value and can be queried only when its Clock latexmath:[\mathbf{k}] is active, except during <<InitializationMode>>.
 _[This is common in clock semantics. See, e.g., <<MLS12>>.]_
 During <<InitializationMode>>, if a clocked variable is declared as an <<InitialUnknown>>, then it must be initialized as a discrete variable.
 Declaring a clocked variable as an <<InitialUnknown>> is optional.
 Uninitialized clocked variables must be initialized in the corresponding Clock's first tick.
 
-A <<ClockedState>> is a clocked variable whose value depends on its previous value (i.e., the value computed at the last clock tick).
+A <<ClockedState>> is a clocked variable belonging to the state vector latexmath:[\mathbf{x}_k], whose value depends on its previous value (i.e., the value computed at the last Clock tick).
 Clocked states declare the <<valueReference>> of their previous variable using the <<previous>> attribute.
 
 The association between <<clocked-variable,clocked variables>> and their <<Clock,Clocks>> is defined by the attribute <<clocks>>.

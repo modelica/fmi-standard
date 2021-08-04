@@ -317,10 +317,14 @@ This flag is ignored in `ModelExchange`.
 |The FMU supports <<IntermediateUpdateMode>> and will call <<fmi3CallbackIntermediateUpdate>>, if provided.
 This flag is ignored in `ModelExchange`.
 
+|[[providesEvaluateDiscreteStates,`providesEvaluateDiscreteStates`]] `providesEvaluateDiscreteStates`
+|The FMU supports <<fmi3EvaluateDiscreteStates>>, if `true`.
+This flag is ignored in `ScheduledExecution`.
+
 |[[recommendedIntermediateInputSmoothness,`recommendedIntermediateInputSmoothness`]] `recommendedIntermediateInputSmoothness`
 |A value of latexmath:[k] with latexmath:[k>0] signals to the co-simulation algorithm, that it is beneficial for the solver to receive intermediate inputs that are k-time continuously differentiable (latexmath:[C^k]) on the current communication interval.
 latexmath:[k=0] means continuous (see <<smoothness>>). +
-This flag is not supported in `ModelExchange`.
+This flag is ignored in `ModelExchange`.
 
 |====
 
@@ -963,8 +967,11 @@ Local variable values must not be used as input to another model or FMU.
 All variables are a function of this <<independent>> variable.
 <<variability>> must be <<continuous>>.
 Exactly one variable of an FMU must be defined as <<independent>>.
+For Model Exchange the value is the last value set by <<fmi3SetTime>>.
+For Co-Simulation the value of the independent variable is <<lastSuccessfulTime>> return by the last call to <<fmi3DoStep>> or the value of argument <<intermediateUpdateTime>> of <<intermediateUpdate,fmi3CallbackIntermediateUpdate>>.
 For <<fmi-for-scheduled-execution,Scheduled Execution>> the value of the independent variable is not defined.
-_[The main purpose of this variable is to define a quantity and unit for the independent variable.]_
+_[The main purpose of this variable in Scheduled Execution is to define a quantity and unit for the independent variable.]_
+The initial value of the independent variable is the value of the argument <<startTime>> of <<fmi3EnterInitializationMode>> for both Co-Simulation and Model Exchange.
 If the unit for the independent variable is not defined, it is implicitly `s` (seconds).
 If one variable is defined as <<independent>>, it must be defined with a floating point type without a <<start>> attribute.
 It is not allowed to call function <<get-and-set-variable-values,`fmi3Set{VariableType}`>> on an <<independent>> variable.
@@ -1061,7 +1068,7 @@ _Note: This is reverse compared to the <<derivative>> attribute.]_
 If present, this variable is clocked.
 The value of <<clocks>> is a list of value references of <<Clock>> variables this variable depends on.
 Only variables with <<variability,`variability == discrete`>> or <<variability,`variability == tunable`>> can have this attribute.
-_[More rigorous importers requiring a variable to be dependent on a single clock can reject FMUs violating this restriction.]_
+_[Some importers might require a variable to be dependent on a single clock for technical reasons. They could reject FMUs violating this restriction.]_
 |====
 
 <<table-allowed-variability-causality-combinations>> shows the combinations of <<variability>>/<<causality>> settings that are allowed.
@@ -1378,7 +1385,7 @@ A different <<start>> value can be provided with an <<get-and-set-variable-value
 _[The standard approach is to set the <<start>> value before <<fmi3EnterInitializationMode>>._
 _However, if the initialization shall be modified in the calling environment (for example, changing from initialization of states to steady-state initialization), it is also possible to use the <<start>> value as iteration variable of an algebraic loop: using an additional condition in the environment, such as_ latexmath:[{\dot{x} = 0}] _, the actual <<start>> value is determined.]_
 
-If <<initial>> = <<exact>> or <<approx>> or <<causality>> = <<input>>, a <<start>> value must be provided.
+If <<initial>> = <<exact>> or <<approx>>, a <<start>> value must be provided.
 
 If <<initial>> = <<calculated>> or <<causality>> = <<independent>>, it is not allowed to provide a <<start>> value.
 
@@ -1390,7 +1397,7 @@ Variables with <<causality>> = <<parameter>> or <<input>>, as well as variables 
 
 - If <<variability>> = <<constant>>, the <<start>> value is the value of the constant.
 
-- If <<causality>> = <<output>> or <<local>>, then the <<start>> value is either an <<initial>> or a `guess` value, depending on the setting of attribute <<initial>>.
+If <<causality>> = <<output>> or <<local>>, then the <<start>> value is either an <<initial>> or a `guess` value, depending on the setting of attribute <<initial>>.
 
 |`derivative`
 |
