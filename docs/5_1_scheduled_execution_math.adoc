@@ -3,7 +3,7 @@
 ==== Timing Concepts and Clocks [[concepts-timing-scheduled-execution]]
 
 The Scheduled Execution interface has a different timing concept compared to FMI for Co-Simulation.
-This is required to handle <<triggered, triggered input Clocks>> which may tick at a time instant that is unpredictable for the simulation algorithm.
+This is required to handle <<triggered, triggered input Clocks>> which may tick at a time instant that is unpredictable for the simulation algorithm. #TODO: why is this different to co-sim with triggered input clocks?#
 Typically, hardware I/O or virtual ECU software events belong to this category.
 
 The activation of a model partition will invoke the computation of the model partition defined by an <<inputClock, input Clock>> for the current <<Clock>> tick time latexmath:[\mathbf{t}_i].
@@ -22,20 +22,21 @@ More details can be found in <<Clock,Clocks>>.
 For real-time applications the simulation time equals the real wall clock time, thus each <<fmi3ActivateModelPartition>> computation step has to be finished in real-time within its current period time length (computation time is not only defined by the runtime of <<fmi3ActivateModelPartition>> but also by the time for setting and getting variables and related operations).
 Usually a preemptive scheduling of the <<fmi3ActivateModelPartition>>, <<get-and-set-variable-values,`fmi3Get{VariableType}`>>, <<get-and-set-variable-values,`fmi3Set{VariableType}`>> calls is required to respect this constraint.
 
+#TODO: non-normative!#
 The FMU's code has to be prepared for being able to correctly handle preemptive calls of <<fmi3ActivateModelPartition>>, <<get-and-set-variable-values,`fmi3Get{VariableType}`>>, <<get-and-set-variable-values,`fmi3Set{VariableType}`>>, <<fmi3GetClock>> and <<fmi3GetIntervalDecimal>>.
 In general for Scheduled Execution this requires a secured internal and external access to global states and variable values to ensure the correct handling of the preemption of model partition computations.
 _[For <<get-and-set-variable-values,`fmi3Get{VariableType}`>>, <<get-and-set-variable-values,`fmi3Set{VariableType}`>> in particular a unique assignment of the respective variables to model partitions via its associated <<Clock>> is strongly recommended.]_
 It is also required that the FMU reports the active state of an <<outputClock>> only with the first call of <<fmi3GetClock>> for a specific activation of this <<Clock>> and sets the reported activation state immediately back to `false` for the following <<fmi3GetClock>> calls for that <<Clock>> until this <<outputClock>> is internally activated again.
 Similarly for <<countdown, `countdown Clocks`>> a call to <<fmi3GetIntervalDecimal>> has to ensure that the Clock's interval qualifier is reset to <<fmi3GetIntervalDecimal, `fmi3IntervalUnchanged`>>.
 
-If a preemptive multitasking regime is intended, an individual task (or thread -- task and thread are used synonymously here) for each model partition (associated to an <<inputClock>>) has to be created.
+If a preemptive multitasking regime is intended, an individual task (or thread -- task and thread are used synonymously here #TODO why task and thread??? even modelpartition or its associated clock can be used (and is used) synonymously already#) for each model partition (associated to an <<inputClock>>) has to be created.
 The task for computing each <<fmi3ActivateModelPartition>> is created and controlled by the simulation algorithm, not by the FMU.
 So the FMU exporting tool does not need to take care for that (except for preparing its code to support preemption).
 
 _[If only one single model partition is available via the interface of an FMU, preemptive calls of the related <<fmi3ActivateModelPartition>> function are possible by default since there are no external cross dependencies within one model partition between communication points.]_
 
-Based on the settings defined in the XML for <<inputClock,input Clocks>> the simulation algorithm calls <<get-and-set-variable-values,`fmi3Set{VariableType}`>>, <<fmi3ActivateModelPartition>>, or <<get-and-set-variable-values,`fmi3Get{VariableType}`>>.
-Set/get calls for each task are only allowed for variables that are associated to the <<inputClock>> associated to that task or - here preemption issues become important - to variables that are associated to no <<Clock>>, based on the XML information.
+Based on the settings #TODO: settings???# defined in the XML for <<inputClock,input Clocks>> the simulation algorithm calls <<get-and-set-variable-values,`fmi3Set{VariableType}`>>, <<fmi3ActivateModelPartition>>, or <<get-and-set-variable-values,`fmi3Get{VariableType}`>>.
+Set/get calls for each task are only allowed for variables that are associated to the <<inputClock>> associated to that task or - here preemption issues become important #TODO non-normative# - to variables that are associated to no <<Clock>>, based on the XML information #TODO based on xml info is redundant#.
 
 _[The recommendation is to avoid variables associated to no or more than one model partition or <<inputClock,input Clocks>> as much as possible._
 _Because they also introduce complexity it, is recommended to reduce dependencies between variables located in different model partitions of one FMU, too.]_
@@ -47,22 +48,24 @@ The simulation algorithm schedules the <<fmi3ActivateModelPartition>> (as well a
 
 Priority (see <<priority>>):
 
-- Same priority: Model partitions (e.g. tasks) cannot preempt each other.
+- Same priority: Model partitions (e.g. tasks #TODO why e.g.?? isn't it synonymous?#) cannot preempt each other. #TODO preemption isn't done by model partitions, how could they preempt each other?#
 Arbitrary evaluation order is possible for model partitions of the same priority.
 
 - Different priorities: Model partitions of a higher priority preempt partitions of a lower priority as soon as the higher priority partition needs to be computed.
 
 _[If multiple tasks are needed to be scheduled for computation at a certain time instant, a simulation algorithm must schedule a task of a higher priority always before a task of a lower priority]_
 
-An <<inputClock>> can hold fixed or modifiable periods, or be triggered unpredictably.
+An <<inputClock>> can hold #TODO: hold???# fixed or modifiable #TODO tunable?# periods, or be triggered unpredictably.
 Refer to chapter on <<Clock,Clocks>> for details.
 
-Based on the period and priority definitions the exporting tool can restrict the code evaluation order.
-It nevertheless has to secure its code against concurrent evaluation _[not against parallel evaluation, as this is not supported for model partitions of an FMU in the interface description of this mode]_ along the defined priority restrictions.
+Based on the period and priority definitions, the exporting tool #TODO: The fmu???# can restrict the code #TODO why suddenly code???# evaluation order.
+It nevertheless has to secure its code against concurrent evaluation _[not against parallel evaluation #TODO what is the difference between concurrent vs parallel evaluation here? and why is ist not supported?#, as this is not supported for model partitions of an FMU in the interface description of this mode]_ along the defined priority restrictions.
 Mostly this is required for internal inter-model-partition communication and in general for the joint use of variables that are associated to more than one model partition of the FMU.
 The exporting tool has to consider the effect of <<triggered>> <<inputClock, 'input Clocks'>> and the influences of computing speed, because the exact occurrence of preemption points cannot be foreseen (within the given priority and period restrictions).
+#TODO what????#
 
 To guard certain code parts against preemption the FMU may use the callback functions <<preemption-support,fmi3CallbackLockPreemption>> and <<preemption-support,fmi3CallbackUnlockPreemption>> provided by the simulation algorithm when instantiating the FMU via <<fmi3InstantiateScheduledExecution>>.
+#TODO what????#
 
 _[Such locks should be used with care and only if needed: Examples are given in <<ClockActivationMode>> and <<example-scheduled-execution>>.]_
 
