@@ -54,7 +54,7 @@ This standard supports two abstraction layers for network stacks:
 
 Signal abstraction layer (also "high cut"):: physical signals as exchanged between the application software (ASW) and the basic software (BSW), in AUTOSAR this would be the Virtual Function Bus, and
 
-Frame abstraction layer (also "low cut"):: binary signals which represent an entire frame/PDU as exchanged through the micro-controller abstraction layer (MCAL) between BSW and the hardware driver.
+Frame abstraction layer (also "low cut"):: binary signal or signals representing one or more network frames as exchanged through the micro-controller abstraction layer (MCAL) between BSW and the hardware driver.
 
 Standardized <<NetworkDescriptionFile,network description files>> shipped with each FMU describe properties of signals and frames, such as signal units, frame composition and trigger conditions.
 These <<NetworkDescriptionFile,network description files>> are placed into the `/extra/org.modelica.fmi.networks4FMI` folder.
@@ -63,16 +63,14 @@ Both abstraction layers are nearly equivalent and can be translated into one ano
 Depending on the export tool, one of the abstraction layers is more "natural" to the FMU, while the other might have to be emulated with additional internal effort.
 Importers on the other hand rarely require both abstraction layers for system level compositions, because the engineering task defines the level of abstraction for the network communication.
 FMUs may choose to only support one abstraction layer providing only the corresponding variables.
-However, for versatility, having FMU capable of communicating on both abstraction layers is convenient for users.
+However, for versatility, having FMU capable of communicating on both abstraction layers is more convenient for users.
 
-_[An FMU providing both abstraction layers can deduce from the fmi3Set() and fmi3Get() call, which abstraction layer the importer is using.]_
-
-These parameter values can be used by the FMU to compute only required output variables and to know which of the abstraction layer to read its inputs from.
+_[FMUs providing both abstraction layers can deduce from the fmi3Set() and fmi3Get() calls they receive, which abstraction layer the importer is using.]_
 
 Since network communication is not continuous but time discrete, FMI 3.0 clock variables are used to indicate when signals and/or frames are sent.
 All signal and frame variables are clocked variables.
 
-FMI 3.0 terminals definition in the `modelDescription.xml` for each level of grouping (networks, frames and PDUs) allow system composition tools without knowledge of the network description format to semantically group signals.
+FMI 3.0 terminals definition in the `terminalsAndIcons.xml` for each level of grouping (networks, frames and PDUs) allow system composition tools without knowledge of the network description format to semantically group signals.
 To uniquely map between the FMU variables and the network variables, FMU variable names are structured, e.g. `BusName::FrameName::PDUName::SignalName`.
 
 If an FMU specifies nodes that are both senders and receivers of a frame, the receiver role will be removed from the FMU interface to allow the signals to have a unique role as output and the reading of such outputs must be handled internally to the FMU.
@@ -85,7 +83,7 @@ _[The FMI standard requires a variable to be either input or output.]_
 FMI 3.0 introduces an `/extra` folder in its `zip` structure.
 The <<NetworkDescriptionFile,network description files>> will be placed under the reverse domain name controlled by the MAP FMI: `/extra/org.modelica.fmi.networks4FMI`.
 DBC, LDF, Fibex and ARXML files are allowed.
-The root name of the description files shall be used as network identifier in the bus terminal type and are case sensitive, e.g. `POWERTRAIN.dbc`.
+The root name of the description files shall be used as network identifier in the bus terminal type and are case sensitive, e.g. `Powertrain.dbc`.
 
 Multiple files can be specified, each one defining one network architecture used by the FMU.
 This standard does not support composing one network architecture from multiple description files, even if using internal include mechanisms, it rather enforces the rule: one network - one file.
@@ -98,32 +96,42 @@ This section explains the different variable types used to carry network traffic
 
 ==== Signal Variables
 
+To define the signal abstraction layer (or "high cut"), signal variables are defined.
+
 A signal variable carries the physical value of a network signal normally packaged inside a PDU or frame.
 The unit definition of the variable must match the one defined in the <<NetworkDescriptionFile>>.
 
 Each network signal must be listed as <<TerminalMemberVariable>> of its corresponding <<PDUTerminal>>.
 
-In case multiplexed signals are present in a frame/PDU: all signals are present, but only the active signal according to the multiplex switch signal contains a valid value, all inactive values must be ignored _[those values could even be outside their specified min-max range without fault]_.
+In case multiplexed signals are present in a frame/PDU: all signals are present, but only the active signal according to the multiplex switch signal contains a valid value, all inactive variables have undefined values _[those values could even be outside their specified min-max range without fault]_.
 
 Generally, signal variables are optional, but they must either be all missing or all present to clearly indicate support for the signal abstraction layer.
 
 ==== Frame Variables [[FrameVariable]]
 
-A frame variable is of type `fmi3Binary` and represents the entire frame, from and including `Start of Frame` until and including `End of Frame`.
-The name of such a frame variable is formed like this `BusName::FrameName_FRAME`, e.g. `Powertrain::tcuSensors_FRAME` (see <<Example>>).
+To define the frame abstraction layer (or "low cut"), frame variables are defined.
 
-Each frame variable must be listed as <<TerminalMemberVariable>> of its corresponding <<FrameTerminal>>.
+A frame variable is of type `fmi3Binary` and contains one or more binary frames, from and including `Start of Frame` until and including `End of Frame` and frame padding between frames.
+Frames and inter-frame padding are build according to the network definitions.
 
-If any frame has such a binary representation of the entire frame, all frames must have such a binary representation of the frame to clearly indicate support for the frame abstraction layer.
+There are two such frame variables per bus: an input and an output.
+The names of these frame variables are defined as `BusName::FRAMES_in` and `BusName::FRAMES_out`, e.g. `Powertrain::FRAMES_in` and `Powertrain::FRAMES_out` (see <<Example>>).
+
+Both frame variables must be listed as <<TerminalMemberVariable>> of its corresponding <<BUSTerminal>>.
+
+Generally, frame variables are optional, but they must either both be missing or present to clearly indicate support for the frame abstraction layer.
 
 ==== Clock Variables [[ClockVariable]]
 
 In order to use FMU input and output variables as transport layer for networks, aperiodic, triggered input and output clocks are used.
-Such a clock is activated by the sender to indicate the transmission of the corresponding frame.
+Such a clock is activated by the sender to indicate the transmission of the corresponding frame or frames.
 
-Each frame `BusName::FrameName` has its own dedicated clock variable named `BusName::FrameName_CLOCK`, e.g. `POWERTRAIN::ecuState_CLOCK` and must be listed as <<TerminalMemberVariable>> of its corresponding <<FrameTerminal>>.
+Each frame `BusName::FrameName` has its own dedicated clock variable named `BusName::FrameName_CLOCK`, e.g. `POWERTRAIN::ecuState_CLOCK`, and must be listed as <<TerminalMemberVariable>> of its corresponding <<FrameTerminal>>.
 
-All clocked variables triggered by this clock belonging to the same frame are then valid and can be read by the importer.
+All signal variables are clocked variables.
+Signal variables belonging to frame `BusName::FrameName` are triggered by the clock `BusName::FrameName_CLOCK` and all these variables must share the same `causality`.
+
+Each frame variable `BusName::FRAMES_in` and `BusName::FRAMES_out` have their own dedicated clock variable named `BusName::FRAMES_in_CLOCK` and `BusName::FRAMES_out_CLOCK`, e.g. `Powertrain::FRAMES_in_CLOCK` and `Powertrain::FRAMES_out_CLOCK`, respectively, must have the appropriate `causality`, and must be listed as <<TerminalMemberVariable>> of its corresponding <<BUSTerminal>>.
 
 // what about dynamic PDUs? Do they need their own clocks as well?
 
@@ -133,22 +141,23 @@ All clocked variables triggered by this clock belonging to the same frame are th
 
 Each network connected to the FMU must be described in `icons/terminalsAndIcons.xml` as a `<Terminal>` element of `<fmiTerminalsAndIcons><Terminals>` that wraps all <<FrameTerminal,frame terminals>>.
 The attribute `name` of the `<Terminal>` must match the root name of its description file
-_[e.g. `POWERTRAIN`, if the file is `/extra/org.modelica.fmi.layered_BUS/POWERTRAIN.dbc`]_.
+_[e.g. `Powertrain`, if the file is `/extra/org.modelica.fmi.layered_BUS/Powertrain.dbc`]_.
 
 Attribute definitions::
  * `terminalKind` must be set to `bus`.
  * `matchingRule` must be set to `bus`.
- * `name` is the network name, e.g. `POWERTRAIN`, see example and constraints above.
+ * `name` is the network name, e.g. `Powertrain`, see <<Example>> and constraints above.
 
 Element definitions::
- * There must be no `<TerminalMemberVariable>` element.
+ * If frame variables (`BusName::FRAMES_in` and `BusName::FRAMES_out`) and their clocks (`BusName::FRAMES_in_CLOCK` and `BusName::FRAMES_out_CLOCK`) are exposed in the `modelDescription.xml`, they must be listed as `<TerminalMemberVariable>` elements here.
+ These variables represent the frame abstraction layer ("low cut").
  * There must be no `<TerminalStreamMemberVariable>` element.
  * There must be one `<Terminal>` element per network frame described in the description file.
 
 Annotation element::
  * There must be an `<Annotation>` element defining which node or nodes (as comma-separated list without spaces) of the <<NetworkDescriptionFile>> are wrapped inside the FMU.
 If the combination of nodes specified for this FMU turns a frame and its signals into both input and output because sending and receiving nodes are specified, only the sending (output) role will be defined in the FMU interface.
-Receiving such frames must then be handled internal to the FMU.
+Receiving such frames must then be handled internally to the FMU.
 
 // TODO: do we need to define what the graphical representation looks like? Or should we not allow it?
 
@@ -163,24 +172,20 @@ Attribute definitions::
 
 Element definitions::
  * There must be no `<TerminalStreamMemberVariable>` element.
- * There must be one `<Terminal>` element per PDU of this frame.
+ * There must be one <<PDUTerminal>> element per PDU of this frame.
  * There must be one `<TerminalMemberVariable>` for the clock this frame is connected to.
-   The name of this variable is composed as <<ClockVariable,`BusName::FrameName_CLOCK`>>, e.g. `POWERTRAIN::tcuSensors_CLOCK`.
- * There can be a variable of type `fmi3Binary` that represents the entire frame, including `Start-of-Frame` and `End-of-Frame`.
-   The name of this variable is composed as <<FrameVariable,`BusName::FrameName_FRAME`>>, e.g. `POWERTRAIN::tcuSensors_FRAME`.
-   This variable represents the frame abstraction layer ("low cut").
+   The name of this variable is composed as <<ClockVariable,`BusName::FrameName_CLOCK`>>, e.g. `Powertrain::tcuSensors_CLOCK`.
 
-Both <<TerminalMemberVariable,`TerminalMemberVariables`>> must have the same causality of either input or output, all <<PDUTerminal,PDU Terminals>> included here must reference <<TerminalMemberVariable>> with the same causality.
+The <<TerminalMemberVariable>> must have the same causality as all variables referenced in the <<PDUTerminal,PDU Terminals>> included here.
 
 ==== PDU Terminal [[PDUTerminal,PDU terminal]]
 
-Each PDU listed in the must be an element of its corresponding <<FrameTerminal>>.
+Each PDU listed in the <<NetworkDescriptionFile>> must be an element of its corresponding <<FrameTerminal>>.
 
 Attribute definitions::
  * `terminalKind` must be set to `pdu`.
  * `matchingRule` must be set to `bus`.
  * `name` must match a PDU name of the <<NetworkDescriptionFile>> in `/extra/org.modelica.fmi.layered_BUS`.
-   If the network type or network description format does not allow for PDUs (CAN and LIN), a single, synthetic PDU with the same name as the frame it belongs to must be created, e.g. `tcuSensors`.
 
 Element definitions::
  * There must be no `<TerminalStreamMemberVariable>` element.
@@ -196,7 +201,7 @@ For network types not natively referencing a "PDU", like CAN, a synthetic PDU wi
 <<PDUTerminal,PDU terminals>> list all the contained signals as `<TerminalMemberVariable>`.
 
 Attribute definitions::
- * `variableName` refers to the input or output variable name of the FMU and to enforce uniqueness is built as follows: `BusName::FrameName::PDUName::SignalName`, e.g. `POWERTRAIN::tcuSensors::tcuSensors::vCar`.
+ * `variableName` refers to the input or output variable name of the FMU and to enforce uniqueness is built as follows: `BusName::FrameName::PDUName::SignalName`, e.g. `Powertrain::tcuSensors::tcuSensors::vCar`.
     These variables represent the signal abstraction layer ("high cut").
  * `memberName` is the `SignalName` as given in the <<NetworkDescriptionFile>>, e.g. `vCar`.
     This is redundant information but simplifies signal name extraction.
@@ -209,8 +214,8 @@ The following excerpts from files are used throughout this document as examples 
 The partial DBC file here lists merely the CAN message (frame) structure.
 Signal trigger conditions are not included because they have no bearing on this standard.
 
-.Example POWERTRAIN.dbc file
-[#POWERTRAIN.dbc]
+.Example Powertrain.dbc file
+[#Powertrain.dbc]
 [source, C]
 ----
 ...
@@ -231,7 +236,7 @@ BO_ 512 ecuState: 4 ECU
 ...
 ----
 
-The `modelDescription.xml` excerpt listed below shows which variables would exist for the `POWERTRAIN.dbc` shown above.
+The `modelDescription.xml` excerpt listed below shows which variables would exist for the `Powertrain.dbc` shown above.
 
 .Example modelDescription.xml for ECU node
 [#modelDescription.xml]
@@ -242,7 +247,7 @@ include::docs/examples/X_network4FMI_modelDescription.xml[]
 
 // TODO add ModelDependency structure above
 
-The following file shows the `<Terminal>` definition representing the network and frame structure defined with `POWERTRAIN.dbc` above.
+The following file shows the `<Terminal>` definition representing the network and frame structure defined with `Powertrain.dbc` above.
 
 .Example terminalsAndIcons.xml file
 [#terminalsAndIcon.xml]
@@ -274,4 +279,4 @@ Such an ideal network differs from physical networks in the following ways:
  * [[multiOutput]]Network protocols allow frames to be sent from more than one node.
    Here this is also possible, with output variables for frames (and their signals) that are sent by more than one FMU.
    This requires the importer to handle the case when multiple source FMUs are sending the same frame.
-   Importers must know how to handle this, just like the must know how to handle flow variables according to Kirchhoff's law.
+   Importers must know how to handle this, just like they must know how to handle flow variables according to Kirchhoff's law.
