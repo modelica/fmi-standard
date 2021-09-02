@@ -1,4 +1,4 @@
-= Network Communication and FMI 3.0
+= Network Communication and FMI 3.0, v1.0
 :sectnums:
 :sectnumlevels: 5
 :toc: left
@@ -21,7 +21,7 @@ This layered standard on top of FMI 3.0, defines how to describe and simulate ne
 {empty} +
 {empty}
 
-Copyright (C) 2008-2011 MODELISAR Consortium and 2012-2020 The Modelica Association Project FMI.
+Copyright (C) 2021 The Modelica Association Project FMI.
 
 This document is licensed under the Attribution-ShareAlike 4.0 International license.
 The code is released under the 2-Clause BSD License.
@@ -67,10 +67,10 @@ However, for versatility, having FMU capable of communicating on both abstractio
 
 _[FMUs providing both abstraction layers can deduce from the fmi3Set() and fmi3Get() calls they receive, which abstraction layer the importer is using.]_
 
-Since network communication is not continuous but time discrete, FMI 3.0 clock variables are used to indicate when signals and/or frames are sent.
+Since network communication is not continuous but time discrete, FMI 3.0 clocks are used to indicate when signals and/or frames are sent.
 All signal and frame variables are clocked variables.
 
-FMI 3.0 terminals definition in the `terminalsAndIcons.xml` for each level of grouping (networks, frames and PDUs) allow system composition tools without knowledge of the network description format to semantically group signals.
+FMI 3.0 terminal definitions in the `terminalsAndIcons.xml` for each level of grouping (networks, frames and PDUs) allow system composition tools without knowledge of the network description format to semantically group signals.
 To uniquely map between the FMU variables and the network variables, FMU variable names are structured, e.g. `BusName::FrameName::PDUName::SignalName`.
 
 If an FMU specifies nodes that are both senders and receivers of a frame, the receiver role will be removed from the FMU interface to allow the signals to have a unique role as output and the reading of such outputs must be handled internally to the FMU.
@@ -83,10 +83,10 @@ _[The FMI standard requires a variable to be either input or output.]_
 FMI 3.0 introduces an `/extra` folder in its `zip` structure.
 The <<NetworkDescriptionFile,network description files>> will be placed under the reverse domain name controlled by the MAP FMI: `/extra/org.modelica.fmi.networks4FMI`.
 DBC, LDF, Fibex and ARXML files are allowed.
-The root name of the description files shall be used as network identifier in the bus terminal type and are case sensitive, e.g. `Powertrain.dbc`.
+The root name of the <<NetworkDescriptionFile>> shall be used as network identifier in the bus terminal type and are case sensitive, e.g. `Powertrain.dbc`.
 
-Multiple files can be specified, each one defining one network architecture used by the FMU.
-This standard does not support composing one network architecture from multiple description files, even if using internal include mechanisms, it rather enforces the rule: one network - one file.
+Multiple files can be specified, each one defining one network used by the FMU.
+This standard does not support composing one network from multiple <<NetworkDescriptionFile,network description files>>, even if using internal include mechanisms, it rather enforces the rule: one network - one file.
 
 It is recommended to use ARXML over DBC files for CAN whenever possible, because the DBC standard lacks some key frame/PDU properties that were added only later using non-standard extensions with different dialects in use.
 
@@ -140,7 +140,7 @@ Each frame variable `BusName::FRAMES_in` and `BusName::FRAMES_out` have their ow
 ==== Bus Terminal [[BUSTerminal,bus terminal]]
 
 Each network connected to the FMU must be described in `icons/terminalsAndIcons.xml` as a `<Terminal>` element of `<fmiTerminalsAndIcons><Terminals>` that wraps all <<FrameTerminal,frame terminals>>.
-The attribute `name` of the `<Terminal>` must match the root name of its description file
+The attribute `name` of the `<Terminal>` must match the root name of its <<NetworkDescriptionFile>>
 _[e.g. `Powertrain`, if the file is `/extra/org.modelica.fmi.layered_BUS/Powertrain.dbc`]_.
 
 Attribute definitions::
@@ -152,14 +152,12 @@ Element definitions::
  * If frame variables (`BusName::FRAMES_in` and `BusName::FRAMES_out`) and their clocks (`BusName::FRAMES_in_CLOCK` and `BusName::FRAMES_out_CLOCK`) are exposed in the `modelDescription.xml`, they must be listed as `<TerminalMemberVariable>` elements here.
  These variables represent the frame abstraction layer ("low cut").
  * There must be no `<TerminalStreamMemberVariable>` element.
- * There must be one `<Terminal>` element per network frame described in the description file.
+ * There must be one `<Terminal>` element per network frame described in the <<NetworkDescriptionFile>>.
 
 Annotation element::
  * There must be an `<Annotation>` element defining which node or nodes (as comma-separated list without spaces) of the <<NetworkDescriptionFile>> are wrapped inside the FMU.
 If the combination of nodes specified for this FMU turns a frame and its signals into both input and output because sending and receiving nodes are specified, only the sending (output) role will be defined in the FMU interface.
 Receiving such frames must then be handled internally to the FMU.
-
-// TODO: do we need to define what the graphical representation looks like? Or should we not allow it?
 
 ==== Frame Terminal [[FrameTerminal,frame terminal]]
 
@@ -168,7 +166,7 @@ Each frame listed in the <<NetworkDescriptionFile>> must be an element of its co
 Attribute definitions::
  * `terminalKind` must be set to `frame`.
  * `matchingRule` must be set to `bus`.
- * `name` must match the frame name of the <<NetworkDescriptionFile>> in `/extra/org.modelica.fmi.layered_BUS`.
+ * `name` must match the frame name as defined in the <<NetworkDescriptionFile>> in `/extra/org.modelica.fmi.layered_BUS`.
 
 Element definitions::
  * There must be no `<TerminalStreamMemberVariable>` element.
@@ -186,6 +184,7 @@ Attribute definitions::
  * `terminalKind` must be set to `pdu`.
  * `matchingRule` must be set to `bus`.
  * `name` must match a PDU name of the <<NetworkDescriptionFile>> in `/extra/org.modelica.fmi.layered_BUS`.
+    For network types not natively referencing a "PDU", like CAN, a synthetic PDU with the same name as its frame is inserted.
 
 Element definitions::
  * There must be no `<TerminalStreamMemberVariable>` element.
@@ -193,8 +192,6 @@ Element definitions::
  * There must be one `<TerminalMemberVariable>` per <<TerminalMemberVariable,signal>> of this PDU.
 
 All <<TerminalMemberVariable,`TerminalMemberVariables`>> must have the same causality of either input or output.
-
-For network types not natively referencing a "PDU", like CAN, a synthetic PDU with the same name as its frame is inserted.
 
 ==== Terminal Member Variable for Signals [[TerminalMemberVariable,Terminal Member Variable]]
 
@@ -211,7 +208,7 @@ Attribute definitions::
 
 The following excerpts from files are used throughout this document as examples and should illustrate how the different concepts relate.
 
-The partial DBC file here lists merely the CAN message (frame) structure.
+The following partial DBC file lists merely the CAN message (frame) structure.
 Signal trigger conditions are not included because they have no bearing on this standard.
 
 .Example Powertrain.dbc file
@@ -245,8 +242,6 @@ The `modelDescription.xml` excerpt listed below shows which variables would exis
 include::docs/examples/X_network4FMI_modelDescription.xml[]
 ----
 
-// TODO add ModelDependency structure above
-
 The following file shows the `<Terminal>` definition representing the network and frame structure defined with `Powertrain.dbc` above.
 
 .Example terminalsAndIcons.xml file
@@ -259,7 +254,7 @@ include::docs/examples/X_network4FMI_terminalsAndIcons.xml[]
 === Known Limitations of this Standard
 
 This layered standard maps several network protocols onto co-simulation variables as transport layer simulating in many ways an ideal network.
-Such an ideal network differs from physical networks in the following ways:
+Such an ideal network differs from physical networks in the following ways (and potentially others):
 
  * Network frame arbitration: frames are sent on the wire according to network-specific priority rules.
    Here all frames are transmitted at the same time without delay.
