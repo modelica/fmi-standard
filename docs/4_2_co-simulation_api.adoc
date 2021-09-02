@@ -8,10 +8,6 @@ image::images/state-machine-co-simulation.svg[width=80%, align="center"]
 
 Common states are defined in <<common-state-machine>>, such as super states <<FMUStateSetable>> and  <<Initialized>>, states <<Instantiated>>, <<ConfigurationMode>>, <<ReconfigurationMode>>, <<InitializationMode>>, <<EventMode>>, <<Terminated>> and <<IntermediateUpdateMode>>.
 
-Compared to FMI for Model Exchange, <<fmi3ExitInitializationMode>> enters directly into <<StepMode>>.
-This was designed in case the Co-Simulation FMU does not support <<EventMode>>.
-Importers can directly switch a Co-Simulation FMU into <<EventMode>> without calling <<fmi3DoStep>> to handle events immediately after initialization.
-
 ==== State: Step Mode [[StepMode,*Step Mode*]]
 
 The state <<StepMode>> is used to compute the values of all variables between communication points and events and to advance time in the FMU.
@@ -47,7 +43,7 @@ a|
 |<<fmi3CallbackIntermediateUpdate>>
 
 |Activate event equations latexmath:[\mathbf{f}_{\mathit{event}}].
-|<<fmi3EnterEventMode>>
+|<<fmi3EnterEventModeCS>>
 
 |====
 
@@ -106,7 +102,7 @@ _Both arguments <<currentCommunicationPoint>> and <<communicationStepSize>> allo
 +
 _[The FMU can use this flag to flush a result buffer.]_
 
-* [[eventEncountered,`eventEncountered`]] <<eventEncountered,`eventEncountered == fmi3True`>> indicates that an event was encountered at <<lastSuccessfulTime>> and the importer has to enter <<EventMode>> by calling <<fmi3EnterEventMode>>.
+* [[eventEncountered,`eventEncountered`]] <<eventEncountered,`eventEncountered == fmi3True`>> indicates that an event was encountered at <<lastSuccessfulTime>> and the importer has to enter <<EventMode>> by calling <<fmi3EnterEventModeCS>>.
 <<eventEncountered,`eventEncountered == fmi3True`>> must not be signaled, if the importer indicates to not support <<EventMode>> by <<eventModeUsed,`eventModeUsed == fmi3False`>>.
 
 * [[terminateSimulationDS,`terminateSimulation`]] When <<terminateSimulationDS,`terminateSimulation == fmi3True`>>, the FMU requests to stop the simulation and the importer must call <<fmi3Terminate>>.
@@ -130,9 +126,10 @@ _<<fixedInternalStepSize>> was introduced to reduce these effects._
 Function <<fmi3CallbackIntermediateUpdate>>::
 <<fmi3CallbackIntermediateUpdate>> switches the FMU itself into the <<IntermediateUpdateMode>>.
 
+[[fmi3EnterEventModeCS,`fmi3EnterEventMode`]]
 Function <<fmi3EnterEventMode>>::
 Changes state to <<EventMode>>.
-This function must not be called, if <<fmi3InstantiateCoSimulation>> signaled <<eventModeUsed,`eventModeUsed = fmi3False`>>, which can be forced by the FMU with <<hasEventMode,`hasEventMode == false`>>.
+This function must not be called, if <<fmi3InstantiateCoSimulation>> signaled <<eventModeUsed,`eventModeUsed == fmi3False`>>, which can be forced by the FMU with <<hasEventMode,`hasEventMode == false`>>. +
 
 Function <<fmi3EnterConfigurationMode>>::
 <<fmi3EnterConfigurationMode>> changes state to <<ReconfigurationMode>>.
