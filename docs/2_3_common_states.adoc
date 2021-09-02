@@ -84,7 +84,7 @@ The function <<fmi3SetDebugLogging>> gives more detailed control about required 
 
 
 +
-* [[eventModeUsed,`eventModeUsed`]]If `eventModeUsed == fmi3True` the importer can handle events and the first <<fmi3EnterEventModeCS>> must be called before the first <<fmi3DoStep>>, otherwise <<fmi3EnterEventModeCS>> must not be called.
+* [[eventModeUsed,`eventModeUsed`]]If `eventModeUsed == fmi3True` the importer can handle events.
 The flag may only be `fmi3True`, if <<hasEventMode,`hasEventMode == true`>>, otherwise the FMU must raise an error.
 For FMUs that have clocks, `eventModeUsed == fmi3True` is required.
 
@@ -324,9 +324,14 @@ a|
 * Evaluate latexmath:[\mathbf{f}_{\mathit{init}}], if no `fmi3GetXXX` function was called
 * Deactivate initialization equations latexmath:[\mathbf{f}_{\mathit{init}}]
 * Update previous values of <<buffers>>: latexmath:[{}^\bullet\mathbf{b}:=\mathbf{b}]
+* latexmath:[\mathbf{t}:=(\mathbf{t}_{\mathit{start}}, 0)]
 * Model Exchange:
-  - Activate event equations latexmath:[\mathbf{f}_{\mathit{event}}]
-  - latexmath:[\mathbf{t}:=(\mathbf{t}_{\mathit{start}}, 0)]
+  - activate event equations latexmath:[\mathbf{f}_{\mathit{event}}]
+* Co-Simulation:
+  - If <<eventModeUsed>> of <<fmi3InstantiateCoSimulation>> is `fmi3True` +
+    activate event equations latexmath:[\mathbf{f}_{\mathit{event}}]
+  - else +
+    activate doStep equations latexmath:[\mathbf{f}_{\mathit{doStep}}]
 
 |<<fmi3ExitInitializationMode>>
 |====
@@ -408,7 +413,14 @@ Function `fmi3ExitInitializationMode`::
 include::../headers/fmi3FunctionTypes.h[tags=ExitInitializationMode]
 ----
 
-Changes the state to <<EventMode>> (ME), <<StepMode>> (CS) or <<ClockActivationMode>> (SE).
++
+Changes the state to
+
+ * Model Exchange: <<EventMode>>
+ * Co-Simulation:
+  ** <<eventModeUsed,`eventModeUsed == fmi3True`>>: <<EventMode>>
+  ** <<eventModeUsed,`eventModeUsed == fmi3False`>>: <<StepMode>>
+ * Scheduled Execution: <<ClockActivationMode>>.
 
 ==== Super State: Initialized [[Initialized,*Initialized*]]
 
