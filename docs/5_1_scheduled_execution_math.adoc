@@ -3,14 +3,27 @@
 ==== Timing Concepts and Clocks [[concepts-timing-scheduled-execution]]
 
 The Scheduled Execution interface has a different timing concept compared to FMI for Co-Simulation.
-This is required to handle <<triggered, triggered input Clocks>> which may tick at a time instant that is unpredictable for the simulation algorithm. #TODO: why is this different to co-sim with triggered input clocks?#
+This is required to handle <<triggered, triggered input Clocks>> which may tick at a time instant that is unpredictable for the simulation algorithm.
+
+#TODO: why is this different to co-sim with triggered input clocks?
+triggered input clocks are also unpredictable.
+I guess the relation to walk-clock time should be mentioned here#
+
 Typically, hardware I/O or virtual ECU software events belong to this category.
 
 The activation of a model partition will invoke the computation of the model partition defined by an <<inputClock, input Clock>> for the current <<Clock>> tick time latexmath:[\mathbf{t}_i].
 
+#TODO: The terms used here seem to be different to the actual function argument, e.g. "current Clock tick time" should be given `activationTime`, right?#
+
 A model partition can only be activated once per activation time point latexmath:[\mathbf{t}_i].
+#TODO: activation time point = activation time?#
 
 During the computation of a model partition of an <<inputClock, `input Clock`>>, the FMU may inform the importer that an <<outputClock>> ticked or a <<countdown, `countdown Clock`>> has to be ticked.
+
+#TODO: A model partition (in SE) seems to be uniquely assigned to an input clock.
+If this is the case, it should be stated once
+Further on, only model partition can be used.#
+
 To do so the FMU switches into <<IntermediateUpdateMode>>.
 Subsequently it is up to the importer to react on this information.
 I.e. the importer may activate potential sinks (e.g. a model partition of another FMU) connected to this <<outputClock>> or it may activate the model partition of the respective <<countdown, `countdown Clock`>>.
@@ -19,52 +32,71 @@ More details can be found in <<Clock,Clocks>>.
 
 ==== Preemption Support [[preemption-support]]
 
-For real-time applications the simulation time equals the real wall clock time, thus each <<fmi3ActivateModelPartition>> computation step has to be finished in real-time within its current period time length (computation time is not only defined by the runtime of <<fmi3ActivateModelPartition>> but also by the time for setting and getting variables and related operations).
-Usually a preemptive scheduling of the <<fmi3ActivateModelPartition>>, <<get-and-set-variable-values,`fmi3Get{VariableType}`>>, <<get-and-set-variable-values,`fmi3Set{VariableType}`>> calls is required to respect this constraint.
+For real-time applications, the simulation time equals the real wall clock time, thus each <<fmi3ActivateModelPartition>> computation has to be finished in real-time within its current period time length.
+#TODO: current period time length - new term, not explained#
+Note, the computation time is not only defined by the runtime of <<fmi3ActivateModelPartition>> but also by the time for setting and getting variables and related operations.
 
-#TODO: non-normative!#
+Usually
+#TODO: Usually can IMHO only be used in non-normative text#
+a preemptive scheduling of the <<fmi3ActivateModelPartition>>, <<get-and-set-variable-values,`fmi3Get{VariableType}`>>, <<get-and-set-variable-values,`fmi3Set{VariableType}`>> calls is required to respect this constraint.
+
+
+#TODO: the following is imho non-normative, or maybe even for implementers guide:#
+
 The FMU's code has to be prepared for being able to correctly handle preemptive calls of <<fmi3ActivateModelPartition>>, <<get-and-set-variable-values,`fmi3Get{VariableType}`>>, <<get-and-set-variable-values,`fmi3Set{VariableType}`>>, <<fmi3GetClock>> and <<fmi3GetIntervalDecimal>>.
 In general for Scheduled Execution this requires a secured internal and external access to global states and variable values to ensure the correct handling of the preemption of model partition computations.
 _[For <<get-and-set-variable-values,`fmi3Get{VariableType}`>>, <<get-and-set-variable-values,`fmi3Set{VariableType}`>> in particular a unique assignment of the respective variables to model partitions via its associated <<Clock>> is strongly recommended.]_
-It is also required that the FMU reports the active state of an <<outputClock>> only with the first call of <<fmi3GetClock>> for a specific activation of this <<Clock>> and sets the reported activation state immediately back to `false` for the following <<fmi3GetClock>> calls for that <<Clock>> until this <<outputClock>> is internally activated again.
+
+The FMU is required to report the activity of an <<outputClock>> only with the first call of <<fmi3GetClock>> for a specific activation of this <<Clock>>, i.e., a subsequent call of <<fmi3GetClock>> for that <<Clock>> must return `false` unless the  <<outputClock>> is internally activated again.
+#TODO: I remember there was discussion about this but I still don't understand this.
+Does this have to be an atomic operation like compare-and-swap in lock free programming?#
+
 Similarly for <<countdown, `countdown Clocks`>> a call to <<fmi3GetIntervalDecimal>> has to ensure that the Clock's interval qualifier is reset to <<fmi3GetIntervalDecimal, `fmi3IntervalUnchanged`>>.
 
-If a preemptive multitasking regime is intended, an individual task (or thread -- task and thread are used synonymously here #TODO why task and thread??? even modelpartition or its associated clock can be used (and is used) synonymously already#) for each model partition (associated to an <<inputClock>>) has to be created.
+If a preemptive multitasking regime #TODO: what is a regime now# is intended #TODO: intended by whom? importer?#, an individual task (or thread -- task and thread are used synonymously here
+#TODO why task and thread???#
+even model partition or its associated clock can be used (and is used) synonymously already#
+) for each model partition (associated to an <<inputClock>>) has to be created.
 The task for computing each <<fmi3ActivateModelPartition>> is created and controlled by the simulation algorithm, not by the FMU.
 So the FMU exporting tool does not need to take care for that (except for preparing its code to support preemption).
 
-_[If only one single model partition is available via the interface of an FMU, preemptive calls of the related <<fmi3ActivateModelPartition>> function are possible by default since there are no external cross dependencies within one model partition between communication points.]_
+_[For FMUs with only one (exposed) model partition, preemptive calls of the related <<fmi3ActivateModelPartition>> function are possible by default
+#TODO: what does by default mean here?#
+since there are no external cross dependencies within one model partition between communication points.]_
 
 Based on the settings #TODO: settings???# defined in the XML for <<inputClock,input Clocks>> the simulation algorithm calls <<get-and-set-variable-values,`fmi3Set{VariableType}`>>, <<fmi3ActivateModelPartition>>, or <<get-and-set-variable-values,`fmi3Get{VariableType}`>>.
-Set/get calls for each task are only allowed for variables that are associated to the <<inputClock>> associated to that task or - here preemption issues become important #TODO non-normative# - to variables that are associated to no <<Clock>>, based on the XML information #TODO based on xml info is redundant#.
+Set/get calls for each task are only allowed for variables that are associated to the <<inputClock>> associated to that task #TODO: task = model partition?# or - here preemption issues become important #TODO non-normative# - to variables that are associated to no <<Clock>>, based on the XML information #TODO based on xml info is redundant#.
 
 _[The recommendation is to avoid variables associated to no or more than one model partition or <<inputClock,input Clocks>> as much as possible._
-_Because they also introduce complexity it, is recommended to reduce dependencies between variables located in different model partitions of one FMU, too.]_
+_Because they also introduce complexity, it is recommended to reduce dependencies between variables located in different model partitions of one FMU, too. #TODO: isn't this obvious? is this sentence necessary? (or something for the implementers guide) #]_
 
 The FMU doesn't need to expose interactions between model partitions within an FMU.
-Hence, the simulation simulation algorithm will not handle it.
+ #TODO: isn't this obvious, non-normative?#
+Hence #TODO: hence seems wrong here#, the simulation simulation algorithm will not handle it.
 
 The simulation algorithm schedules the <<fmi3ActivateModelPartition>> (as well as related <<get-and-set-variable-values,`fmi3Get{VariableType}`>> and `fmi3Set{VariableType}`) calls based on given priorities for <<inputClock, inputClocks>>.
 
 Priority (see <<priority>>):
 
 - Same priority: Model partitions (e.g. tasks #TODO why e.g.?? isn't it synonymous?#) cannot preempt each other. #TODO preemption isn't done by model partitions, how could they preempt each other?#
-Arbitrary evaluation order is possible for model partitions of the same priority.
+For model partitions with the same priority, the simulation algorithm decides on the actual evaluation order within the group this model partitions.
 
-- Different priorities: Model partitions of a higher priority preempt partitions of a lower priority as soon as the higher priority partition needs to be computed.
+- Different priorities: Model partitions of a higher priority preempt #TODO: model partitions can't preempt# partitions of a lower priority as soon as the higher priority partition needs to be computed.
 
 _[If multiple tasks are needed to be scheduled for computation at a certain time instant, a simulation algorithm must schedule a task of a higher priority always before a task of a lower priority]_
 
-An <<inputClock>> can hold #TODO: hold???# fixed or modifiable #TODO tunable?# periods, or be triggered unpredictably.
+An <<inputClock>> can hold #TODO: hold???# fixed or modifiable #TODO tunable?# periods #TODO: what is a period here? i guess time intervals is a better term her, period seems related to frequency#, or be triggered unpredictably.
 Refer to chapter on <<Clock,Clocks>> for details.
 
 Based on the period and priority definitions, the exporting tool #TODO: The fmu???# can restrict the code #TODO why suddenly code???# evaluation order.
 It nevertheless has to secure its code against concurrent evaluation _[not against parallel evaluation #TODO what is the difference between concurrent vs parallel evaluation here? and why is ist not supported?#, as this is not supported for model partitions of an FMU in the interface description of this mode]_ along the defined priority restrictions.
 Mostly this is required for internal inter-model-partition communication and in general for the joint use of variables that are associated to more than one model partition of the FMU.
 The exporting tool has to consider the effect of <<triggered>> <<inputClock, 'input Clocks'>> and the influences of computing speed, because the exact occurrence of preemption points cannot be foreseen (within the given priority and period restrictions).
-#TODO what????#
+#TODO what???? and non-normative#
 
-To guard certain code parts against preemption the FMU may use the callback functions <<preemption-support,fmi3CallbackLockPreemption>> and <<preemption-support,fmi3CallbackUnlockPreemption>> provided by the simulation algorithm when instantiating the FMU via <<fmi3InstantiateScheduledExecution>>.
+To guard the execution of certain code parts against preemption, the FMU may use the callback functions <<preemption-support,fmi3CallbackLockPreemption>> and <<preemption-support,fmi3CallbackUnlockPreemption>>.
+
+These functions are provided by the simulation algorithm when instantiating the FMU via <<fmi3InstantiateScheduledExecution>>.
 #TODO what????#
 
 _[Such locks should be used with care and only if needed: Examples are given in <<ClockActivationMode>> and <<example-scheduled-execution>>.]_
