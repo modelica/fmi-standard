@@ -90,7 +90,7 @@ typedef void  (*fmi3CallbackLogMessage) (fmi3InstanceEnvironment instanceEnviron
 typedef void (*fmi3CallbackIntermediateUpdate) (
     fmi3InstanceEnvironment instanceEnvironment,
     fmi3Float64  intermediateUpdateTime,
-    fmi3Boolean  clocksTicked,
+    fmi3Boolean  clockHandlingRequested,
     fmi3Boolean  intermediateVariableSetRequested,
     fmi3Boolean  intermediateVariableGetAllowed,
     fmi3Boolean  intermediateStepFinished,

@@ -633,27 +633,26 @@ The importer calls <<fmi3GetClock>> to inquire the clock activation state.
 |<<fmi3SetClock>> in <<EventMode>>,
 <<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
 <<fmi3GetInterval>> in <<InitializationMode>>,
-<<fmi3GetInterval>> in both <<EventMode>> and <<ClockActivationMode>> if and only if this Clock ticked using <<clocksTicked,`clocksTicked == fmi3True`>>
+<<fmi3GetInterval>> in both <<EventMode>> and <<ClockActivationMode>>
 |simulation of the behavior of a control algorithm with variable execution time, generation of pulse sequences
 
 |[[countdown,`countdown`]]`countdown`
 |<<fmi3SetClock>> in <<EventMode>>,
 <<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
-<<fmi3GetInterval>> in <<InitializationMode>>, in every <<EventMode>>, and in <<IntermediateUpdateMode>>.
-In Scheduled Execution the FMU has to inform the importer by calling <<fmi3CallbackIntermediateUpdate>> that the Clock is about to tick using <<clocksTicked,`clocksTicked == fmi3True`>>
+<<fmi3GetInterval>> in <<InitializationMode>>, in every <<EventMode>> and in <<IntermediateUpdateMode>>.
+In Scheduled Execution the FMU has to inform the importer by calling <<fmi3CallbackIntermediateUpdate>> that the Clock is about to tick using <<clockHandlingRequested,`clockHandlingRequested == fmi3True`>>
 |time-delayed actions after an event, for example, ignition signal some time after specific crank shaft angle
 
 2.2+|[[triggered,`triggered`]]triggered
 |<<input>>
 |<<triggered>>
 |<<fmi3SetClock>> in <<EventMode>>,
-<<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
-argument <<clocksTicked>> of <<fmi3CallbackIntermediateUpdate>>
+<<fmi3ActivateModelPartition>> in <<ClockActivationMode>>
 |triggered by a hardware interrupt of an embedded system, e.g. a control algorithm, triggered by a crankshaft angle
 
 |<<output>>
 |<<triggered>>
-|<<fmi3GetClock>> in both <<EventMode>> and <<IntermediateUpdateMode>>, and argument <<clocksTicked>> of <<fmi3CallbackIntermediateUpdate>>
+|<<fmi3GetClock>> in both <<EventMode>> and <<IntermediateUpdateMode>>, argument <<clockHandlingRequested>> of <<fmi3CallbackIntermediateUpdate>>
 |crankshaft angle sensor ticking several times per revolution
 |====
 
@@ -759,7 +758,7 @@ Must be retrieved in <<EventMode>> or <<ClockActivationMode>> if and only if the
 
 [[countdown-aperiodic-clock,countdown aperiodic Clock]]
 Countdown aperiodic Clock::
-is a time-based Clock whose next interval is not yet known right after the Clock just ticked, forcing the importer to call <<fmi3GetInterval>> in every <<EventMode>> and in <<IntermediateUpdateMode>> if <<clocksTicked>> == `fmi3True` in <<fmi3CallbackIntermediateUpdate>>.
+is a time-based Clock whose next interval is not yet known right after the Clock just ticked, forcing the importer to call <<fmi3GetInterval>> in every <<EventMode>> and in <<IntermediateUpdateMode>> if <<clockHandlingRequested>> == `fmi3True` in <<fmi3CallbackIntermediateUpdate>>.
 The return argument <<qualifier>> of <<fmi3GetInterval>> is used to indicate if the next interval is already known.
 +
 The next Clock tick at time instant latexmath:[t_i] is defined as: +
@@ -779,7 +778,7 @@ latexmath:[\begin{align*}
 Must be retrieved in <<InitializationMode>>.
 
 |latexmath:[\mathbf{T}_{interval, i} \geq 0, \qquad i = 1,2,3,{...}]
-|The time interval from the event time at which the argument <<qualifier,`qualifier == fmi3IntervalChanged`>> of <<fmi3GetInterval>> to the next Clock tick.
+|The time interval from the call of <<fmi3CallbackIntermediateUpdate>> at which the argument <<qualifier,`qualifier`>> of <<fmi3GetInterval>> returns `fmi3IntervalChanged` to the next Clock tick.
 
 |===
 
@@ -845,11 +844,10 @@ During <<ClockActivationMode>> after <<fmi3ActivateModelPartition>> has been cal
 To retrieve this information the importer calls <<fmi3GetInterval>> on the Clock.
 
 The FMU may request to schedule another model partition even while currently a model partition is being executed.
-<<countdown>> Clocks can tick at any time during the execution of any model partition.
-The FMU signals their ticking by calling <<fmi3CallbackIntermediateUpdate>> with argument <<clocksTicked>> == `fmi3True`.
-The importer calls <<fmi3GetInterval>> for all countdown Clocks.
-If a new interval is provided, the importer initiates the scheduling of the associated model partitions with the returned <<interval>>.
-<<qualifier>> == `fmi3IntervalChanged` indicates that the corresponding Clock has to be scheduled.
+A new interval for a <<countdown>> Clock can be provided at any time during the execution of any model partition.
+The FMU signals that a <<countdown>> Clock is about to tick by calling <<fmi3CallbackIntermediateUpdate>> with argument <<clockHandlingRequested>> == `fmi3True`.
+The importer calls <<fmi3GetInterval>> for all <<countdown>> Clocks.
+If a new interval is provided, i.e. return argument <<qualifier>> == `fmi3IntervalChanged`, the importer initiates the scheduling of the associated model partitions with the returned <<interval>>.
 
 In case more than one Clock ticks at the same time instant, the scheduler needs a priority to define the activation sequence of the associated model partitions.
 This ordering is defined by the <<priority>> attributes of the Clock.
@@ -927,10 +925,10 @@ include::../headers/fmi3FunctionTypes.h[tag=IntervalQualifier]
 ----
 with the following meanings:
 
- * `fmi3IntervalNotYetKnown` is returned for <<countdown-aperiodic-clock>> for which the next interval is not yet known. The importer must query the next interval at each <<EventMode>> for all <<countdown-aperiodic-clock>> because the next interval may change at any <<EventMode>>.
+ * `fmi3IntervalNotYetKnown` is returned for a <<countdown-aperiodic-clock>> for which the next interval is not yet known. The importer must query the next interval at each <<EventMode>> or <<IntermediateUpdateMode>> if <<clockHandlingRequested,`clockHandlingRequested == fmi3True`>> in <<fmi3CallbackIntermediateUpdate>>, respectively, for all <<countdown-aperiodic-clock,countdown aperiodic Clocks>> because the next interval may change at any <<EventMode>> or <<IntermediateUpdateMode>>.
  * `fmi3IntervalUnchanged` is returned if a previous call to <<fmi3GetInterval>> already returned a value which has not changed since.
  * `fmi3IntervalChanged` is returned to indicate that the value for the interval has changed for this <<Clock>>.
- The new <<Clock>> interval is relative to the time of the current <<EventMode>>.
+ The new <<Clock>> interval is relative to the time of the current <<EventMode>> or <<IntermediateUpdateMode>> in contrast to the interval of a periodic <<Clock>>, where the interval is defined as the time between consecutive <<Clock>> ticks.
 
 [[fmi3GetIntervalFraction,`fmi3GetIntervalFraction`]]
 [source, C]
