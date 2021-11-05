@@ -13,9 +13,9 @@ The state machine in <<figure-scheduled-execution-state-machine>> defines the al
 [#figure-scheduled-execution-state-machine]
 image::images/state-machine-scheduled-execution.svg[width=80%, align="center"]
 
-If the simulation algorithm intends to enter the state <<Terminated>>, it must ensure that all tasks related to model partitions of the FMU have ended.
-Hence, if in states <<ClockActivationMode>>, <<IntermediateUpdateMode>>, or <<ReconfigurationMode>> a function returns <<fmi3Fatal>>, the simulation algorithm may prematurely end all tasks related to the computation of model partitions of this FMU.
-If in these states a function returns <<fmi3Discard>> or <<fmi3Error>> the simulation algorithm may wait until all other tasks of the model partitions of this FMU have ended, but new tasks must not be started.
+If the simulation algorithm intends to enter the state <<Terminated>>, it must ensure that all computations related to model partitions of the FMU have ended.
+Hence, if in states <<ClockActivationMode>>, <<IntermediateUpdateMode>>, or <<ReconfigurationMode>> a function returns <<fmi3Fatal>>, the simulation algorithm may prematurely end all computations of model partitions of this FMU.
+If in these states a function returns <<fmi3Discard>> or <<fmi3Error>> the simulation algorithm may wait until all other model partitions of this FMU have ended, but new model partitions must not be started.
 
 Each state of the state machine corresponds to a certain phase of a simulation.
 Common states are defined in <<common-state-machine>>, such as super states <<FMUStateSetable>> and  <<Initialized>>, states <<Instantiated>>, <<ConfigurationMode>>, <<ReconfigurationMode>>, <<InitializationMode>>, <<Terminated>> and <<IntermediateUpdateMode>>.
@@ -23,13 +23,12 @@ Common states are defined in <<common-state-machine>>, such as super states <<FM
 ==== Super State: Initialized [[Initialized-SE,*Initialized*]]
 
 The following specific constraints apply to the state <<Initialized>> of Scheduled Execution.
-The FMU enters state <<Terminated>> only after all other tasks related to the computation of model partitions of this FMU have ended.
-After <<fmi3Terminate>> has been called, no new tasks can be started (e.g. related to <<countdown, `countdown Clock`>> ticks) and all other function calls for this FMU must return <<fmi3Error>> until the state <<Terminated>> is reached.
+The FMU enters state <<Terminated>> only after all computations of model partitions of this FMU have ended.
+After <<fmi3Terminate>> has been called, no new model partitions can be started (e.g. related to <<countdown, `countdown Clock`>> ticks) and all other function calls for this FMU must return <<fmi3Error>> until the state <<Terminated>> is reached.
 
 ==== State: Clock Activation Mode [[ClockActivationMode,*Clock Activation Mode*]]
 
 The FMU enters this state when the simulation algorithm calls <<fmi3ExitInitializationMode>> in state <<InitializationMode>> or <<fmi3ExitConfigurationMode>> in state <<ReconfigurationMode>>.
-#TODO: general question: do we need this info in the docu, it is visiable in the state diagram anyways. the spec is already quite long, such redundant info could be dropped#
 
 In this state the simulation algorithm can create multiple concurrent tasks related to an FMU. In each task, the simulation algorithm can activate one or multiple model partitions of an FMU based on the defined <<inputClock,input Clocks>> properties via a <<fmi3ActivateModelPartition>> call for each Clock.
 #TODO: still unclear for me: what is the relation between a task and model partition, 1:1 or 1:n?#
@@ -70,26 +69,12 @@ These functions can be called after the computation of a model partition for var
 Because of real-time constraints, the computational effort has to be predictable for all operations in Scheduled Execution.
 Therefore, all computationally expensive operations to compute a model partition have to be contained within the <<fmi3ActivateModelPartition>> function.
 The simulation algorithm can assume that <<get-and-set-variable-values,`fmi3Get{VariableTypeExclClock}`>> and <<get-and-set-variable-values,`fmi3Set{VariableTypeExclClock}`>> operations are not computationally expensive.
-_[It is recommended, to call <<get-and-set-variable-values,`fmi3Set{VariableTypeExclClock}`>> and <<get-and-set-variable-values,`fmi3Get{VariableTypeExclClock}`>> in the same task as <<fmi3ActivateModelPartition>>.]_
-#TODO: no rational given for the recommendation#
 
 The restrictions related to variable <<causality>> and <<variability>> defined for <<StepMode>> in <<fmi-for-co-simulation,`Co-Simulation`>> apply.
 
 It is not allowed to call <<get-and-set-variable-values,`fmi3Get{VariableTypeExclClock}`>> functions after <<get-and-set-variable-values,`fmi3Set{VariableTypeExclClock}`>> functions without an <<fmi3ActivateModelPartition>> call in between.
-#TODO: should we really not allow it or just like for co-sim mention that values retrieved via get calls will only change after activating partition?
-this would be more consistent with co-sim. Isn't a ActivateModelPartition call comparable to "fine-grained" DoStep call for a model partition?#
-
-_[The reason is to avoid different interpretations of the caching, since contrary to <<fmi-for-model-exchange, `FMI for Model Exchange`>>, <<fmi3ActivateModelPartition>> will perform the actual calculation instead of <<get-and-set-variable-values,`fmi3Get{VariableTypeExclClock}`>>, and therefore, dummy algebraic loops at communication points cannot be handled by an appropriate sequence of <<get-and-set-variable-values,`fmi3Get{VariableTypeExclClock}`>> and <<get-and-set-variable-values,`fmi3Set{VariableTypeExclClock}`>> calls as for Model Exchange._
-
-_To ensure predictable behavior every variable should be assigned uniquely to a model partition via its associated <<Clock>>._
-_Observe two examples:_
-
-* _An output variable is changed by two different model partitions._
-_The values returned by <<get-and-set-variable-values,`fmi3Get`>> that is placed after <<fmi3ActivateModelPartition>> may return the values computed by the other model partition if that model partition has higher priority and preempted the task execution meanwhile._
-* _An input variable is used by two different model partitions._
-_The variable values of a model partitions of lower priority may have been overwritten by a call to <<get-and-set-variable-values,`fmi3Set`>> in the context of a task executed for a model partition of higher priority._
-
-_Note that if every variable is assigned uniquely to a model partition it is also not necessary to use <<preemption-support, `preemption locks`>> in the context of <<get-and-set-variable-values,`fmi3Get`>> and <<get-and-set-variable-values,`fmi3set`>>.]_
+_[It is recommended, to call <<get-and-set-variable-values,`fmi3Set{VariableTypeExclClock}`>>, <<fmi3ActivateModelPartition>> and <<get-and-set-variable-values,`fmi3Get{VariableTypeExclClock}`>> in a sequence._
+_The reason is to avoid different interpretations of the caching, since contrary to <<fmi-for-model-exchange, `FMI for Model Exchange`>>, <<fmi3ActivateModelPartition>> will perform the actual calculation instead of <<get-and-set-variable-values,`fmi3Get{VariableTypeExclClock}`>>, and therefore, dummy algebraic loops at communication points cannot be handled by an appropriate sequence of <<get-and-set-variable-values,`fmi3Get{VariableTypeExclClock}`>> and <<get-and-set-variable-values,`fmi3Set{VariableTypeExclClock}`>> calls as for Model Exchange.]_
 
 [[fmi3ActivateModelPartition, `fmi3ActivateModelPartition`]]
 Function `fmi3ActivateModelPartition`::
