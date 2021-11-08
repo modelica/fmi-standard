@@ -1,60 +1,24 @@
 === Concepts [[concepts-scheduled-execution]]
 
-==== Time [[concepts-timing-scheduled-execution]]
-
-#TODO: Discuss if this paragraph is necessary at all, if it should be merged or move to <<advancing-time>>, <<ClockActivationMode>> or maybe used to extend the glossary e.g. <<model-partition>>.#
-
-The basic differences of the three interface types on how time is advanced is pointed out in <<advancing-time>>.
-
-An FMU exposes its provided model partitions by defining associated clocks.
-The FMU's modelDescription.xml contains a <<Clock, clock>> for every <<model partition>> of the FMU.
-It is the scheduler's task to activate the model partitions by calling <<fmi3ActivateModelPartition>> for each associated clock.
-When activating the model partitions of an FMU the scheduler is expected to respect the clock properties, especially the periods and priorities of the associated clocks.
-Detailed information on clocks can be found in chapter <<Clock,Clocks>>.
-By scheduling the exposed <<model-partition, model partitions>> of an FMU and executing them for dedicated points in time it is the scheduler that defines how time progresses.
-The current time latexmath:[\mathbf{t}_i] is valid during the whole computation of the model partition.
-It is communicated to the FMU as <<activationTime>> argument of <<fmi3ActivateModelPartition>>.
-<<fmi3ActivateModelPartition>> must only be called once for the same clock and time.
-
-_[Examples:_
-
-* _A simple scheduler calls the model partitions of periods 5ms and 10ms of an FMU in a loop._
-_The later one is activated only every second loop iteration._
-_Thus the time of the simulation advances discretely by 5ms in every step of the loop._
-* _On a real-time simulator the scheduler activates the model partitions of the same example whenever the wall clock's time has progressed for 5ms or 10ms respectively.
-]_
-
-During the computation of a model partition of an <<inputClock, `input Clock`>>, the FMU may inform the importer that an <<outputClock>> ticked or a <<countdown, `countdown Clock`>> has to be ticked.
-
-To do so the FMU switches into <<IntermediateUpdateMode>>.
-Subsequently it is up to the importer to react on this information.
-I.e. the importer may activate potential sinks (e.g. a model partition of another FMU) connected to this <<outputClock>> or it may activate the model partition of the respective <<countdown, `countdown Clock`>>.
-
-Based on the settings #TODO: settings???# defined in the XML for <<inputClock,input Clocks>> the simulation algorithm calls <<get-and-set-variable-values,`fmi3Set{VariableType}`>>, <<fmi3ActivateModelPartition>>, or <<get-and-set-variable-values,`fmi3Get{VariableType}`>>.
-Set/get calls for each task are only allowed for variables that are associated to the <<inputClock>> associated to that task #TODO: task = model partition?# or - here preemption issues become important #TODO non-normative# - to variables that are associated to no <<Clock>>, based on the XML information #TODO based on xml info is redundant#.
-
-The simulation algorithm schedules the <<fmi3ActivateModelPartition>> (as well as related <<get-and-set-variable-values,`fmi3Get{VariableType}`>> and `fmi3Set{VariableType}`) calls based on given priorities for <<inputClock, inputClocks>>.
-
-Priority (see <<priority>>):
-
-- Same priority: Model partitions (e.g. tasks #TODO why e.g.?? isn't it synonymous?#) cannot preempt each other. #TODO preemption isn't done by model partitions, how could they preempt each other?#
-For model partitions with the same priority, the simulation algorithm decides on the actual evaluation order within the group this model partitions.
-
-- Different priorities: Model partitions of a higher priority preempt #TODO: model partitions can't preempt# partitions of a lower priority as soon as the higher priority partition needs to be computed.
-
-_[If multiple tasks are needed to be scheduled for computation at a certain time instant, a simulation algorithm must schedule a task of a higher priority always before a task of a lower priority]_
-
-
 ==== Preemption Support [[preemption-support]]
 
+#TODO: Discuss when to use italic and when to use brackets and update the spec accordingly.#
+
 In Scheduled Execution the importer has to ensure that model partitions are scheduled according to their priorities (refer to <<scheduled-execution>>).
-So, if a model partition of lower priority is executed when a model partition of higher priority is activated the scheduler must ensure that the execution of the later one is not delayed and causing violations of timing constraints.
+So, if a model partition of lower <<priority>> is executed when a model partition of higher priority is activated the scheduler must ensure that the execution of the later one is not delayed and causing violations of timing constraints.
 _[On a real-time simulator a violation of a timing constraint usually results in an overrun exception i.e. a model partition is supposed to be executed when an instance of the same model partition has not yet finished its execution.]_
 
 Preemption support means that the scheduler can immediately interrupt the current execution of a model partition in order to execute a model partition of higher priority.
 The computation of the interrupted model partition is proceeded afterwards.
 So by regarding priorities and supporting preemption the scheduler can ensure that most critical model partitions are never delayed by less important model parts.
 _[This is particularly important for real-time simulators as the wall clock time is dictating the time for the next execution.]_
+
+* Same <<priority>>: The scheduler does not preempt the execution of a model partition in favor of a model partition of the same priority.
+For model partitions with the same priority, it decides on the execution order based on (customer) configurations in the importer.
+* Different priorities: The scheduler preempts the execution of a model partition of a lower priority as soon as a model partition of higher priority partition needs to be computed.
+_[Simply stated: The model partition of higher priority preempts the model partition of lower priority.]_
+
+_An example for scheduling based on priorities and preempting model partitions is given in section <<example-scheduled-execution>>._
 
 It may be important for the FMU to secure particular sections of its code against being preempted.
 To guard the execution of certain code parts against being interrupted, the FMU may use the callback functions <<preemption-support,fmi3CallbackLockPreemption>> and <<preemption-support,fmi3CallbackUnlockPreemption>>.
@@ -73,22 +37,21 @@ The FMU's code has to be prepared to correctly handle preemption of
 * <<fmi3GetClock>>
 * and <<fmi3GetIntervalDecimal>>.
 
-In general this means that the FMU's code has to secure internal and external access to global states and variable wherever data inconsistencies due to potential preemptions are anticipated.
+In general this means that the FMU's code has to secure access to its global states and variable wherever data inconsistencies due to potential preemptions are anticipated.
 
-_[Note that_
+_Note that_
 
-* _in order to avoid data inconsistencies and predictable behavior with <<get-and-set-variable-values,`fmi3Get{VariableType}`>>, <<get-and-set-variable-values,`fmi3Set{VariableType}`>> a unique assignment of the respective variables to model partitions via its associated <<Clock>> is strongly recommended._
+* _in order to avoid data inconsistencies and safeguard predictable behavior with <<get-and-set-variable-values,`fmi3Get{VariableType}`>>, <<get-and-set-variable-values,`fmi3Set{VariableType}`>> a unique assignment of the respective variables to model partitions via its associated <<Clock>> is strongly recommended._
 _Observe the example below:_
-_If every variable is assigned uniquely to a model partition it is not necessary to use <<preemption-support, `preemption locks`>> in the context of <<get-and-set-variable-values,`fmi3Get{VariableType}`>> and <<get-and-set-variable-values,`fmi3Set{VariableType}`>>._
-* _for <<fmi3GetClock>> the FMU has to ensure that the active state of an outputClock is securely reset and cannot be observed twice for the same Clock tick in case this call is preempted._
+_If every #variable TODO: Needs to be more precise? "Model variable of ..."# is assigned uniquely to a model partition it is not necessary to use <<preemption-support, `preemption locks`>> in the context of <<get-and-set-variable-values,`fmi3Get{VariableType}`>> and <<get-and-set-variable-values,`fmi3Set{VariableType}`>>._
+* _for <<fmi3GetClock>> the FMU has to ensure that the active state of an output Clock is securely reset and cannot be observed twice for the same Clock tick in case this call is preempted._
 _An example is given in <<example-scheduled-execution>>._
 * _for <<fmi3GetIntervalDecimal>> the FMU has to ensure that the <<countdown, `countdown Clock's`>> interval qualifier is reset to <<fmi3GetIntervalDecimal, `fmi3IntervalUnchanged`>> and cannot be observed twice for the same Clock tick in case this call is preempted._
 _An example is given in <<example-scheduled-execution>>._
 * _depending on their implementation <<preemption-support,fmi3CallbackLockPreemption>> and <<preemption-support,fmi3CallbackUnlockPreemption>> have a strong impact on the simulator's OS so their use should be as rare and short as possible._
 _So in general it is recommended to reduce dependencies between different model partitions of one FMU by design._
 _One may also consider if the code can be preempted by other parts of the same FMU: E.g. a model partition cannot be interrupted if it is the only model partition of the FMU or if it holds the highest priority._
-_Thus no locks are necessary.
-]_
+_I such cases no locks are necessary._
 
 _[Example to observe why every variable should be assigned uniquely to a model partition via its associated <<Clock>>:_
 
