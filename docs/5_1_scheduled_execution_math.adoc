@@ -5,7 +5,7 @@
 #TODO: Discuss when to use italic and when to use brackets and update the spec accordingly.#
 
 In Scheduled Execution the importer has to ensure that model partitions are scheduled according to their priorities (refer to <<scheduled-execution>>).
-So, if a model partition of lower <<priority>> is executed when a model partition of higher priority is activated the scheduler must ensure that the execution of the later one is not delayed and causing violations of timing constraints.
+If a model partition of lower <<priority>> is executed when a model partition of higher priority is activated the scheduler must ensure that the execution of the later one is not delayed and causing violations of timing constraints.
 _[On a real-time simulator a violation of a timing constraint usually results in an overrun exception i.e. a model partition is supposed to be executed when an instance of the same model partition has not yet finished its execution.]_
 
 Preemption support means that the scheduler can immediately interrupt the current execution of a model partition in order to execute a model partition of higher priority.
@@ -37,16 +37,16 @@ The FMU's code has to be prepared to correctly handle preemption of
 * <<fmi3GetClock>>
 * and <<fmi3GetIntervalDecimal>>.
 
-In general this means that the FMU's code has to secure access to its global states and variable wherever data inconsistencies due to potential preemptions are anticipated.
+In general this means that the FMU's code has to secure access to its global states and variables wherever data inconsistencies due to potential preemptions are anticipated.
 
-_Note that_
+_[Note that_
 
 * _in order to avoid data inconsistencies and safeguard predictable behavior with <<get-and-set-variable-values,`fmi3Get{VariableType}`>>, <<get-and-set-variable-values,`fmi3Set{VariableType}`>> a unique assignment of the respective variables to model partitions via its associated <<Clock>> is strongly recommended._
 _Observe the example below:_
 _If every #variable TODO: Needs to be more precise? "Model variable of ..."# is assigned uniquely to a model partition it is not necessary to use <<preemption-support, `preemption locks`>> in the context of <<get-and-set-variable-values,`fmi3Get{VariableType}`>> and <<get-and-set-variable-values,`fmi3Set{VariableType}`>>._
-* _for <<fmi3GetClock>> the FMU has to ensure that the active state of an output Clock is securely reset and cannot be observed twice for the same Clock tick in case this call is preempted._
+* _for <<fmi3GetClock>> the FMU has to ensure that the active state of an <<outputClock,output Clock>> is securely reset and cannot be observed twice for the same Clock tick in case this call is preempted._
 _An example is given in <<example-scheduled-execution>>._
-* _for <<fmi3GetIntervalDecimal>> the FMU has to ensure that the <<countdown, `countdown Clock's`>> interval qualifier is reset to <<fmi3GetIntervalDecimal, `fmi3IntervalUnchanged`>> and cannot be observed twice for the same Clock tick in case this call is preempted._
+* _for <<fmi3GetIntervalDecimal>> the FMU has to ensure that the <<countdown, countdown Clock's>> interval qualifier is reset to <<fmi3GetIntervalDecimal, `fmi3IntervalUnchanged`>> and cannot be observed twice for the same Clock tick in case this call is preempted._
 _An example is given in <<example-scheduled-execution>>._
 * _depending on their implementation <<preemption-support,fmi3CallbackLockPreemption>> and <<preemption-support,fmi3CallbackUnlockPreemption>> have a strong impact on the simulator's OS so their use should be as rare and short as possible._
 _So in general it is recommended to reduce dependencies between different model partitions of one FMU by design._
@@ -58,5 +58,4 @@ _[Example to observe why every variable should be assigned uniquely to a model p
 * _An output variable is changed by two different model partitions._
 _The values returned by <<get-and-set-variable-values,`fmi3Get`>> that is placed after <<fmi3ActivateModelPartition>> may return the values computed by the other model partition if that model partition has higher priority and preempted the execution meanwhile._
 * _An input variable is used by two different model partitions._
-_The variable values of a model partitions of lower priority may have been overwritten by a call to <<get-and-set-variable-values,`fmi3Set`>> for a model partition of higher priority.
-]_
+_The variable values of a model partitions of lower priority may have been overwritten by a call to <<get-and-set-variable-values,`fmi3Set`>> for a model partition of higher priority.]_
