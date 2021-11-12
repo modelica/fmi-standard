@@ -2,8 +2,6 @@
 
 ==== Preemption Support [[preemption-support]]
 
-#TODO: Discuss when to use italic and when to use brackets and update the spec accordingly.#
-
 In Scheduled Execution the importer has to ensure that model partitions are scheduled according to their priorities (refer to <<scheduled-execution>>).
 If a model partition of lower <<priority>> is executed when a model partition of higher priority is activated the scheduler must ensure that the execution of the latter one is not delayed and causing violations of timing constraints.
 _[On a real-time simulator a violation of a timing constraint usually results in an overrun exception i.e. a model partition is supposed to be executed when an instance of the same model partition has not yet finished its execution.]_
@@ -18,11 +16,10 @@ For model partitions with the same priority, it decides on the execution order b
 * Different priorities: The scheduler preempts the execution of a model partition of a lower priority as soon as a model partition of higher priority partition needs to be computed.
 _[Simply stated: The model partition of higher priority preempts the model partition of lower priority.]_
 
-_An example for scheduling based on priorities and preempting model partitions is given in section <<example-scheduled-execution>>._
+_[An example for scheduling based on priorities and preempting model partitions is given in section <<example-scheduled-execution>>.]_
 
 It may be important for the FMU to secure particular sections of its code against being preempted.
-To guard the execution of certain code parts against being interrupted, the FMU may use the callback functions <<preemption-support,fmi3CallbackLockPreemption>> and <<preemption-support,fmi3CallbackUnlockPreemption>>.
-These functions are provided by the simulation algorithm when instantiating the FMU via <<fmi3InstantiateScheduledExecution>>.
+Callback functions <<preemption-support,`fmi3CallbackLockPreemption`>> and <<preemption-support,`fmi3CallbackUnlockPreemption`>> are provided by the simulation algorithm when instantiating the FMU via <<fmi3InstantiateScheduledExecution>> to allow the FMU to signal entering and exiting such code sections.
 
 [source, C]
 ----
@@ -43,19 +40,19 @@ _[Note that_
 
 * _in order to avoid data inconsistencies and safeguard predictable behavior with <<get-and-set-variable-values,`fmi3Get{VariableType}`>>, <<get-and-set-variable-values,`fmi3Set{VariableType}`>> a unique assignment of the respective variables to model partitions via its associated <<Clock>> is strongly recommended._
 _Observe the example below:_
-_If every #variable TODO: Needs to be more precise? "Model variable of ..."# is assigned uniquely to a model partition it is not necessary to use <<preemption-support, `preemption locks`>> in the context of <<get-and-set-variable-values,`fmi3Get{VariableType}`>> and <<get-and-set-variable-values,`fmi3Set{VariableType}`>>._
+_If every variable is assigned uniquely to a model partition it is not necessary to use <<preemption-support, `preemption locks`>> in the context of <<get-and-set-variable-values,`fmi3Get{VariableType}`>> and <<get-and-set-variable-values,`fmi3Set{VariableType}`>>._
 * _for <<fmi3GetClock>> the FMU has to ensure that the active state of an <<outputClock,output Clock>> is securely reset and cannot be observed twice for the same Clock tick in case this call is preempted._
 _An example is given in <<example-scheduled-execution>>._
 * _for <<fmi3GetIntervalDecimal>> the FMU has to ensure that the <<countdown, countdown Clock's>> interval qualifier is reset to <<fmi3GetIntervalDecimal, `fmi3IntervalUnchanged`>> and cannot be observed twice for the same Clock tick in case this call is preempted._
 _An example is given in <<example-scheduled-execution>>._
-* _depending on their implementation <<preemption-support,fmi3CallbackLockPreemption>> and <<preemption-support,fmi3CallbackUnlockPreemption>> have a strong impact on the simulator's OS so their use should be as rare and short as possible._
+* _depending on their implementation <<preemption-support,`fmi3CallbackLockPreemption`>> and <<preemption-support,`fmi3CallbackUnlockPreemption`>> have a strong impact on the simulator's OS so their use should be as rare and short as possible._
 _So in general it is recommended to reduce dependencies between different model partitions of one FMU by design._
 _One may also consider if the code can be preempted by other parts of the same FMU: E.g. a model partition cannot be interrupted if it is the only model partition of the FMU or if it holds the highest priority._
-_I such cases no locks are necessary._
+_I such cases no locks are necessary.]_
 
 _[Example to observe why every variable should be assigned uniquely to a model partition via its associated <<Clock>>:_
 
 * _An output variable is changed by two different model partitions._
-_The values returned by <<get-and-set-variable-values,`fmi3Get`>> that is placed after <<fmi3ActivateModelPartition>> may return the values computed by the other model partition if that model partition has higher priority and preempted the execution meanwhile._
+_The values returned by <<get-and-set-variable-values,`fmi3Get{VariableType}`>> that is placed after <<fmi3ActivateModelPartition>> may return the values computed by the other model partition if that model partition has higher priority and preempted the execution meanwhile._
 * _An input variable is used by two different model partitions._
-_The variable values of a model partitions of lower priority may have been overwritten by a call to <<get-and-set-variable-values,`fmi3Set`>> for a model partition of higher priority.]_
+_The variable values of a model partitions of lower priority may have been overwritten by a call to <<get-and-set-variable-values,`fmi3Set{VariableType}`>> for a model partition of higher priority.]_
