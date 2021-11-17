@@ -633,7 +633,7 @@ The importer calls <<fmi3GetClock>> to inquire the clock activation state.
 |<<fmi3SetClock>> in <<EventMode>>,
 <<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
 <<fmi3GetInterval>> in <<InitializationMode>>,
-<<fmi3GetInterval>> in both <<EventMode>> and <<ClockActivationMode>>
+<<fmi3GetInterval>> in both <<EventMode>> and <<ClockActivationMode>> if and only if this Clock ticked
 |simulation of the behavior of a control algorithm with variable execution time, generation of pulse sequences
 
 |[[countdown,`countdown`]]`countdown`
@@ -778,7 +778,7 @@ latexmath:[\begin{align*}
 Must be retrieved in <<InitializationMode>>.
 
 |latexmath:[\mathbf{T}_{interval, i} \geq 0, \qquad i = 1,2,3,{...}]
-|The time interval from the call of <<fmi3CallbackIntermediateUpdate>> at which the argument <<qualifier,`qualifier`>> of <<fmi3GetInterval>> returns `fmi3IntervalChanged` to the next Clock tick.
+|The time interval from the event time or the point in time when <<fmi3CallbackIntermediateUpdate>> is called at which the argument <<qualifier,`qualifier`>> of <<fmi3GetInterval>> returns `fmi3IntervalChanged` to the next Clock tick.
 
 |===
 
@@ -847,7 +847,7 @@ The FMU may request to schedule another model partition even while currently a m
 A new interval for a <<countdown>> Clock can be provided at any time during the execution of any model partition.
 The FMU signals that a <<countdown>> Clock is about to tick by calling <<fmi3CallbackIntermediateUpdate>> with argument <<clockHandlingRequested>> == `fmi3True`.
 The importer calls <<fmi3GetInterval>> for all <<countdown>> Clocks.
-If a new interval is provided, i.e. return argument <<qualifier>> == `fmi3IntervalChanged`, the importer initiates the scheduling of the associated model partitions with the returned <<interval>>.
+If a new <<countdown-aperiodic-clock,`interval`>> latexmath:[\mathbf{T}_{interval, i}] is provided, i.e. return argument <<qualifier>> == `fmi3IntervalChanged`, the importer initiates the scheduling of the associated model partitions regarding the delay of the returned interval.
 
 In case more than one Clock ticks at the same time instant, the scheduler needs a priority to define the activation sequence of the associated model partitions.
 This ordering is defined by the <<priority>> attributes of the Clock.
@@ -925,7 +925,8 @@ include::../headers/fmi3FunctionTypes.h[tag=IntervalQualifier]
 ----
 with the following meanings:
 
- * `fmi3IntervalNotYetKnown` is returned for a <<countdown-aperiodic-clock>> for which the next interval is not yet known. The importer must query the next interval at each <<EventMode>> or <<IntermediateUpdateMode>> if <<clockHandlingRequested,`clockHandlingRequested == fmi3True`>> in <<fmi3CallbackIntermediateUpdate>>, respectively, for all <<countdown-aperiodic-clock,countdown aperiodic Clocks>> because the next interval may change at any <<EventMode>> or <<IntermediateUpdateMode>>.
+ * `fmi3IntervalNotYetKnown` is returned for a <<countdown-aperiodic-clock>> for which the next interval is not yet known.
+ The importer must query the next interval at each <<EventMode>> or <<IntermediateUpdateMode>> if <<clockHandlingRequested,`clockHandlingRequested == fmi3True`>> in <<fmi3CallbackIntermediateUpdate>>, respectively, for all <<countdown-aperiodic-clock,countdown aperiodic Clocks>> because the next interval may change at any <<EventMode>> or <<IntermediateUpdateMode>>.
  * `fmi3IntervalUnchanged` is returned if a previous call to <<fmi3GetInterval>> already returned a value which has not changed since.
  * `fmi3IntervalChanged` is returned to indicate that the value for the interval has changed for this <<Clock>>.
  The new <<Clock>> interval is relative to the time of the current <<EventMode>> or <<IntermediateUpdateMode>> in contrast to the interval of a periodic <<Clock>>, where the interval is defined as the time between consecutive <<Clock>> ticks.

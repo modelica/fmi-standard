@@ -122,14 +122,14 @@ void CallbackIntermediateUpdate(fmi3InstanceEnvironment instanceEnvironment,
 
 /* tag::SE_fmu_activateMP10ms[] */
 void activateModelPartition10ms(ModelInstance* instance, fmi3Float64 activationTime) {
-
+	fmi3Float64 intermediateUpdateTime = 0.0; // ignored for SE
 	fmi3Boolean conditionForCountdownClockMet = (AIn1 > AIn2);
 	if (conditionForCountdownClockMet) {
 		CountdownClockQualifier = fmi3IntervalChanged;
 		CountdownClockInterval = 0.0;
 		// inform the simulation algorithm that the countdown clock is about to tick
 		fmi3Boolean clockHandlingRequested = fmi3True;
-		instance->callbackIntermediateUpdate(instance->instanceEnvironment, activationTime, clockHandlingRequested,
+		instance->callbackIntermediateUpdate(instance->instanceEnvironment, intermediateUpdateTime, clockHandlingRequested,
 			fmi3False, fmi3False, fmi3False, fmi3False, NULL, NULL);
 	}
 	fmi3Boolean conditionForOutputClockMet = (AIn2 > 42.0);
@@ -138,7 +138,7 @@ void activateModelPartition10ms(ModelInstance* instance, fmi3Float64 activationT
 		OutputClockTicked = fmi3ClockActive;
 		// inform the simulation algorithm that the output clock has ticked
 		fmi3Boolean clockHandlingRequested = fmi3True;
-		instance->callbackIntermediateUpdate(instance->instanceEnvironment, activationTime, clockHandlingRequested,
+		instance->callbackIntermediateUpdate(instance->instanceEnvironment, intermediateUpdateTime, clockHandlingRequested,
 			fmi3False, fmi3False, fmi3False, fmi3False, NULL, NULL);
 	}
 	AOut = AIn1 + AIn2;
