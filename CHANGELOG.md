@@ -1,5 +1,15 @@
 # Changelog
 
+## v2.0.3 (2021-11-15)
+
+* `p. 22f` Fixed: Update logging documentation (#1435)
+* `p. 69` Clarification: on deflating zip file (#1307)
+* `p. 70f` Clarification: Relax requirement for including dependencies (#1488)
+* `p. 79` Mention event indicators in math description of initialization mode (#1318)
+* `p. 90`  Allow getNominalsOfContinuous stats in initialization model (#1312)
+* `fmi2FunctionTypes.h` : Fixed: Add missing parameter name "serializedState" in fmi2SerializeFMUstate() (#1279)
+
+
 ## v2.0.2 (2020-12-15)
 
 * `p. 22` Fixed: Discourage use of memory management functions (#931)
