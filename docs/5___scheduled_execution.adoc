@@ -1,20 +1,19 @@
 == FMI for Scheduled Execution [[fmi-for-scheduled-execution]]
 
-The <<fmi-for-co-simulation,Co-Simulation>> interface provides an indirect control over the computation of model partitions.
-With Scheduled Execution, a simulation algorithm can directly control the time of computation (i.e. scheduling) for such model partitions.
+The Scheduled Execution interface provides support for concurrent computation of <<model-partition, model partitions>> on a single computational resource (e.g. CPU-core).
+The FMU exposes model partitions defined by its associated Clocks while the <<importer>> is enabled to explicitly schedule each model partition's execution.
+As mentioned in <<advancing-time>>, it is the importer respectively its scheduler that controls how time is progressing.
 
-The Scheduled Execution interface addresses simulation use cases with the following requirements:
+The following use cases and requirements motivate the introduction of this interface type:
 
-* At any time (even for unpredictable events), an event can be signaled to an FMU;
-* If multiple FMUs share resources (e.g. control tasks), the time requirements (e.g. execution time, communication deadlines) of all model partitions have to be observed and respected;
-** Time requirements may exist due to communication constraints (that are not apparent at FMU simulation level) which have to be fulfilled by the simulation algorithm;
-** That requires a global evaluation order and preemption policy for all model partitions of the multiple FMUs
-** Priority information provided by the FMUs has to be evaluated and merged to an overall priority for available model partitions
-* Data shall move between the different FMU model partitions for the same or next activation time.
-** Get/set operations must also be possible for the same activation time for different model partitions between the computation of these model partitions.
-* The Scheduled Execution interface provides support for concurrent computation of model partitions (i.e. a support of multiple rates) on a single computational resource (e.g. CPU-core) of an FMU.
-For that a preemptive multitasking regime is intended (cooperative multitasking is not covered by this description).
+* The scheduler can execute a model partition at any time.
+It can execute model partitions periodically or reacting to an <<event>> e.g. an event of an external I/O or an event sent from an FMU (see below).
+* The scheduler can run model partitions of one FMU together with model partitions of other FMUs or model partitions provided by other sources such as other models or functions in a single process.
+* The scheduler regards <<priority, priorities>> of the model partitions defined by the FMU.
+* The Scheduled Execution interface allows the scheduler to preempt the execution of an FMU's model partition.
+The <<importer>> is providing lock/unlock functions to the FMU to secure sections that should not be interrupted (e.g. the exchange of data between two model partitions of the same FMU).
+* The Scheduled Execution interface allows the FMU to send an event to the scheduler while a model partition is executed.
+
 
 _[A parallel computation of model partitions is not part of the FMI 3.0 API._
-_An FMU may still internally use parallel computation on multiple cores, but handling this is (currently) not part of the FMI standard. Such an internal parallel computation is not visible to the simulation algorithm._
-_It is a tool vendor specific solution that has ties to the used OS and the co-simulation environment.]_
+_An FMU may still internally use parallel computation on multiple cores, but handling this is (currently) not part of the FMI standard.]_

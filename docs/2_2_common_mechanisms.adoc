@@ -262,7 +262,7 @@ The standard header file as documented in this specification has version `"3.0"`
 This section highlights the differences of the concept of time (in general the independent variable) for the three different FMI types, ME, CS and SE.
 Depending on the instantiated FMI type, the importer is restricted in what functions it is allowed to call in order to drive the simulation.
 
-In Model Exchange, time is under the sole control of the importer and its integration algorithm.
+In Model Exchange, time is under the sole control of the <<importer>> and its integration algorithm.
 The model itself receives the current time to be used in its computation with <<fmi3SetTime>>.
 In fact, time is not necessarily always advancing as solvers might need to jump back and forth in time to localize events using zero-crossings of <<eventIndicator, event indicators>>.
 
@@ -272,9 +272,17 @@ During this <<fmi3DoStep>>, both importer and FMU might encounter events (or oth
 The FMU may use <<earlyReturn>> argument of the <<fmi3DoStep>> function to tell the importer that the FMU needs to return earlier, and the importer may use the callback <<fmi3CallbackIntermediateUpdate>> to signal the FMU that the latter should return earlier.
 The output argument <<lastSuccessfulTime>> of <<fmi3DoStep>> allows the FMU to signal the importer its current internal time.
 
-In Scheduled Execution, time has a more discrete form.
-The scheduler of the importer activates specific tasks according to the time of the importer.
+In Scheduled Execution just like in Model Exchange, time is under the sole control of the importer i.e. its scheduler.
+By scheduling the exposed <<model-partition, model partitions>> of an FMU and executing them for dedicated points in time it is the scheduler that defines how time progresses.
+For FMUs these points in time are <<event,events>> defined by time-based or triggered <<Clock,Clocks>> for all exposed model partitions of a set of FMUs, or clock ticks signaled by the FMUs.
 The time itself is communicated to the FMU as <<activationTime>> argument of <<fmi3ActivateModelPartition>>.
+
+_[Examples for Scheduled Execution:_
+
+* _A simple scheduler calls the model partitions of periods 5ms and 10ms of an FMU in a loop._
+_The latter one is activated only every second loop iteration._
+_Thus the time of the simulation advances discretely by 5ms in every step of the loop._
+* _On a real-time simulator the scheduler activates the model partitions of the same example whenever the wall clock's time has progressed for 5ms or 10ms respectively.]_
 
 ==== Variables [[fmu-variables]]
 
@@ -590,7 +598,7 @@ While the importer is the source of the actual Clock activations, the timing of 
 Output Clock::
 [[outputClock, `output Clock`]]
 is a variable of type Clock with <<causality>> == <<output>>.
-The attribute <<interval>> must be <<triggered>> for output Clocks.
+The attribute <<interval>> must be <<triggered>> for <<outputClock,output Clocks>>.
 The importer calls <<fmi3GetClock>> to inquire the clock activation state.
 
 .Overview of Clock types.
@@ -796,8 +804,8 @@ is activated with <<fmi3SetClock>> by the importer in <<EventMode>>, or triggers
 Triggered output Clock::
 is activated within the FMU and the importer must call <<fmi3GetClock>> in <<EventMode>> or in <<IntermediateUpdateMode>>.
 
-_[Output Clocks are intended to enable an FMU to provide a trigger to the outside world, e.g. to a <<triggered, `triggered input Clock`>> of another FMU._
-_Note, that if intended to activate model partitions or a Clock of the same FMU calling <<fmi3GetInterval>> for a <<countdown, `countdown Clock`>> and evaluating the <<qualifier>> is recommended._
+_[<<outputClock,Output Clocks>> are intended to enable an FMU to provide a trigger to the outside world, e.g. to a <<triggered,triggered input Clock>> of another FMU._
+_Note, that if intended to activate model partitions or a Clock of the same FMU calling <<fmi3GetInterval>> for a <<countdown,countdown Clock>> and evaluating the <<qualifier>> is recommended._
 _An example is provided in <<example-scheduled-execution>>.]_
 
 ===== Model Partitions and Clocked Variables [[clocked-variable]]
@@ -857,6 +865,7 @@ If a new interval is provided, the importer initiates the scheduling of the asso
 
 In case more than one Clock ticks at the same time instant, the scheduler needs a priority to define the activation sequence of the associated model partitions.
 This ordering is defined by the <<priority>> attributes of the Clock.
+For Scheduled Execution this attribute is mandatory for every Clock.
 
 _[For real-time computation use cases, the priority information is used also for task preemption configurations._
 _It is therefore important to restrict the number of distinct priority levels for an FMU to available priority levels on the target platform and/or to avoid unnecessary computational overhead._
