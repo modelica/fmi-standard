@@ -1,31 +1,31 @@
 === Code Example [[example-scheduled-execution]]
 
-The FMU ThreeInputClocks sketches the usage of the FMI functions.
-The example is given in a mix of pseudo-code and C, in order to keep it small and understandable.
-We consider one FMU with three model partitions.
-Two model partitions associated to two <<periodic-clock,periodic Clocks>> `10msClock` and `50msClock` (periods 10 ms and 50 ms) and one aperiodic <<countdown, `countdown clock`>> `AperiodicClock`.
+The FMU `ThreeInputClocks` sketches the usage of the Scheduled Execution.
+The example consists of one FMU with three model partitions.
+Two model partitions are associated with two <<periodic-clock,periodic Clocks>> `10msClock` and `50msClock` (periods 10 ms and 50 ms) and one is associated with an aperiodic <<countdown,countdown clock>> `AperiodicClock`.
 
-During the execution of the model partition of <<Clock>> `10msClock` the FMU sets the <<interval>> for <<countdown, `countdown clock`>> `AperiodicClock` and calls <<fmi3CallbackIntermediateUpdate>> to invoke the execution of the corresponding model partition.
+During the execution of the model partition of <<Clock>> `10msClock`, the FMU changes the <<interval>> for <<countdown,countdown clock>> `AperiodicClock` and calls <<fmi3CallbackIntermediateUpdate>> to inform the importer that the interval has changed. The importer retrieves this interval and activates the corresponding model partition.
 
-The function calls <<fmi3ActivateModelPartition>> are executed in the context of preemptable tasks whose priorities are derived from the respective <<Clock>> configurations of the FMU.
-In this example the execution of the task of <<countdown, `countdown clock`>> `AperiodicClock` is waiting for the task of <<Clock>> `10msClock` to finish.
+In this example, the calls to <<fmi3ActivateModelPartition>> (as well as related <<get-and-set-variable-values,`fmi3Get{VariableType}`>> and `fmi3Set{VariableType}`) for each associated Clock are placed into a task.
+A task can be thought of as a simple interface of the scheduler that allows to connect the FMU interface by implementing a void/void function and set up the task's priorities as derived from the respective <<Clock>> configurations of the FMU.
+
+As a result of the FMU's configuration and implementation the following can be observed:
+The task of <<countdown,countdown clock>> `AperiodicClock` is waiting for the task of <<Clock>> `10msClock` to finish.
 Likewise the task of `AperiodicClock` is suspended when the task of higher priority is scheduled again.
+The example also depicts how a task associated with an even lower priority <<Clock>> (`50msClock`) is delayed several times by tasks of higher priority.
+Note that the point in time when the task was scheduled is the <<activationTime>> of <<fmi3ActivateModelPartition>> (...Activate...(<<inputClock>>, <<activationTime>>)).
 
-The example also depicts how a task associated to an even lower prior <<Clock>> `50msClock` is delayed several times by tasks of higher priority.
-Note that the point of time when the task was scheduled is the `activationTime` of <<fmi3ActivateModelPartition>> (...Activate...(`clock`, `activationTime`)).
-
-.Scheduled Execution Example ThreeInputClocks
+.Scheduled Execution Example `ThreeInputClocks`
 [[figure-scs_example]]
 image::images/se_example.png[width=90%, align="center"]
 
 ==== Simulation Algorithm Implementation
 
-To enable the computation of a Scheduled Execution FMU a simulation algorithm has to provide a task scheduler.
-Depending on the particular configuration the simulation algorithm sets up tasks for every <<inputClock>>.
-When executed each task calls <<fmi3ActivateModelPartition>> for its respective <<Clock>>.
-The `activationTime` is provided by the simulation algorithm.
+Depending on the particular configuration the simulation algorithm uses the interface of a scheduler to set up tasks for every <<inputClock>>.
 Periodic tasks can be scheduled on initialization of the simulation application.
 Aperiodic tasks are scheduled explicitly during the execution.
+When executed, each task calls <<fmi3ActivateModelPartition>> (as well as related <<get-and-set-variable-values,`fmi3Get{VariableType}`>> and `fmi3Set{VariableType}`) for each associated Clock.
+The <<activationTime>> is provided by the simulation algorithm.
 
 [source, C]
 ----
@@ -34,7 +34,7 @@ include::examples/snippets.c[tags=SE_sa_task10ms]
 
 The FMU requests to schedule the model partition of `AperiodicClock`.
 It calls <<fmi3CallbackIntermediateUpdate>> to enable the importer to check whether the FMU has defined a new interval for `AperiodicClock`.
-Evaluating the return values <<qualifier>> and <<interval>> of <<fmi3GetInterval>> the simulation algorithms determines if the respective task has to be scheduled and which delay has to be applied.
+By evaluating the returned values <<qualifier>> and <<interval>> of <<fmi3GetInterval>> the simulation algorithms determines if the respective task has to be scheduled and which delay has to be applied.
 
 [source, C]
 ----
@@ -43,14 +43,14 @@ include::examples/snippets.c[tags=SE_sa_intermediateUpdate]
 
 ==== FMU Implementation
 
-The FMU implements <<fmi3ActivateModelPartition>> dispatching for every <<inputClock>> so the code might look like this:
+The FMU implements <<fmi3ActivateModelPartition>> regarding every <<inputClock>> so the code might look like this:
 
 [source, C]
 ----
 include::examples/snippets.c[tags=SE_fmu_activateMP]
 ----
 
-In the context of the task being executed every 10 ms, the FMU initiates the scheduling of a task by setting a new interval to <<countdown, `countdown Clock`>> `AperiodicClock` and evoking <<fmi3CallbackIntermediateUpdate>>.
+In the task being executed every 10 ms, the FMU initiates the scheduling of a task by setting a new interval to <<countdown,countdown Clock>> `AperiodicClock` and evoking <<fmi3CallbackIntermediateUpdate>>.
 
 [source, C]
 ----

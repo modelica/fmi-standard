@@ -680,11 +680,11 @@ An `<Enumeration>` element must have at least one `<Item>`.
 
 |`priority`
 |[[priority,`priority`]]
-<<Clock,`Clocks`>> that have to be activated at the same time instant are ordered according to this attribute.
+This attribute is only considered for <<Clock,`Clocks`>> in Scheduled Execution that are associated to a <<model-partition, model partitions>>.
+In Scheduled Execution this attribute is mandatory.
 Smaller values signal higher priorities.
-No ordering is defined for multiple <<Clock,`Clocks`>> with the same <<priority>>.
-
-This attribute is only considered in Scheduled Execution.
+<<Clock,`Clocks`>> that have to be activated at the same time instant are ordered according to this attribute.
+For multiple <<Clock,`Clocks`>> with the same priority the order is undefined.
 
 |`interval`
 |
@@ -714,7 +714,7 @@ This attribute must only be used for <<periodic-clock,periodic Clocks>>.
 |`supportsFraction`
 |
 [[supportsFraction,`supportsFraction`]]
-This attribute defines, if the functions `fmi3GetXXXFraction` and `fmi3SetXXXFraction` are allowed to be called for all <<time-based-clock,time-based Clocks>>.
+This attribute defines, if the functions `fmi3GetXXXFraction` and `fmi3SetIntervalFraction` are allowed to be called for all <<time-based-clock,time-based Clocks>>.
 
 |[[resolution, `resolution`]]`resolution`
 |Instead of defining clock timing using floating point numbers, FMI allows the definition of rational numbers using <<intervalCounter,`intervalCounters`>> and <<shiftCounter,`shiftCounters`>>.
@@ -1378,8 +1378,7 @@ Initial or guess value of variable.
 This value is also stored in the C functions.
 _[Therefore, calling_ <<get-and-set-variable-values,`fmi3Set{VariableType}`>> _to set <<start>> values is only necessary, if a different value as stored in the XML file is desired._
 _It is not allowed to change the start values in the <<modelDescription.xml>> file of an FMU, as this would break the consistency with the hard-coded start values in the C-Code._
-_This could lead to unpredictable behavior of the FMU in different importing tools, as it is not mandatory to call <<get-and-set-variable-values,`fmi3Set{VariableType}`>> to set start values during initialization._
-_Instead it is recommended to use the SSP Standard (https://ssp-standard.org/) to handle modified parameters of FMUs or different parameter sets.]_
+_This could lead to unpredictable behavior of the FMU in different importing tools, as it is not mandatory to call <<get-and-set-variable-values,`fmi3Set{VariableType}`>> to set start values during initialization.]_
 
 The <<start>> is either a single value or a list of values.
 The serialization of a multi-dimensional array variable is described in <<serialization-of_variables>>.
@@ -1428,8 +1427,7 @@ All variables listed in this element must have attribute `derivative` (in order 
 
 |`reinit`
 |[[reinit,`reinit`]]
-Only for Model Exchange (if only a Co-Simulation FMU, this attribute must not be present.
-If both Model Exchange and a Co-Simulation FMU, this attribute is ignored for co-simulation): +
+Only used in Model Exchange, ignored for the other interface types.
 Can only be present for a continuous-time <<state>>. +
 If `true`, <<state>> can be reinitialized at an event by the FMU. +
 If `false`, <<state>> will not be reinitialized at an event by the FMU.
@@ -1669,7 +1667,7 @@ _The ordering of the variables in this list is defined by the exporting tool._
 _Usually, it is best to order according to the declaration order in the source model, since then the <<Output>> list does not change if the declaration order of <<output,`outputs`>> in the source model is not changed._
 _This is for example, important for linearization, in order that the interpretation of the output vector does not change for a re-exported FMU.]_
 Attribute <<dependencies>> defines the dependencies of the <<output,`outputs`>> from the knowns at the current super-dense time instant in Event and in <<ContinuousTimeMode>> (ME) and at the current communication point (CS and SE).
-Attribute <<dependencies>> for <<output>> <<Clock,`Clocks`>> lists all known variables (including input clocks) that contribute to trigger a clock tick for that output clock.
+Attribute <<dependencies>> for <<output>> <<Clock,`Clocks`>> lists all known variables (including input clocks) that contribute to trigger a clock tick for that <<outputClock,output Clock>>.
 Beside the knowns, the <<output,`outputs`>> also depend on "frozen" variables (= variables which cannot be changed in the current mode) but these "frozen" variables are not listed as <<dependencies>>.
 The functional dependency is defined as (dependencies of variables that are fixed in Event and <<ContinuousTimeMode>> and at communication points are not shown): +
 latexmath:[{(\mathbf{y}_c, \mathbf{y}_d) := \mathbf{f}_{\mathit{output}}(\mathbf{x}_c, \mathbf{u}_c, \mathbf{u}_d, t, \mathbf{p}_{\mathit{tune}})}]
@@ -1750,7 +1748,7 @@ _The ordering of the variables in this list is defined by the exporting tool.]_
 
 For Co-Simulation, elements <<EventIndicator>> are ignored.
 
-_[If an FMU supports both Model Exchange and Co-Simulation, then the <<EventIndicator>> elements might be present, since it is needed for Model Exchange.]_
+_[If an FMU supports more than Model Exchange, then the <<EventIndicator>> elements might be present, since it is needed for Model Exchange, but will be ignored for Co-Simulation and Scheduled Execution.]_
 |====
 
 Elements <<Output>>, <<ContinuousStateDerivative>>, <<ClockedState>>, <<InitialUnknown>>, and <<EventIndicator>> have (partially) the following attributes:

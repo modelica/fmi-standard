@@ -111,7 +111,6 @@ include::../headers/fmi3FunctionTypes.h[tags=CallbackLogMessage]
 +
 Pointer to a function that is called by the FMU _[usually if an `fmi3XXX` function does not behave as desired]_.
 
-** `instanceName` is the name of the FMU instance that calls this function.
 ** `status` contains the severity of the message, see `fmi3Status`.
 If <<fmi3OK,`status == fmi3OK`>>, the message is a pure information message.
 ** `category` is the category of the message.
@@ -156,7 +155,7 @@ The function controls the debug logging that is output via the <<logMessage>> ca
 ** `nCategories` defines the length of the argument `categories`.
 ** If `nCategories == 0`, <<loggingOn>> applies to all log categories and the value of `categories` is undefined.
 ** `categories` is an array of `nCategories` elements.
-The allowed values of `categories` are defined in the modelDescription.xml via element <<definition-of-log-categories,`<LogCategories>`>>.
+The allowed values of `categories` are defined in the <<modelDescription.xml>> via element <<definition-of-log-categories,`<LogCategories>`>>.
 
 [[fmi3Reset,`fmi3Reset`]]
 Function `fmi3Reset`::
@@ -397,14 +396,20 @@ Function <<fmi3GetEventIndicators>>::
 See <<fmi3GetEventIndicators>>.
 
 Function <<fmi3GetShiftDecimal>>::
+See <<fmi3GetShift>>.
+
 Function <<fmi3GetShiftFraction>>::
 See <<fmi3GetShift>>.
 
 Function <<fmi3GetIntervalDecimal>>::
+See <<fmi3GetInterval>>.
+
 Function <<fmi3GetIntervalFraction>>::
 See <<fmi3GetInterval>>.
 
 Function <<fmi3SetIntervalDecimal>>::
+One of these functions must be called for all <<fixed-periodic-clock,Fixed periodic Clocks>>.
+
 Function <<fmi3SetIntervalFraction>>::
 One of these functions must be called for all <<fixed-periodic-clock,Fixed periodic Clocks>>.
 
@@ -544,7 +549,7 @@ Function <<fmi3SetClock>>::
 For <<inputClock,`input Clocks`>>, <<fmi3SetClock>> is called to set the activation status of <<Clock,`Clocks`>> to `fmi3ClockActive` or `fmi3ClockInactive`.
 During the solution of algebraic loops, the activation condition of triggered input clocks may change and therefore <<fmi3SetClock>> can be called multiple times per super-dense time instant.
 When a Clock is deactivated, the FMU must reset all clocked states of this Clock to the values computed during the last <<fmi3UpdateDiscreteStates>> when this Clock was active (latexmath:[{}^\bullet\mathbf{v}_{\mathit{k}}]). +
-_[Rationale: a triggered output Clock latexmath:[c] may depend on some variable latexmath:[v] that is involved in an algebraic loop._
+_[Rationale: a triggered <<outputClock,output Clock>> latexmath:[c] may depend on some variable latexmath:[v] that is involved in an algebraic loop._
 _As part of the iterations to solve the algebraic loop, latexmath:[v] acquires a value that activates the Clock._
 _If the final (or some intermediate) value of latexmath:[v] no longer activates the Clock, then this Clock must be deactivated by the Importer during the same super-dense time instant.]_ +
 The importer can set a Clock to `fmi3ClockInactive` only if the Clock has the attribute <<canBeDeactivated,`canBeDeactivated == true`>>.
@@ -572,17 +577,23 @@ See <<fmi3GetAdjointDerivative>>.
 
 Function <<fmi3GetContinuousStates>>::
 This function must be called if <<fmi3UpdateDiscreteStates>> returned with <<valuesOfContinuousStatesChanged, `valuesOfContinuousStatesChanged == fmi3True`>>.
-Can only be called in Model Exchange.
+Not allowed in Co-Simulation and Scheduled Execution.
 
 Function <<fmi3GetContinuousStateDerivatives>>::
+Not allowed in Co-Simulation and Scheduled Execution.
+
 Function <<fmi3GetEventIndicators>>::
+Not allowed in Co-Simulation and Scheduled Execution.
+
 Function <<fmi3GetNumberOfContinuousStates>>::
+Not allowed in Co-Simulation and Scheduled Execution.
+
 Function <<fmi3GetNumberOfEventIndicators>>::
-Can only be called in Model Exchange.
+Not allowed in Co-Simulation and Scheduled Execution.
 
 Function <<fmi3EvaluateDiscreteStates>>::
+This function is called to trigger the evaluation of latexmath:[\mathbf{f}_{\mathit{disc}}] to compute the current values of discrete states from previous values.
 The FMU signals the support of <<fmi3EvaluateDiscreteStates>> via the capability flag <<providesEvaluateDiscreteStates>>.
-Evaluate latexmath:[\mathbf{f}_{\mathit{disc}}] to obtain current values of discrete states from previous values.
 +
 [[fmi3EvaluateDiscreteStates,`fmi3EvaluateDiscreteStates`]]
 [source, C]
@@ -591,7 +602,8 @@ include::../headers/fmi3FunctionTypes.h[tag=EvaluateDiscreteStates]
 ----
 
 Function <<fmi3UpdateDiscreteStates>>::
-When the importer converges on a solution for event handling at the current super-dense time step it calls <<fmi3UpdateDiscreteStates>> to determine if another event iteration is required (introducing a new super-dense time instant) or <<EventMode>> can be exited.
+This function is called to signal a converged solution at the current super-dense time instant.
+<<fmi3UpdateDiscreteStates>> must be called at least once per super-dense time instant.
 +
 [[fmi3UpdateDiscreteStates,`fmi3UpdateDiscreteStates`]]
 [source, C]
@@ -600,7 +612,7 @@ include::../headers/fmi3FunctionTypes.h[tag=UpdateDiscreteStates]
 ----
 
 [[discreteStatesNeedUpdate,`discreteStatesNeedUpdate`]]
-* When `discreteStatesNeedUpdate == fmi3True`, the importer must stay in <<EventMode>> for another event iteration.
+* When `discreteStatesNeedUpdate == fmi3True`, the importer must stay in <<EventMode>> for another event iteration, starting a new super-dense time instant.
 
 [[terminateSimulationUDS,`terminateSimulation`]]
 * When <<terminateSimulationUDS,`terminateSimulation == fmi3True`>>, the FMU requests to stop the simulation and the importer must call <<fmi3Terminate>>.
@@ -778,7 +790,7 @@ _[It is up to the FMU if the <<intermediateUpdateTime>> is based on wall-clock t
 
 [[clockHandlingRequested,`clockHandlingRequested`]]
 * The <<clockHandlingRequested>> parameter is only used in Scheduled Execution and is ignored in Co-Simulation.
-When <<clockHandlingRequested,`clockHandlingRequested == fmi3True`>>, it means that <<fmi3GetClock>> must be called for gathering all <<Clock>> related information about ticking <<outputClock,`output`>> <<Clock,Clocks>> and <<fmi3GetInterval>> must be called for all <<countdown>> <<Clock,Clocks>> whose associated model partitions have to be scheduled afterwards if a new interval is provided.
+When <<clockHandlingRequested,`clockHandlingRequested == fmi3True`>>, it means that <<fmi3GetClock>> must be called for gathering all <<Clock>> related information about ticking <<outputClock,output Clocks>> and <<fmi3GetInterval>> must be called for all <<countdown>> <<Clock,Clocks>> whose associated model partitions have to be scheduled afterwards if a new interval is provided.
 
 [[intermediateVariableSetRequested,`intermediateVariableSetRequested`]]
 * If <<intermediateVariableSetRequested,`intermediateVariableSetRequested == fmi3True`>>, the co-simulation algorithm may provide intermediate values for continuous <<input>> variables with <<intermediateUpdate,`intermediateUpdate = true`>> by calling <<get-and-set-variable-values,`fmi3Set{VariableType}`>>.
@@ -879,12 +891,22 @@ Getting variables might trigger <<selectiv-computation,computations>>.
 _[If <<Terminated>> is entered because of an `fmi3Error` return value, retrieved values should only be used for debugging purposes.]_
 
 Function <<fmi3GetContinuousStateDerivatives>>::
+Not allowed in Co-Simulation and Scheduled Execution.
+
 Function <<fmi3GetContinuousStates>>::
+Not allowed in Co-Simulation and Scheduled Execution.
+
 Function <<fmi3GetNominalsOfContinuousStates>>::
+Not allowed in Co-Simulation and Scheduled Execution.
+
 Function <<fmi3GetEventIndicators>>::
+Not allowed in Co-Simulation and Scheduled Execution.
+
 Function <<fmi3GetDirectionalDerivative>>::
+No restrictions.
+
 Function <<fmi3GetAdjointDerivative>>::
 No restrictions.
 
 Function <<fmi3GetOutputDerivatives>>::
-Not allowed in Model Exchange.
+Not allowed in Model Exchange and Scheduled Execution.
