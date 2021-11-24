@@ -80,7 +80,6 @@ typedef enum {
 
 /* tag::CallbackLogMessage[] */
 typedef void  (*fmi3CallbackLogMessage) (fmi3InstanceEnvironment instanceEnvironment,
-                                         fmi3String instanceName,
                                          fmi3Status status,
                                          fmi3String category,
                                          fmi3String message);
