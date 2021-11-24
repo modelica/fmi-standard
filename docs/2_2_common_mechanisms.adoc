@@ -262,7 +262,7 @@ The standard header file as documented in this specification has version `"3.0"`
 This section highlights the differences of the concept of time (in general the independent variable) for the three different FMI types, ME, CS and SE.
 Depending on the instantiated FMI type, the importer is restricted in what functions it is allowed to call in order to drive the simulation.
 
-In Model Exchange, time is under the sole control of the importer and its integration algorithm.
+In Model Exchange, time is under the sole control of the <<importer>> and its integration algorithm.
 The model itself receives the current time to be used in its computation with <<fmi3SetTime>>.
 In fact, time is not necessarily always advancing as solvers might need to jump back and forth in time to localize events using zero-crossings of <<eventIndicator, event indicators>>.
 
@@ -272,9 +272,17 @@ During this <<fmi3DoStep>>, both importer and FMU might encounter events (or oth
 The FMU may use <<earlyReturn>> argument of the <<fmi3DoStep>> function to tell the importer that the FMU needs to return earlier, and the importer may use the callback <<fmi3CallbackIntermediateUpdate>> to signal the FMU that the latter should return earlier.
 The output argument <<lastSuccessfulTime>> of <<fmi3DoStep>> allows the FMU to signal the importer its current internal time.
 
-In Scheduled Execution, time has a more discrete form.
-The scheduler of the importer activates specific tasks according to the time of the importer.
+In Scheduled Execution just like in Model Exchange, time is under the sole control of the importer i.e. its scheduler.
+By scheduling the exposed <<model-partition, model partitions>> of an FMU and executing them for dedicated points in time it is the scheduler that defines how time progresses.
+For FMUs these points in time are <<event,events>> defined by time-based or triggered <<Clock,Clocks>> for all exposed model partitions of a set of FMUs, or clock ticks signaled by the FMUs.
 The time itself is communicated to the FMU as <<activationTime>> argument of <<fmi3ActivateModelPartition>>.
+
+_[Examples for Scheduled Execution:_
+
+* _A simple scheduler calls the model partitions of periods 5ms and 10ms of an FMU in a loop._
+_The latter one is activated only every second loop iteration._
+_Thus the time of the simulation advances discretely by 5ms in every step of the loop._
+* _On a real-time simulator the scheduler activates the model partitions of the same example whenever the wall clock's time has progressed for 5ms or 10ms respectively.]_
 
 ==== Variables [[fmu-variables]]
 
@@ -368,6 +376,10 @@ Exceptions:
 . By setting the complete <<get-set-fmu-state,FMU state>> using <<fmi3SetFMUState>>, all variables are potentially changed.
 
 All strings passed as arguments to `fmi3SetString`, as well as all binary values passed as arguments to `fmi3SetBinary`, must be copied during these function calls, because there is no guarantee of the lifetime of strings or binary values, when these functions return.
+
+_[Note: In Scheduled Execution, Clocks are neither activated nor deactivated by the importer using <<fmi3SetClock>>._
+_Instead: The activation of a clock requires the importer to call <<fmi3ActivateModelPartition>>._
+_For <<triggered>> <<outputClock,output Clocks>>, the importer calls <<fmi3GetClock>> during <<IntermediateUpdateMode>>.]_
 
 ===== Handling min/max Range Violations [[min-max-violations]]
 
@@ -563,8 +575,8 @@ This allows different use cases to be implemented with different semantics.
 
 Clock variables synchronize events between importer and across FMUs, by
 
-. communicating exactly which specific event happens and
-. exactly at which time instant, independent from continuous time specified by the arguments of `fmi3SetTime` or `fmi3DoStep`.
+. communicating exactly which specific event happens (using <<fmi3SetClock>> in ME and CS or <<fmi3ActivateModelPartition>> in SE) and
+. exactly at which time instant, independent from continuous time specified by the arguments of <<fmi3SetTime>> or <<fmi3DoStep>>.
 
 The first point solves the issue that an FMU must know exactly which event happens during an <<EventMode>> if several events are very close to one another.
 
@@ -586,7 +598,8 @@ While the importer is the source of the actual Clock activations, the timing of 
 Output Clock::
 [[outputClock, `output Clock`]]
 is a variable of type Clock with <<causality>> == <<output>>.
-The attribute <<intervalVariability>> must be <<triggered>> for output Clocks.
+
+The attribute <<intervalVariability>> must be <<triggered>> for <<outputClock,output Clocks>>.
 The importer calls <<fmi3GetClock>> to inquire the clock activation state.
 
 .Overview of Clock types.
@@ -636,27 +649,26 @@ h|<<intervalVariability>>
 |<<fmi3SetClock>> in <<EventMode>>,
 <<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
 <<fmi3GetInterval>> in <<InitializationMode>>,
-<<fmi3GetInterval>> in both <<EventMode>> and <<ClockActivationMode>> if and only if this Clock ticked using <<clocksTicked,`clocksTicked == fmi3True`>>
+<<fmi3GetInterval>> in both <<EventMode>> and <<ClockActivationMode>> if and only if this Clock ticked
 |simulation of the behavior of a control algorithm with variable execution time, generation of pulse sequences
 
 |[[countdown,`countdown`]]`countdown`
 |<<fmi3SetClock>> in <<EventMode>>,
 <<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
-<<fmi3GetInterval>> in <<InitializationMode>>, in every <<EventMode>>, and in <<IntermediateUpdateMode>>.
-In Scheduled Execution the FMU has to inform the importer by calling <<fmi3CallbackIntermediateUpdate>> that the Clock is about to tick using <<clocksTicked,`clocksTicked == fmi3True`>>
+<<fmi3GetInterval>> in <<InitializationMode>>, in every <<EventMode>> and in <<IntermediateUpdateMode>>.
+In Scheduled Execution the FMU has to inform the importer by calling <<fmi3CallbackIntermediateUpdate>> that the Clock is about to tick using <<clockHandlingRequested,`clockHandlingRequested == fmi3True`>>
 |time-delayed actions after an event, for example, ignition signal some time after specific crank shaft angle
 
 2.2+|[[triggered,`triggered`]]triggered
 |<<input>>
 |<<triggered>>
 |<<fmi3SetClock>> in <<EventMode>>,
-<<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
-argument <<clocksTicked>> of <<fmi3CallbackIntermediateUpdate>>
+<<fmi3ActivateModelPartition>> in <<ClockActivationMode>>
 |triggered by a hardware interrupt of an embedded system, e.g. a control algorithm, triggered by a crankshaft angle
 
 |<<output>>
 |<<triggered>>
-|<<fmi3GetClock>> in both <<EventMode>> and <<IntermediateUpdateMode>>, and argument <<clocksTicked>> of <<fmi3CallbackIntermediateUpdate>>
+|<<fmi3GetClock>> in both <<EventMode>> and <<IntermediateUpdateMode>>, argument <<clockHandlingRequested>> of <<fmi3CallbackIntermediateUpdate>>
 |crankshaft angle sensor ticking several times per revolution
 |====
 
@@ -762,7 +774,7 @@ Must be retrieved in <<EventMode>> or <<ClockActivationMode>> if and only if the
 
 [[countdown-aperiodic-clock,countdown aperiodic Clock]]
 Countdown aperiodic Clock::
-is a time-based Clock whose next interval is not yet known right after the Clock just ticked, forcing the importer to call <<fmi3GetInterval>> in every <<EventMode>> and in <<IntermediateUpdateMode>> if <<clocksTicked>> == `fmi3True` in <<fmi3CallbackIntermediateUpdate>>.
+is a time-based Clock whose next interval is not yet known right after the Clock just ticked, forcing the importer to call <<fmi3GetInterval>> in every <<EventMode>> and in <<IntermediateUpdateMode>> if <<clockHandlingRequested>> == `fmi3True` in <<fmi3CallbackIntermediateUpdate>>.
 The return argument <<qualifiers>> of <<fmi3GetInterval>> is used to indicate if the next interval is already known.
 +
 The next Clock tick at time instant latexmath:[t_i] is defined as: +
@@ -782,7 +794,7 @@ latexmath:[\begin{align*}
 Must be retrieved in <<InitializationMode>>.
 
 |latexmath:[\mathbf{T}_{interval, i} \geq 0, \qquad i = 1,2,3,{...}]
-|The time interval from the event time at which the argument <<qualifiers,`qualifiers == fmi3IntervalChanged`>> of <<fmi3GetInterval>> to the next Clock tick.
+|The time interval from the event time or the point in time when <<fmi3CallbackIntermediateUpdate>> is called (see <<intermediateUpdateTime>>) at which the argument <<qualifiers,`qualifiers`>> of <<fmi3GetInterval>> returns `fmi3IntervalChanged`.
 
 |===
 
@@ -795,8 +807,8 @@ is activated with <<fmi3SetClock>> by the importer in <<EventMode>>, or triggers
 Triggered output Clock::
 is activated within the FMU and the importer must call <<fmi3GetClock>> in <<EventMode>> or in <<IntermediateUpdateMode>>.
 
-_[Output Clocks are intended to enable an FMU to provide a trigger to the outside world, e.g. to a <<triggered, `triggered input Clock`>> of another FMU._
-_Note, that if intended to activate model partitions or a Clock of the same FMU calling <<fmi3GetInterval>> for a <<countdown, `countdown Clock`>> and evaluating the <<qualifiers>> is recommended._
+_[<<outputClock,Output Clocks>> are intended to enable an FMU to provide a trigger to the outside world, e.g. to a <<triggered,triggered input Clock>> of another FMU._
+_Note, that if intended to activate model partitions or a Clock of the same FMU calling <<fmi3GetInterval>> for a <<countdown,countdown Clock>> and evaluating the <<qualifiers>> is recommended._
 _An example is provided in <<example-scheduled-execution>>.]_
 
 ===== Model Partitions and Clocked Variables [[clocked-variable]]
@@ -848,14 +860,15 @@ During <<ClockActivationMode>> after <<fmi3ActivateModelPartition>> has been cal
 To retrieve this information the importer calls <<fmi3GetInterval>> on the Clock.
 
 The FMU may request to schedule another model partition even while currently a model partition is being executed.
-<<countdown>> Clocks can tick at any time during the execution of any model partition.
-The FMU signals their ticking by calling <<fmi3CallbackIntermediateUpdate>> with argument <<clocksTicked>> == `fmi3True`.
-The importer calls <<fmi3GetInterval>> for all countdown Clocks.
-If a new interval is provided, the importer initiates the scheduling of the associated model partitions with the returned interval.
-<<qualifiers>> == <<fmi3IntervalChanged>> indicates that the corresponding Clock has to be scheduled.
+
+A new interval for a <<countdown>> Clock can be provided at any time during the execution of any model partition.
+The FMU signals that a <<countdown>> Clock is about to tick by calling <<fmi3CallbackIntermediateUpdate>> with argument <<clockHandlingRequested>> == `fmi3True`.
+The importer calls <<fmi3GetInterval>> for all <<countdown>> Clocks.
+If a new interval latexmath:[\mathbf{T}_{interval, i}] is provided, i.e. return argument <<qualifiers>> == <<fmi3IntervalChanged>>, the importer initiates the scheduling of the associated model partitions regarding the delay of the returned interval.
 
 In case more than one Clock ticks at the same time instant, the scheduler needs a priority to define the activation sequence of the associated model partitions.
 This ordering is defined by the <<priority>> attributes of the Clock.
+For Scheduled Execution this attribute is mandatory for every Clock.
 
 _[For real-time computation use cases, the priority information is used also for task preemption configurations._
 _It is therefore important to restrict the number of distinct priority levels for an FMU to available priority levels on the target platform and/or to avoid unnecessary computational overhead._
@@ -920,6 +933,7 @@ include::../headers/fmi3FunctionTypes.h[tag=GetIntervalDecimal]
 
 * `valueReferences` is an array of size `nValueReferences` holding the value references of the `Clock` variables.
 
+[[intervals,`intervals`]]
 * `intervals` is an array of size `nIntervals` to retrieve the Clock intervals.
 
 [[qualifiers,`qualifiers`]]
@@ -933,14 +947,15 @@ include::../headers/fmi3FunctionTypes.h[tag=IntervalQualifier]
 with the following meanings:
 
 [[fmi3IntervalNotYetKnown,`fmi3IntervalNotYetKnown`]]
- * `fmi3IntervalNotYetKnown` is returned for <<countdown-aperiodic-clock>> for which the next interval is not yet known. The importer must query the next interval at each <<EventMode>> for all <<countdown-aperiodic-clock>> because the next interval may change at any <<EventMode>>.
+ * `fmi3IntervalNotYetKnown` is returned for a <<countdown-aperiodic-clock>> for which the next interval is not yet known.
+ The importer must query the next interval at each <<EventMode>> or <<IntermediateUpdateMode>> if <<clockHandlingRequested,`clockHandlingRequested == fmi3True`>> in <<fmi3CallbackIntermediateUpdate>>, respectively, for all <<countdown-aperiodic-clock,countdown aperiodic Clocks>> because the next interval may change at any <<EventMode>> or <<IntermediateUpdateMode>>.
 
 [[fmi3IntervalUnchanged,`fmi3IntervalUnchanged`]]
  * `fmi3IntervalUnchanged` is returned if a previous call to <<fmi3GetInterval>> already returned a value which has not changed since.
 
 [[fmi3IntervalChanged,`fmi3IntervalChanged`]]
  * `fmi3IntervalChanged` is returned to indicate that the value for the interval has changed for this <<Clock>>.
- The new <<Clock>> interval is relative to the time of the current <<EventMode>>.
+ The new <<Clock>> interval is relative to the time of the current <<EventMode>> or <<IntermediateUpdateMode>> in contrast to the interval of a periodic <<Clock>>, where the interval is defined as the time between consecutive <<Clock>> ticks.
 
 [[fmi3GetIntervalFraction,`fmi3GetIntervalFraction`]]
 [source, C]
@@ -1343,6 +1358,9 @@ The inner level does not exist for scalar variables.
 * `nValues` is the size of the argument `values`.
 `nValues` only equals `nValueReferences` if all corresponding output variables are scalar variables.
 --
+
+In Scheduled Execution, all variables are time-discrete.
+Therefore, calling <<fmi3GetOutputDerivatives>> is not allowed in Scheduled Execution.
 
 _[ Example:_ +
 _Assuming an FMU has outputs latexmath:[y_1][2*3] with value reference 1, latexmath:[y_2] with value reference 2, latexmath:[ y_3][2] value reference 3, latexmath:[y_4] with value reference 4 and `maxOutputDerivativeOrder`=2._ +
