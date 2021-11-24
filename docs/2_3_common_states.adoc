@@ -9,7 +9,7 @@ State-machine states specific to a single interface type will be described in th
 [[each-state-description]]
 Each state description lists the governing equations and actions and the corresponding API functions influencing these equations in a table (not defining the calling order), and also lists the allowed function calls and usage restrictions.
 
-.Common calling sequence for C functions of common states for all three FMI types.
+.Common calling sequence for C functions of common states for at least two of the interface types.
 [#figure-common-state-machine]
 image::images/state-machines-common-states.svg[width=80%, align="center"]
 
@@ -736,9 +736,8 @@ _[The following use cases are enabled:_
 
 * _Access to intermediate variables enables advanced Co-Simulation with interpolation/extrapolation techniques (such as polynomial extrapolation, <<transmission-line-modeling>> (<<tlm>>) co-simulation, anti-alias filtering, smoothing of input among others)._
 * _<<IntermediateUpdateMode>> enables the same input approximation that was possible in FMI 2.0 with `fmi2SetInputDerivatives`, by evaluation of the approximation polynomial by the importer and not within the FMU as in FMI 2.0_
-* _FMUs can inform the importer about an event, which occurs during an <<fmi3DoStep>> in case of CS (see <<fmi-for-co-simulation>>)._
 * _The Co-Simulation algorithm can request an <<early-return,early return>> from <<fmi3DoStep>>, because of an event between communication points (see <<early-return>>)._
-* _A model partition of a Scheduled Execution FMU calls <<fmi3CallbackIntermediateUpdate>> to signal clock activations with `clocksTicked == fmi3True`._
+* _A model partition of a Scheduled Execution FMU calls <<fmi3CallbackIntermediateUpdate>> to signal that a <<triggered, `triggered output`>> <<Clock>> ticked or a new interval for a <<countdown>> <<Clock>> is provided with <<clockHandlingRequested, `clockHandlingRequested == fmi3True`>>._
 
 _Note that the call to <<fmi3CallbackIntermediateUpdate>> and thus entering the <<IntermediateUpdateMode>> can only be triggered by the FMU itself._
 _The importer cannot actively trigger this and hence for some use cases (e.g. cooperative multitasking and setting of intermediate input values) it relies on the callbacks from the FMUs to be able to realize these use cases properly.]_
@@ -785,12 +784,13 @@ include::../headers/fmi3FunctionTypes.h[tag=CallbackIntermediateUpdate]
 If an event happens or an <<outputClock>> ticks, <<intermediateUpdateTime>> is the time of event or <<outputClock>> tick.
 In Co-Simulation, <<intermediateUpdateTime>> is restricted by the arguments to <<fmi3DoStep>> as follows: +
 <<currentCommunicationPoint>> latexmath:[\leq] <<intermediateUpdateTime>> latexmath:[\leq] (<<currentCommunicationPoint>> + <<communicationStepSize>>). +
-The FMU must not call the callback function <<fmi3CallbackIntermediateUpdate>> with an <<intermediateUpdateTime>> that is smaller than the <<intermediateUpdateTime>> given in a previous call of <<fmi3CallbackIntermediateUpdate>> with `intermediateStepFinished == fmi3True`.
-In Scheduled Execution the <<intermediateUpdateTime>> should be ignored since in this case the simulation algorithm controls the time and not the FMU.
+The FMU must not call the callback function <<fmi3CallbackIntermediateUpdate>> with an <<intermediateUpdateTime>> that is smaller than the <<intermediateUpdateTime>> given in a previous call of <<fmi3CallbackIntermediateUpdate>> with `intermediateStepFinished == fmi3True`. +
+In Scheduled Execution the <<intermediateUpdateTime>> is used as base for the argument <<intervals>> of <<fmi3GetInterval>> if <<clockHandlingRequested,`clockHandlingRequested == fmi3True`>>.
+_[It is up to the FMU if the <<intermediateUpdateTime>> is based on wall-clock time (e.g. in real-time mode) or if this is just returning the last <<activationTime>> of <<fmi3ActivateModelPartition>> because it can adjust the <<intervals>> returned by <<fmi3GetInterval>> to properly declare the next clock activation.]_
 
-[[clocksTicked,`clocksTicked`]]
-* The <<clocksTicked>> parameter is only used in Scheduled Execution and is ignored in Co-Simulation.
-When <<clocksTicked,`clocksTicked == fmi3True`>>, it means that <<fmi3GetClock>> function must be called for gathering all <<Clock>> related information about ticking <<outputClock,output Clocks>>, <<fmi3GetInterval>> must be called for all <<countdown>> <<Clock,Clocks>> and then activate the respective model partitions accordingly.
+[[clockHandlingRequested,`clockHandlingRequested`]]
+* The <<clockHandlingRequested>> parameter is only used in Scheduled Execution and is ignored in Co-Simulation.
+When <<clockHandlingRequested,`clockHandlingRequested == fmi3True`>>, it means that <<fmi3GetClock>> must be called for gathering all <<Clock>> related information about ticking <<outputClock,output Clocks>> and <<fmi3GetInterval>> must be called for all <<countdown>> <<Clock,Clocks>> whose associated model partitions have to be scheduled afterwards if a new interval is provided.
 
 [[intermediateVariableSetRequested,`intermediateVariableSetRequested`]]
 * If <<intermediateVariableSetRequested,`intermediateVariableSetRequested == fmi3True`>>, the co-simulation algorithm may provide intermediate values for continuous <<input>> variables with <<intermediateUpdate,`intermediateUpdate = true`>> by calling <<get-and-set-variable-values,`fmi3Set{VariableType}`>>.
@@ -860,7 +860,7 @@ Additionally to the functions listed above, Scheduled Execution allows calling t
 
 Function <<fmi3GetClock>>::
 The scheduling algorithm uses <<fmi3GetClock>> to determine which clock is active. +
-_[For efficiency, <<fmi3GetClock>> should only be called if <<clocksTicked, `clocksTicked == fmi3True`>>.]_ +
+_[For efficiency, <<fmi3GetClock>> should only be called if <<clockHandlingRequested, `clockHandlingRequested == fmi3True`>>.]_ +
 Depending on the clock activation state, the scheduling algorithm can call <<get-and-set-variable-values,`fmi3Set{VariableType}`>> and <<get-and-set-variable-values,`fmi3Get{VariableType}`>> for variables associated with the corresponding <<Clock>>.
 For an <<outputClock>> only the first call of `fmi3GetClock` for a specific activation of this <<Clock>> signals `fmi3ClockActive`.
 The FMU sets the reported activation state immediately back to `fmi3ClockInactive` for following `fmi3GetClock` calls for that <<Clock>> until this <<outputClock>> is activated again.

@@ -53,7 +53,7 @@ typedef struct {
     fmi3CallbackUnlockPreemption unlockPreemption;
 
     void* instanceEnvironment;
-    bool clocksTicked;
+    bool clockHandlingRequested;
 
     // SE variables
     fmi3Float64 AIn1; // 0.0
@@ -102,14 +102,14 @@ void ExecuteModelPartition10ms() {
 
 /* tag::SE_sa_intermediateUpdate[] */
 void CallbackIntermediateUpdate(fmi3InstanceEnvironment instanceEnvironment,
-    fmi3Float64  intermediateUpdateTime, fmi3Boolean  clocksTicked,
+    fmi3Float64  intermediateUpdateTime, fmi3Boolean  clockHandlingRequested,
     fmi3Boolean  intermediateVariableSetRequested, fmi3Boolean  intermediateVariableGetAllowed,
     fmi3Boolean  intermediateStepFinished, fmi3Boolean  canReturnEarly,
     fmi3Boolean* earlyReturnRequested, fmi3Float64* earlyReturnTime) {
 
     fmi3Float64 interval[] = { 0.0 };
     fmi3IntervalQualifier intervalQualifier[] = { fmi3IntervalNotYetKnown };
-    if (clocksTicked == fmi3True) {
+    if (clockHandlingRequested == fmi3True) {
         // ask FMU if countdown clock is about to tick
         const fmi3ValueReference aperiodicClockReferences[] = { 6 };
         fmi3GetIntervalDecimal(fmu, aperiodicClockReferences, 1, interval, intervalQualifier, 1);
@@ -138,8 +138,8 @@ void activateModelPartition10ms(fmi3Instance instance, fmi3Float64 activationTim
         inst->CountdownClockQualifier = fmi3IntervalChanged;
         inst->CountdownClockInterval = 0.0;
         // inform simulation algorithm that the countdown clock has ticked
-        fmi3Boolean clocksTicked = fmi3True;
-        inst->callbackIntermediateUpdate(inst->instanceEnvironment, activationTime, clocksTicked,
+        fmi3Boolean clockHandlingRequested = fmi3True;
+        inst->callbackIntermediateUpdate(inst->instanceEnvironment, activationTime, clockHandlingRequested,
             fmi3False, fmi3False, fmi3False, fmi3False, NULL, NULL);
     }
     fmi3Boolean conditionForOutputClockMet = (inst->AIn2 > 42.0);
@@ -147,8 +147,8 @@ void activateModelPartition10ms(fmi3Instance instance, fmi3Float64 activationTim
         // outputClock ticks
         inst->OutputClockTicked = fmi3ClockActive;
         // inform simulation algorithm that output clock has ticked
-        fmi3Boolean clocksTicked = fmi3True;
-        inst->callbackIntermediateUpdate(inst->instanceEnvironment, activationTime, clocksTicked,
+        fmi3Boolean clockHandlingRequested = fmi3True;
+        inst->callbackIntermediateUpdate(inst->instanceEnvironment, activationTime, clockHandlingRequested,
             fmi3False, fmi3False, fmi3False, fmi3False, NULL, NULL);
     }
     inst->AOut = inst->AIn1 + inst->AIn2;
