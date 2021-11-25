@@ -85,12 +85,10 @@ typedef void  (*fmi3CallbackLogMessage) (fmi3InstanceEnvironment instanceEnviron
                                          fmi3String message);
 /* end::CallbackLogMessage[] */
 
-/* tag::CallbackRequestClockActivation[] */
-typedef void (*fmi3CallbackRequestClockActivation) (
-    fmi3InstanceEnvironment  instanceEnvironment,
-    const fmi3ValueReference activateClockReferences[],
-    size_t                   nActivateClockReferences);
-/* end::CallbackRequestClockActivation[] */
+/* tag::CallbackClockUpdate[] */
+typedef void (*fmi3CallbackClockUpdate) (
+    fmi3InstanceEnvironment  instanceEnvironment);
+/* end::CallbackClockUpdate[] */
 
 /* tag::CallbackIntermediateUpdate[] */
 typedef void (*fmi3CallbackIntermediateUpdate) (
@@ -153,18 +151,18 @@ typedef fmi3Instance fmi3InstantiateCoSimulationTYPE(
     fmi3CallbackIntermediateUpdate intermediateUpdate);
 
 typedef fmi3Instance fmi3InstantiateScheduledExecutionTYPE(
-    fmi3String                         instanceName,
-    fmi3String                         instantiationToken,
-    fmi3String                         resourcePath,
-    fmi3Boolean                        visible,
-    fmi3Boolean                        loggingOn,
-    const fmi3ValueReference           requiredIntermediateVariables[],
-    size_t                             nRequiredIntermediateVariables,
-    fmi3InstanceEnvironment            instanceEnvironment,
-    fmi3CallbackLogMessage             logMessage,
-    fmi3CallbackRequestClockActivation requestClockActivation,
-    fmi3CallbackLockPreemption         lockPreemption,
-    fmi3CallbackUnlockPreemption       unlockPreemption);
+    fmi3String                     instanceName,
+    fmi3String                     instantiationToken,
+    fmi3String                     resourcePath,
+    fmi3Boolean                    visible,
+    fmi3Boolean                    loggingOn,
+    const fmi3ValueReference       requiredIntermediateVariables[],
+    size_t                         nRequiredIntermediateVariables,
+    fmi3InstanceEnvironment        instanceEnvironment,
+    fmi3CallbackLogMessage         logMessage,
+    fmi3CallbackClockUpdate        clockUpdate,
+    fmi3CallbackLockPreemption     lockPreemption,
+    fmi3CallbackUnlockPreemption   unlockPreemption);
 /* end::Instantiate[] */
 
 /* tag::FreeInstance[] */
