@@ -137,14 +137,11 @@ Function <<fmi3EnterConfigurationMode>>::
 
 ==== State: Intermediate Update Mode [[IntermediateUpdateMode,*Intermediate Update Mode*]]
 
-This state is only available in Co-Simulation and Scheduled Execution.
-
 _[The following use cases are enabled:_
 
 * _Access to intermediate variables enables advanced Co-Simulation with interpolation/extrapolation techniques (such as polynomial extrapolation, <<transmission-line-modeling>> (<<tlm>>) co-simulation, anti-alias filtering, smoothing of input among others)._
 * _<<IntermediateUpdateMode>> enables the same input approximation that was possible in FMI 2.0 with `fmi2SetInputDerivatives`, by evaluation of the approximation polynomial by the importer and not within the FMU as in FMI 2.0_
 * _The Co-Simulation algorithm can request an <<early-return,early return>> from <<fmi3DoStep>>, because of an event between communication points (see <<early-return>>)._
-* _A model partition of a Scheduled Execution FMU calls <<fmi3CallbackIntermediateUpdate>> to signal that a <<triggered, `triggered output`>> <<Clock>> ticked or a new interval for a <<countdown>> <<Clock>> is provided with <<clockHandlingRequested, `clockHandlingRequested == fmi3True`>>._
 
 _Note that the call to <<fmi3CallbackIntermediateUpdate>> and thus entering the <<IntermediateUpdateMode>> can only be triggered by the FMU itself._
 _The importer cannot actively trigger this and hence for some use cases (e.g. cooperative multitasking and setting of intermediate input values) it relies on the callbacks from the FMUs to be able to realize these use cases properly.]_
@@ -160,8 +157,6 @@ FMUs can signal with the optional attribute <<recommendedIntermediateInputSmooth
 _[This can increase simulation speed for higher order multi-step solvers that in this case do not have to reset at communication points.]_
 
 The importer must ensure that the input approximation function latexmath:[\mathbf{u}_u] is consistent with the values of the input variable (latexmath:[\mathbf{u}_u(\mathbf{t}_{i+1})= \mathbf{u}(\mathbf{t}_{i+1})]).
-
-// TODO: Irina/Matthias: what is <<IntermediateUpdateMode>> used for in Scheduled Execution: Please provide small paragraph like previous paragraph
 
 Due to the way numerical solvers estimate and correct the approximation error, these intermediate <<output>> values may be tentative or may be final.
 It is possible for the FMU to inform the co-simulation algorithm whether the internal solver is in a tentative state, meaning that the output values computed from that state are also tentative, or if the internal solver has successfully completed the integration step, meaning that the FMU's internal state is final, and will never be changed in the current execution of <<fmi3DoStep>>.
@@ -192,12 +187,6 @@ If an event happens or an <<outputClock>> ticks, <<intermediateUpdateTime>> is t
 In Co-Simulation, <<intermediateUpdateTime>> is restricted by the arguments to <<fmi3DoStep>> as follows: +
 <<currentCommunicationPoint>> latexmath:[\leq] <<intermediateUpdateTime>> latexmath:[\leq] (<<currentCommunicationPoint>> + <<communicationStepSize>>). +
 The FMU must not call the callback function <<fmi3CallbackIntermediateUpdate>> with an <<intermediateUpdateTime>> that is smaller than the <<intermediateUpdateTime>> given in a previous call of <<fmi3CallbackIntermediateUpdate>> with `intermediateStepFinished == fmi3True`. +
-In Scheduled Execution the <<intermediateUpdateTime>> is used as base for the argument <<intervals>> of <<fmi3GetInterval>> if <<clockHandlingRequested,`clockHandlingRequested == fmi3True`>>.
-_[It is up to the FMU if the <<intermediateUpdateTime>> is based on wall-clock time (e.g. in real-time mode) or if this is just returning the last <<activationTime>> of <<fmi3ActivateModelPartition>> because it can adjust the <<intervals>> returned by <<fmi3GetInterval>> to properly declare the next clock activation.]_
-
-[[clockHandlingRequested,`clockHandlingRequested`]]
-* The <<clockHandlingRequested>> parameter is only used in Scheduled Execution and is ignored in Co-Simulation.
-When <<clockHandlingRequested,`clockHandlingRequested == fmi3True`>>, it means that <<fmi3GetClock>> must be called for gathering all <<Clock>> related information about ticking <<outputClock,output Clocks>> and <<fmi3GetInterval>> must be called for all <<countdown>> <<Clock,Clocks>> whose associated model partitions have to be scheduled afterwards if a new interval is provided.
 
 [[intermediateVariableSetRequested,`intermediateVariableSetRequested`]]
 * If <<intermediateVariableSetRequested,`intermediateVariableSetRequested == fmi3True`>>, the co-simulation algorithm may provide intermediate values for continuous <<input>> variables with <<intermediateUpdate,`intermediateUpdate = true`>> by calling <<get-and-set-variable-values,`fmi3Set{VariableType}`>>.
@@ -213,17 +202,14 @@ The set of variables for which the co-simulation algorithm can get values is sup
 If <<intermediateStepFinished, `intermediateStepFinished == fmi3True`>>, intermediate outputs inquired by the co-simulation algorithm with <<get-and-set-variable-values,`fmi3Get{VariableType}`>> correspond to accepted internal solver step.
 
 [[canReturnEarly,`canReturnEarly`]]
-* When <<canReturnEarly,`canReturnEarly == fmi3True`>> the FMU signals to the co-simulation algorithm its ability to return early from the current <<fmi3DoStep>>. +
-This argument is ignored in Scheduled Execution.
+* When <<canReturnEarly,`canReturnEarly == fmi3True`>> the FMU signals to the co-simulation algorithm its ability to return early from the current <<fmi3DoStep>>.
 
 [[earlyReturnRequested,`earlyReturnRequested`]]
-* `earlyReturnRequested`: If and only if <<canReturnEarly,`canReturnEarly == fmi3True`>>, the co-simulation algorithm may request the FMU to return early from <<fmi3DoStep>> by setting `earlyReturnRequested == fmi3True`. +
-This argument is ignored in Scheduled Execution.
+* `earlyReturnRequested`: If and only if <<canReturnEarly,`canReturnEarly == fmi3True`>>, the co-simulation algorithm may request the FMU to return early from <<fmi3DoStep>> by setting `earlyReturnRequested == fmi3True`.
 
 [[earlyReturnTime,`earlyReturnTime`]]
 * `earlyReturnTime` is used to signal the FMU at which time to return early from the current <<fmi3DoStep>>, if the return value of <<earlyReturnRequested, `earlyReturnRequested == fmi3True`>>.
-If the <<earlyReturnTime>> is greater than the last signaled <<intermediateUpdateTime>>, the FMU may integrate up to the time instant <<earlyReturnTime>>. +
-This argument is ignored in Scheduled Execution.
+If the <<earlyReturnTime>> is greater than the last signaled <<intermediateUpdateTime>>, the FMU may integrate up to the time instant <<earlyReturnTime>>.
 
 .Mathematical description of <<IntermediateUpdateMode>>.
 [#table-math-intermediateUpdateMode]
@@ -239,8 +225,7 @@ This argument is ignored in Scheduled Execution.
 |<<fmi3GetOutputDerivatives>>
 
 a|
-* Co-Simulation: Set continuous intermediate input variables latexmath:[\mathbf{u}_{\mathit{c,u}}(\mathbf{t}_u)]
-* Scheduled Execution: Set intermediate input variables latexmath:[\mathbf{u}_u(\mathbf{t}_u)]
+Set continuous intermediate input variables latexmath:[\mathbf{u}_{\mathit{c,u}}(\mathbf{t}_u)]
 |<<get-and-set-variable-values,`fmi3Set{VariableType}`>>
 
 |====
@@ -262,18 +247,3 @@ In Co-Simulation, <<discrete>> <<input,`inputs`>> must not be set.
 
 There is a defined order of calling these functions: first all <<get-and-set-variable-values,`fmi3Get{VariableType}`>> calls must be performed, then <<get-and-set-variable-values,`fmi3Set{VariableType}`>> may be called. +
 _[This is analogous to the calling sequence of_ <<get-and-set-variable-values,`fmi3Get{VariableType}`>> _and_ <<get-and-set-variable-values,`fmi3Set{VariableType}`>> _calls at communication points.]_
-
-Additionally to the functions listed above, Scheduled Execution allows calling the following functions:
-
-Function <<fmi3GetClock>>::
-The scheduling algorithm uses <<fmi3GetClock>> to determine which clock is active. +
-_[For efficiency, <<fmi3GetClock>> should only be called if <<clockHandlingRequested, `clockHandlingRequested == fmi3True`>>.]_ +
-Depending on the clock activation state, the scheduling algorithm can call <<get-and-set-variable-values,`fmi3Set{VariableType}`>> and <<get-and-set-variable-values,`fmi3Get{VariableType}`>> for variables associated with the corresponding <<Clock>>.
-For an <<outputClock>> only the first call of `fmi3GetClock` for a specific activation of this <<Clock>> signals `fmi3ClockActive`.
-The FMU sets the reported activation state immediately back to `fmi3ClockInactive` for following `fmi3GetClock` calls for that <<Clock>> until this <<outputClock>> is activated again.
-
-Functions <<fmi3GetIntervalDecimal>> & <<fmi3GetIntervalFraction>>::
-These function calls are allowed for <<inputClock, input clocks>>.
-
-_[In Scheduled Execution it cannot be determined which model partition has called <<fmi3CallbackIntermediateUpdate>>, because multiple model partitions can be active at the same time._
-_Since all information about which model partition to activate is coded into its corresponding clock, there is no need to know which potentially other model partition activated this clock.]_
