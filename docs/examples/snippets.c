@@ -48,12 +48,11 @@ fmi3Status fmi3SetFloat64(fmi3Instance instance,
 
 typedef struct {
 
-    fmi3CallbackIntermediateUpdate callbackIntermediateUpdate;
+    fmi3CallbackClockUpdate callbackClockUpdate;
     fmi3CallbackLockPreemption lockPreemption;
     fmi3CallbackUnlockPreemption unlockPreemption;
 
     void* instanceEnvironment;
-    bool clockHandlingRequested;
 
     // SE variables
     fmi3Float64 AIn1; // 0.0
@@ -102,32 +101,36 @@ void ExecuteModelPartition10ms() {
 
 /* tag::SE_sa_intermediateUpdate[] */
 void CallbackIntermediateUpdate(fmi3InstanceEnvironment instanceEnvironment,
-    fmi3Float64  intermediateUpdateTime, fmi3Boolean  clockHandlingRequested,
+    fmi3Float64  intermediateUpdateTime,
     fmi3Boolean  intermediateVariableSetRequested, fmi3Boolean  intermediateVariableGetAllowed,
     fmi3Boolean  intermediateStepFinished, fmi3Boolean  canReturnEarly,
     fmi3Boolean* earlyReturnRequested, fmi3Float64* earlyReturnTime) {
+    // Nothing here on purpose
+}
+/* end::SE_sa_intermediateUpdate[] */
+
+/* tag::SE_sa_clockUpdate[] */
+void CallbackClockUpdate(fmi3InstanceEnvironment instanceEnvironment) {
 
     fmi3Float64 interval[] = { 0.0 };
     fmi3IntervalQualifier intervalQualifier[] = { fmi3IntervalNotYetKnown };
-    if (clockHandlingRequested == fmi3True) {
-        // ask FMU if countdown clock is about to tick
-        const fmi3ValueReference aperiodicClockReferences[] = { 6 };
-        fmi3GetIntervalDecimal(fmu, aperiodicClockReferences, 1, interval, intervalQualifier, 1);
-        if (intervalQualifier[0] == fmi3IntervalChanged) {
-            // schedule task for AperiodicClock with a delay
-            ScheduleAperiodicTask(interval[0]);
-        }
-        // ask FMU if output clock has ticked
-        fmi3ValueReference outputClockReferences[] = { 7 };
-        fmi3Boolean clocksActivationState[] = { fmi3ClockInactive };
-        fmi3GetClock(fmu, outputClockReferences, 1, clocksActivationState, 1);
-        if (clocksActivationState[0]) {
-            // schedule some external task
-            ScheduleExternalTask();
-        }
+    // ask FMU if countdown clock is about to tick
+    const fmi3ValueReference aperiodicClockReferences[] = { 6 };
+    fmi3GetIntervalDecimal(fmu, aperiodicClockReferences, 1, interval, intervalQualifier, 1);
+    if (intervalQualifier[0] == fmi3IntervalChanged) {
+        // schedule task for AperiodicClock with a delay
+        ScheduleAperiodicTask(interval[0]);
+    }
+    // ask FMU if output clock has ticked
+    fmi3ValueReference outputClockReferences[] = { 7 };
+    fmi3Boolean clocksActivationState[] = { fmi3ClockInactive };
+    fmi3GetClock(fmu, outputClockReferences, 1, clocksActivationState, 1);
+    if (clocksActivationState[0]) {
+        // schedule some external task
+        ScheduleExternalTask();
     }
 }
-/* end::SE_sa_intermediateUpdate[] */
+/* end::SE_sa_clockUpdate[] */
 
 /* tag::SE_fmu_activateMP10ms[] */
 void activateModelPartition10ms(fmi3Instance instance, fmi3Float64 activationTime) {
@@ -138,18 +141,14 @@ void activateModelPartition10ms(fmi3Instance instance, fmi3Float64 activationTim
         inst->CountdownClockQualifier = fmi3IntervalChanged;
         inst->CountdownClockInterval = 0.0;
         // inform simulation algorithm that the countdown clock has ticked
-        fmi3Boolean clockHandlingRequested = fmi3True;
-        inst->callbackIntermediateUpdate(inst->instanceEnvironment, activationTime, clockHandlingRequested,
-            fmi3False, fmi3False, fmi3False, fmi3False, NULL, NULL);
+        inst->callbackClockUpdate(inst->instanceEnvironment);
     }
     fmi3Boolean conditionForOutputClockMet = (inst->AIn2 > 42.0);
     if (conditionForOutputClockMet) {
         // outputClock ticks
         inst->OutputClockTicked = fmi3ClockActive;
         // inform simulation algorithm that output clock has ticked
-        fmi3Boolean clockHandlingRequested = fmi3True;
-        inst->callbackIntermediateUpdate(inst->instanceEnvironment, activationTime, clockHandlingRequested,
-            fmi3False, fmi3False, fmi3False, fmi3False, NULL, NULL);
+        inst->callbackClockUpdate(inst->instanceEnvironment);
     }
     inst->AOut = inst->AIn1 + inst->AIn2;
 }
