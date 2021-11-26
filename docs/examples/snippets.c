@@ -99,16 +99,6 @@ void ExecuteModelPartition10ms() {
 }
 /* end::SE_sa_task10ms[] */
 
-/* tag::SE_sa_intermediateUpdate[] */
-void CallbackIntermediateUpdate(fmi3InstanceEnvironment instanceEnvironment,
-    fmi3Float64  intermediateUpdateTime,
-    fmi3Boolean  intermediateVariableSetRequested, fmi3Boolean  intermediateVariableGetAllowed,
-    fmi3Boolean  intermediateStepFinished, fmi3Boolean  canReturnEarly,
-    fmi3Boolean* earlyReturnRequested, fmi3Float64* earlyReturnTime) {
-    // Nothing here on purpose
-}
-/* end::SE_sa_intermediateUpdate[] */
-
 /* tag::SE_sa_clockUpdate[] */
 void CallbackClockUpdate(fmi3InstanceEnvironment instanceEnvironment) {
 
