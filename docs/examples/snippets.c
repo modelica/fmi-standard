@@ -76,7 +76,6 @@ fmi3ValueReference ClockReference10ms = 5;
 
 fmi3Float64 ActivationTime = 0.0;
 
-size_t ClockElementIndex = 0;
 Environment *env;
 
 fmi3Instance fmu;
@@ -94,7 +93,7 @@ void activateModelPartitionAperiodic(fmi3Instance* instance, fmi3Float64 activat
 /*tag::SE_sa_task10ms[] */
 void ExecuteModelPartition10ms() {
     fmi3SetFloat64(fmu, AInputReferences, 2, AInput, 2);
-    fmi3ActivateModelPartition(fmu, ClockReference10ms, ClockElementIndex, ActivationTime);
+    fmi3ActivateModelPartition(fmu, ClockReference10ms, ActivationTime);
     fmi3GetFloat64(fmu, AOutputReferences, 1, AOutput, 1);
 }
 /* end::SE_sa_task10ms[] */
@@ -146,7 +145,7 @@ void activateModelPartition10ms(fmi3Instance instance, fmi3Float64 activationTim
 
 /* tag::SE_fmu_activateMP[] */
 fmi3Status fmi3ActivateModelPartition(fmi3Instance instance, fmi3ValueReference clockReference,
-    size_t clockElementIndex, fmi3Float64 activationTime) {
+    fmi3Float64 activationTime) {
 
     switch (clockReference) {
     case 5:    // Input clock 10msClock
