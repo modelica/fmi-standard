@@ -621,7 +621,6 @@ typedef fmi3Status fmi3DoStepTYPE(fmi3Instance instance,
 /* tag::ActivateModelPartition[] */
 typedef fmi3Status fmi3ActivateModelPartitionTYPE(fmi3Instance instance,
                                                   fmi3ValueReference clockReference,
-                                                  size_t clockElementIndex,
                                                   fmi3Float64 activationTime);
 /* end::ActivateModelPartition[] */
 
