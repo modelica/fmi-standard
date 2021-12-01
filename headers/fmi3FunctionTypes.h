@@ -156,8 +156,6 @@ typedef fmi3Instance fmi3InstantiateScheduledExecutionTYPE(
     fmi3String                     resourcePath,
     fmi3Boolean                    visible,
     fmi3Boolean                    loggingOn,
-    const fmi3ValueReference       requiredIntermediateVariables[],
-    size_t                         nRequiredIntermediateVariables,
     fmi3InstanceEnvironment        instanceEnvironment,
     fmi3CallbackLogMessage         logMessage,
     fmi3CallbackClockUpdate        clockUpdate,
