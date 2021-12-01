@@ -85,11 +85,15 @@ typedef void  (*fmi3CallbackLogMessage) (fmi3InstanceEnvironment instanceEnviron
                                          fmi3String message);
 /* end::CallbackLogMessage[] */
 
+/* tag::CallbackClockUpdate[] */
+typedef void (*fmi3CallbackClockUpdate) (
+    fmi3InstanceEnvironment  instanceEnvironment);
+/* end::CallbackClockUpdate[] */
+
 /* tag::CallbackIntermediateUpdate[] */
 typedef void (*fmi3CallbackIntermediateUpdate) (
     fmi3InstanceEnvironment instanceEnvironment,
     fmi3Float64  intermediateUpdateTime,
-    fmi3Boolean  clockHandlingRequested,
     fmi3Boolean  intermediateVariableSetRequested,
     fmi3Boolean  intermediateVariableGetAllowed,
     fmi3Boolean  intermediateStepFinished,
@@ -156,7 +160,7 @@ typedef fmi3Instance fmi3InstantiateScheduledExecutionTYPE(
     size_t                         nRequiredIntermediateVariables,
     fmi3InstanceEnvironment        instanceEnvironment,
     fmi3CallbackLogMessage         logMessage,
-    fmi3CallbackIntermediateUpdate intermediateUpdate,
+    fmi3CallbackClockUpdate        clockUpdate,
     fmi3CallbackLockPreemption     lockPreemption,
     fmi3CallbackUnlockPreemption   unlockPreemption);
 /* end::Instantiate[] */
