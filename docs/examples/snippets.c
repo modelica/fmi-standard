@@ -189,7 +189,9 @@ fmi3Status fmi3GetIntervalDecimal(fmi3Instance instance,
             env->lockPreemption(); // Optional: Preventing preemption is actually not needed here.
             interval[i] = inst->CountdownClockInterval;
             qualifier[i] = inst->CountdownClockQualifier;
-            inst->CountdownClockQualifier = fmi3IntervalUnchanged;
+            if (inst->CountdownClockQualifier == fmi3IntervalChanged) {
+                inst->CountdownClockQualifier = fmi3IntervalUnchanged;
+            }
             env->unlockPreemption();
             break;
         case 8:    // Input clock 50msClock
