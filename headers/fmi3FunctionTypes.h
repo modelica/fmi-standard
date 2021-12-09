@@ -386,7 +386,7 @@ typedef fmi3Status fmi3GetNumberOfVariableDependenciesTYPE(fmi3Instance instance
 /* tag::GetVariableDependencies[] */
 typedef fmi3Status fmi3GetVariableDependenciesTYPE(fmi3Instance instance,
                                                    fmi3ValueReference dependent,
-                                                   size_t elementIndicesOfDependent[],
+                                                   size_t elementIndicesOfDependents[],
                                                    fmi3ValueReference independents[],
                                                    size_t elementIndicesOfIndependents[],
                                                    fmi3DependencyKind dependencyKinds[],
