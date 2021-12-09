@@ -521,7 +521,7 @@ typedef fmi3Status fmi3EvaluateDiscreteStatesTYPE(fmi3Instance instance);
 
 /* tag::UpdateDiscreteStates[] */
 typedef fmi3Status fmi3UpdateDiscreteStatesTYPE(fmi3Instance instance,
-                                                fmi3Boolean* discreteStatesNeedUpdate,
+                                                fmi3Boolean* needsDiscreteStatesUpdate,
                                                 fmi3Boolean* terminateSimulation,
                                                 fmi3Boolean* nominalsOfContinuousStatesChanged,
                                                 fmi3Boolean* valuesOfContinuousStatesChanged,
