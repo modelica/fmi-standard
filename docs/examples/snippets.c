@@ -88,7 +88,6 @@ void activateModelPartition50ms(fmi3Instance* instance, fmi3Float64 activationTi
     ModelInstance * inst = (ModelInstance *) instance;
     inst->BOut = 2.2 * inst->BIn;
 }
-void activateModelPartitionAperiodic(fmi3Instance* instance, fmi3Float64 activationTime) {}
 
 /*tag::SE_sa_task10ms[] */
 void ExecuteModelPartition10ms() {
@@ -100,21 +99,21 @@ void ExecuteModelPartition10ms() {
 
 /* tag::SE_sa_clockUpdate[] */
 void CallbackClockUpdate(fmi3InstanceEnvironment instanceEnvironment) {
-
     fmi3Float64 interval[] = { 0.0 };
     fmi3IntervalQualifier intervalQualifier[] = { fmi3IntervalNotYetKnown };
-    // ask FMU if countdown clock is about to tick
+
+    // ask FMU if countdown clock AperiodicClock is about to tick
     const fmi3ValueReference aperiodicClockReferences[] = { 6 };
-    fmi3GetIntervalDecimal(fmu, aperiodicClockReferences, 1, interval, intervalQualifier, 1);
+    fmi3GetIntervalDecimal(fmu, aperiodicClockReferences, 1, interval, intervalQualifier);
     if (intervalQualifier[0] == fmi3IntervalChanged) {
         // schedule task for AperiodicClock with a delay
         ScheduleAperiodicTask(interval[0]);
     }
-    // ask FMU if output clock has ticked
+    // ask FMU if OutputClock has ticked
     fmi3ValueReference outputClockReferences[] = { 7 };
-    fmi3Boolean clocksActivationState[] = { fmi3ClockInactive };
-    fmi3GetClock(fmu, outputClockReferences, 1, clocksActivationState, 1);
-    if (clocksActivationState[0]) {
+    fmi3Boolean clockActivationStates[] = { fmi3ClockInactive };
+    fmi3GetClock(fmu, outputClockReferences, 1, clockActivationStates);
+    if (clockActivationStates[0]) {
         // schedule some external task
         ScheduleExternalTask();
     }
@@ -129,24 +128,33 @@ void activateModelPartition10ms(fmi3Instance instance, fmi3Float64 activationTim
     if (conditionForCountdownClockMet) {
         inst->CountdownClockQualifier = fmi3IntervalChanged;
         inst->CountdownClockInterval = 0.0;
-        // inform simulation algorithm that the countdown clock has ticked
+        // inform the simulation algorithm that countdown clock AperiodicClock is about to tick
         inst->callbackClockUpdate(inst->instanceEnvironment);
     }
+
     fmi3Boolean conditionForOutputClockMet = (inst->AIn2 > 42.0);
     if (conditionForOutputClockMet) {
-        // outputClock ticks
+        // OutputClock ticks
         inst->OutputClockTicked = fmi3ClockActive;
-        // inform simulation algorithm that output clock has ticked
+        // inform the simulation algorithm that OutputClock has ticked
         inst->callbackClockUpdate(inst->instanceEnvironment);
     }
     inst->AOut = inst->AIn1 + inst->AIn2;
 }
 /* end::SE_fmu_activateMP10ms[] */
 
-/* tag::SE_fmu_activateMP[] */
-fmi3Status fmi3ActivateModelPartition(fmi3Instance instance, fmi3ValueReference clockReference,
-    fmi3Float64 activationTime) {
+/* tag::SE_fmu_activateMPAperiodic[] */
+void activateModelPartitionAperiodic(fmi3Instance instance, fmi3Float64 activationTime) {
+    ModelInstance* inst = (ModelInstance*)instance;
+    inst->CountdownClockQualifier = fmi3IntervalNotYetKnown;
+    // ...
+}
+/* end::SE_fmu_activateMPAperiodic[] */
 
+/* tag::SE_fmu_activateMP[] */
+fmi3Status fmi3ActivateModelPartition(fmi3Instance instance,
+                                      fmi3ValueReference clockReference,
+                                      fmi3Float64 activationTime) {
     switch (clockReference) {
     case 5:    // Input clock 10msClock
         activateModelPartition10ms(instance, activationTime);
@@ -164,20 +172,32 @@ fmi3Status fmi3ActivateModelPartition(fmi3Instance instance, fmi3ValueReference 
 /* end::SE_fmu_activateMP[] */
 
 /* tag::SE_fmu_getIntervalDecimal[] */
-fmi3Status fmi3GetIntervalDecimal(fmi3Instance instance, const fmi3ValueReference valueReferences[],
-    size_t nValueReferences, fmi3Float64 interval[], fmi3IntervalQualifier qualifier[], size_t nValues) {
+fmi3Status fmi3GetIntervalDecimal(fmi3Instance instance,
+                                  const fmi3ValueReference valueReferences[],
+                                  size_t nValueReferences,
+                                  fmi3Float64 interval[],
+                                  fmi3IntervalQualifier qualifier[]) {
     ModelInstance * inst = (ModelInstance *) instance;
 
-    for (int i = 0; i < nValues; i++) {
-        if (valueReferences[i] == 6) {
+    for (int i = 0; i < nValueReferences; i++) {
+        switch (valueReferences[i]) {
+        case 5:    // Input clock 10msClock
+            interval[i] = 0.01;
+            qualifier[i] = fmi3IntervalUnchanged;
+            break;
+        case 6:    // Input clock AperiodicClock
             env->lockPreemption(); // Optional: Preventing preemption is actually not needed here.
             interval[i] = inst->CountdownClockInterval;
             qualifier[i] = inst->CountdownClockQualifier;
-            inst->CountdownClockQualifier = fmi3IntervalUnchanged;
+            if (inst->CountdownClockQualifier == fmi3IntervalChanged) {
+                inst->CountdownClockQualifier = fmi3IntervalUnchanged;
+            }
             env->unlockPreemption();
-        }
-        else {
-            qualifier[i] = fmi3IntervalNotYetKnown;
+            break;
+        case 8:    // Input clock 50msClock
+            interval[i] = 0.05;
+            qualifier[i] = fmi3IntervalUnchanged;
+        // ...
         }
     }
     return fmi3OK;
@@ -185,19 +205,21 @@ fmi3Status fmi3GetIntervalDecimal(fmi3Instance instance, const fmi3ValueReferenc
 /* end::SE_fmu_getIntervalDecimal[] */
 
 /* tag::SE_fmu_getClock[] */
-fmi3Status fmi3GetClock(fmi3Instance instance, const fmi3ValueReference valueReferences[],
-    size_t nValueReferences, fmi3Clock values[], size_t nValues) {
+fmi3Status fmi3GetClock(fmi3Instance instance,
+                        const fmi3ValueReference valueReferences[],
+                        size_t nValueReferences,
+                        fmi3Clock values[]) {
     ModelInstance * inst = (ModelInstance *) instance;
 
-    for (int i = 0; i < nValues; i++) {
-        if (valueReferences[i] == 7) {
+    for (int i = 0; i < nValueReferences; i++) {
+        switch (valueReferences[i]) {
+        case 7:    // OutputClock
             env->lockPreemption(); // Optional: Preventing preemption is actually not needed here.
             values[i] = inst->OutputClockTicked;
             inst->OutputClockTicked = fmi3ClockInactive;
             env->unlockPreemption();
-        }
-        else {
-            values[i] = fmi3ClockInactive;
+            break;
+        // ...
         }
     }
     return fmi3OK;

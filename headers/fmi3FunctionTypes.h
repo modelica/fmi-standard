@@ -284,8 +284,7 @@ typedef fmi3Status fmi3GetBinaryTYPE (fmi3Instance instance,
 typedef fmi3Status fmi3GetClockTYPE  (fmi3Instance instance,
                                       const fmi3ValueReference valueReferences[],
                                       size_t nValueReferences,
-                                      fmi3Clock values[],
-                                      size_t nValues);
+                                      fmi3Clock values[]);
 /* end::GetClock[] */
 
 /* tag::Setters[] */
@@ -372,8 +371,7 @@ typedef fmi3Status fmi3SetBinaryTYPE (fmi3Instance instance,
 typedef fmi3Status fmi3SetClockTYPE  (fmi3Instance instance,
                                       const fmi3ValueReference valueReferences[],
                                       size_t nValueReferences,
-                                      const fmi3Clock values[],
-                                      size_t nValues);
+                                      const fmi3Clock values[]);
 /* end::SetClock[] */
 
 /* Getting Variable Dependency Information */
@@ -467,8 +465,7 @@ typedef fmi3Status fmi3GetIntervalDecimalTYPE(fmi3Instance instance,
                                               const fmi3ValueReference valueReferences[],
                                               size_t nValueReferences,
                                               fmi3Float64 intervals[],
-                                              fmi3IntervalQualifier qualifiers[],
-                                              size_t nIntervals);
+                                              fmi3IntervalQualifier qualifiers[]);
 /* end::GetIntervalDecimal[] */
 
 /* tag::GetIntervalFraction[] */
@@ -477,16 +474,14 @@ typedef fmi3Status fmi3GetIntervalFractionTYPE(fmi3Instance instance,
                                                size_t nValueReferences,
                                                fmi3UInt64 intervalCounters[],
                                                fmi3UInt64 resolutions[],
-                                               fmi3IntervalQualifier qualifiers[],
-                                               size_t nIntervals);
+                                               fmi3IntervalQualifier qualifiers[]);
 /* end::GetIntervalFraction[] */
 
 /* tag::GetShiftDecimal[] */
 typedef fmi3Status fmi3GetShiftDecimalTYPE(fmi3Instance instance,
                                            const fmi3ValueReference valueReferences[],
                                            size_t nValueReferences,
-                                           fmi3Float64 shifts[],
-                                           size_t nShifts);
+                                           fmi3Float64 shifts[]);
 /* end::GetShiftDecimal[] */
 
 /* tag::GetShiftFraction[] */
@@ -494,16 +489,14 @@ typedef fmi3Status fmi3GetShiftFractionTYPE(fmi3Instance instance,
                                             const fmi3ValueReference valueReferences[],
                                             size_t nValueReferences,
                                             fmi3UInt64 shiftCounters[],
-                                            fmi3UInt64 resolutions[],
-                                            size_t nShifts);
+                                            fmi3UInt64 resolutions[]);
 /* end::GetShiftFraction[] */
 
 /* tag::SetIntervalDecimal[] */
 typedef fmi3Status fmi3SetIntervalDecimalTYPE(fmi3Instance instance,
                                               const fmi3ValueReference valueReferences[],
                                               size_t nValueReferences,
-                                              const fmi3Float64 intervals[],
-                                              size_t nIntervals);
+                                              const fmi3Float64 intervals[]);
 /* end::SetIntervalDecimal[] */
 
 /* tag::SetIntervalFraction[] */
@@ -511,8 +504,7 @@ typedef fmi3Status fmi3SetIntervalFractionTYPE(fmi3Instance instance,
                                                const fmi3ValueReference valueReferences[],
                                                size_t nValueReferences,
                                                const fmi3UInt64 intervalCounters[],
-                                               const fmi3UInt64 resolutions[],
-                                               size_t nIntervals);
+                                               const fmi3UInt64 resolutions[]);
 /* end::SetIntervalFraction[] */
 
 /* tag::EvaluateDiscreteStates[] */
