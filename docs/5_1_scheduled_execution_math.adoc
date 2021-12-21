@@ -2,20 +2,9 @@
 
 ==== Preemption Support [[preemption-support]]
 
-For real-time applications the simulation time equals the real wall clock time, thus each <<fmi3ActivateModelPartition>> computation step has to be finished in real-time within its current period time length (computation time is not only defined by the runtime of <<fmi3ActivateModelPartition>> but also by the time for setting and getting variables and related operations).
-Usually a preemptive scheduling of the <<fmi3ActivateModelPartition>>, <<get-and-set-variable-values,`fmi3Get{VariableType}`>>, <<get-and-set-variable-values,`fmi3Set{VariableType}`>> calls is required to respect this constraint.
-
-The FMU's code has to be prepared for being able to correctly handle preemptive calls of <<fmi3ActivateModelPartition>>, <<get-and-set-variable-values,`fmi3Get{VariableType}`>>, <<get-and-set-variable-values,`fmi3Set{VariableType}`>>, <<fmi3GetClock>> and <<fmi3GetIntervalDecimal>>.
-In general for Scheduled Execution this requires a secured internal and external access to global states and variable values to ensure the correct handling of the preemption of model partition computations.
-_[For <<get-and-set-variable-values,`fmi3Get{VariableType}`>>, <<get-and-set-variable-values,`fmi3Set{VariableType}`>> in particular a unique assignment of the respective variables to model partitions via its associated <<Clock>> is strongly recommended.]_
-It is also required that the FMU reports the active state of an <<outputClock>> only with the first call of <<fmi3GetClock>> for a specific activation of this <<Clock>> and sets the reported activation state immediately back to `false` for the following <<fmi3GetClock>> calls for that <<Clock>> until this <<outputClock>> is internally activated again.
-Similarly for <<countdown>> Clocks a call to <<fmi3GetIntervalDecimal>> has to ensure that the Clock's interval qualifier is reset to <<fmi3IntervalUnchanged>>.
-
-If a preemptive multitasking regime is intended, an individual task (or thread -- task and thread are used synonymously here) for each model partition (associated to an <<inputClock>>) has to be created.
-The task for computing each <<fmi3ActivateModelPartition>> is created and controlled by the simulation algorithm, not by the FMU.
-So the FMU exporting tool does not need to take care for that (except for preparing its code to support preemption).
-
-_[If only one single model partition is available via the interface of an FMU, preemptive calls of the related <<fmi3ActivateModelPartition>> function are possible by default since there are no external cross dependencies within one model partition between communication points.]_
+In Scheduled Execution the importer has to ensure that model partitions are scheduled according to their priorities (refer to <<scheduled-execution>>).
+If a model partition of lower <<priority>> is executed when a model partition of higher priority is activated the scheduler must ensure that the execution of the latter one is not delayed and causing violations of timing constraints.
+_[On a real-time simulator a violation of a timing constraint usually results in an overrun exception i.e. a model partition is supposed to be executed when an instance of the same model partition has not yet finished its execution.]_
 
 Preemption support means that the scheduler can immediately interrupt the current execution of a model partition in order to execute a model partition of higher priority.
 The computation of the interrupted model partition is proceeded afterwards.
