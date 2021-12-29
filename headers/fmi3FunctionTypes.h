@@ -384,7 +384,7 @@ typedef fmi3Status fmi3GetNumberOfVariableDependenciesTYPE(fmi3Instance instance
 /* tag::GetVariableDependencies[] */
 typedef fmi3Status fmi3GetVariableDependenciesTYPE(fmi3Instance instance,
                                                    fmi3ValueReference dependent,
-                                                   size_t elementIndicesOfDependents[],
+                                                   size_t elementIndicesOfDependent[],
                                                    fmi3ValueReference independents[],
                                                    size_t elementIndicesOfIndependents[],
                                                    fmi3DependencyKind dependencyKinds[],
@@ -513,7 +513,7 @@ typedef fmi3Status fmi3EvaluateDiscreteStatesTYPE(fmi3Instance instance);
 
 /* tag::UpdateDiscreteStates[] */
 typedef fmi3Status fmi3UpdateDiscreteStatesTYPE(fmi3Instance instance,
-                                                fmi3Boolean* needsDiscreteStatesUpdate,
+                                                fmi3Boolean* discreteStatesNeedUpdate,
                                                 fmi3Boolean* terminateSimulation,
                                                 fmi3Boolean* nominalsOfContinuousStatesChanged,
                                                 fmi3Boolean* valuesOfContinuousStatesChanged,
@@ -606,7 +606,7 @@ typedef fmi3Status fmi3DoStepTYPE(fmi3Instance instance,
                                   fmi3Float64 currentCommunicationPoint,
                                   fmi3Float64 communicationStepSize,
                                   fmi3Boolean noSetFMUStatePriorToCurrentPoint,
-                                  fmi3Boolean* needsEventHandling,
+                                  fmi3Boolean* eventHandlingNeeded,
                                   fmi3Boolean* terminateSimulation,
                                   fmi3Boolean* earlyReturn,
                                   fmi3Float64* lastSuccessfulTime);
