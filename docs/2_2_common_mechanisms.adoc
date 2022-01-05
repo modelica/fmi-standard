@@ -9,7 +9,7 @@ _[For example, if the functions of one instance of an FMU are accessed from more
 the multi-threaded simulation environment that uses the FMU must guarantee that there are no race conditions while invoking the FMI functions.
 The FMU itself does not implement any services to support this.]_
 
-* FMI callback functions are not allowed to call back into the FMU (<<logMessage,`fmi3CallbackLogMessage`>>, <<preemption-support,`fmi3CallbackLockPreemption`>>, <<preemption-support,`fmi3CallbackUnlockPreemption`>>), except <<intermediateUpdate,`fmi3CallbackIntermediateUpdate`>> and <<fmi3CallbackClockUpdate>> which lead to the well-defined states <<IntermediateUpdateMode>> and <<ClockUpdateMode>>, respectively, defining which function calls back into the FMU are allowed.
+* FMI callback functions are not allowed to call back into the FMU (<<logMessage,`fmi3LogMessageCallback`>>, <<preemption-support,`fmi3LockPreemptionCallback`>>, <<preemption-support,`fmi3UnlockPreemptionCallback`>>), except <<intermediateUpdate,`fmi3IntermediateUpdateCallback`>> and <<fmi3ClockUpdateCallback>> which lead to the well-defined states <<IntermediateUpdateMode>> and <<ClockUpdateMode>>, respectively, defining which function calls back into the FMU are allowed.
 
 * FMI functions must not change global settings which affect other processes/threads.
 An FMI function may change settings of the thread in which it is called (such as floating point control registers), provided these changes are restored before leaving the function or before a callback function is called. +
@@ -270,7 +270,7 @@ In Co-Simulation, time advances in (possibly variable) steps negotiated between 
 The importer calls <<fmi3DoStep>> with the <<currentCommunicationPoint>> and a target <<communicationStepSize>> (required to be larger than 0.0).
 During this <<fmi3DoStep>>, both importer and FMU might encounter events (or other situations) that require reduction of the <<communicationStepSize>> (potentially even down to 0.0).
 The FMU may use the return argument <<earlyReturn>> of the <<fmi3DoStep>> function to tell the importer that the FMU returned earlier.
-The importer may use the return argument <<earlyReturnRequested>> of the callback <<fmi3CallbackIntermediateUpdate>> to signal the FMU to return early from the current <<fmi3DoStep>>.
+The importer may use the return argument <<earlyReturnRequested>> of the callback <<fmi3IntermediateUpdateCallback>> to signal the FMU to return early from the current <<fmi3DoStep>>.
 The output argument <<lastSuccessfulTime>> of <<fmi3DoStep>> allows the FMU to signal the importer its current internal time.
 
 In Scheduled Execution just like in Model Exchange, time is under the sole control of the importer i.e. its scheduler.
@@ -659,7 +659,7 @@ h|<<intervalVariability>>
 |<<fmi3SetClock>> in <<EventMode>>,
 <<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
 <<fmi3GetInterval>> in <<InitializationMode>>, in every <<EventMode>> and in every <<ClockUpdateMode>>.
-In Scheduled Execution the FMU has to inform the importer by calling <<fmi3CallbackClockUpdate>> that the Clock is about to tick
+In Scheduled Execution the FMU has to inform the importer by calling <<fmi3ClockUpdateCallback>> that the Clock is about to tick
 |time-delayed actions after an event, for example, ignition signal some time after specific crank shaft angle
 
 2.2+|[[triggered,`triggered`]]triggered
@@ -865,7 +865,7 @@ To retrieve this information the importer calls <<fmi3GetInterval>> on the Clock
 The FMU may request to schedule another model partition even while currently a model partition is being executed.
 
 A new interval for a <<countdown>> Clock can be provided at any time during the execution of any model partition.
-The FMU signals that a <<countdown>> Clock is about to tick by calling <<fmi3CallbackClockUpdate>>.
+The FMU signals that a <<countdown>> Clock is about to tick by calling <<fmi3ClockUpdateCallback>>.
 The importer calls <<fmi3GetInterval>> for all <<countdown>> Clocks.
 If a new interval latexmath:[\mathbf{T}_{interval, i}] is provided, i.e. return argument <<qualifiers>> == <<fmi3IntervalChanged>>, the importer initiates the scheduling of the associated model partitions regarding the delay of the returned interval.
 

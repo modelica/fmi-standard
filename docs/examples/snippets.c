@@ -24,8 +24,8 @@ typedef struct {
 
 typedef struct {
 
-    fmi3CallbackLockPreemption lockPreemption;
-    fmi3CallbackUnlockPreemption unlockPreemption;
+    fmi3LockPreemptionCallback lockPreemption;
+    fmi3UnlockPreemptionCallback unlockPreemption;
 
 } Environment;
 
@@ -48,9 +48,9 @@ fmi3Status fmi3SetFloat64(fmi3Instance instance,
 
 typedef struct {
 
-    fmi3CallbackClockUpdate callbackClockUpdate;
-    fmi3CallbackLockPreemption lockPreemption;
-    fmi3CallbackUnlockPreemption unlockPreemption;
+    fmi3ClockUpdateCallback callbackClockUpdate;
+    fmi3LockPreemptionCallback lockPreemption;
+    fmi3UnlockPreemptionCallback unlockPreemption;
 
     void* instanceEnvironment;
 
