@@ -40,7 +40,7 @@ a|
 |<<fmi3DoStep>>
 
 |latexmath:[(\mathbf{v}_{u-k}, \mathbf{t}_u) := \mathbf{f}_{\mathit{inter}}({}^{\bullet}\mathbf{x}_d, \mathbf{u}_{c+d}, {}^{\bullet}\mathbf{u}_{c,u}, \mathbf{p}, {}^{\bullet}\mathbf{b}, \mathbf{t}_i, \mathbf{h}_i)]
-|<<fmi3CallbackIntermediateUpdate>>
+|<<fmi3IntermediateUpdateCallback>>
 
 |Activate event equations latexmath:[\mathbf{f}_{\mathit{event}}].
 |<<fmi3EnterEventModeCS>>
@@ -113,7 +113,7 @@ _[This is different from <<earlyReturn>> which only indicates that the <<fmi3DoS
 The time reached is specified in <<lastSuccessfulTime>>.
 Reasons for <<earlyReturn, `earlyReturn == fmi3True`>> are
 ** expressed by the return arguments <<eventHandlingNeeded>> or <<terminateSimulationDS>> of <<fmi3DoStep>>, or
-** the FMU's reaction to the importers request for <<earlyReturn>> by the return argument <<earlyReturnRequested, `earlyReturnRequested == fmi3True`>> of <<fmi3CallbackIntermediateUpdate>>, or
+** the FMU's reaction to the importers request for <<earlyReturn>> by the return argument <<earlyReturnRequested, `earlyReturnRequested == fmi3True`>> of <<fmi3IntermediateUpdateCallback>>, or
 ** the FMU's request for a communication point at <<lastSuccessfulTime>> for any other reason.
 
 * [[lastSuccessfulTime,`lastSuccessfulTime`]] `lastSuccessfulTime` represents the internal time latexmath:[\mathbf{t}_\mathit{i+1}] of the FMU when <<fmi3DoStep>> returns, for any value of <<earlyReturn>>.
@@ -124,8 +124,8 @@ _[Examples:_
 _<<fixedInternalStepSize>> was introduced to reduce these effects._
 ** _A variable-step integrator with minimal step size is not able to land exactly at_ latexmath:[\mathbf{t}_\mathit{i+1}]_.]_
 
-Function <<fmi3CallbackIntermediateUpdate>>::
-<<fmi3CallbackIntermediateUpdate>> switches the FMU itself into the <<IntermediateUpdateMode>>.
+Function <<fmi3IntermediateUpdateCallback>>::
+<<fmi3IntermediateUpdateCallback>> switches the FMU itself into the <<IntermediateUpdateMode>>.
 
 [[fmi3EnterEventModeCS,`fmi3EnterEventMode`]]
 Function <<fmi3EnterEventMode>>::
@@ -144,7 +144,7 @@ _[The following use cases are enabled:_
 * _<<IntermediateUpdateMode>> enables the same input approximation that was possible in FMI 2.0 with `fmi2SetInputDerivatives`, by evaluation of the approximation polynomial by the importer and not within the FMU as in FMI 2.0_
 * _The Co-Simulation algorithm can request an <<early-return,early return>> from <<fmi3DoStep>>, because of an event between communication points (see <<early-return>>)._
 
-_Note that the call to <<fmi3CallbackIntermediateUpdate>> and thus entering the <<IntermediateUpdateMode>> can only be triggered by the FMU itself._
+_Note that the call to <<fmi3IntermediateUpdateCallback>> and thus entering the <<IntermediateUpdateMode>> can only be triggered by the FMU itself._
 _The importer cannot actively trigger this and hence for some use cases (e.g. cooperative multitasking and setting of intermediate input values) it relies on the callbacks from the FMUs to be able to realize these use cases properly.]_
 
 A Co-Simulation FMU can provide values for its <<output>> variables at intermediate points between two consecutive communication points, and is able to receive new values for <<input>> variables at these intermediate points.
@@ -172,11 +172,11 @@ It distinguishes the level of trust that can be placed in the tentative outputs 
 image::images/intermediateupdate.svg[width=65%, align="center"]
 
 The FMU signals the support of <<IntermediateUpdateMode>> via the capability flag <<providesIntermediateUpdate>>.
-The co-simulation algorithm signals the support for <<IntermediateUpdateMode>> by providing a non-NULL callback-function pointer for <<fmi3CallbackIntermediateUpdate, `intermediateUpdate`>>.
+The co-simulation algorithm signals the support for <<IntermediateUpdateMode>> by providing a non-NULL callback-function pointer for <<fmi3IntermediateUpdateCallback, `intermediateUpdate`>>.
 
-The FMU enters <<IntermediateUpdateMode>> by calling <<fmi3CallbackIntermediateUpdate>> within <<StepMode>> and leaves the state towards <<StepMode>> when the function returns.
+The FMU enters <<IntermediateUpdateMode>> by calling <<fmi3IntermediateUpdateCallback>> within <<StepMode>> and leaves the state towards <<StepMode>> when the function returns.
 
-[[fmi3CallbackIntermediateUpdate,`fmi3CallbackIntermediateUpdate`]]
+[[fmi3IntermediateUpdateCallback,`fmi3IntermediateUpdateCallback`]]
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tag=CallbackIntermediateUpdate]
@@ -187,7 +187,7 @@ include::../headers/fmi3FunctionTypes.h[tag=CallbackIntermediateUpdate]
 If an event happens or an <<outputClock>> ticks, <<intermediateUpdateTime>> is the time of event or <<outputClock>> tick.
 In Co-Simulation, <<intermediateUpdateTime>> is restricted by the arguments to <<fmi3DoStep>> as follows: +
 <<currentCommunicationPoint>> latexmath:[\leq] <<intermediateUpdateTime>> latexmath:[\leq] (<<currentCommunicationPoint>> + <<communicationStepSize>>). +
-The FMU must not call the callback function <<fmi3CallbackIntermediateUpdate>> with an <<intermediateUpdateTime>> that is smaller than the <<intermediateUpdateTime>> given in a previous call of <<fmi3CallbackIntermediateUpdate>> with `intermediateStepFinished == fmi3True`. +
+The FMU must not call the callback function <<fmi3IntermediateUpdateCallback>> with an <<intermediateUpdateTime>> that is smaller than the <<intermediateUpdateTime>> given in a previous call of <<fmi3IntermediateUpdateCallback>> with `intermediateStepFinished == fmi3True`. +
 
 [[intermediateVariableSetRequested,`intermediateVariableSetRequested`]]
 * If <<intermediateVariableSetRequested,`intermediateVariableSetRequested == fmi3True`>>, the co-simulation algorithm may provide intermediate values for continuous <<input>> variables with <<intermediateUpdate,`intermediateUpdate = true`>> by calling <<get-and-set-variable-values,`fmi3Set{VariableType}`>>.

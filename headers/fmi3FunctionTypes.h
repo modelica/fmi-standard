@@ -79,19 +79,19 @@ typedef enum {
 /* end::IntervalQualifier[] */
 
 /* tag::CallbackLogMessage[] */
-typedef void  (*fmi3CallbackLogMessage) (fmi3InstanceEnvironment instanceEnvironment,
+typedef void  (*fmi3LogMessageCallback) (fmi3InstanceEnvironment instanceEnvironment,
                                          fmi3Status status,
                                          fmi3String category,
                                          fmi3String message);
 /* end::CallbackLogMessage[] */
 
 /* tag::CallbackClockUpdate[] */
-typedef void (*fmi3CallbackClockUpdate) (
+typedef void (*fmi3ClockUpdateCallback) (
     fmi3InstanceEnvironment  instanceEnvironment);
 /* end::CallbackClockUpdate[] */
 
 /* tag::CallbackIntermediateUpdate[] */
-typedef void (*fmi3CallbackIntermediateUpdate) (
+typedef void (*fmi3IntermediateUpdateCallback) (
     fmi3InstanceEnvironment instanceEnvironment,
     fmi3Float64  intermediateUpdateTime,
     fmi3Boolean  intermediateVariableSetRequested,
@@ -103,8 +103,8 @@ typedef void (*fmi3CallbackIntermediateUpdate) (
 /* end::CallbackIntermediateUpdate[] */
 
 /* tag::CallbackPreemptionLock[] */
-typedef void (*fmi3CallbackLockPreemption)   ();
-typedef void (*fmi3CallbackUnlockPreemption) ();
+typedef void (*fmi3LockPreemptionCallback)   ();
+typedef void (*fmi3UnlockPreemptionCallback) ();
 /* end::CallbackPreemptionLock[] */
 
 /* Define fmi3 function pointer types to simplify dynamic loading */
@@ -134,7 +134,7 @@ typedef fmi3Instance fmi3InstantiateModelExchangeTYPE(
     fmi3Boolean                visible,
     fmi3Boolean                loggingOn,
     fmi3InstanceEnvironment    instanceEnvironment,
-    fmi3CallbackLogMessage     logMessage);
+    fmi3LogMessageCallback     logMessage);
 
 typedef fmi3Instance fmi3InstantiateCoSimulationTYPE(
     fmi3String                     instanceName,
@@ -147,8 +147,8 @@ typedef fmi3Instance fmi3InstantiateCoSimulationTYPE(
     const fmi3ValueReference       requiredIntermediateVariables[],
     size_t                         nRequiredIntermediateVariables,
     fmi3InstanceEnvironment        instanceEnvironment,
-    fmi3CallbackLogMessage         logMessage,
-    fmi3CallbackIntermediateUpdate intermediateUpdate);
+    fmi3LogMessageCallback         logMessage,
+    fmi3IntermediateUpdateCallback intermediateUpdate);
 
 typedef fmi3Instance fmi3InstantiateScheduledExecutionTYPE(
     fmi3String                     instanceName,
@@ -157,10 +157,10 @@ typedef fmi3Instance fmi3InstantiateScheduledExecutionTYPE(
     fmi3Boolean                    visible,
     fmi3Boolean                    loggingOn,
     fmi3InstanceEnvironment        instanceEnvironment,
-    fmi3CallbackLogMessage         logMessage,
-    fmi3CallbackClockUpdate        clockUpdate,
-    fmi3CallbackLockPreemption     lockPreemption,
-    fmi3CallbackUnlockPreemption   unlockPreemption);
+    fmi3LogMessageCallback         logMessage,
+    fmi3ClockUpdateCallback        clockUpdate,
+    fmi3LockPreemptionCallback     lockPreemption,
+    fmi3UnlockPreemptionCallback   unlockPreemption);
 /* end::Instantiate[] */
 
 /* tag::FreeInstance[] */
