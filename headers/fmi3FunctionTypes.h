@@ -4,7 +4,7 @@
 #include "fmi3PlatformTypes.h"
 
 /*
-This header file defines the data and function types of FMI 3.0-beta.2.
+This header file defines the data and function types of FMI 3.0-beta.3.
 It must be used when compiling an FMU or an FMI importer.
 
 Copyright (C) 2011 MODELISAR consortium,
@@ -406,13 +406,13 @@ typedef fmi3Status fmi3FreeFMUStateTYPE(fmi3Instance instance, fmi3FMUState* FMU
 
 /* tag::SerializedFMUStateSize[] */
 typedef fmi3Status fmi3SerializedFMUStateSizeTYPE(fmi3Instance instance,
-                                                  fmi3FMUState  FMUState,
+                                                  fmi3FMUState FMUState,
                                                   size_t* size);
 /* end::SerializedFMUStateSize[] */
 
 /* tag::SerializeFMUState[] */
 typedef fmi3Status fmi3SerializeFMUStateTYPE     (fmi3Instance instance,
-                                                  fmi3FMUState  FMUState,
+                                                  fmi3FMUState FMUState,
                                                   fmi3Byte serializedState[],
                                                   size_t size);
 /* end::SerializeFMUState[] */
@@ -449,9 +449,8 @@ typedef fmi3Status fmi3GetAdjointDerivativeTYPE(fmi3Instance instance,
                                                 size_t nSensitivity);
 /* end::GetAdjointDerivative[] */
 
-
-
 /* Entering and exiting the Configuration or Reconfiguration Mode */
+
 /* tag::EnterConfigurationMode[] */
 typedef fmi3Status fmi3EnterConfigurationModeTYPE(fmi3Instance instance);
 /* end::EnterConfigurationMode[] */
