@@ -60,7 +60,9 @@ typedef        uint32_t fmi3ValueReference;       /* Handle to the value of a va
 
 /* tag::VariableTypes[] */
 typedef           float fmi3Float32;  /* Single precision floating point (32-bit) */
+/* tag::fmi3Float64[] */
 typedef          double fmi3Float64;  /* Double precision floating point (64-bit) */
+/* end::fmi3Float64[] */
 typedef          int8_t fmi3Int8;     /* 8-bit signed integer */
 typedef         uint8_t fmi3UInt8;    /* 8-bit unsigned integer */
 typedef         int16_t fmi3Int16;    /* 16-bit signed integer */
