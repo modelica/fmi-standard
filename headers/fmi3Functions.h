@@ -294,7 +294,9 @@ FMI3_Export fmi3EnterContinuousTimeModeTYPE fmi3EnterContinuousTimeMode;
 FMI3_Export fmi3CompletedIntegratorStepTYPE fmi3CompletedIntegratorStep;
 
 /* Providing independent variables and re-initialization of caching */
+/* tag::SetTimeTYPE[] */
 FMI3_Export fmi3SetTimeTYPE             fmi3SetTime;
+/* end::SetTimeTYPE[] */
 FMI3_Export fmi3SetContinuousStatesTYPE fmi3SetContinuousStates;
 
 /* Evaluation of the model equations */

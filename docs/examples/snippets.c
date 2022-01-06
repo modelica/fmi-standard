@@ -2,12 +2,9 @@
 
 #include "fmi3Functions.h"
 
-// tag::ModelStruct1[]
 typedef struct {
-
     fmi3Instance instance;
     fmi3GetFloat64TYPE* fmi3GetFloat64;
-// end::ModelStruct1[]
     fmi3SetFloat64TYPE* fmi3SetFloat64;
     fmi3EnterEventModeTYPE* fmi3EnterEventMode;
     fmi3UpdateDiscreteStatesTYPE* fmi3UpdateDiscreteStates;
@@ -18,9 +15,7 @@ typedef struct {
     fmi3GetClockTYPE* fmi3GetClock;
     fmi3SetClockTYPE* fmi3SetClock;
     bool discreteStatesNeedUpdate;
-// tag::ModelStruct2[]
 } FMU;
-// end::ModelStruct2[]
 
 typedef struct {
 
