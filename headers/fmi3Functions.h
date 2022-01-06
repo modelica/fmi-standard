@@ -310,10 +310,15 @@ Functions for Co-Simulation
 ****************************************************/
 
 /* Simulating the FMU */
-FMI3_Export fmi3EnterStepModeTYPE          fmi3EnterStepMode;
-FMI3_Export fmi3GetOutputDerivativesTYPE   fmi3GetOutputDerivatives;
+FMI3_Export fmi3EnterStepModeTYPE        fmi3EnterStepMode;
+FMI3_Export fmi3GetOutputDerivativesTYPE fmi3GetOutputDerivatives;
+FMI3_Export fmi3DoStepTYPE               fmi3DoStep;
+
+/***************************************************
+Functions for Scheduled Execution
+****************************************************/
+
 FMI3_Export fmi3ActivateModelPartitionTYPE fmi3ActivateModelPartition;
-FMI3_Export fmi3DoStepTYPE                 fmi3DoStep;
 
 #ifdef __cplusplus
 }  /* end of extern "C" { */

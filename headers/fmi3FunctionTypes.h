@@ -612,6 +612,10 @@ typedef fmi3Status fmi3DoStepTYPE(fmi3Instance instance,
                                   fmi3Float64* lastSuccessfulTime);
 /* end::DoStep[] */
 
+/***************************************************
+Types for Functions for Scheduled Execution
+****************************************************/
+
 /* tag::ActivateModelPartition[] */
 typedef fmi3Status fmi3ActivateModelPartitionTYPE(fmi3Instance instance,
                                                   fmi3ValueReference clockReference,
