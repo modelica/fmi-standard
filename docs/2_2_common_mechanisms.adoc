@@ -1,32 +1,37 @@
 === General Mechanisms [[general-mechanisms]]
 
-This section contains the common interface definitions that allow a C program to invoke the FMU functions.
+==== Requirements for Implementations of the C-API
 
-Note that the following general properties hold for an FMU:
+The following general requirements for implementations of FMUs and importers must be followed:
 
-* FMI functions of one instance do not need to be thread-safe. +
+* FMI functions of one instance are not required to be thread-safe. +
 _[For example, if the functions of one instance of an FMU are accessed from more than one thread;
 the multi-threaded simulation environment that uses the FMU must guarantee that there are no race conditions while invoking the FMI functions.
 The FMU itself does not implement any services to support this.]_
 
-* FMI callback functions are not allowed to call back into the FMU (<<logMessage,`fmi3LogMessageCallback`>>, <<preemption-support,`fmi3LockPreemptionCallback`>>, <<preemption-support,`fmi3UnlockPreemptionCallback`>>), except <<intermediateUpdate,`fmi3IntermediateUpdateCallback`>> and <<fmi3ClockUpdateCallback>> which lead to the well-defined states <<IntermediateUpdateMode>> and <<ClockUpdateMode>>, respectively, defining which function calls back into the FMU are allowed.
+* The following FMI callback functions must not call back into the FMU:
+ ** <<logMessage,`fmi3LogMessageCallback`>>, and
+ ** <<preemption-support,`fmi3LockPreemptionCallback`>>, and
+ ** <<preemption-support,`fmi3UnlockPreemptionCallback`>>).
+
++
+The following callback functions lead to well-defined states and may call FMI functions according to their respective state definitions:
+ ** <<intermediateUpdate,`fmi3IntermediateUpdateCallback`>>, and
+ ** <<fmi3ClockUpdateCallback>>.
 
 * FMI functions must not change global settings which affect other processes/threads.
 An FMI function may change settings of the thread in which it is called (such as floating point control registers), provided these changes are restored before leaving the function or before a callback function is called.
 To prepare the FMU code to run reliably on <<preemption-support, preemptive systems>> FMI functions must not change global settings. +
 _[This property ensures that functions of different FMU instances can be called safely in any order._
 _Additionally, they can be called in parallel provided the functions are called in different processes._
-_If an FMI function changes for example the floating point control word of the CPU, it must restore the previous value before return of the function._
-_For x86 CPUs, the floating point control word is set using the `fldcw` instruction._
-_This can be used to switch on additional exceptions such as floating point division by zero._
-_An FMU might temporarily change the floating point control word and get notified on floating point exceptions internally, but has to restore the flag and clear the floating point status word before return of the respective FMI function.]_
+_If an FMI function changes, for example, the floating point control word of the CPU, it must restore the previous value before return of the function.]_
 
-* In general, FMI function arguments are not allowed to be `NULL`, unless explicitly allowed by the standard document where `NULL` will be assigned a specific semantic. +
+* FMI function arguments must not to be `NULL`, unless explicitly allowed by the standard document where `NULL` will be assigned a specific semantic. +
 _[For an example of `NULL` being explicitly allowed see <<resourcePath>>._
 _Defensive implementations should still guard against `NULL` pointers.]_
 
 * The FMI Standard does not provide a runtime platform or portability layer.
-Access to operating system resources and services, such as memory, network or file system, must be implemented with special care because the availability of such resources and services is not guaranteed on every target platform and/or simulator.
+Access to operating system resources and services, such as memory, network or file system, should be implemented with special care because the availability of such resources and services is not guaranteed on every target platform and/or simulator.
 If some resource is required by the FMU but is not available, the FMU must log what resource failed and return with error.
 
 ==== Header Files and Naming of Functions [[header-files-and-naming-of-functions]]
