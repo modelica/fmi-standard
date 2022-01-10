@@ -2,6 +2,12 @@
 
 #include "fmi3Functions.h"
 
+/* tag::structuralParameterExample[] */
+double A[3][2] = { {0.0, 0.1},
+                   {1.0, 1.1},
+                   {2.0, 2.1}};
+/* end::structuralParameterExample[] */
+
 typedef struct {
     fmi3Instance instance;
     fmi3GetFloat64TYPE* fmi3GetFloat64;
@@ -84,7 +90,7 @@ void activateModelPartition50ms(fmi3Instance* instance, fmi3Float64 activationTi
     inst->BOut = 2.2 * inst->BIn;
 }
 
-/*tag::SE_sa_task10ms[] */
+/* tag::SE_sa_task10ms[] */
 void ExecuteModelPartition10ms() {
     fmi3SetFloat64(fmu, AInputReferences, 2, AInput, 2);
     fmi3ActivateModelPartition(fmu, ClockReference10ms, ActivationTime);
