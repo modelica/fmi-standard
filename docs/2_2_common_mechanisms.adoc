@@ -181,14 +181,15 @@ include::../headers/fmi3PlatformTypes.h[tags=VariableTypes]
 
 ==== Status Returned by Functions [[status-returned-by-functions]]
 
-This section defines the `status` flag (an enumeration of type `fmi3Status` defined in file `fmi3FunctionTypes.h`) that is returned by functions to indicate the success of the function call:
+This section defines the return values the C-API functions indicating success or failure of the function call.
+It is defined in file `fmi3FunctionTypes.h` as an enumeration of type `fmi3Status`:
 
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=Status]
 ----
 
-The status has the following meaning:
+The status values have the following meaning:
 
 [[fmi3OK,`fmi3OK`]]
 `fmi3OK`::
@@ -197,7 +198,7 @@ The output argument values are defined.
 
 [[fmi3Warning,`fmi3Warning`]]
 `fmi3Warning`::
-A non-critical problem was detected, but the computation can continue.
+A non-critical problem was detected, but the computation may continue.
 The output argument values are defined.
 Function <<logMessage>> should be called by the FMU with further information before returning this status, respecting the current logging settings. +
 _[In certain applications, e.g. in a prototyping environment, warnings may be acceptable._
@@ -206,10 +207,10 @@ _For production environments warnings should be treated like errors unless they 
 [[fmi3Discard,`fmi3Discard`]]
 `fmi3Discard`::
 The call was not successful and the FMU is in the same state as before the call.
-The output argument values are not defined, but the computation can continue.
+The output argument values are undefined, but the computation may continue.
 Function <<logMessage>> should be called by the FMU with further information before returning this status, respecting the current logging settings.
-Advanced simulation algorithms can try alternative approaches to drive the simulation by calling the function with different arguments or calling another function.
-Otherwise the simulation algorithm has to treat this return code like <<fmi3Error>> and has to terminate the simulation. +
+Advanced simulation algorithms may try alternative approaches to drive the simulation by calling the function with different arguments or calling another function.
+Otherwise the simulation algorithm must treat this return code like <<fmi3Error>> and must terminate the simulation. +
 _[Examples for usage of <<fmi3Discard>> are_
  * _handling of <<min-max-violations,min/max violation>>, or_
  * _signal numerical problems during model evaluation forcing smaller step sizes.]_
@@ -217,7 +218,7 @@ _[Examples for usage of <<fmi3Discard>> are_
 [[fmi3Error,`fmi3Error`]]
 `fmi3Error`::
 The call failed.
-The output argument values are undefined and the simulation cannot be continued.
+The output argument values are undefined and the simulation must not be continued.
 Function <<logMessage>> should be called by the FMU with further information before returning this status, respecting the current logging settings.
 If a function returns <<fmi3Error>>, it is possible to restore a previously retrieved FMU state by calling <<fmi3SetFMUState>>.
 Otherwise <<fmi3FreeInstance>> or <<fmi3Reset>> must be called.
@@ -230,7 +231,7 @@ _[For example, when setting a constant with a call to <<get-and-set-variable-val
 The state of all instances of the model is irreparably corrupted.
 _[For example, due to a runtime exception such as access violation or integer division by zero during the execution of an FMI function.]_
 Function <<logMessage>> should be called by the FMU with further information before returning this status, respecting the current logging settings, if still possible.
-It is not allowed to call any other function for any instance of the FMU.
+The importer must not call any other function for any instance of the FMU.
 
 ==== Inquire Version Number of Header Files [[inquire-version-number]]
 
@@ -243,35 +244,35 @@ include::../headers/fmi3FunctionTypes.h[tags=GetVersion]
 This function returns `fmi3Version` of the `fmi3Functions.h` header file which was used to compile the functions of the FMU.
 This function call is allowed always and in all interface types.
 
-The standard header file as documented in this specification has version `"3.0"`, so this function returns `"3.0"`.
+The standard header file as documented in this specification has version `3.0`, so this function returns `3.0`.
 
 ==== Advancing Time [[advancing-time]]
 
 This section highlights the differences of the concept of time (in general the independent variable) for the three different FMI types, ME, CS and SE.
-Depending on the instantiated FMI type, the importer is restricted in what functions it is allowed to call in order to drive the simulation.
+The FMI type defines which functions drive the time in the simulation.
 
 In Model Exchange, time is under the sole control of the <<importer>> and its integration algorithm.
 The model itself receives the current time to be used in its computation with <<fmi3SetTime>>.
-In fact, time is not necessarily always advancing as solvers might need to jump back and forth in time to localize events using zero-crossings of <<eventIndicator, event indicators>>.
+Time is not necessarily always advancing as solvers might need to jump back and forth in time, for example, to localize events using <<eventIndicator, event indicators>>.
 
 In Co-Simulation, time advances in (possibly variable) steps negotiated between the co-simulation algorithm of the importer and the FMU.
 The importer calls <<fmi3DoStep>> with the <<currentCommunicationPoint>> and a target <<communicationStepSize>> (required to be larger than 0.0).
 During this <<fmi3DoStep>>, both importer and FMU might encounter events (or other situations) that require reduction of the <<communicationStepSize>> (potentially even down to 0.0).
-The FMU may use the return argument <<earlyReturn>> of the <<fmi3DoStep>> function to tell the importer that the FMU returned earlier.
+The FMU may use the return argument <<earlyReturn>> of the <<fmi3DoStep>> function to tell the importer that the FMU returned earlier than requested.
 The importer may use the return argument <<earlyReturnRequested>> of the callback <<fmi3IntermediateUpdateCallback>> to signal the FMU to return early from the current <<fmi3DoStep>>.
 The output argument <<lastSuccessfulTime>> of <<fmi3DoStep>> allows the FMU to signal the importer its current internal time.
 
-In Scheduled Execution just like in Model Exchange, time is under the sole control of the importer i.e. its scheduler.
+In Scheduled Execution, just like in Model Exchange, time is under the sole control of the importer i.e. its scheduler.
 By scheduling the exposed <<model-partition, model partitions>> of an FMU and executing them for dedicated points in time it is the scheduler that defines how time progresses.
-For FMUs these points in time are <<event,events>> defined by time-based or triggered <<Clock,Clocks>> for all exposed model partitions of a set of FMUs, or clock ticks signaled by the FMUs.
+These points in time are <<event,events>> defined by time-based or triggered <<Clock,Clocks>>.
 The time itself is communicated to the FMU as <<activationTime>> argument of <<fmi3ActivateModelPartition>>.
 
 _[Examples for Scheduled Execution:_
 
-* _A simple scheduler calls the model partitions of periods 5ms and 10ms of an FMU in a loop._
+* _A simple scheduler calls the model partitions of periods 5 ms and 10 ms of an FMU in a loop._
 _The latter one is activated only every second loop iteration._
-_Thus the time of the simulation advances discretely by 5ms in every step of the loop._
-* _On a real-time simulator the scheduler activates the model partitions of the same example whenever the wall clock's time has progressed for 5ms or 10ms respectively.]_
+_Thus the time of the simulation advances discretely by 5 ms in every step of the loop._
+* _A scheduler of a real-time simulator activates the model partitions whenever wall-clock time has progressed for 5 ms or 10 ms.]_
 
 ==== Variables [[fmu-variables]]
 
@@ -470,7 +471,7 @@ include::../headers/fmi3FunctionTypes.h[tags=SerializedFMUStateSize]
 ----
 
 This function returns the `size` of the byte vector, in order that <<FMUState>> can be stored in it.
-With this information, the environment has to allocate an `fmi3Byte` vector of the required length `size`.
+With this information, the environment must allocate an `fmi3Byte` vector of the required length `size`.
 
 [[fmi3SerializeFMUState,`fmi3SerializeFMUState`]]
 Function `fmi3SerializeFMUState`::
@@ -511,7 +512,7 @@ In an FMU, every output argument can be computed by its specific get function.
 Additionally, the output argument need not be a function of all input arguments, but of only a subset from it, as defined in the <<modelDescription.xml>> under `<ModelStructure>`.
 
 _[The functions above have the slight drawback that values must always be copied._
-_For example, a call to_ <<fmi3SetContinuousStates>> _will provide the actual states in a vector, and this function has to copy the values in to the internal model data structure so that subsequent evaluation calls can utilize these values._
+_For example, a call to_ <<fmi3SetContinuousStates>> _will provide the actual states in a vector, and this function must copy the values in to the internal model data structure so that subsequent evaluation calls can utilize these values._
 _If this turns out to be an efficiency issue, a future release of FMI might provide additional functions to provide the address of a memory area where the variable values are present.]_
 
 ==== Algebraic Loops [[algebraic-loops]]
@@ -649,7 +650,7 @@ h|<<intervalVariability>>
 |<<fmi3SetClock>> in <<EventMode>>,
 <<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
 <<fmi3GetInterval>> in <<InitializationMode>>, in every <<EventMode>> and in every <<ClockUpdateMode>>.
-In Scheduled Execution the FMU has to inform the importer by calling <<fmi3ClockUpdateCallback>> that the Clock is about to tick
+In Scheduled Execution the FMU must inform the importer by calling <<fmi3ClockUpdateCallback>> that the Clock is about to tick
 |time-delayed actions after an event, for example, ignition signal some time after specific crank shaft angle
 
 2.2+|[[triggered,`triggered`]]triggered
@@ -850,7 +851,7 @@ A Clock latexmath:[\mathbf{k}] depends on a Clock or variable latexmath:[\mathbf
 
 ===== Scheduled Execution [[scheduled-execution]]
 
-During <<ClockActivationMode>> after <<fmi3ActivateModelPartition>> has been called for a <<calculated>>, <<tunable>> or <<changing>> Clock the FMU provides the information on when the Clock will tick again, i.e. when the corresponding model partition has to be scheduled the next time.
+During <<ClockActivationMode>> after <<fmi3ActivateModelPartition>> has been called for a <<calculated>>, <<tunable>> or <<changing>> Clock the FMU provides the information on when the Clock will tick again, i.e. when the corresponding model partition must be scheduled the next time.
 To retrieve this information the importer calls <<fmi3GetInterval>> on the Clock.
 
 The FMU may request to schedule another model partition even while currently a model partition is being executed.
@@ -944,7 +945,7 @@ with the following meanings:
  * `fmi3IntervalChanged` is returned to indicate that the value for the interval has changed for this <<Clock>>.
  Any previously returned intervals (if any) are overwritten with the current value.
  The new <<Clock>> interval is relative to the time of the current <<EventMode>> or <<ClockUpdateMode>> in contrast to the interval of a periodic <<Clock>>, where the interval is defined as the time between consecutive <<Clock>> ticks.
- In Scheduled Execution this means that the corresponding model partition has to be scheduled or re-scheduled (if a previous call to <<fmi3GetInterval>> returned <<fmi3IntervalChanged>>).
+ In Scheduled Execution this means that the corresponding model partition must be scheduled or re-scheduled (if a previous call to <<fmi3GetInterval>> returned <<fmi3IntervalChanged>>).
 
 [[fmi3IntervalUnchanged,`fmi3IntervalUnchanged`]]
   * `fmi3IntervalUnchanged` is returned if a previous call to <<fmi3GetInterval>> already returned a value qualified with <<fmi3IntervalChanged>> which has not changed since.
@@ -971,7 +972,7 @@ include::../headers/fmi3FunctionTypes.h[tag=GetIntervalFraction]
 * `qualifiers` is an array of size `nValueReferences` to retrieve the Clock <<qualifiers>>.
 
 [[shifts, `shifts`]]
-For <<table-overview-clocks,some Clocks>>, the importer has to query the delay to the first Clock tick from the FMU using the following functions[[fmi3GetShift,`fmi3GetShift`]]:
+For <<table-overview-clocks,some Clocks>>, the importer must query the delay to the first Clock tick from the FMU using the following functions[[fmi3GetShift,`fmi3GetShift`]]:
 
 [[fmi3GetShiftDecimal,`fmi3GetShiftDecimal`]]
 [source, C]
