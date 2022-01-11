@@ -332,15 +332,15 @@ All elements of the array, including structural zeros, are serialized.
 
 ===== Getting and Setting Variable Values [[get-and-set-variable-values]]
 
-Restrictions for setting and getting of variables with certain types, causalities and variabilities are described in the state machine and state descriptions (see <<common-state-machine>>, <<state-machine-model-exchange>> in case of Model Exchange, <<state-machine-co-simulation>> for Co-Simulation and <<state-machine-scheduled-execution>> for Scheduled Execution).
-In addition to those state-specific restrictions, setting and getting of <<clocked-variable,clocked variables>> is only allowed during <<EventMode>> when their respective Clocks are active, and during <<InitializationMode>> irrespective of Clock actication status.
+Restrictions for setting and getting of variables with certain types, causalities and variabilities are defined in the state machine and state descriptions (see <<common-state-machine>> for common states, <<state-machine-model-exchange>> for Model Exchange, <<state-machine-co-simulation>> for Co-Simulation, and <<state-machine-scheduled-execution>> for Scheduled Execution).
+In addition to those state-specific restrictions, setting and getting of <<clocked-variable,clocked variables>> is only allowed during <<EventMode>> when their respective Clocks are active, and during <<InitializationMode>> irrespective of Clock activation status.
 
-The value of a variable must be accessed with the respective <<get-and-set-variable-values,`fmi3Get/Set{VariableType}`>> (see also <<VariableType,`{VariableType}`>> and <<VariableTypeExclClock,`{VariableTypeExclClock}`>>) for the <<definition-of-model-variables,type defined>> in the <<modelDescription.xml>>.
+The variable <<definition-of-model-variables,type>> defined in the <<modelDescription.xml>> determines the function <<get-and-set-variable-values,`fmi3Get/Set{VariableType}`>> (see also <<VariableType,`{VariableType}`>> and <<VariableTypeExclClock,`{VariableTypeExclClock}`>>) that must be used for accessing the respective variable values.
 To set or inquire variables of type <<figure-schema-Enumeration,`Enumeration`>>, `fmi3SetInt64` and `fmi3GetInt64` must be used. +
 _[Since C allows negative values for enumerations, signed integers are used._
 _With enums being defined as int in the programming language C and compilers are free to choose any bit-width for int, 64 bit getters and setters are needed to be platform and compiler agnostic.]_
 
-The current values of the variables can be inquired with the following functions:
+The current values of the variables may be inquired with the following functions:
 
 [source, C]
 ----
@@ -349,16 +349,16 @@ include::../headers/fmi3FunctionTypes.h[tags=Getters]
 include::../headers/fmi3FunctionTypes.h[tags=GetClock]
 ----
 
-* `valueReferences` is a vector of `nValueReferences` value handles that define the variables that shall be inquired.
+* `valueReferences` is a vector of `nValueReferences` handles that reference the variables that shall be inquired.
 
 * `values` is a vector with the actual values of these variables.
 
 * `valueSizes` is a vector with the actual sizes of the values for binary variables.
 
 * `nValues` provides the number of values in the `values` vector (and `valueSizes` vector, where applicable) which is only equal to `nValueReferences` if all <<valueReference>>pass:[s] point to scalar variables.
-_[The passing of `nValues` is, strictly speaking, passing redundant information:
+_[The passing of `nValues` is redundant:
 The number of values can be reconstructed from the value references passed in and their corresponding variable definitions and (potentially dynamic) array sizes.
-It is added to ensure memory safety and other sanity checks to be preserved even in the face of potential divergence of array configuration.]_
+It is added to enable memory safety and other sanity checks.]_
 
 The strings returned by `fmi3GetString`, as well as the binary values returned by `fmi3GetBinary`, must be copied by the importer because the allocated memory for these strings might be deallocated or overwritten by the next call of an FMU function.
 
@@ -371,7 +371,7 @@ include::../headers/fmi3FunctionTypes.h[tags=Setters]
 include::../headers/fmi3FunctionTypes.h[tags=SetClock]
 ----
 
-* `valueReferences` is a vector of `nValueReferences` value handles that define the variables that shall be set.
+* `valueReferences` is a vector of `nValueReferences` handles that reference the variables that shall be set.
 
 * `values` is a vector with the actual values of these variables.
 
@@ -382,10 +382,10 @@ include::../headers/fmi3FunctionTypes.h[tags=SetClock]
 With two exceptions, all variables that are allowed to be set with <<get-and-set-variable-values,`fmi3Set{VariableType}`>> keep their respective values until the next call to <<get-and-set-variable-values,`fmi3Set{VariableType}`>>.
 Exceptions:
 
-. Variables of type Clock must be deactivated during <<fmi3UpdateDiscreteStates>> by the FMU.
-. By setting the complete <<get-set-fmu-state,FMU state>> using <<fmi3SetFMUState>>, all variables are potentially changed.
+* Variables of type Clock must be deactivated during <<fmi3UpdateDiscreteStates>> by the FMU.
+* By setting the complete <<get-set-fmu-state,FMU state>> using <<fmi3SetFMUState>>, all variables are potentially changed.
 
-All strings passed as arguments to `fmi3SetString`, as well as all binary values passed as arguments to `fmi3SetBinary`, must be copied during these function calls, because there is no guarantee of the lifetime of strings or binary values, when these functions return.
+All strings passed as arguments to `fmi3SetString`, as well as all binary values passed as arguments to `fmi3SetBinary`, must be copied during these function calls by the FMU, because there is no guarantee of the lifetime of strings or binary values, when these functions return.
 
 _[Note: In Scheduled Execution, Clocks are neither activated nor deactivated by the importer using <<fmi3SetClock>>._
 _Instead: The activation of a clock requires the importer to call <<fmi3ActivateModelPartition>>.]_
@@ -584,8 +584,8 @@ This allows different use cases to be implemented with different semantics.
 
 Clock variables synchronize events between importer and across FMUs, by
 
-. communicating exactly which specific event happens (using <<fmi3SetClock>> in ME and CS or <<fmi3ActivateModelPartition>> in SE) and
-. exactly at which time instant, independent from continuous time specified by the arguments of <<fmi3SetTime>> or <<fmi3DoStep>>.
+* communicating exactly which specific event happens (using <<fmi3SetClock>> in ME and CS or <<fmi3ActivateModelPartition>> in SE) and
+* exactly at which time instant, independent from continuous time specified by the arguments of <<fmi3SetTime>> or <<fmi3DoStep>>.
 
 The first point solves the issue that an FMU must know exactly which event happens during an <<EventMode>> if several events are very close to one another.
 
