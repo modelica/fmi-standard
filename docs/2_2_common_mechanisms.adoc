@@ -393,29 +393,24 @@ _Instead: The activation of a clock requires the importer to call <<fmi3Activate
 ===== Handling min/max Range Violations [[min-max-violations]]
 
 Attributes <<min>> and <<max>> can be defined for variables of float, integer or enumeration types.
-The question is how <<get-and-set-variable-values,`fmi3Set{VariableType}`>>, <<get-and-set-variable-values,`fmi3Get{VariableType}`>> shall utilize this definition.
-There are several conflicting requirements: +
-Avoiding forbidden regions (for example, if `u` is an <<input>> and "sqrt(u)" is computed in the FMU, `min = 0` on `u` shall guarantee that only values of `u` in the allowed regions are provided).
-Numerical algorithms (solvers or optimizers) do not guarantee constraints.
+There are several conflicting requirements on how to utilize these min/max definitions:
+
+* Avoiding forbidden regions, for example, if `u` is an <<input>> and "sqrt(u)" is computed in the FMU, `min = 0` on `u` shall guarantee that only values of `u` in the allowed regions are provided.
+Numerical algorithms, for example, solvers and optimizers, cannot guarantee these limits.
 If a variable is outside of the bounds, the solver tries to bring it back into the bounds.
-As a consequence, calling <<get-and-set-variable-values,`fmi3Get{VariableType}`>> during an iteration of such a solver might return values that are not in the defined min/max region.
-After the iteration is finalized, it is only guaranteed that a value is within its bounds up to a certain numerical precision. +
-During system creation and prototyping, checks on min/max should be performed.
-For maximum performance on production or real-time systems, these checks might not be performed. +
-The approach in FMI is therefore that min/max definitions are an information from the FMU to the environment defining the region in which the FMU is designed to operate.
-In any case, it is expected that the FMU handles variables appropriately where the region definition is critical.
-For example, dividing by an <<input>> (so the <<input>> should not be in a small range of zero) or taking the square root of an <<input>> (so the <<input>> should not be negative) may either result in returning <<fmi3Discard>> or <<fmi3Error>>, or the FMU is able to handle this situation in other ways.
+As a consequence, calling <<get-and-set-variable-values,`fmi3Set{VariableType}`>> during an iteration of such a solver might provide values that are not within defined min/max region.
+After the iteration is finalized, it is only guaranteed that a value is within its bounds up to a certain numerical precision.
 
-If the FMU is generated so that min/max shall be checked whenever meaningful (for example, for debug purposes), then the following strategy should be used:
+* During system creation and prototyping, checks on min/max should be performed.
+For maximum performance or real-time systems, these checks might not be performed.
 
-If <<get-and-set-variable-values,`fmi3Set{VariableType}`>> is called violating the min/max attribute settings of the corresponding variable, the following actions are performed:
+The approach in FMI is therefore that min/max definitions inform the importer about the region in which the FMU is designed to operate.
+However, the FMU should not rely on the min/max range to be properly observed.
+For example, dividing by an <<input>> or taking the square root of an <<input>> may result in returning either <<fmi3Discard>> or <<fmi3Error>>, or the FMU is able to handle this situation gracefully.
 
-* On a <<fixed>> or <<tunable>> <<parameter>> <<fmi3Discard,`fmi3Status == fmi3Discard`>> is returned.
-* On an <<input>>, the FMU decides what to return (If no computation is possible, it could return <<fmi3Discard,`fmi3Status == fmi3Discard`>>, in other situations it may return <<fmi3Warning>> or <<fmi3Error>>, or <<fmi3OK>>, if it is uncritical).
+If an FMU defines min/max values for <<local>> and <<output>> variables of integer and <Enumeration> types, then the FMU must return values within the defined range when <<get-and-set-variable-values,`fmi3Get{VariableType}`>> is called.
 
-If an FMU defines min/max values for integer types and `<Enumeration>` variables (<<local>> and <<output>> variables), then the expected behavior of the FMU is that <<get-and-set-variable-values,`fmi3Get{VariableType}`>> functions return values in the defined range.
-
-If an FMU defines min/max values, then the expected behavior of the FMU is that <<get-and-set-variable-values,`fmi3Get{VariableType}`>> returns values at the solution (accepted steps of the integrators) in the defined range with a certain uncertainty related to the tolerances of the numerical algorithms.]
+If an FMU defines min/max values for <<local>> and <<output>> variables of floating point types, then the FMU may return values in the defined range with a certain uncertainty related to the tolerances of the numerical algorithms and representational limits of IEEE 754.
 
 ===== Getting and Setting the Complete FMU State [[get-set-fmu-state]]
 
