@@ -415,19 +415,19 @@ If an FMU defines min/max values for <<local>> and <<output>> variables of float
 ===== Getting and Setting the Complete FMU State [[get-set-fmu-state]]
 
 --
-The FMU has an internal state consisting of all values that are needed to continue a simulation.
+The FMU has internal data representing its state.
 This internal state consists especially of the values of the continuous states, iteration variables, <<parameter>> values, <<input>> values, delay buffers, file identifiers, and FMU internal status information.
-With the functions of this section, the internal FMU state can be copied and the pointer to this copy is returned to the environment.
-The FMU state copy can be set as actual FMU state, in order to continue the simulation from it.
+Depending on the FMI type, only a subset of this data is directly accessible via the FMI C-API.
+With the functions of this section, the entire internal FMU state can be stored and reapplied to continue the simulation from this state.
 
 _[Examples for using this feature:_
 
-_For variable step-size control of co-simulation algorithms (get the FMU state for every accepted communication step; if the follow-up step is not accepted, restart co-simulation from this FMU state)._
+* _For variable step-size control of co-simulation algorithms: get the FMU state for every accepted communication step; if the follow-up step is not accepted, restart co-simulation from this FMU state._
 
-_For nonlinear Kalman filters (get the FMU state just before initialization; in every sample period, set new continuous states from the Kalman filter algorithm based on measured values; integrate to the next sample instant and inquire the predicted continuous states that are used in the Kalman filter algorithm as basis to set new continuous states)._
+* _For nonlinear Kalman filters: get the FMU state just before initialization; in every sample period, set new continuous states from the Kalman filter algorithm based on measured values; integrate to the next sample instant and inquire the predicted continuous states that are used in the Kalman filter algorithm as basis to set new continuous states._
 
-_For nonlinear model predictive control (get the FMU state just before initialization; in every sample period, set new continuous states from an observer, initialize and get the FMU state after initialization._
-_From this state, perform many simulations that are restarted after the initialization with new input variables proposed by the optimizer).]_
+* _For nonlinear model predictive control: get the FMU state just before initialization; in every sample period, set new continuous states from an observer, initialize and get the FMU state after initialization._
+_From this state, perform many simulations that are restarted after the initialization with new input variables proposed by the optimizer.]_
 
 Furthermore, the FMU state can be serialized and copied in a byte vector.
 _[This can be, for example, used to perform an expensive steady-state initialization, copy the received FMU state in a byte vector and store this vector on file._
@@ -441,11 +441,12 @@ Function `fmi3GetFMUState`::
 include::../headers/fmi3FunctionTypes.h[tags=GetFMUState]
 ----
 
-[[FMUState,`FMUState`]]This function makes a copy of the internal FMU state and returns a pointer to this copy in <<FMUState>>.
+[[FMUState,`FMUState`]]This function copies the internal FMU state and returns a pointer to this copy in <<FMUState>>.
+<<FMUState>> must contain all information required to allow continuing the simulation from the current FMU state without additional FMI C-API calls.
 If on entry `*FMUState == NULL`, a new allocation is required.
-If `*FMUState != NULL`, then `*FMUState` points to a previously returned <<FMUState>> that has not been modified since.
+If `*FMUState != NULL`, then `*FMUState` points to a previously returned <<FMUState>> that is no longer needed and can be overwritten.
 In particular, <<fmi3FreeFMUState>> had not been called with this <<FMUState>> as an argument.
-_[Function <<fmi3GetFMUState>> typically reuses the memory of this <<FMUState>> in this case and returns the same pointer to it, but with the actual <<FMUState>>.]_
+_[Function <<fmi3GetFMUState>> typically reuses the memory of this <<FMUState>> in this case and returns the same pointer to it, but with the current <<FMUState>>.]_
 
 [[fmi3SetFMUState, `fmi3SetFMUState`]]
 Function `fmi3SetFMUState`::
@@ -455,9 +456,8 @@ Function `fmi3SetFMUState`::
 include::../headers/fmi3FunctionTypes.h[tags=SetFMUState]
 ----
 
-This function copies the content of the previously copied <<FMUState>> back and uses it as actual new FMU state.
-The <<FMUState>> copy still exists.
-_[The simulation is restarted at this state, when calling <<fmi3SetFMUState>> with <<FMUState>>.]_
+This function restores the state provided by <<FMUState>>.
+The FMU must not change the content of the provided <<FMUState>> to allow multiple calls of <<fmi3SetFMUState>> with this <<FMUState>>.
 
 [[fmi3FreeFMUState, `fmi3FreeFMUState`]]
 Function `fmi3FreeFMUState`::
@@ -529,7 +529,7 @@ _If this turns out to be an efficiency issue, a future release of FMI might prov
 
 ==== Algebraic Loops [[algebraic-loops]]
 
-When connecting FMUs, loop structures can occur that might lead to linear or non-linear algebraic systems of equations, involving continuous and discrete-time variables.
+When connecting FMUs, loop structures can occur that might lead to linear or nonlinear algebraic systems of equations, involving continuous and discrete-time variables.
 In order to detect and solve such systems of equations efficiently, information which <<output,`output`>> depends directly on which <<input,`inputs`>> is needed.
 This data is optionally provided in the <<modelDescription.xml>> under element `<ModelStructure>`.
 If this data is not provided, the worst case must be assumed: all <<output>> variables depend algebraically on all <<input>> variables.
