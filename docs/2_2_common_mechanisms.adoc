@@ -545,7 +545,7 @@ The importer calls <<fmi3GetClock>> to inquire the Clock's activation state.
 |====
 2.2+h|Clock properties
 2+h|XML attributes
-.2+h|Related API calls and arguments
+.2+h|Related API calls
 .2+h|Example
 
 h|<<causality>>
@@ -564,7 +564,7 @@ h|<<intervalVariability>>
 |`fixed`
 |[[fixedClock,`fixed`]]<<fmi3SetClock>> in <<EventMode>>,
 <<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
-<<fmi3SetInterval>>, <<fmi3GetInterval>> and <<fmi3GetShift>> in <<InitializationMode>>
+<<fmi3SetInterval>> in <<InitializationMode>>
 |clocked PI-controller with an adaptable interval
 
 |`calculated`
@@ -665,8 +665,8 @@ Constant periodic Clock::
 is a time-based periodic clock that defines its <<intervalDecimal>> or <<intervalCounter>> and <<shiftCounter>> or <<shiftDecimal>> in the <<modelDescription.xml>>.
 
 [[fixed-periodic-clock,fixed periodic Clock]]Fixed periodic Clock::
-is a time-based periodic Clock which ticks with an arbitrary, but constant interval starting after an arbitrary latexmath:[\mathbf{T}_{\mathit{shift}}], both interval and shift chosen by the importer.
-The importer informs the FMU about the Clock's `fixed` interval using <<fmi3SetInterval>>. +
+is a time-based periodic Clock which ticks with an arbitrary, but constant interval latexmath:[\mathbf{T}_{\mathit{interval}}] starting after an arbitrary latexmath:[\mathbf{T}_{\mathit{shift}}], both interval and shift chosen by the importer.
+The importer informs the FMU about the Clock's `fixed` interval using <<fmi3SetInterval>> in <<InitializationMode>>. +
 _[This information enables the FMU to adapt internal computations to the `fixed` Clock interval determined by the importer.]_
 
 Calculated periodic Clock::
@@ -681,7 +681,6 @@ The importer must use <<fmi3GetShift>> to retrieve the Clock shift in <<Initiali
 
 [[aperiodic-clock]]Aperiodic Clock::
 is a time-based Clock with an interval that can change during runtime by FMU-internal mechanisms.
-<<fmi3GetInterval>> must be called to retrieve the first interval in <<InitializationMode>>.
 Calling <<fmi3GetShift>> is not allowed.
 
 [[changing-aperiodic-clock,changing aperiodic Clock]]
@@ -702,17 +701,17 @@ latexmath:[\begin{align*}
 
 |latexmath:[\mathbf{T}_{interval, 0} \geq 0]
 |The time interval from latexmath:[\mathbf{t}_{\mathit{start}}] to first Clock tick.
-Must be retrieved in <<InitializationMode>>.
+Must be retrieved using <<fmi3GetInterval>> in <<InitializationMode>>.
 
-|latexmath:[\mathbf{T}_{interval, i} > 0, \qquad i = 1,2,3,{...}]
+|latexmath:[\mathbf{T}_{interval, i} \geq 0, \qquad i = 1,2,3,{...}]
 |The time interval from the current Clock tick to the next Clock tick.
-Must be retrieved in <<EventMode>> or <<ClockActivationMode>> if and only if the corresponding Clock ticked.
+Must be retrieved using <<fmi3GetInterval>> in <<EventMode>> or <<ClockActivationMode>> if and only if the corresponding Clock ticked.
 
 |===
 
 [[countdown-aperiodic-clock,countdown aperiodic Clock]]
 Countdown aperiodic Clock::
-is a time-based Clock whose next interval is not yet known right after the Clock just ticked, forcing the importer to call <<fmi3GetInterval>> in every <<EventMode>> and in every <<ClockUpdateMode>>.
+is a time-based Clock whose next interval is not yet known right after the Clock just ticked, forcing the importer to call <<fmi3GetInterval>> in <<InitializationMode>>, in every <<EventMode>> and <<ClockUpdateMode>>.
 The return argument <<qualifiers>> of <<fmi3GetInterval>> is used to indicate if the next interval is already known.
 +
 The next Clock tick at time instant latexmath:[t_i] is defined as: +
@@ -729,7 +728,7 @@ latexmath:[\begin{align*}
 
 |latexmath:[\mathbf{T}_{interval, 0} \geq 0]
 |The time interval from latexmath:[\mathbf{t}_\mathit{start}] to the first Clock tick.
-Must be retrieved in <<InitializationMode>>.
+Must be retrieved using <<fmi3GetInterval>> in <<InitializationMode>>.
 
 |latexmath:[\mathbf{T}_{interval, i} \geq 0, \qquad i = 1,2,3,{...}]
 |The time interval starting at the current <<EventMode>> or <<ClockUpdateMode>> when <<fmi3GetInterval>> is called.
@@ -745,8 +744,8 @@ is activated with <<fmi3SetClock>> by the importer in <<EventMode>>, or triggers
 Triggered output Clock::
 is activated within the FMU and the importer must call <<fmi3GetClock>> in <<EventMode>> or in <<ClockUpdateMode>>.
 
-_[<<outputClock,Output Clocks>> are intended to enable an FMU to provide a trigger to the outside world, e.g. to a <<triggered,triggered input Clock>> of another FMU._
-_Note, that if intended to activate model partitions or a Clock of the same FMU calling <<fmi3GetInterval>> for a <<countdown-aperiodic-clock,countdown Clock>> and evaluating the <<qualifiers>> is recommended._
+_[<<outputClock,Output Clocks>> enable an FMU to provide a trigger to the outside world, e.g. to a <<triggered,triggered input Clock>> of another FMU._ +
+_If an FMU wants to actively trigger a model partition (Clock) of itself, it should use a <<countdown-aperiodic-clock,countdown Clock>>._
 _An example is provided in <<example-scheduled-execution>>.]_
 
 ===== Model Partitions and Clocked Variables [[clocked-variable]]
