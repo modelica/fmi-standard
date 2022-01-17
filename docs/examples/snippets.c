@@ -230,23 +230,23 @@ fmi3Status fmi3GetClock(fmi3Instance instance,
 void algebraicLoop1() {
 
     // tag::AlgebraicLoop1[]
-    FMU *m1, *m2;
+    FMU *M1, *M2;
     fmi3ValueReference vr_M1_u, vr_M1_y, vr_M2_u1, vr_M2_u2, vr_M2_y1, vr_M2_y2;
     fmi3Float64 s = 0.1, M2_y1, M1_y, M2_y2;
     // ...
-    m2->fmi3SetFloat64(m2->instance, &vr_M2_u1, 1, &s, 1);
-    m2->fmi3GetFloat64(m2->instance, &vr_M2_y1, 1, &M2_y1, 1);
-    m1->fmi3SetFloat64(m1->instance, &vr_M1_u,  1, &M2_y1, 1);
-    m1->fmi3GetFloat64(m1->instance, &vr_M1_y,  1, &M1_y, 1);
-    m2->fmi3SetFloat64(m2->instance, &vr_M2_u2, 1, &M1_y, 1);
-    m2->fmi3GetFloat64(m2->instance, &vr_M2_y1, 1, &M2_y2, 1);
+    M2->fmi3SetFloat64(M2->instance, &vr_M2_u1, 1, &s, 1);
+    M2->fmi3GetFloat64(M2->instance, &vr_M2_y1, 1, &M2_y1, 1);
+    M1->fmi3SetFloat64(M1->instance, &vr_M1_u,  1, &M2_y1, 1);
+    M1->fmi3GetFloat64(M1->instance, &vr_M1_y,  1, &M1_y, 1);
+    M2->fmi3SetFloat64(M2->instance, &vr_M2_u2, 1, &M1_y, 1);
+    M2->fmi3GetFloat64(M2->instance, &vr_M2_y1, 1, &M2_y2, 1);
     //...
     // end::AlgebraicLoop1[]
 }
 
 void algebraicLoop2() {
     // tag::AlgebraicLoop2[]
-    FMU *m3, *m4;
+    FMU *M3, *M4;
     fmi3ValueReference vr_M3_u, vr_M3_y, vr_M4_u, vr_M4_y;
     fmi3Float64 s, M3_y, M4_y, residual, tolerance;
     bool converged = false;
@@ -254,10 +254,10 @@ void algebraicLoop2() {
     while (!converged) { // start iteration
         // s determined by the solver
         // ...
-        m4->fmi3SetFloat64(m4->instance, &vr_M4_u, 1, &s, 1);
-        m4->fmi3GetFloat64(m4->instance, &vr_M4_y, 1, &M4_y, 1);
-        m3->fmi3SetFloat64(m3->instance, &vr_M3_u, 1, &M4_y, 1);
-        m3->fmi3GetFloat64(m3->instance, &vr_M3_y, 1, &M3_y, 1);
+        M4->fmi3SetFloat64(M4->instance, &vr_M4_u, 1, &s, 1);
+        M4->fmi3GetFloat64(M4->instance, &vr_M4_y, 1, &M4_y, 1);
+        M3->fmi3SetFloat64(M3->instance, &vr_M3_u, 1, &M4_y, 1);
+        M3->fmi3GetFloat64(M3->instance, &vr_M3_y, 1, &M3_y, 1);
         residual = s - M3_y; // provided to the solver
         converged = residual < tolerance;
     }
@@ -270,34 +270,34 @@ void algebraicLoop3() {
     fmi3Int32 *v3;
     size_t v4;
 
-    fmi3Boolean m1_DStatesNeedUpdate, m2_DStatesNeedUpdate, *p2, *p3, *p4, *p5;
+    fmi3Boolean M1_DStatesNeedUpdate, M2_DStatesNeedUpdate, *p2, *p3, *p4, *p5;
     fmi3Float64 *p6;
     bool isCoSimulation;
 
     // tag::AlgebraicLoop3[]
-    FMU *m1, *m2;  // structures that hold the functions and instances of the FMUs
+    FMU *M1, *M2;  // structures that hold the functions and instances of the FMUs
 
-    m1->fmi3EnterEventMode(m1->instance, v1, v2, v3, v4, v5);
-    m2->fmi3EnterEventMode(m2->instance, v1, v2, v3, v4, v5);
+    M1->fmi3EnterEventMode(M1->instance, v1, v2, v3, v4, v5);
+    M2->fmi3EnterEventMode(M2->instance, v1, v2, v3, v4, v5);
 
     // start event iteration
     do {
         // solve algebraic loop as described in the sample codes above
 
         // introduce new instant of super-dense time
-        m1->fmi3UpdateDiscreteStates(m1->instance, &m1_DStatesNeedUpdate, p2, p3, p4, p5, p6);
-        m2->fmi3UpdateDiscreteStates(m2->instance, &m2_DStatesNeedUpdate, p2, p3, p4, p5, p6);
+        M1->fmi3UpdateDiscreteStates(M1->instance, &M1_DStatesNeedUpdate, p2, p3, p4, p5, p6);
+        M2->fmi3UpdateDiscreteStates(M2->instance, &M2_DStatesNeedUpdate, p2, p3, p4, p5, p6);
 
-    } while (m1_DStatesNeedUpdate || m2_DStatesNeedUpdate);
+    } while (M1_DStatesNeedUpdate || M2_DStatesNeedUpdate);
 
     if (isCoSimulation) {
         // Co-Simulation
-        m1->fmi3EnterStepMode(m1->instance);
-        m2->fmi3EnterStepMode(m2->instance);
+        M1->fmi3EnterStepMode(M1->instance);
+        M2->fmi3EnterStepMode(M2->instance);
     } else {
         // Model Exchange
-        m1->fmi3EnterContinuousTimeMode(m1->instance);
-        m2->fmi3EnterContinuousTimeMode(m2->instance);
+        M1->fmi3EnterContinuousTimeMode(M1->instance);
+        M2->fmi3EnterContinuousTimeMode(M2->instance);
     }
     // end::AlgebraicLoop3[]
 }
