@@ -23,7 +23,7 @@ The simulation algorithm signals to the FMU that it supports and has recognized 
 
 The following specific constraints apply to the state <<Initialized>> of Scheduled Execution.
 The FMU enters state <<Terminated>> only after all computations of model partitions of this FMU have ended.
-After <<fmi3Terminate>> has been called, no new model partitions can be started (e.g. related to <<countdown,countdown Clock>> ticks) and all other function calls for this FMU must return <<fmi3Error>> until the state <<Terminated>> is reached.
+After <<fmi3Terminate>> has been called, no new model partitions can be started (e.g. related to <<countdown-aperiodic-clock,countdown Clock>> ticks) and all other function calls for this FMU must return <<fmi3Error>> until the state <<Terminated>> is reached.
 
 ==== State: Clock Activation Mode [[ClockActivationMode,*Clock Activation Mode*]]
 
@@ -39,10 +39,10 @@ The current time latexmath:[\mathbf{t}_i] is communicated to the FMU as <<activa
 <<fmi3ActivateModelPartition>> must only be called once for the same Clock and time.
 _[The basic differences of the three interface types on how time is advanced is pointed out in <<advancing-time>>.]_
 
-During the computation of a model partition of an <<inputClock,input Clock>>, the FMU may inform the importer that an <<outputClock>> ticked or a <<countdown, countdown Clock>> has to be ticked.
+During the computation of a model partition of an <<inputClock,input Clock>>, the FMU may inform the importer that an <<outputClock>> ticked or a <<countdown-aperiodic-clock, countdown Clock>> has to be ticked.
 To do so the FMU switches into <<ClockUpdateMode>>.
 Subsequently it is up to the importer to react on this information.
-I.e. the importer may activate potential sinks (e.g. a model partition of another FMU) connected to this <<outputClock>> or the model partition of the respective <<countdown,countdown Clock>>.
+I.e. the importer may activate potential sinks (e.g. a model partition of another FMU) connected to this <<outputClock>> or the model partition of the respective <<countdown-aperiodic-clock,countdown Clock>>.
 
 [cols="2,1",options="header",]
 |====
@@ -125,7 +125,7 @@ _[If required, the FMU can internally derive the <<Clock>> interval_ latexmath:[
 Consecutive calls to <<fmi3ActivateModelPartition>> for a <<clockReference>> (i.e. <<valueReference>> of <<Clock>> variable) must have strictly monotonically increasing <<activationTime>> latexmath:[\mathbf{t}_i].
 
 Functions <<fmi3GetIntervalDecimal>> & <<fmi3GetIntervalFraction>>::
-These function calls are allowed for <<tunableClock>> and <<changing>> Clocks.
+These function calls are allowed for <<tunableClock>> and <<changing-aperiodic-clock>> Clocks.
 
 [[fmi3ClockUpdateCallback,`fmi3ClockUpdateCallback`]]
 Function `fmi3ClockUpdateCallback`::
@@ -146,9 +146,9 @@ _[This is because these functions apply to the whole FMU and not only to a speci
 
 ==== State: Clock Update Mode [[ClockUpdateMode,*Clock Update Mode*]]
 
-A model partition of a Scheduled Execution FMU calls <<fmi3ClockUpdateCallback>> to signal that a <<triggered, `triggered output`>> <<Clock>> ticked or a new interval for a <<countdown>> <<Clock>> is available.
+A model partition of a Scheduled Execution FMU calls <<fmi3ClockUpdateCallback>> to signal that a <<triggered, `triggered output`>> <<Clock>> ticked or a new interval for a <<countdown-aperiodic-clock,`countdown`>> <<Clock>> is available.
 
-This means that <<fmi3GetClock>> must be called for gathering all <<Clock>> related information about ticking <<outputClock,output Clocks>> and <<fmi3GetInterval>> must be called for all <<countdown>> <<Clock,Clocks>> whose associated model partitions have to be scheduled afterwards if a new interval is provided.
+This means that <<fmi3GetClock>> must be called for gathering all <<Clock>> related information about ticking <<outputClock,output Clocks>> and <<fmi3GetInterval>> must be called for all <<countdown-aperiodic-clock,`countdown`>> <<Clock,Clocks>> whose associated model partitions have to be scheduled afterwards if a new interval is provided.
 
 Allowed Functions::
 
@@ -158,7 +158,7 @@ For an <<outputClock>> only the first call of <<fmi3GetClock>> for a specific ac
 The FMU sets the reported activation state immediately back to fmi3ClockInactive` for following <<fmi3GetClock>> calls for that <<Clock>> until this <<outputClock>> is activated again.
 
 Functions <<fmi3GetIntervalDecimal>> & <<fmi3GetIntervalFraction>>::
-These function calls are allowed for <<countdown>> Clocks.
+These function calls are allowed for <<countdown-aperiodic-clock,`countdown`>> Clocks.
 
 _[In Scheduled Execution it cannot be determined which model partition has called <<fmi3ClockUpdateCallback>>, because multiple model partitions can be active at the same time._
 _Since all information about which model partition to activate is coded into its corresponding Clock, there is no need to know which potentially other model partition activated this Clock.]_
