@@ -505,70 +505,6 @@ This function deserializes the byte vector `serializedState` of length `size`, c
 
 These serialization and deserialization functions may be called, only if the capability flags <<canGetAndSetFMUState>> and <<canSerializeFMUState>> are set to `true`.
 
-==== Selective Computation of Variables [[selectiv-computation]]
-
-Depending on the phase of the solver algorithm, different FMU variables need to be computed.
-FMI allows selective retrieval of FMU variables with specific get functions (e.g. <<get-and-set-variable-values,`fmi3Get{VariableType}`>>, <<fmi3GetEventIndicators>>, <<fmi3GetContinuousStateDerivatives>>).
-This enables computation on demand with subsequent calls returning the same value until some set operation requires re-computation.
-
-For example:
-* during the iteration of an integrator step, only the state derivatives need to be computed, provided the <<output>> of an FMU is not connected, or
-* when localizing <<state-event,state events>>, only the computation of event indicators may be required.
-
-Because specific set functions exist (<<get-and-set-variable-values,`fmi3Set{VariableType}`>>, <<fmi3SetTime>>, <<fmi3SetContinuousStates>>), caching algorithms can be applied to reuse already computed values.
-
-In all tables describing the mathematical model of a state (e.g. <<table-math-model-exchange,ContinuousTimeMode>>), for notational convenience one function (e.g. latexmath:[\mathbf{f}_\mathit{cont}]) is defined to compute all outputs from all input arguments.
-However, in an efficiently implemented FMU, computation of each output may be triggered by its specific get function.
-Additionally, the outputs may be a function of a subset of the input arguments, as defined in the <<ModelStructure>>.
-
-_[The functions above have the slight drawback that values must always be copied._
-_For example, a call to_ <<fmi3SetContinuousStates>> _provides the new continuous states in a vector._
-_This function must copy the state values into an internal data structure such that subsequent computations triggered by get functions will utilize these values._
-_If this turns out to be an efficiency issue, a future release of FMI might provide additional functions to provide the address of a memory area where the variable values are.]_
-
-==== Algebraic Loops [[algebraic-loops]]
-
-When connecting FMUs, loop structures can occur that might lead to linear or nonlinear algebraic systems of equations, involving continuous and discrete-time variables.
-In order to detect and solve such systems of equations efficiently, information which <<output,`output`>> depends directly on which <<input,`inputs`>> is needed.
-This data is optionally provided in the <<modelDescription.xml>> under element <<ModelStructure>>.
-If this data is not provided, the worst case must be assumed: all <<output>> variables depend algebraically on all <<input>> variables.
-
-_[Example: In <<figure-connected-fmus>> two different types of connected FMUs are shown (the "dotted lines" characterize the dependency information):_
-
-.Calling sequences for FMUs that are connected in a loop.
-[#figure-connected-fmus]
-image::images/ArtificialAlgebraicLoops.svg[width=80%, align="center"]
-
-_Since different variables are computed in every mode and the causality of variable computation can be different in <<InitializationMode>> compared to other modes, it might be necessary to solve different kinds of loops in the different modes._ +
-_Artificial algebraic loops (see left diagram of <<figure-connected-fmus>>) can be solved in the modes <<InitializationMode>>, <<EventMode>>, and <<ContinuousTimeMode>> by an appropriate sequence of <<get-and-set-variable-values,`fmi3Set{VariableType}`>> and <<get-and-set-variable-values,`fmi3Get{VariableType}`>> calls:_
-
-[source, C]
-----
-include::examples/snippets.c[tags=AlgebraicLoop1]
-----
-
-_In the right diagram of <<figure-connected-fmus>>, FMUs `M3` and `M4` are connected in such a way that a real algebraic loop is formed._
-_This loop might be solved iteratively, for example with a Newton method._
-_In every iteration the iteration variable `s` is provided by the solver, and via the shown sequence of <<get-and-set-variable-values,`fmi3Set{VariableType}`>> and <<get-and-set-variable-values,`fmi3Get{VariableType}`>> calls, the `residual` is computed and used by the solver to determine a new value of `s` as input `u` of `M4`._
-_The iteration is terminated when the `residual` is small enough._
-_This method works for <<InitializationMode>>, <<EventMode>>, and <<ContinuousTimeMode>>._
-
-[source, C]
-----
-include::examples/snippets.c[tags=AlgebraicLoop2]
-----
-
-_In <<StepMode>>, <<fmi3SetFMUState>> is required to restore the FMU state before the next iteration with <<get-and-set-variable-values,`fmi3Set{VariableType}`>>, <<fmi3DoStep>>, and <<get-and-set-variable-values,`fmi3Get{VariableType}`>> is executed._
-
-_In <<EventMode>>, the algorithms from above must be embedded in an event iteration:_
-[source, C]
-----
-include::examples/snippets.c[tags=AlgebraicLoop3]
-----
-_]_
-
-When solving algebraic loops in <<EventMode>>, limitations to variable manipulations declared with XML attribute <<canHandleMultipleSetPerTimeInstant>> must be observed.
-
 ==== Clocks [[Clock,Clock]]
 
 FMI 3.0 specifies the behavior of a clocked FMU.
@@ -1084,6 +1020,70 @@ If this function is called after the <<fmi3ExitInitializationMode>> call, it ret
 The retrieved dependency information of one variable becomes invalid as soon as a <<structuralParameter,`structural parameter`>> linked to the variable or to any of its depending variables are set.
 As a consequence, if you change <<structuralParameter,`structural parameters`>> affecting B or A, the dependency of B becomes invalid.
 The dependency information must change only if <<structuralParameter,`structural parameters`>> are changed.
+
+==== Selective Computation of Variables [[selectiv-computation]]
+
+Depending on the phase of the solver algorithm, different FMU variables need to be computed.
+FMI allows selective retrieval of FMU variables with specific get functions (e.g. <<get-and-set-variable-values,`fmi3Get{VariableType}`>>, <<fmi3GetEventIndicators>>, <<fmi3GetContinuousStateDerivatives>>).
+This enables computation on demand with subsequent calls returning the same value until some set operation requires re-computation.
+
+For example:
+* during the iteration of an integrator step, only the state derivatives need to be computed, provided the <<output>> of an FMU is not connected, or
+* when localizing <<state-event,state events>>, only the computation of event indicators may be required.
+
+Because specific set functions exist (<<get-and-set-variable-values,`fmi3Set{VariableType}`>>, <<fmi3SetTime>>, <<fmi3SetContinuousStates>>), caching algorithms can be applied to reuse already computed values.
+
+In all tables describing the mathematical model of a state (e.g. <<table-math-model-exchange,ContinuousTimeMode>>), for notational convenience one function (e.g. latexmath:[\mathbf{f}_\mathit{cont}]) is defined to compute all outputs from all input arguments.
+However, in an efficiently implemented FMU, computation of each output may be triggered by its specific get function.
+Additionally, the outputs may be a function of a subset of the input arguments, as defined in the <<ModelStructure>>.
+
+_[The functions above have the slight drawback that values must always be copied._
+_For example, a call to_ <<fmi3SetContinuousStates>> _provides the new continuous states in a vector._
+_This function must copy the state values into an internal data structure such that subsequent computations triggered by get functions will utilize these values._
+_If this turns out to be an efficiency issue, a future release of FMI might provide additional functions to provide the address of a memory area where the variable values are.]_
+
+==== Algebraic Loops [[algebraic-loops]]
+
+When connecting FMUs, loop structures can occur that might lead to linear or nonlinear algebraic systems of equations, involving continuous and discrete-time variables.
+In order to detect and solve such systems of equations efficiently, information which <<output,`output`>> depends directly on which <<input,`inputs`>> is needed.
+This data is optionally provided in the <<modelDescription.xml>> under element <<ModelStructure>>.
+If this data is not provided, the worst case must be assumed: all <<output>> variables depend algebraically on all <<input>> variables.
+
+_[Example: In <<figure-connected-fmus>> two different types of connected FMUs are shown (the "dotted lines" characterize the dependency information):_
+
+.Calling sequences for FMUs that are connected in a loop.
+[#figure-connected-fmus]
+image::images/ArtificialAlgebraicLoops.svg[width=80%, align="center"]
+
+_Since different variables are computed in every mode and the causality of variable computation can be different in <<InitializationMode>> compared to other modes, it might be necessary to solve different kinds of loops in the different modes._ +
+_Artificial algebraic loops (see left diagram of <<figure-connected-fmus>>) can be solved in the modes <<InitializationMode>>, <<EventMode>>, and <<ContinuousTimeMode>> by an appropriate sequence of <<get-and-set-variable-values,`fmi3Set{VariableType}`>> and <<get-and-set-variable-values,`fmi3Get{VariableType}`>> calls:_
+
+[source, C]
+----
+include::examples/snippets.c[tags=AlgebraicLoop1]
+----
+
+_In the right diagram of <<figure-connected-fmus>>, FMUs `M3` and `M4` are connected in such a way that a real algebraic loop is formed._
+_This loop might be solved iteratively, for example with a Newton method._
+_In every iteration the iteration variable `s` is provided by the solver, and via the shown sequence of <<get-and-set-variable-values,`fmi3Set{VariableType}`>> and <<get-and-set-variable-values,`fmi3Get{VariableType}`>> calls, the `residual` is computed and used by the solver to determine a new value of `s` as input `u` of `M4`._
+_The iteration is terminated when the `residual` is small enough._
+_This method works for <<InitializationMode>>, <<EventMode>>, and <<ContinuousTimeMode>>._
+
+[source, C]
+----
+include::examples/snippets.c[tags=AlgebraicLoop2]
+----
+
+_In <<StepMode>>, <<fmi3SetFMUState>> is required to restore the FMU state before the next iteration with <<get-and-set-variable-values,`fmi3Set{VariableType}`>>, <<fmi3DoStep>>, and <<get-and-set-variable-values,`fmi3Get{VariableType}`>> is executed._
+
+_In <<EventMode>>, the algorithms from above must be embedded in an event iteration:_
+[source, C]
+----
+include::examples/snippets.c[tags=AlgebraicLoop3]
+----
+_]_
+
+When solving algebraic loops in <<EventMode>>, limitations to variable manipulations declared with XML attribute <<canHandleMultipleSetPerTimeInstant>> must be observed.
 
 ==== Getting Partial Derivatives [[partial-derivatives]]
 
