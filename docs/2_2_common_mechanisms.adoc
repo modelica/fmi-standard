@@ -517,9 +517,11 @@ Clock variables synchronize events between importer and across FMUs, by
 * communicating exactly which specific event happens (using <<fmi3SetClock>> in <<EventMode>> in ME and CS or <<fmi3ActivateModelPartition>> in SE) and
 * exactly at which time instant, independent from continuous time specified by the arguments of <<fmi3SetTime>> or <<fmi3DoStep>>.
 
-===== Clock Types
+Clocks define <<clocked-variable,model partitions>> effecting only <<clocked-variable,clocked variables>>.
 
-Clocks are <<discrete>> <<fmu-variables,variables>> with a special semantic.
+===== Clock Types [[fmi3Clock,`fmi3Clock`]]
+
+Clocks are <<discrete>> <<fmu-variables,variables>> of type `fmi3Clock`.
 They are restricted to being scalar variables.
 
 The variable's attribute <<intervalVariability>> declares the type of Clock, see overview in <<table-overview-clocks>>.
@@ -750,9 +752,11 @@ _An example is provided in <<example-scheduled-execution>>.]_
 
 ===== Model Partitions and Clocked Variables [[clocked-variable]]
 
-Each Clock latexmath:[\mathbf{k}] induces a discrete system.
+Each Clock latexmath:[\mathbf{k}] induces a discrete subsystem.
 Its state advances at each tick of latexmath:[\mathbf{k}].
-Such a system, also called the <<model-partition>> of latexmath:[\mathbf{k}], is written as:
+Such a system, also called the <<model-partition>> of latexmath:[\mathbf{k}], may represent a part of control code, an interrupt service routine of an embedded system, or a discretized part of a plant model.
+
+A model partition is written as:
 
 latexmath:[\begin{align*}
 (\mathbf{x}_k) &:= \mathbf{f}_{disc}(^\bullet{\mathbf{x}_k}, \mathbf{u}, \mathbf{t}) \\
@@ -764,19 +768,16 @@ where:
 * latexmath:[\mathbf{f}_{disc}] denotes the state transition function and
 * latexmath:[\mathbf{f}_{event}] denotes the output function of the <<model-partition>> of latexmath:[\mathbf{k}].
 
-_[Such a model partition may represent part of control code or an interrupt service routine of an embedded system, or a discretized part of a plant model._
-_The name "model partition" refers to the fact that a model inside an FMU may declare multiple Clocks, each with its own partition of the overall model.]_
-
 When latexmath:[\mathbf{k}] is active (i.e., ticking) invoking the FMI functions `fmi3Get{VariableType}` on variables in the output vector latexmath:[\mathbf{y}_k] will trigger the execution of the output function latexmath:[\mathbf{f}_{event}] to compute such variables.
 If <<providesEvaluateDiscreteStates>> is `false`, then latexmath:[\mathbf{f}_{disc}] cannot be called explicitly using <<fmi3EvaluateDiscreteStates>>, but will be implicitly executed during latexmath:[\mathbf{f}_{event}].
 When <<fmi3EvaluateDiscreteStates>> is called, the state vector latexmath:[\mathbf{x}_k] is updated according to state transition function latexmath:[\mathbf{f}_{disc}].
 
-_[Separating_ latexmath:[\mathbf{f}_{disc}] _from_ latexmath:[\mathbf{f}_{event}] _allows manipulation of the current (discrete) state and compute the corresponding outputs.]_
+_[Separating_ latexmath:[\mathbf{f}_{disc}] _from_ latexmath:[\mathbf{f}_{event}] _allows manipulation of the current (discrete) state and compute the corresponding outputs, for instance for model-based control applications.]_
 
-The discrete-time variables latexmath:[\mathbf{x}_k] and latexmath:[\mathbf{y}_k] are called <<clocked-variable,clocked variables>>.
+The discrete-time variables latexmath:[\mathbf{x}_k] and latexmath:[\mathbf{y}_k] are called clocked variables.
 A clocked variable latexmath:[\mathbf{v}_k] can acquire a new value and can be queried only when its Clock latexmath:[\mathbf{k}] is active, except during <<InitializationMode>>.
-_[This is common in clock semantics. See, e.g., <<MLS12>>.]_
-During <<InitializationMode>>, if a clocked variable is declared as an <<InitialUnknown>>, then it must be initialized as a discrete variable.
+_[This is common in clock semantics, see for example <<MLS12>>.]_
+During <<InitializationMode>>, if a clocked variable is declared as an <<InitialUnknown>>, then it must be initialized as all other discrete variable of the FMU.
 Declaring a clocked variable as an <<InitialUnknown>> is optional.
 Uninitialized clocked variables must be initialized in the corresponding Clock's first tick.
 
@@ -788,9 +789,10 @@ The association between <<clocked-variable,clocked variables>> and their <<Clock
 _[For example, a global counter could be incremented by multiple model partitions, each controlled by a different Clock.]_
 
 Output clocks may depend on input Clocks and other variables.
-Such dependencies are declared in the <<ModelStructure>>.
+Such <<dependencies>> are declared in the <<ModelStructure>>.
 A Clock latexmath:[\mathbf{k}] depends on a Clock or variable latexmath:[\mathbf{v}] if a tick or the value of latexmath:[\mathbf{v}] may trigger a tick of latexmath:[\mathbf{k}] during the same super-dense time instant.
 
+Compared to <<dependencies>>, <<clocks>> declared dependencies also restrict when <<clocked-variable,clocked variables>> can be <<get-and-set-variable-values,accessed>>.
 
 ===== Scheduled Execution [[scheduled-execution]]
 
