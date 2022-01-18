@@ -794,39 +794,12 @@ A Clock latexmath:[\mathbf{k}] depends on a Clock or variable latexmath:[\mathbf
 
 Compared to <<dependencies>>, <<clocks>> declared dependencies also restrict when <<clocked-variable,clocked variables>> can be <<get-and-set-variable-values,accessed>>.
 
-===== Scheduled Execution [[scheduled-execution]]
-
-During <<ClockActivationMode>> after <<fmi3ActivateModelPartition>> has been called for a <<calculated>>, <<tunable>> or <<changing-aperiodic-clock>> Clock the FMU provides the information on when the Clock will tick again, i.e. when the corresponding model partition must be scheduled the next time.
-To retrieve this information the importer calls <<fmi3GetInterval>> on the Clock.
-
-The FMU may request to schedule another model partition even while currently a model partition is being executed.
-
-A new interval for a <<countdown-aperiodic-clock,`countdown`>> Clock can be provided at any time during the execution of any model partition.
-The FMU signals that a <<countdown-aperiodic-clock,`countdown`>> Clock is about to tick by calling <<fmi3ClockUpdateCallback>>.
-The importer calls <<fmi3GetInterval>> for all <<countdown-aperiodic-clock,`countdown`>> Clocks.
-If a new interval latexmath:[\mathbf{T}_{interval, i}] is provided, i.e. return argument <<qualifiers>> == <<fmi3IntervalChanged>>, the importer initiates the scheduling of the associated model partitions regarding the delay of the returned interval.
-
-In case more than one Clock ticks at the same time instant, the scheduler needs a priority to define the activation sequence of the associated model partitions.
-This ordering is defined by the <<priority>> attributes of the Clock.
-For Scheduled Execution this attribute is mandatory for every Clock.
-
-_[A clock's <<priority>> information is required to support the scheduled execution of several model partitions._
-_In particular the <<preemption-support, preemption support>> is based these priorities._
-_It is therefore important to restrict the number of distinct priority levels for an FMU to available priority levels on the target platform and/or to avoid unnecessary computational overhead._
-_A common number of different priority levels is, e.g., 100 (0 to 99), as defined in Linux based operating systems.]_
-
-_[The Clock priorities are local to an FMU._
-_It is not possible for an FMU exporting tool to know in advance the priorities of other FMUs that will be connected to an FMU in a simulation setup._
-_It is the responsibility of the importer to derive a computational order for the computation of two or more distinct FMUs based on the local FMU Clock priorities and input-output relationships of connected FMUs.]_
-
-_[For <<periodic-clock, `periodic Clocks`>> it is recommended to derive the priorities based on a rate monotonic scheduling scheme (smallest period leads to highest priority, that is, has the smallest priority value.]_
-
 ===== [[fmi3SetInterval]] Clocks specific API
 
 [[fmi3GetClock,`fmi3GetClock`]]
 [[fmi3SetClock,`fmi3SetClock`]]Clocks are get and set just like any other variable (see also <<get-and-set-variable-values>>):
 
-<<fmi3SetClock>> must not be called in Scheduled Execution.
+<<fmi3SetClock>> must not be called in Scheduled Execution, instead <<fmi3ActivateModelPartition>> must be called.
 
 For some Clock types, the interval [[fmi3SetInterval,`fmi3SetInterval`]] is set by the environment for the current time instant by the function <<fmi3SetIntervalDecimal>> or <<fmi3SetIntervalFraction>>.
 The values of the arguments <<intervals>>, <<intervalCounters>>, <<resolutions>>, <<shifts>> and <<shiftCounters>> refer to the unit of the <<independent>> variable.
