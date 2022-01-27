@@ -233,7 +233,7 @@ _For example the value for the FMI 3.0 Alpha 2 release is `3.0-alpha.2`.]_
 
 |[[instantiationToken,`instantiationToken`]]`instantiationToken`
 |The <<instantiationToken>> is a string that can be used by the FMU to check that the XML file is compatible with the implementation of the FMU.
-For this purpose the importing tool must pass the <<instantiationToken>> from the <<modelDescription.xml>> to the <<fmi3Instantiate>> function call.
+For this purpose the importer must pass the <<instantiationToken>> from the <<modelDescription.xml>> to the <<fmi3Instantiate>> function call.
 
 |`description`
 |Optional string with a brief description of the model.
@@ -853,7 +853,7 @@ However different dimension sizes can be specified using different mechanisms an
 
 All initial dimension sizes (i.e. prior to any configuration or reconfiguration) must be positive integers (i.e. not zero), so that no dimension is initially vanished.
 
-_[This allows importing tools to ignore <<structuralParameter,`structural parameters`>> because that <<start>> value reflects the internal default setting of that <<structuralParameter,`structural parameter`>>._
+_[This allows importers to ignore <<structuralParameter,`structural parameters`>> because that <<start>> value reflects the internal default setting of that <<structuralParameter,`structural parameter`>>._
 _The rationale for requiring positive start values for <<structuralParameter, `structural parameters`>> is that this avoids importers having to deal with vanishing dimensions if they do not want to deal with them (or even with changing sizes at all)._
 _If we allowed 0 dimension sizes for initial values, tools that do not even care about changing dimension sizes must be prepared to handle vanishing dimensions.]_
 
@@ -1376,7 +1376,7 @@ Initial or guess value of variable.
 This value is also stored in the C functions.
 _[Therefore, calling_ <<get-and-set-variable-values,`fmi3Set{VariableType}`>> _to set <<start>> values is only necessary, if a different value as stored in the XML file is desired._
 _It is not allowed to change the start values in the <<modelDescription.xml>> file of an FMU, as this would break the consistency with the hard-coded start values in the C-Code._
-_This could lead to unpredictable behavior of the FMU in different importing tools, as it is not mandatory to call <<get-and-set-variable-values,`fmi3Set{VariableType}`>> to set start values during initialization.]_
+_This could lead to unpredictable behavior of the FMU in different importers, as it is not mandatory to call <<get-and-set-variable-values,`fmi3Set{VariableType}`>> to set start values during initialization.]_
 
 The <<start>> is either a single value or a list of values.
 The serialization of a multi-dimensional array variable is described in <<serialization-of_variables>>.
@@ -1962,10 +1962,10 @@ The coordinate system is defined by the coordinates of two points, the lower lef
 The x-axis is directed to the right, the y-axis is directed upwards.
 
 _[The exporting tool should define how the coordinate system unit relates to mm display or printout size._
-_However, an importing tool might choose to use the factor from the default coordinate system extent to the actual coordinate system extent to calculate a scaling factor, to match the default icon size in the importing tool._
+_However, an importer might choose to use the factor from the default coordinate system extent to the actual coordinate system extent to calculate a scaling factor, to match the default icon size in the importer._
 
 _The area defined by the coordinate system is suggested to be used as "clickable icon size" in importers._
-_A `<Terminal>` might be placed outside of this area, therefore the visible bounding box has to be determined by the importing tool.]_
+_A `<Terminal>` might be placed outside of this area, therefore the visible bounding box has to be determined by the importer.]_
 
 The coordinate system default is `x1=-100, y1=-100, x2=100, y2=100`.
 This extent is used if the `<CoordinateSystem>` element is missing.
@@ -1986,7 +1986,7 @@ The extent and position of the FMU icon are defined in the `<Icon>` element.
 The optional image file of the FMU icon is placed at the path `terminalsAndIcons/icon.png` in the ZIP archive of the FMU.
 The terminals should not be visible in the image.
 Optionally an SVG file with path `terminalsAndIcons/icon.svg` can be provided if also the PNG file is present.
-This enables high quality rendering and printing in importing tools.
+This enables high quality rendering and printing in importers.
 
 The point (`x1`, `y1`) maps to the left lower corner of the PNG image or SVG viewport.
 The point (`x2`, `y2`) maps to the right upper corner of the PNG image or SVG viewport.
@@ -1999,7 +1999,7 @@ The clickable icon size is defined by the `<CoordinateSystem>` element.
 The FMU icon itself may exceed this extent (or bounding box).
 The bounding box of the terminals is given by the extent in the terminals element.
 Their location is neither limited to the extent of the icon nor the extent of the coordinate system.
-_[An importing tool has to determine the outer bounding box enclosing all graphical items.]_
+_[An importer has to determine the outer bounding box enclosing all graphical items.]_
 
 Transparent SVG or PNG files are allowed and wanted.
 The order of the elements in the XML file defines the order of painting.
@@ -2010,7 +2010,7 @@ _[So the FMU icon should be placed first in the XML file, terminal below.]_
 
 ====== Overview
 
-Terminals are fully optional and can be ignored by any importing tool.
+Terminals are fully optional and can be ignored by any importer.
 
 A terminal is:
 
@@ -2057,17 +2057,17 @@ The rule names beginning with `org.modelica` and `org.fmi-standard` are explicit
 [[plug,`plug`]]
 |`plug`
 |Matching of the variables is based on `memberName`.
-An importing tool should connect terminals only if all member variables are present and match.
+An importer should connect terminals only if all member variables are present and match.
 
 [[bus,`bus`]]
 |`bus`
 |Matching of the variables is based on `memberName`.
-An importing tool may connect terminals if some or no terminal member variables are present.
+An importer may connect terminals if some or no terminal member variables are present.
 
 [[sequence,`sequence`]]
 |`sequence`
 |Matching of the variables is based on the order of the terminal member variables.
-An importing tool should connect terminals only if the number of member variables matches.
+An importer should connect terminals only if the number of member variables matches.
 
 |====
 
@@ -2146,7 +2146,7 @@ _Nested terminals can have different `matchingRule`s._
 
 _There is no special handling of <<derivative,`derivatives`>>._
 _If a <<derivative>> is a terminal member variable then it is considered as normal member variable._
-_However, if a <<derivative>> of a terminal member variable is not terminal member, then this <<derivative>> information may be used by an importing tool.]_
+_However, if a <<derivative>> of a terminal member variable is not terminal member, then this <<derivative>> information may be used by an importer.]_
 
 ====== Terminal Stream Member Variable
 
@@ -2188,7 +2188,7 @@ latexmath:[q_{i,\mathit{inStream}}] _is the convective quantity in case the matt
 _Both variables are present in the terminal._
 _The outStream variable has the <<causality>> <<output>> or <<calculatedParameter>> because this information has to be provided by each FMU._
 _The inStream variable has the <<causality>> <<input>> or <<parameter>>._
-_To display the actual value in an importing tool, this actual value has to be selected depending on the sign of the terminal member variable with `variableKind` `inflow` or `outflow`._
+_To display the actual value in an importer, this actual value has to be selected depending on the sign of the terminal member variable with `variableKind` `inflow` or `outflow`._
 _However, calculating the actual value is not necessary._
 
 _If only two terminals with a variable are connected and their <<causality>> matches, then the values of the outStream variables can be forwarded to the corresponding inStream values._
@@ -2215,12 +2215,12 @@ An additional SVG file with extension '.svg' is optional.
 
 _[Note that this specification is functionally equivalent to looking up image sources from the `terminalsAndIcons` folder of the FMU ZIP archive after dot removal from the path as per section 5.2.4 of RFC 3986.]_
 
-The `defaultConnectionStrokeSize` and `defaultConnectionColor` can be provided to define the intended connection line layout in the importing tool.
+The `defaultConnectionStrokeSize` and `defaultConnectionColor` can be provided to define the intended connection line layout in the importer.
 The stroke size is given relative to the coordinate system extent.
 The stroke color is given in RGB values from 0 to 255. E.g.: `255 255 0`.
 
 _[Nested terminals may have a `<TerminalGraphicalRepresentation>` element._
-_However, if and how nested terminals are displayed, is up to the importing tool.]_
+_However, if and how nested terminals are displayed, is up to the importer.]_
 
 _[The order of painting of the `<TerminalGraphicalRepresentation>` of terminals on each level is equal to the order in the `<Terminal>` element._
 _So graphical representations appearing first, are painted first, are behind graphical representations which appear below.]_
@@ -2238,17 +2238,17 @@ _The first use case is a signal flow from an <<output>> of one FMU to an <<input
 _The <<output>> value has to be forwarded to the <<input>>._
 
 _The signal flow can cause algebraic loops._
-_If variables in connected terminals have the <<causality>> <<output>>, then an importing tool may iterate an undefined <<input>> of an FMU to ensure that the connected output values are equal._
+_If variables in connected terminals have the <<causality>> <<output>>, then an importer may iterate an undefined <<input>> of an FMU to ensure that the connected output values are equal._
 
 _Another use case is the parameter propagation._
-_If a variable in both connected terminals has the <<causality>> <<parameter>>, then an importing tool could ask the user for the value of one of those <<parameter,`parameters`>> only, and propagate this value to the other FMU._
-_If only one of the variables has <<causality>> <<parameter>>, and the other is a <<constant>> <<output>> or <<calculatedParameter>>, then the importing tool could also propagate the <<parameter>> value without presenting a parameter to the user._
+_If a variable in both connected terminals has the <<causality>> <<parameter>>, then an importer could ask the user for the value of one of those <<parameter,`parameters`>> only, and propagate this value to the other FMU._
+_If only one of the variables has <<causality>> <<parameter>>, and the other is a <<constant>> <<output>> or <<calculatedParameter>>, then the importer could also propagate the <<parameter>> value without presenting a parameter to the user._
 _One example of use would be the name of a substance flowing through a pipe._
 _If the fluid flows from one pipe FMU to another, the substance should be the same._
 _This substance name could be propagated over several FMUs._
 
 _Finally the `variableKind` `signal` can be applied to implement compatibility checks._
-_If for example the <<variability>> of the variables in connected terminals are <<constant>>, then the importing tool can implement an equality assertion._
+_If for example the <<variability>> of the variables in connected terminals are <<constant>>, then the importer can implement an equality assertion._
 _This is also possible with <<calculated>> <<parameter,`parameters`>>._
 _One example of use would be the cross sectional flow area in pipes which is calculated from geometry parameters._
 _A change in the cross sectional flow area is relevant for the momentum equation, and therefore the connection has to be deemed incompatible if these variables are present and unequal.]_
