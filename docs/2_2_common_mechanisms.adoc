@@ -981,9 +981,7 @@ It is filled in by this function with the enumeration value describing the depen
 
 If this function is called before the <<fmi3ExitInitializationMode>> call, it returns the initial dependencies.
 If this function is called after the <<fmi3ExitInitializationMode>> call, it returns the runtime dependencies.
-The retrieved dependency information of one variable becomes invalid as soon as a <<structuralParameter,`structural parameter`>> linked to the variable or to any of its depending variables are set.
-As a consequence, if you change <<structuralParameter,`structural parameters`>> affecting B or A, the dependency of B becomes invalid.
-The dependency information must change only if <<structuralParameter,`structural parameters`>> are changed.
+The retrieved dependency information of one variable becomes invalid as soon as a <<structuralParameter,`structural parameter`>> linked to the variable or to any of its depending variables is set.
 
 ==== Selective Computation of Variables [[selectiv-computation]]
 
@@ -1003,14 +1001,13 @@ Additionally, the outputs may be a function of a subset of the input arguments, 
 
 _[The functions above have the slight drawback that values must always be copied._
 _For example, a call to_ <<fmi3SetContinuousStates>> _provides the new continuous states in a vector._
-_This function must copy the state values into an internal data structure such that subsequent computations triggered by get functions will utilize these values._
-_If this turns out to be an efficiency issue, a future release of FMI might provide additional functions to provide the address of a memory area where the variable values are.]_
+_This function must copy the state values into an internal data structure such that subsequent computations triggered by get functions will utilize these values.]_
 
 ==== Algebraic Loops [[algebraic-loops]]
 
-When connecting FMUs, loop structures can occur that might lead to linear or nonlinear algebraic systems of equations, involving continuous and discrete-time variables.
+When connecting FMUs, loop structures may occur that lead to linear or nonlinear algebraic systems of equations, involving continuous and discrete-time variables.
 In order to detect and solve such systems of equations efficiently, information which <<output,`output`>> depends directly on which <<input,`inputs`>> is needed.
-This data is optionally provided in the <<modelDescription.xml>> under element <<ModelStructure>>.
+This data may be provided in the <<modelDescription.xml>> under element <<ModelStructure>>.
 If this data is not provided, the worst case must be assumed: all <<output>> variables depend algebraically on all <<input>> variables.
 
 _[Example: In <<figure-connected-fmus>> two different types of connected FMUs are shown (the "dotted lines" characterize the dependency information):_
@@ -1047,7 +1044,7 @@ include::examples/snippets.c[tags=AlgebraicLoop3]
 ----
 _]_
 
-When solving algebraic loops in <<EventMode>>, limitations to variable manipulations declared with XML attribute <<canHandleMultipleSetPerTimeInstant>> must be observed.
+When solving algebraic loops in <<EventMode>>, limitations to variable manipulations declared with attribute <<canHandleMultipleSetPerTimeInstant>> must be observed.
 
 ==== Getting Partial Derivatives [[partial-derivatives]]
 
@@ -1057,12 +1054,12 @@ Partial derivatives can be used:
 * in implicit integration algorithms in Model Exchange, and
 * in iterative co-simulation algorithms.
 
-To avoid expensive numeric approximations of these derivatives, FMI offers dedicated functions to retrieve partial derivatives for an FMU.
+To avoid expensive numeric approximations of these derivatives, FMI offers dedicated functions to retrieve partial derivatives for variables of an FMU.
 For Model Exchange, this means computing the partial derivatives at any time instant, whereas for Co-Simulation, this means computing the partial derivatives at a communication point.
 
 An FMU has different states and in every state an FMU might be described by different equations and different unknowns.
-The precise definitions are given in the mathematical descriptions of Model Exchange (<<state-machine-model-exchange>>) and Co-Simulation (<<state-machine-co-simulation>>).
-In every state, the general form of the FMU equations are:
+The precise definitions are given in the mathematical descriptions of Model Exchange (<<state-machine-model-exchange>>), Co-Simulation (<<state-machine-co-simulation>>), and Scheduled Execution (<<state-machine-scheduled-execution>>).
+In every state, the general form of the FMU equations is:
 
 [latexmath]
 ++++
@@ -1087,11 +1084,11 @@ Details about which variables are in latexmath:[\mathbf{v}_{\mathit{known}}] are
 
 * latexmath:[{\mathbf{v}_{\mathit{rest}}}] is the set of <<input>> variables and discrete-time states of function latexmath:[\mathbf{f}] which cannot be set by the importer in the current state, but in other states _[for example, discrete-time <<input,`inputs`>> in <<ContinuousTimeMode>>]_.
 
-* <<EventIndicator,`EventIndicators`>> must not be included among latexmath:[\mathbf{v}_{\mathit{unknonwn}}].
+* <<EventIndicator,`EventIndicators`>> must not be included among latexmath:[\mathbf{v}_{\mathit{unknonwn}}]. +
 _[This is intentional as their dependencies listed in <<ModelStructure>> are intended for debugging purposes and not for partial derivatives.]_
 
 _[The variable relationships are different in different states._
-_For example, during <<ContinuousTimeMode>>, the partial derivate of a continuous-time output *y* with respect to discrete-time <<input,`inputs`>> is undefined, because discrete-time <<input,`inputs`>> cannot be set between events.]_
+_For example, during <<ContinuousTimeMode>>, the partial derivate of a continuous-time output_ latexmath:[\mathbf{y}] _with respect to discrete-time <<input,`inputs`>> is undefined, because discrete-time <<input,`inputs`>> cannot be set between events.]_
 
 There are two access functions for partial derivatives:
 
@@ -1203,8 +1200,6 @@ _If the sparsity of a matrix shall be taken into account, then the matrix can be
 - _The incidence information of the matrix (whether an element is zero or not zero) is extracted from the XML file from element <<ModelStructure>>._
 
 - _A so called graph coloring algorithm is employed to determine the columns of the matrix that can be computed by one call of `fmi3GetDirectionalDerivative`._
-_Efficient graph coloring algorithms are freely available, such as library https://cscapes.cs.purdue.edu/coloringpage/[ColPack] written in C/C++ (LGPL), or the routines by <<CGM84>>._
-_See e.g. http://www.netlib.org/toms/618._
 
 - _For the columns determined in (2), one call to <<fmi3GetDirectionalDerivative>> is made._
 _After each such call, the elements of the resulting directional derivative vector are copied into their correct locations of the partial derivative matrix._
@@ -1305,7 +1300,7 @@ _]_
 
 In FMI for Co-Simulation, the n-th <<derivative,`derivatives`>> with respect to time of continuous <<output,`outputs`>> can be retrieved with <<fmi3GetOutputDerivatives>> to allow interpolation/extrapolation of connected input variables between communication points by the importer in <<IntermediateUpdateMode>>. +
 
-Whether the FMU is able to provide the <<derivative,`derivatives`>> of <<output,`outputs`>> is given by the unsigned integer capability flag <<maxOutputDerivativeOrder>> that represents the maximum order of the <<output>> <<derivative, `derivatives`>>.
+Whether the FMU is able to provide the <<derivative,`derivatives`>> of <<output,`outputs`>> is given by the capability flag <<maxOutputDerivativeOrder>> that represents the maximum order of the <<output>> <<derivative, `derivatives`>>.
 If the actual order is lower (because the order of integration algorithm is low), the retrieved value is 0.
 
 Restrictions on calling the function are the same as for the <<get-and-set-variable-values,`fmi3Get{VariableType}`>> function for <<continuous>> <<output,`outputs`>>.
