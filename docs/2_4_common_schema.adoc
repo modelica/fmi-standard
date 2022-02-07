@@ -144,7 +144,7 @@ _This could lead to annotations with a `type` attribute of `org.modelica.fmi.som
 Annotations are intended to allow structured extensions of the FMI XML files, without creating conflicting extensions, or leaving ambiguities in interpretation.
 All annotations may safely be ignored by implementations that just implement the base FMI standard.
 
-==== Definition of an FMU [[fmiModelDescription,`<fmiModelDescription>`]]
+==== Model Description [[fmiModelDescription,`<fmiModelDescription>`]]
 
 <<system_overview>> shows the root element `fmiModelDescription`.
 
@@ -253,11 +253,12 @@ The format is a subset of `dateTime` and should be: `YYYY-MM-DDThh:mm:ssZ` (with
 
 |====
 
-==== Definition of Capability Flags [[common-capability-flags]]
+==== Attributes and Capability Flags [[common-capability-flags]]
 
-The elements `<ModelExchange>`, `<CoSimulation>` and `<ScheduledExecution>` contain attributes, some representing capability flags describing which optional functionalities the FMU supports.
+The elements `<ModelExchange>`, `<CoSimulation>` and `<ScheduledExecution>` contain attributes, some representing capability flags, describing which optional functionalities the FMU supports.
 
-The following table contains capability flags common to all three interface types.
+The following table contains attributes and capability flags common to all three interface types.
+For all Boolean attributes the default is `false`.
 
 .Common attributes and capability flags.
 [[table-common-capability-flags]]
@@ -273,53 +274,49 @@ Used as prefix for FMI functions if the functions are provided in C source code 
 See also <<header-files-and-naming-of-functions>>.
 
 |`needsExecutionTool`
-|If `true`, a tool is needed to execute the model and the FMU just contains the communication to this tool.
+|If `true`, a tool is needed to execute the FMU.
+The FMU implements the communication to this tool.
 _[Typically, this information is only utilized for information purposes._
-_For example, when loading an FMU with `needsExecutionTool = true`, the environment can inform the user that a tool has to be available on the computer where the model is instantiated._
+_For example, when loading an FMU with `needsExecutionTool = true`, the environment can inform the user that a tool has to be available on the computer where the FMU is instantiated._
 _The name of the tool can be taken from attribute `generationTool` in `<fmiModelDescription>`.]_
 
 |`canBeInstantiatedOnlyOncePerProcess`
-|This flag indicates cases (especially for embedded code), where only one instance per FMU is possible (multiple instantiation is default = `false`; if multiple instances are needed and the flag `canBeInstantiatedOnlyOncePerProcess = true`, the FMUs must be instantiated in different processes).
+|If `true`, the FMU must be instantiated only once per process.
 
 |[[canGetAndSetFMUState,`canGetAndSetFMUState`]]`canGetAndSetFMUState`
-|If `true`, the environment can inquire the internal FMU state and can restore it.
+|If `true`, the environment may inquire the internal FMU state and may restore it.
 That is, functions <<fmi3GetFMUState>>, <<fmi3SetFMUState>>, and <<fmi3FreeFMUState>> are supported by the FMU.
 
 |[[canSerializeFMUState,`canSerializeFMUState`]]`canSerializeFMUState`
-|If `true`, the environment can serialize the internal FMU state, in other words, functions <<fmi3SerializedFMUStateSize>>, <<fmi3SerializeFMUState>>, <<fmi3DeSerializeFMUState>> are supported by the FMU.
-If this is the case, then flag <<canGetAndSetFMUState>> must be `true` as well.
+|If `true`, the environment may serialize the internal FMU state, in other words, functions <<fmi3SerializedFMUStateSize>>, <<fmi3SerializeFMUState>>, <<fmi3DeSerializeFMUState>> are supported by the FMU.
+If `true`, the flag <<canGetAndSetFMUState>> must be `true` as well.
 
 |[[providesDirectionalDerivatives,`providesDirectionalDerivatives`]]`providesDirectionalDerivatives`
-|If `true`, the directional derivative of the equations can be computed with <<fmi3GetDirectionalDerivative>>.
+|If `true`, the directional derivative of the equations may be retrieved using <<fmi3GetDirectionalDerivative>>.
 
 |[[providesAdjointDerivatives,`providesAdjointDerivatives`]]`providesAdjointDerivatives`
-|If `true`, the adjoint derivatives of the equations can be computed with <<fmi3GetAdjointDerivative>>.
+|If `true`, the adjoint derivatives of the equations may be retrieved using <<fmi3GetAdjointDerivative>>.
 
 |`providesPerElementDependencies`
-|The FMU is able to provide detailed dependency information at runtime using <<fmi3GetNumberOfVariableDependencies>> and <<fmi3GetVariableDependencies>>.
+|If `true`, the FMU is able to provide detailed dependency information at runtime using <<fmi3GetNumberOfVariableDependencies>> and <<fmi3GetVariableDependencies>>.
 
 |[[providesEvaluateDiscreteStates,`providesEvaluateDiscreteStates`]] `providesEvaluateDiscreteStates`
-|The FMU supports <<fmi3EvaluateDiscreteStates>>, if `true`.
+|If `true`, the FMU supports <<fmi3EvaluateDiscreteStates>>.
 This flag is ignored in Scheduled Execution.
 
 |====
 
-==== Definition of Units
+==== Physical Units
 
-In this section, the units of the variables are defined.
-
-_[Unit support is important for technical systems since otherwise it is very easy for errors to occur._
-_Unit handling is a difficult topic, and there seems to be no method available that is really satisfactory for all applications, such as unit check, unit conversion, unit propagation or dimensional analysis._
-_In FMI, a pragmatic approach is used that takes into account that every software system supporting units has potentially its own specific technique to describe and utilize units.]_
+This section describes how units for variables can be defined.
+These descriptions allow automatic unit checks and value conversion in the importer to bridge the gap between FMUs from different simulation domains.
+The FMI unit descriptions are more secure than using humanly readable unit strings only, because all units can be defined as combinations of the 7 SI base units.
 
 Element `<fmiModelDescription><UnitDefinitions>` is defined as:
 
-.UnitDefinitions element.
+.`UnitDefinitions` element.
 [[figure-schema-UnitDefinitions]]
 image::images/schema/UnitDefinitions.png[width=90%]
-
-It contains one or more `Unit` definitions.
-If no units are defined, element `<UnitDefinitions>` must not be present.
 
 The `name` of a `Unit` must be unique with respect to all other `<Unit>` elements.
 If a variable is associated with a `Unit`, the value passed to <<get-and-set-variable-values,`fmi3Set{VariableType}`>> (resp. retrieved with <<get-and-set-variable-values,`fmi3Get{VariableType}`>>) has this unit.
@@ -329,7 +326,7 @@ _Since there is no standard to represent units in strings, and there are differe
 The `Unit` definition consists of the exponents of the 7 SI base units `kg`, `m`, `s`, `A`, `K`, `mol`, `cd`, the exponent of the SI derived unit `rad`, and optionally a `factor` and an `offset`.
 _[The additional `rad` base unit helps to handle the often occurring quantities in technical systems that depend on an angle.]_
 
-.BaseUnit element.
+.`BaseUnit` element.
 [[figure-schema-BaseUnit]]
 image::images/schema/BaseUnit.png[width=50%, align="center"]
 
@@ -339,7 +336,7 @@ A value latexmath:[v_{unit}] in `Unit` is converted to the base unit latexmath:[
 ++++
 v_{base} = \texttt{factor} * v_{unit} + \texttt{if relativeQuantity then 0 else offset}
 ++++
-where `factor` and `offset` are attributes of the `<BaseUnit>`, and  `relativeQuantity` an attrinbute of the `TypeDefinition` of a variable.
+where `factor` and `offset` are attributes of the `<BaseUnit>`, and  `relativeQuantity` an attribute of the `TypeDefinition` of a variable.
 
 _[For example, if_ latexmath:[{p_{\mathit{bar}}}] _is a pressure value in unit `bar`, and_ latexmath:[{p_{\mathit{Pa}}}] _is the pressure value in `<BaseUnit>`, then_
 
@@ -355,16 +352,15 @@ _Note that if in column `exponents` the definition_ latexmath:[\frac{kg \cdot m^
 
 .Unit examples.
 [[table-unit-examples]]
-[cols="1,1,1,1,1",options="header"]
+[cols="1,1,1,1,1"]
 |====
-.2+|Quantity
-.2+|Unit.name +
-(examples)
+.2+h|Quantity
+.2+h|Unit.name (examples)
+3+h|Unit.BaseUnit
 
-3+|Unit.BaseUnit
-|exponents
-|factor
-|offset
+h|exponents
+h|factor
+h|offset
 
 |_Torque_
 |`N.m`
@@ -536,7 +532,7 @@ include::examples/unit_definition.xml[tags=UnitDefinitions]
 ----
 _]_
 
-==== Definition of Types [[definition-of-types]]
+==== Variable Types [[definition-of-types]]
 
 Element `<fmiModelDescription><TypeDefinitions>` is defined as:
 
@@ -726,7 +722,7 @@ This attribute must only be used for <<periodic-clock,periodic Clocks>>.
 
 |====
 
-==== Definition of Log Categories [[definition-of-log-categories]]
+==== Log Categories [[definition-of-log-categories]]
 
 Element `<fmiModelDescription><LogCategories>` is defined as:
 
@@ -787,7 +783,7 @@ _Note that since element `<LogCategories>` is optional, an FMU does not need to 
 _In FMI 1.0, it was necessary to provide all log output of the FMU to the <<logMessage>> and then a filter in the <<logMessage>> could select what to show to the end-user._
 _The approach introduced in FMI 2.0 is therefore much more efficient.]_
 
-==== Definition of a Default Experiment [[DefaultExperiment]]
+==== Default Experiment [[DefaultExperiment]]
 
 Element `<fmiModelDescription><DefaultExperiment>` is defined as:
 
@@ -802,7 +798,7 @@ Furthermore, for Co-Simulation FMUs the <<stepSize>> defines the preferred <<com
 <<startTime>>, <<stopTime>> and <<stepSize>> refer to the unit of the <<independent>> variable.
 
 [[ModelVariables,`<ModelVariables>`]]
-==== Definition of Model Variables
+==== Model Variables
 
 ===== Static information
 
@@ -1573,7 +1569,7 @@ It might be that not all elements of an array are present.
 
 The <<variableNamingConvention>> `structured` does not define if arrays are 0-based or 1-based.
 
-==== Definition of the Model Structure [[ModelStructure,`<ModelStructure>`]]
+==== Model Structure [[ModelStructure,`<ModelStructure>`]]
 
 The structure of the model is defined in element `<fmiModelDescription><ModelStructure>`.
 It defines the <<model-dependencies,dependencies>> between variables.
@@ -1879,7 +1875,7 @@ _If an FMU is imported in an environment and such an iteration is set up, then t
 _In such a case, all <<dependencies>> lists for <<output>> variables under the <<InitialUnknown>> element should be defined as empty lists defining that the setting of <<input,`inputs`>> and/or of <<start>> values does not influence the <<output,`outputs`>>._
 _As a result, it is not possible to formulate algebraic loops of connected FMUs during <<InitializationMode>>.]_
 
-==== Definition of Terminals and Icons [[fmiTerminalsAndIcons]]
+==== Terminals and Icons [[fmiTerminalsAndIcons]]
 
 Terminals define semantic groups of variables to ease connecting compatible signals on the system level.
 This definition adds an additional layer to the interface description of the FMUs.
@@ -2253,7 +2249,7 @@ _Other, nonscalar, quantities which also sum up to zero, like a mechanical force
 _This is the case since Kirchhoff's current law only holds for scalars where a sign convention is sufficient._
 _Other definitions are beyond the scope of this terminal specification and need clear definition in other specifications on top of this.]_
 
-==== Definition of Build Configurations [[BuildConfiguration,`<BuildConfiguration>`]]
+==== Build Configurations [[BuildConfiguration,`<BuildConfiguration>`]]
 
 Each <<BuildConfiguration>> provides the necessary information to compile and link the sources of the model into a dynamic library or as part of an executable.
 An FMU importer may not regard more than one <<BuildConfiguration>> when building the FMU for a specific <<platform>>.
