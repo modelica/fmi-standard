@@ -6,29 +6,25 @@ Especially, the FMU variables and their attributes such as `name`, `unit`, <<sta
 
 Additional optional information about the graphical representation and the grouping of FMU variables into terminals is stored in the optional text file `terminalsAndIcons/terminalsAndIcons.xml` in XML format as specified by the XML schema file <<fmiTerminalsAndIcons,`fmi3TerminalsAndIcons.xsd`>>.
 
-Build information for source code FMUs is provided together with a `buildDescription.xml` file in the `sources` directory that adheres to the `fmi3BuildDescription.xsd` schema file.
+Build information for source code FMUs is provided together with a <<BuildConfiguration,`buildDescription.xml`>> file in the `sources` directory that adheres to the `fmi3BuildDescription.xsd` schema file.
 
-It is not allowed to change the <<modelDescription.xml>> file.
+It is not allowed to change the <<modelDescription.xml>> file within an FMU.
 _[Reason: The <<modelDescription.xml>> file has to be consistent with the binary or source code implementations._
-_Specifically, changes to the start values are not allowed.]_
+_Specifically, changes to the start values would introduce such inconsistencies.]_
 
-The structure of the XML files is defined with the schema file `fmi3ModelDescription.xsd` and the optional `fmi3TerminalsAndIcons.xsd` and `fmi3BuildDescription.xsd` files.
-These schema files utilize several helper schema files.
-
-In this section these schema files are discussed.
-The normative definition are the above mentioned schema files.
-In the graphical representation of the schema, optional elements are marked with a dashed box (e.g., see <<figure-schema-Annotations>>).
+In this section the schema files mentioned above, including their helper schema files, are discussed.
+In the graphical representation of the schemata, optional elements are marked with a dashed box (e.g., see <<figure-schema-Annotations>>).
 The required data types (like: `xs:normalizedString`) are defined in https://www.w3.org/TR/xmlschema-2/[XML Schema Part 2: Datatypes Second Edition].
 The types used in the FMI schema files are:
 
 .Types used in the FMI 3.0 schema files.
 [#table-types-in-schema]
-[cols="1,3,1,1"]
+[cols="2,6,2,2",options="header"]
 |====
 |XML
 |Description (http://www.w3.org/TR/xmlschema-2/)
 |Mapping to C
-|Mapping to FMI 3.0
+|Mapping to FMI
 
 |`double`
 |IEEE 754 double-precision 64-bit floating point type _[An IEEE 754 double-precision floating point value can have up to 17 significant digits in its decimal representation.
@@ -43,42 +39,42 @@ In order to not loose precision, either an appropriate minimal printer algorithm
 |`fmi3Float32`
 
 |`byte`
-|Integer number with maximum value 127 and minimum value -128 (8 bit signed integer)
+|Integer number with maximum value 127 and minimum value -128 (8-bit signed integer)
 |`int8_t`
 |`fmi3Int8`
 
 |`unsignedByte`
-|Integer number with maximum value 255 and minimum value 0 (8 bit unsigned integer)
+|Integer number with maximum value 255 and minimum value 0 (8-bit unsigned integer)
 |`uint8_t`
 |`fmi3UInt8`
 
 |`short`
-|Integer number with maximum value 32767 and minimum value -32768 (16 bit signed integer)
+|Integer number with maximum value 32767 and minimum value -32768 (16-bit signed integer)
 |`int16_t`
 |`fmi3Int16`
 
 |`unsignedShort`
-|Integer number with maximum value 65535 and minimum value 0 (16 bit unsigned integer)
+|Integer number with maximum value 65535 and minimum value 0 (16-bit unsigned integer)
 |`uint16_t`
 |`fmi3UInt16`
 
 |`int`
-|Integer number with maximum value 2147483647 and minimum value -2147483648 (32 bit signed integer)
+|Integer number with maximum value 2147483647 and minimum value -2147483648 (32-bit signed integer)
 |`int32_t`
 |`fmi3Int32`
 
 |`unsignedInt`
-|Integer number with maximum value 4294967295 and minimum value 0 (32 bit unsigned integer)
+|Integer number with maximum value 4294967295 and minimum value 0 (32-bit unsigned integer)
 |`uint32_t`
 |`fmi3UInt32`
 
 |`long`
-|Integer number with maximum value 9223372036854775807 and minimum value -9223372036854775808 (64 bit signed integer)
+|Integer number with maximum value 9223372036854775807 and minimum value -9223372036854775808 (64-bit signed integer)
 |`int64_t`
 |`fmi3Int64`
 
 |`unsignedLong`
-|Integer number with maximum value 18446744073709551615 and minimum value 0 (64 bit unsigned integer)
+|Integer number with maximum value 18446744073709551615 and minimum value 0 (64-bit unsigned integer)
 |`uint64_t`
 |`fmi3UInt64`
 
@@ -119,14 +115,15 @@ include::examples/co_simulation.xml[lines=1]
 ----
 
 The FMI schema files (`fmi3*.xsd`) are also stored in UTF-8. +
-_[Note that the definition of an encoding scheme is a prerequisite in order for the XML file to contain letters outside of the 7 bit ANSI ASCII character set, such as German umlauts, or Asian characters._
+_[Note that the definition of an encoding scheme is a prerequisite in order for the XML file to contain letters outside of the 7-bit ANSI ASCII character set, such as German umlauts, or Asian characters._
 _Furthermore, note the FMI calling interface requires that strings are encoded in UTF-8._
 _Since the XML files are also required to be encoded in UTF-8, string variables need not to be transformed when reading from the XML files in to C string variables.]._
 
 _[Note that child information items, such as elements in a sequence are ordered lists according to document order, whereas attribute information items are unordered sets (see http://www.w3.org/TR/XML-infoset/#infoitem.element)._
 _The FMI schema is based on ordered lists in a sequence and therefore parsing must preserve this order._
-_For example, the information stored in <<ContinuousStateDerivative>> in <<ModelStructure>> is only correct if this property is fulfilled.]_
+_For example, the order of the <<ContinuousStateDerivative>> elements defines the order to be used in <<fmi3GetContinuousStates>>, <<fmi3SetContinuousStates>>, and <<fmi3GetContinuousStateDerivatives>>.]_
 
+[[Annotations,`<Annotations>`]]
 All XML-based file formats defined in this standard allow optional `Annotation` elements to be inserted in all XML elements that represent entities of the underlying data model.
 This is achieved through the `Annotations` element:
 
@@ -139,29 +136,25 @@ The content of the `Annotation` element can be arbitrary XML data, and can make 
 
 The namespace mechanism for the `type` attribute is based on reverse domain notation:
 The originator of a specification for additional data specifies a domain name under their control as the namespace for the additional data, in order to avoid conflicts due to name collisions.
-The namespace is used in reverse domain notation.
 All namespaces under both the `org.modelica` and `org.fmi-standard` domains are reserved for use in future layered standards.
 
 _[For example, extensions defined by the Modelica Association might make use of the `org.modelica.fmi` namespace._
 _This could lead to annotations with a `type` attribute of `org.modelica.fmi.something`, and/or extra files under the `extra/org.modelica.ssp.something` sub-directory.]_
 
 Annotations are intended to allow structured extensions of the FMI XML files, without creating conflicting extensions, or leaving ambiguities in interpretation.
-All annotations can safely be ignored by implementations that just implement the base FMI standard.
+All annotations may safely be ignored by implementations that just implement the base FMI standard.
 
 ==== Definition of an FMU [[fmiModelDescription,`<fmiModelDescription>`]]
 
-This is the root-level schema file and is illustrated in <<system_overview>>.
-The figure contains all elements in the schema file.
-Data is defined by attributes to these elements.
+<<system_overview>> shows the root element `fmiModelDescription`.
 
-.fmiModelDescription element.
+.`fmiModelDescription` element.
 [[system_overview]]
 image::images/schema/fmiModelDescription.png[width=70%]
 
-On the top level, the schema consists of the elements detailed in <<table-schema-fmiModelDescription>>.
 _[If an optional element is present and defines a list (such as `<UnitDefinitions>`), the list must have at least one element (such as `<Unit>`).]_
 
-.fmiModelDescription element details.
+.`fmiModelDescription` element details.
 [[table-schema-fmiModelDescription]]
 [cols="1,3",options="header"]
 |====
@@ -169,7 +162,7 @@ _[If an optional element is present and defines a list (such as `<UnitDefinition
 |Description
 
 |`<ModelExchange>`
-|If present, the FMU is based on FMI for Model Exchange (<<fmi-for-model-exchange>>) _[(in other words, the FMU includes the model or the communication to a tool that provides the model, and the environment provides the simulation engine)]_.
+|If present, the FMU is based on FMI for Model Exchange (<<fmi-for-model-exchange>>).
 
 |`<CoSimulation>`
 |If present, the FMU is based on FMI for Co-Simulation (<<fmi-for-co-simulation>>).
@@ -178,42 +171,38 @@ _[If an optional element is present and defines a list (such as `<UnitDefinition
 |If present, the FMU is based on FMI for Scheduled Execution (<<fmi-for-scheduled-execution>>).
 
 |`<UnitDefinitions>`
-|A global list of unit and display unit definitions _[for example, used to convert display units into the units used in the model equations]_.
+|A list of unit and display unit definitions _[for example, used to convert display units into the units used in the model equations]_.
 These definitions are used in the XML element <<ModelVariables>>.
 
 |`<TypeDefinitions>`
-|A global list of type definitions that are utilized in <<ModelVariables>>.
+|A list of type definitions that are utilized in <<ModelVariables>>.
 
 |`<LogCategories>`
-|A global list of log categories that can be set to define the log information that is supported from the FMU.
+|A list of log categories that can be set to define the log information that is supported from the FMU.
 
 |`<DefaultExperiment>`
-|Providing default settings for the integrator, such as stop time and relative tolerance.
+|Default settings for the importer algorithms, such as stop time and relative tolerance.
 
 |<<ModelVariables>>
-|The central FMU data structure defining all variables of the FMU that are visible/accessible via the FMU functions.
+|A list of all variables of the FMU that are accessible via the FMU functions.
 
 |<<ModelStructure>>
 |Defines the structure of the model.
-Especially, the ordered lists of <<output,`outputs`>>, continuous-time <<state,states>>, initial unknowns (the unknowns during <<InitializationMode>>) and the event indicators are defined here.
-For more details see <<ModelStructure>>.
-Furthermore, the dependency of the unknowns from the knowns can be optionally defined for <<output,`outputs`>>, continuous-time <<state,states>> and initial unknowns.
-_[This information can be, for example, used to compute efficiently a sparse Jacobian for simulation, or to utilize the <<input>> / <<output>> dependency in order to detect that in some cases there are actually no algebraic loops when connecting FMUs together]_.
-Dependencies for event indicators are not provided.
-_[The calculation of derivatives of event indicators is not provided.]_.
+Especially, the ordered lists of <<output,`outputs`>>, continuous-time <<state,states>>, clocked states, initial unknowns (the unknowns during <<InitializationMode>>), and the event indicators are defined here.
+Furthermore, the dependency of the unknowns from the knowns (as described in <<model-dependencies>>) can be optionally defined for <<output,`outputs`>>, continuous-time <<state,states>> and initial unknowns.
 
-|`<Annotations>`
+|<<Annotations>>
 |Optional annotations for the top-level element.
 
 |====
 
 At least one element of `<ModelExchange>`, `<CoSimulation>` or `<ScheduledExecution>` must be present to identify the type of the FMU.
-If multiple elements are defined, different types of models are included in the FMU.
-The details of these elements are defined in <<fmi-for-model-exchange>>, <<fmi-for-co-simulation>> or <<fmi-for-scheduled-execution>>.
+The details of these elements are defined in <<model-exchange-schema>>, <<co-simulation-schema>> or <<scheduled-execution-schema>>.
+How to support multiple interface types within one FMU, see <<multipleInterfaceTypes>>.
 
 The XML attributes of `<fmiModelDescription>` are:
 
-.fmiModelDescription attribute details.
+.`fmiModelDescription` attribute details.
 [[table-schema-fmiModelDescription-attributes]]
 [cols="1,3",options="header"]
 |====
@@ -221,9 +210,9 @@ The XML attributes of `<fmiModelDescription>` are:
 |Description
 
 |`fmiVersion`
-|Version of FMI that was used to generate the XML file.
+|Version of FMI the XML file complies with.
 The value for this version is `3.0`.
-Future minor revisions are denoted as `3.1`, `3.2` ...
+Future minor revisions will be denoted as `3.1`, `3.2` ...
 
 _[During development prototype FMU implementations can indicate compliance with a certain development version based on the tags available at https://github.com/modelica/fmi-standard/tags._
 _For example the value for the FMI 3.0 Alpha 2 release is `3.0-alpha.2`.]_
@@ -232,40 +221,36 @@ _For example the value for the FMI 3.0 Alpha 2 release is `3.0-alpha.2`.]_
 |The name of the model as used in the modeling environment that generated the XML file, such as `Modelica.Mechanics.Rotational.Examples.CoupledClutches`.
 
 |[[instantiationToken,`instantiationToken`]]`instantiationToken`
-|The <<instantiationToken>> is a string that can be used by the FMU to check that the XML file is compatible with the implementation of the FMU.
+|The <<instantiationToken>> is a string that may be used by the FMU to check that the XML file is compatible with the implementation of the FMU.
 For this purpose the importer must pass the <<instantiationToken>> from the <<modelDescription.xml>> to the <<fmi3Instantiate>> function call.
 
 |`description`
 |Optional string with a brief description of the model.
 
 |`author`
-|Optional string with the name and organization of the model author.
+|Optional string with the name of the model author.
 
 |`version`
 |Optional version of the model _[for example `1.0`]_.
 
 |`copyright`
-|Optional information on the intellectual property copyright for this FMU _[for example `(C) My Company 2011`]_.
+|Optional information on the intellectual property copyright for this FMU _[for example `(C) My Company 2022`]_.
 
 |`license`
-|Optional information on the intellectual property licensing
-for this FMU _[for example `BSD license <license text or link to license>`]_.
+|Optional information on the intellectual property licensing for this FMU. +
+_[For example `BSD license <license text or link to license>`._
+_If more space is required, the folder <<license-information,`licenses`>> should be used.]_
 
 |`generationTool`
 |Optional name of the tool that generated the XML file.
 
 |`generationDateAndTime`
 |Optional date and time when the XML file was generated.
-The format is a subset of `dateTime` and should be: `YYYY-MM-DDThh:mm:ssZ` (with one `T` between date and time; `Z` characterizes the Zulu time zone, in other words, Greenwich meantime) _[for example `2009-12-08T14:33:22Z`]_.
+The format is a subset of `dateTime` and should be: `YYYY-MM-DDThh:mm:ssZ` (with one `T` between date and time; `Z` characterizes the Zulu time zone, in other words, Greenwich meantime) _[for example `2009-12-08T14:33:22Z`, according to ISO 8601]_.
 
 |[[variableNamingConvention,`variableNamingConvention`]]<<variableNamingConvention>>
 |Defines whether the variable names in <<ModelVariables>> and in `<TypeDefinitions>` follow a particular convention.
 For the details, see <<namingSection>>.
-Currently standardized are:
-
-`= flat`: A list of strings (the default).
-
-`= structured`: Hierarchical names with `.` as hierarchy separator, and with array elements and derivative characterization.
 
 |====
 
