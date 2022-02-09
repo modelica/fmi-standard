@@ -77,10 +77,9 @@ _If the FMU in such a case cannot be simulated, as it depends on the resources f
 In other words, the FMU is executed in batch mode.
 If `visible == fmi3True`, the FMU is executed in interactive mode, and the FMU might require to explicitly acknowledge start of simulation / instantiation / initialization (acknowledgment is non-blocking).
 
-* [[loggingOn,`loggingOn`]] If `loggingOn == fmi3False`, then any logging is disabled and the <<logMessage>> callback function is not called by the FMU.
-If `loggingOn == fmi3True`, the FMU enables a vendor defined set of `<LogCategories>`.
-This set should typically contain categories for messages that explain execution errors, like <<fmi3Discard>>, <<fmi3Error>> and <<fmi3Fatal>>.
-The function <<fmi3SetDebugLogging>> gives more detailed control about required `<LogCategories>` (see <<definition-of-log-categories>>).
+* [[loggingOn,`loggingOn`]] If `loggingOn == fmi3False`, then any logging is disabled and the <<logMessage>> callback function must not be called by the FMU.
+If `loggingOn == fmi3True`, then all `<LogCategories>` are enabled.
+The function <<fmi3SetDebugLogging>> gives more detailed control about enabling specific `<LogCategories>` (see <<definition-of-log-categories>>).
 
 
 +
@@ -109,14 +108,14 @@ If <<nRequiredIntermediateVariables>> is zero <<requiredIntermediateVariables>> 
 include::../headers/fmi3FunctionTypes.h[tags=CallbackLogMessage]
 ----
 +
-Pointer to a function that is called by the FMU _[usually if an `fmi3XXX` function does not behave as desired]_.
+Pointer to a function that is called by the FMU to provide information about its internal status in human readable form.
 
 ** `status` contains the severity of the message, see `fmi3Status`.
 If <<fmi3OK,`status == fmi3OK`>>, the message is a pure information message.
 If a function does not return <<fmi3OK>>, it must provide the reason by calling <<logMessage>> at least once with this `status`.
 ** `category` is the category of the message.
 The allowed values for `category` are defined in the <<modelDescription.xml>> file via the element <<definition-of-log-categories,`<LogCategories>`>>.
-<<logMessage>> should only be called for log categories that were enabled by a call to <<fmi3SetDebugLogging>> or via <<loggingOn,`loggingOn == fmi3True`>> in <<fmi3Instantiate>>.
+<<logMessage>> must only be called for log categories that were enabled by calls to <<fmi3SetDebugLogging>> or via <<loggingOn,`loggingOn == fmi3True`>> in <<fmi3Instantiate>>.
 If the FMU does not define any log categories, `category` must be `NULL`.
 ** `message` is a string that contains the message to log. It may contain line-breaks (`\n`), but should not have a trailing line break.
 
@@ -153,13 +152,22 @@ Function `fmi3SetDebugLogging`::
 ----
 include::../headers/fmi3FunctionTypes.h[tags=SetDebugLogging]
 ----
-The function controls the debug logging that is output via the <<logMessage>> callback function by the FMU.
+The function controls the debug logging that is output by the FMU via the callback function <<logMessage>>.
+The FMU must call the <<logMessage>> callback function only for `categories` which are turned on by this function.
+If this function is never called, logging for all log categories is allowed.
 
-** If <<loggingOn,`loggingOn == fmi3True`>>, debug logging is enabled for the log categories specified in `categories`, otherwise it is disabled.
-** `nCategories` defines the length of the argument `categories`.
-** If `nCategories == 0`, <<loggingOn>> applies to all log categories and the value of `categories` is undefined.
+** If <<loggingOn,`loggingOn == fmi3True`>>, debug logging is enabled for the log categories specified in `categories`.
+If <<loggingOn,`loggingOn == fmi3False`>>, debug logging is disabled for the log categories specified in `categories`.
+
+** `nCategories` defines the length of the array of argument `categories`.
+If `nCategories == 0`, <<loggingOn>> applies to all log categories and the value of `categories` is undefined.
+
 ** `categories` is an array of `nCategories` elements.
-The allowed values of `categories` are defined in the <<modelDescription.xml>> via element <<definition-of-log-categories,`<LogCategories>`>>.
+The importer must only use values specified in the <<modelDescription.xml>> via element <<definition-of-log-categories,`<LogCategories>`>> as elements of argument `categories`.
+
+_[For example: If <<logMessage>> shall be called only for log category `logStatusFatal`, two calls are required:_
+* _first, all log categories are turned off using <<loggingOn,`loggingOn == fmi3False`>> with `nCategories == 0`, and_
+* _second, only `logStatusFatal` is placed in `categories` with <<loggingOn,`loggingOn == fmi3True`>>.]_
 
 [[fmi3Reset,`fmi3Reset`]]
 Function `fmi3Reset`::
