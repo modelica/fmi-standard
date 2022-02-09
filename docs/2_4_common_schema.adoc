@@ -773,9 +773,9 @@ Element `<fmiModelDescription><DefaultExperiment>` is defined as:
 [[figure-schema-DefaultExperiment]]
 image::images/schema/DefaultExperiment.png[width=60%, align="center"]
 
-[[stepSize,`stepSize`]]`<DefaultExperiment>` consists of the optional default start time, stop time, relative tolerance, and step size for the first simulation run.
-A tool may ignore this information.
-However, it is convenient for a user that <<startTime>>, <<stopTime>>, <<tolerance>> and <<stepSize>> have already a meaningful default value for the model at hand.
+[[stepSize,`stepSize`]]`<DefaultExperiment>` consists of the optional default start time, stop time, relative tolerance, and step size for a simulation run.
+A tool may ignore this information. +
+_[However, it is convenient for a user that <<startTime>>, <<stopTime>>, <<tolerance>> and <<stepSize>> have already a meaningful default value for the model at hand.]_ +
 Furthermore, for Co-Simulation FMUs the <<stepSize>> defines the preferred <<communicationStepSize>>.
 <<startTime>>, <<stopTime>> and <<stepSize>> refer to the unit of the <<independent>> variable.
 
@@ -785,14 +785,14 @@ Furthermore, for Co-Simulation FMUs the <<stepSize>> defines the preferred <<com
 ===== Static information
 
 The element of `<fmiModelDescription><ModelVariables>` is the central part of the <<modelDescription.xml>>.
-It provides the static information of all exposed variables and is defined as follows.
+It provides the static information of all exposed variables and is defined as follows:
 
 .ModelVariables element.
 [[figure-schema-ModelVariables]]
 image::images/schema/ModelVariables.png[width=60%, align="center"]
 
-The <<ModelVariables>> element consists of variable elements (see <<figure-schema-ModelVariables>>).
-Variable elements can uniformly represent variables of primitive (atomic) types, like single floating point or integer variables, as well as arrays of an arbitrary (but fixed) number of dimensions.
+The <<ModelVariables>> element consists of an arbitrary number of `<fmi3Variable>` elements (see <<figure-schema-ModelVariables>>).
+`<fmi3Variable>` elements represent scalars or arrays of an arbitrary (but fixed) number of dimensions for variables of different types, like single-precision floating point, string or binary.
 The schema definition is present in a separate file `fmi3Variable.xsd`.
 
 [[Dimension,`<Dimension>`]]
@@ -806,22 +806,21 @@ Each <<Dimension>> element specifies the size of one dimension of the array:
 The <<variability>> of the dimension size is <<constant>> in this case.
 
 - If the <<valueReference>> attribute of the <<Dimension>> element is present, it defines the size of this dimension to be the value of the variable with the value reference given by the <<valueReference>> attribute.
-The referenced variable must be a variable of type `<UInt64>`, and must either be a constant (i.e. with <<variability>> = <<constant>>) or a <<structuralParameter,`structural parameter`>>(i.e. with <<causality>> = <<structuralParameter>>).
+The referenced variable must be a variable of type `<UInt64>`, and must either be a constant (i.e. with <<variability>> = <<constant>>) or a <<structuralParameter,`structural parameter`>> (i.e. with <<causality>> = <<structuralParameter>>).
 The <<variability>> of the dimension size is in this case the <<variability>> of the referenced variable.
 A <<structuralParameter,`structural parameter`>> must be a variable of type `<UInt64>` only if it is referenced in <<Dimension>>.
 
 These two options are mutually exclusive, i.e., for each <<Dimension>> element either a <<start>> attribute or a <<valueReference>> attribute can be supplied, but not both.
-However different dimension sizes can be specified using different mechanisms and can have differing <<variability>> attributes.
+However different <<Dimension>> sizes for the same variable may be specified using different mechanisms by having different <<variability>> attributes.
 
-All initial dimension sizes (i.e. prior to any configuration or reconfiguration) must be positive integers (i.e. not zero), so that no dimension is initially vanished.
+All initial dimension sizes (defined by <<start>> values either directly or indirectly in the <<fmiModelDescription>>) must be positive integers (i.e. not zero), so that no dimension is initially vanished.
 
-_[This allows importers to ignore <<structuralParameter,`structural parameters`>> because that <<start>> value reflects the internal default setting of that <<structuralParameter,`structural parameter`>>._
-_The rationale for requiring positive start values for <<structuralParameter, `structural parameters`>> is that this avoids importers having to deal with vanishing dimensions if they do not want to deal with them (or even with changing sizes at all)._
-_If we allowed 0 dimension sizes for initial values, tools that do not even care about changing dimension sizes must be prepared to handle vanishing dimensions.]_
+_[This allows importers to ignore <<structuralParameter,`structural parameters`>> because their <<start>> values reflect the internal default settings of <<structuralParameter,`structural parameters`>>._
+_If we allowed 0 dimension sizes for initial values, tools that do not even care about changing dimension sizes would need to be able to handle vanishing arrays.]_
 
-_[ Example:_
+_[Example:_
 _`V` is a floating point vector parameter._
-_The length of the vector depends on the <<structuralParameter,`structural parameter`>> `len`._
+_The length of the vector depends on the <<structuralParameter,`structural parameter`>> `len`, connected via the `valueReference="100"`._
 _The default length of the vector is 7._
 _This length can be changed in <<ConfigurationMode>> because the <<variability>> of the <<structuralParameter,`structural parameter`>> `len` is <<fixed>>._
 _The values of `V` can be changed whenever <<tunable>> parameters can be changed._
@@ -836,12 +835,12 @@ _]_
 Changes to dimension sizes are constrained by the `min`/`max` attributes of the referenced <<structuralParameter,`structural parameters`>>, which can be any non-negative integer, including zero.
 Specifying a minimum size of zero on a <<structuralParameter,`structural parameter`>> allows any related dimension sizes to be changed to zero in <<ConfigurationMode>> or <<ReconfigurationMode>>, thus causing the respective array size to go to zero, which leaves the respective array variable without any active elements.
 
-The actual dimension sizes of arrays are also constrained by the FMU platform, due to memory and addressing constraints:
+The actual dimension sizes of arrays are also constrained by the importer, due to memory and addressing constraints:
 Since the API functions to access variables and their values are constrained to `size_t` individual elements, platforms with addresses of less than 64-bit width will not be able to access elements beyond their addressing limits, neither will they be able to allocate enough memory or address space to represent such arrays.
 For these reasons implementations must take platform-specific constraints into account when changing dimension sizes, and must be prepared to handle the inability of the FMU to adjust to the desired sizes during <<ConfigurationMode>> or <<ReconfigurationMode>>.
 
 Changing any dimension of a variable in <<ConfigurationMode>> or <<ReconfigurationMode>> invalidates the variable's current value (including its <<start>> value).
-It should be noted that changing a <<structuralParameter,`structural parameter`>> might affect dimension sizes of several variables.
+Changing one <<structuralParameter,`structural parameter`>> might affect dimension sizes of several variables.
 
 ===== Alias variables
 
