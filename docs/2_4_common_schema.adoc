@@ -310,7 +310,7 @@ This flag is ignored in Scheduled Execution.
 
 This section describes how units for variables can be defined.
 These descriptions allow automatic unit checks and value conversion in the importer to bridge the gap between FMUs from different simulation domains.
-The FMI unit descriptions are more secure than using humanly readable unit strings only, because all units can be defined as combinations of the 7 SI base units.
+The FMI unit descriptions are more secure than using humanly readable unit strings only, because all units can be defined as combinations of the seven SI base units.
 
 Element `<fmiModelDescription><UnitDefinitions>` is defined as:
 
@@ -323,7 +323,7 @@ If a variable is associated with a `Unit`, the value passed to <<get-and-set-var
 _[The purpose of the name is to uniquely identify a unit and, for example, use it to display the unit in menus or in plots._
 _Since there is no standard to represent units in strings, and there are different ways how this is performed in different tools, no specific format for the string representation of the unit is required.]_
 
-The `Unit` definition consists of the exponents of the 7 SI base units `kg`, `m`, `s`, `A`, `K`, `mol`, `cd`, the exponent of the SI derived unit `rad`, and optionally a `factor` and an `offset`.
+The `Unit` definition consists of the exponents of the seven SI base units `kg`, `m`, `s`, `A`, `K`, `mol`, `cd`, the exponent of the SI derived unit `rad`, and optionally a `factor` and an `offset`.
 _[The additional `rad` base unit helps to handle the often occurring quantities in technical systems that depend on an angle.]_
 
 .`BaseUnit` element.
@@ -543,11 +543,10 @@ image::images/schema/TypeDefinitions.png[width=70%, align="center"]
 This element consists of a set of `<TypeDefinition>` elements according to schema `fmi3TypeDefinition` in file `fmi3Type.xsd`.
 Each `<TypeDefinition>` has attributes `name` and `description`.
 Attribute `name` must be unique with respect to all other elements of the `<TypeDefinitions>` list.
-Furthermore, `name` of a `<TypeDefinition>` must be different to all `name` attributes of variables _[if the same names would be used, then this would nearly always give problems when importing the FMU in an environment such as Modelica, where a type name cannot be used as instance name]_.
+Furthermore, `name` of a `<TypeDefinition>` must be different to all `name` attributes of variables _[if the same names would be used, then this would nearly always give problems when importing the FMU in an environment using the Modelica language, where a type name cannot be used as instance name]_.
 
-Additionally, one variable type element must be present.
-Each variable type has its own attributes which can be consulted in the schema.
-<<figure-schema-Float64Type>>, <<figure-schema-Int32Type>>, <<figure-schema-BooleanType>>, <<figure-schema-BinaryType>>, and <<figure-schema-EnumerationType>>, are representative examples.
+Each variable type has its own set of attributes.
+<<figure-schema-Float64Type>>, <<figure-schema-Int32Type>>, <<figure-schema-BooleanType>>, <<figure-schema-BinaryType>>, <<figure-schema-EnumerationType>>, and <<figure-schema-ClockType>> are representative examples.
 
 .Float64Type element.
 [[figure-schema-Float64Type]]
@@ -574,7 +573,7 @@ image::images/schema/EnumerationType.png[width=100%, align="center"]
 image::images/schema/ClockType.png[width=100%, align="center"]
 
 
-The type elements are referred to in variable elements to declare their type.
+The `<TypeDefinition>` elements are referred to in variable elements to declare their type.
 _[The alternative would be to define a type per variable._
 _However, this would lead to a situation where, e.g., the definition of a `Torque` type would have to be repeated over and over.]_
 The attributes and elements have the following meaning:
@@ -589,24 +588,21 @@ The attributes and elements have the following meaning:
 |`quantity`
 |Physical quantity of the variable.
 _[For example, `Angle`, or `Energy`._
-_The quantity names are not standardized]_
+_The quantity names are not standardized.]_
 
 |`unit`
-|Unit of the variable defined with attribute `name` of `<UnitDefinitions><Unit>` that is used for the model equations.
-_[For example, `N.m`: in this case a `Unit.name = `N.m` must be present under `<UnitDefinitions>`.]_
-_[Note that for variables that are without a unit, the element should not have a `unit` attribute.]_
-_[Giving an empty string as a `unit` attribute specifies a valid unit that needs to be defined among the unit definitions.]_
+|Unit of the variable referencing to a `<UnitDefinitions><Unit>` with the same `name`, which must exist.
+Type definitions without unit must not have a `unit` attribute.
 
 |[[displayUnit,`displayUnit`]] `displayUnit`
-|Default display unit.
-The conversion to the `unit` is defined with the element `<fmiModelDescription><UnitDefinitions>`.
-If the corresponding `displayUnit` is not defined under `<UnitDefinitions><Unit><DisplayUnit>`, then `displayUnit` is ignored.
-It is an error if `displayUnit` is defined as variable type element, but `unit` is not, or unit is not defined under `<UnitDefinitions><Unit>`.
+|Default display unit of the variable referencing to a `<DisplayUnit>` which must exist under `<UnitDefinitions><Unit>` with the `name` of `unit`.
+The conversion to the `unit` is defined with the element `<fmiModelDescription><UnitDefinitions><Unit><DisplayUnit>`.
+If `displayUnit` is defined a `unit` must also be defined.
 
 |`mimeType`
 |Indicates the type of data passed as a binary.
 Defaults to `application/octet-stream`, which is unspecific.
-Implementations can use this information to provide guidance to the user about valid/useful connections.
+Implementations may use this information to provide guidance about valid/useful connections.
 
 |`maxSize`
 |Indicates the maximum size (bytes) of the data passed as a binary.
@@ -617,14 +613,14 @@ _[For example, 10 degree Celsius = 10 Kelvin if `relativeQuantity = true` and no
 
 |[[min,`min`]]`min`
 |Minimum value of variable (variable value latexmath:[\geq] `min`).
-If not defined, the minimum is the largest negative number that can be represented on the machine.
-The `min` definition is information from the FMU to the environment defining the region in which the FMU is designed to operate (see <<min-max-violations>>).
+If not defined, the minimum is the largest negative number that can be represented on the machine for that `<TypeDefinition>`.
+The `min` defines the region in which the FMU is designed to operate (see <<min-max-violations>>).
 _[If, for example, an `<Enumeration>` is defined with `name1 = -4`, `name2 = 1`, `name3 = 5`, `name4 = 11` and `min = -2`, `max = 5`, then only `name2` and `name3` are allowed.]_
 
 |[[max,`max`]]`max`
 |Maximum value of variable (variable value latexmath:[\leq] `max`).
-If not defined, the maximum is the largest positive number that can be represented on the machine.
-The `max` definition is information from the FMU to the environment defining the region in which the FMU is designed to operate (see <<min-max-violations>>).
+If not defined, the maximum is the largest positive number that can be represented on the machine for that `<TypeDefinition>`.
+The `max` defines the region in which the FMU is designed to operate (see <<min-max-violations>>).
 _[If, for example, an `<Enumeration>` is defined with `name1 = -4`, `name2 = 1`, `name3 = 5`, `name4 = 11` and `min = -2`, `max = 5`, then only `name2` and `name3` are allowed.]_
 
 |`nominal`
@@ -640,19 +636,18 @@ _[Typical examples are the monotonically increasing rotation angles of crank sha
 _This information can, for example, be used to increase numerical stability and accuracy by setting the corresponding bound for the relative error to zero (relative tolerance = 0.0), if the corresponding variable is a continuous <<state>> variable.]_
 
 |`Item`
-|`<Item>` of an enumeration has a sequence of `name` and `value` pairs.
-The values can be any integer number but must be unique within the same enumeration (in order that the mapping between `name` and `value` is bijective).
-An `<Enumeration>` element must have at least one `<Item>`.
+|An `<EnumerationType>` must have a non-empty sequence of `<Item>` elements with attributes `name` and `value`.
+`name` and `value` must be unique within the same `<EnumerationType>`.
 
 2+|Attributes for `ClockType`
 
 |`canBeDeactivated`
 |[[canBeDeactivated,`canBeDeactivated`]]
-<<Clock,`Clocks`>> with the attribute <<canBeDeactivated,`canBeDeactivated == true`>> can be actively deactivated using <<fmi3SetClockEM>>.
+<<Clock,`Clocks`>> with the attribute <<canBeDeactivated,`canBeDeactivated == true`>> may be actively deactivated using <<fmi3SetClockEM>>.
 
 |`priority`
 |[[priority,`priority`]]
-This attribute is only considered for <<Clock,`Clocks`>> in Scheduled Execution that are associated to a <<model-partition, model partitions>>.
+This attribute is only considered for <<Clock,`Clocks`>> in Scheduled Execution.
 In Scheduled Execution this attribute is mandatory.
 Smaller values signal higher priorities.
 <<Clock,`Clocks`>> that have to be activated at the same time instant are ordered according to this attribute.
@@ -668,19 +663,15 @@ The attribute `intervalVariability` declares the clock type, see <<table-overvie
 |`intervalDecimal`
 |
 [[intervalDecimal,`intervalDecimal`]]
-The time interval latexmath:[\mathbf{T}_{interval}] between consecutive <<Clock>> ticks.
-
+This attribute defines the time interval latexmath:[\mathbf{T}_{interval}] between consecutive <<Clock>> ticks.
 This value must be greater than 0.0.
-
 This attribute must only be used for <<periodic-clock,periodic Clocks>>.
 
 |`shiftDecimal`
 |
 [[shiftDecimal,`shiftDecimal`]]
-This value defines the delay of the first clock activation relative to latexmath:[\mathbf{t}_{\mathit{start}}] (<<startTime>>).
-
+This attribute defines the delay of the first clock activation relative to latexmath:[\mathbf{t}_{\mathit{start}}] (<<startTime>>).
 This value must be equal or greater than 0.0.
-
 This attribute must only be used for <<periodic-clock,periodic Clocks>>.
 
 |`supportsFraction`
@@ -691,9 +682,7 @@ This attribute defines, if the functions `fmi3GetXXXFraction` and `fmi3SetInterv
 |[[resolution, `resolution`]]`resolution`
 |Instead of defining clock timing using floating point numbers, FMI allows the definition of rational numbers using <<intervalCounter>> and <<shiftCounter>>.
 The `resolution` defines the minimal quanta clock timing can be resolved by.
-
 This attribute is required for <<periodic-clock,time-based periodic clocks>> if <<supportsFraction,`supportsFraction = true`>> and either <<intervalCounter>> or <<shiftCounter>> is present.
-
 This attribute must only be used for <<periodic-clock,periodic Clocks>>.
 
 |[[intervalCounter,`intervalCounter`]]`intervalCounter`
@@ -702,11 +691,8 @@ This attribute must only be used for <<periodic-clock,periodic Clocks>>.
 latexmath:[\mathbf{T}_{interval} = ] `intervalCounter / resolution`.
 
 <<intervalCounter>> and <<resolution>> have no default value.
-
 This value must be greater than 0.
-
 This attribute is allowed if <<supportsFraction,`supportsFraction = true`>> and is required if <<intervalVariability,intervalVariability == `constant`>> or <<intervalVariability,intervalVariability == `fixed`>>.
-
 This attribute must only be used for <<periodic-clock,periodic Clocks>>.
 
 |[[shiftCounter,`shiftCounter`]]`shiftCounter`
@@ -714,10 +700,7 @@ This attribute must only be used for <<periodic-clock,periodic Clocks>>.
 
 latexmath:[\mathbf{T}_{shift} = ] `shiftCounter / resolution`.
 
-This value must be greater than 0.
-
 This attribute is allowed if <<supportsFraction,`supportsFraction = true`>> and is required if <<intervalVariability,intervalVariability == `constant`>> or <<intervalVariability,intervalVariability == `fixed`>>.
-
 This attribute must only be used for <<periodic-clock,periodic Clocks>>.
 
 |====
