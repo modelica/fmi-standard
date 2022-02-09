@@ -1,3 +1,5 @@
+param([switch] $verbose)
+
 $pngOutDir = Resolve-Path (Join-Path $PSScriptRoot "..\docs\images\schema")
 $generatorDir = Join-Path $PSScriptRoot "xsddiagram"
 $generator = Join-Path $generatorDir "XSDDiagramConsole.exe"
@@ -10,7 +12,7 @@ function Clear-Gen() {
 function Get-XSDDiagram() {
 	if (-Not (Test-Path $generator))
 	{
-		$uri = "https://github.com/clagms/xsddiagram/releases/download/XSDDiagram_1.2_FMI/XSDDiagram_1.2_FMI.zip"
+		$uri = "https://github.com/clagms/xsddiagram/releases/download/XSDDiagram_1.3_FMI/XSDDiagram_1.3_FMI.zip"
 		$zipFile = "XSDDiagram-Binary.zip"
 		Invoke-WebRequest -Uri $uri -OutFile $zipFile
 		Expand-Archive -Path $zipFile -DestinationPath $generatorDir -Force
@@ -39,7 +41,18 @@ function Export-Schema() {
 	Write-Output "Generating schema for $element..."
 	$out = Join-Path $pngOutDir $outName
 	Check-Existing $out
-	& $generator -o $out -r $element -e $expand -d -c -z 300 -a -no-gui -y (Resolve-Path (Join-Path $PSScriptRoot "..\schema\$schema"))
+
+	$schema = (Resolve-Path (Join-Path $PSScriptRoot "..\schema\$schema"))
+	if ($verbose) {
+		Write-Output "Generator command parameters:"
+		Write-Output "  exe: $generator"
+		Write-Output "  out: $out"
+		Write-Output "  element: $element"
+		Write-Output "  expand: $expand"
+		Write-Output "  schema: $schema"
+	}
+
+	& $generator -o $out -r $element -e $expand -d -c -z 300 -a -no-gui -y $schema
 
 	If ((Get-Item $out).length -eq 0kb) {
 		Write-Output "Error generating file $out"
