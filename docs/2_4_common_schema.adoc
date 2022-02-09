@@ -859,7 +859,7 @@ _]_
 
 ===== Variable Attributes
 
-The most common attributes of variables are shown in <<figure-schema-fmi3AbstractVariable>>.
+The common attributes of variables are shown in <<figure-schema-fmi3AbstractVariable>>.
 
 .fmi3AbstractVariable element.
 [[figure-schema-fmi3AbstractVariable]]
@@ -879,7 +879,7 @@ The `name` must be unique for all variables of an FMU and may follow a defined <
 |`valueReference`
 |
 [[valueReference,`valueReference`]]
-A handle of the variable to identify the variable value in the model interface and for references within the <<modelDescription.xml>>.
+A handle of the variable to identify the variable value in the C-API functions and for references within the <<modelDescription.xml>>.
 The `valueReference` must be unique for all variables of an FMU.
 
 |`description`
@@ -889,10 +889,11 @@ The `valueReference` must be unique for all variables of an FMU.
 |
 [[causality,`causality`]]
 Enumeration that defines the causality of the variable.
-Allowed values of this enumeration:
+Allowed values of this enumeration are:
 
 [[parameter,`parameter`]]
-`= parameter`: A data value that is constant during the simulation (except for <<tunable>> parameters, see there) and is provided by the environment and cannot be used in connections, except for parameter propagation in terminals as described in <<GeneralRemarkOnSignal>>.
+`= parameter`: A data value that is provided by the importer or user to change the behavior of the FMU.
+It is constant during the simulation (except for <<tunable>> parameters) and should not be used in connections, except for parameter propagation in terminals as described in <<GeneralRemarkOnSignal>>.
 <<variability>> must be <<fixed>> or <<tunable>>.
 These parameters can be changed independently, unlike <<calculatedParameter,calculated parameters>>.
 <<initial>> must be <<exact>> or not present (meaning <<exact>>).
@@ -909,21 +910,22 @@ _[For example, the importer could forward the output of another FMU into this in
 [[output,`output`]]
 `= output`: The variable value can be used by the importer. +
 _[For example, this value can be forwarded to an input of another FMU.]_ +
-The algebraic relationship to the <<input,`inputs`>> can be defined via the <<dependencies>> attribute of <<Output,`<fmiModelDescription><ModelStructure><Output>`>>.
+The algebraic relationships to the <<input,`inputs`>> can be defined via the <<dependencies>> attribute of <<Output,`<fmiModelDescription><ModelStructure><Output>`>>.
 
 [[local,`local`]]
 `= local`: Local variables are: +
 
-* continuous <<state,states>> and their <<ContinuousStateDerivative,`ContinuousStateDerivative`pass:[s]>>, <<ClockedState,`ClockedState`pass:[s]>>, <<EventIndicator,`EventIndicator`pass:[s]>> or <<InitialUnknown,`InitialUnknown`pass:[s]>>.
+* continuous <<state,states>> and their <<ContinuousStateDerivative,`ContinuousStateDerivatives`>>, <<ClockedState,`ClockedStates`>>, <<EventIndicator,`EventIndicators`>> or <<InitialUnknown,`InitialUnknowns`>>.
 These variables are listed in the <<ModelStructure>>. +
 * [[localClock,`local clock`]] internal, intermediate variables or local clocks which can be read for debugging purposes and are not listed in the <<ModelStructure>>.
 
 Setting of local variables: +
 
-* In <<InitializationMode>> and before, local variables need to be set if they do have start values or are listed as <<InitialUnknown>>.
+* See <<InitializationMode>> and <<Instantiated>> for restrictions.
 
 * In super state <<Initialized>>, <<get-and-set-variable-values,`fmi3Set{VariableType}`>> must not be called on any of the local variables.
 Only in Model Exchange, continuous <<state,states>> can be set with <<fmi3SetContinuousStates>>.
+
 Local variable values must not be used as input to another model or FMU.
 
 [[independent,`independent`]]
@@ -931,16 +933,11 @@ Local variable values must not be used as input to another model or FMU.
 All variables are a function of this <<independent>> variable.
 <<variability>> must be <<continuous>>.
 Exactly one variable of an FMU must be defined as <<independent>>.
-For Model Exchange the value is the last value set by <<fmi3SetTime>>.
-For Co-Simulation the value of the independent variable is <<lastSuccessfulTime>> return by the last call to <<fmi3DoStep>> or the value of argument <<intermediateUpdateTime>> of <<fmi3IntermediateUpdateCallback>>.
-For <<fmi-for-scheduled-execution,Scheduled Execution>> the value of the independent variable is not defined.
-_[The main purpose of this variable in Scheduled Execution is to define a quantity and unit for the independent variable.]_
-The initial value of the independent variable is the value of the argument <<startTime>> of <<fmi3EnterInitializationMode>> for both Co-Simulation and Model Exchange.
 If the unit for the independent variable is not defined, it is implicitly `s` (seconds).
-If one variable is defined as <<independent>>, it must be defined with a floating point type without a <<start>> attribute.
+The independent variable must be defined as a floating point type without a <<start>> attribute.
 It is not allowed to call function <<get-and-set-variable-values,`fmi3Set{VariableType}`>> on an <<independent>> variable.
-Instead, its value is initialized with <<fmi3EnterInitializationMode>> and after initialization set by <<fmi3SetTime>> for Model Exchange and by arguments <<currentCommunicationPoint>> and <<communicationStepSize>> of <<fmi3DoStep>> for Co-Simulation FMUs.
-_[The actual value can be inquired with <<get-and-set-variable-values,`fmi3Get{VariableType}`>>.]_
+See <<advancing-time>> for how the independent variable is set.
+The actual value may be inquired with <<get-and-set-variable-values,`fmi3Get{VariableType}`>>.
 
 [[structuralParameter,`structuralParameter`]]
 `= structuralParameter`: The variable value can only be changed in <<ConfigurationMode>> or <<ReconfigurationMode>>.
@@ -949,17 +946,13 @@ The <<initial>> attribute must be <<exact>> or not present (meaning <<exact>>).
 The <<start>> attribute is mandatory.
 A <<structuralParameter,`structural parameter`>> must not have a <<Dimension>> element.
 A <<structuralParameter,`structural parameter`>> may be referenced in <<Dimension>> elements.
-If a <<structuralParameter,`structural parameters`>> is referenced in <<Dimension>> elements, it must be of type `<UInt64>` and its <<start>> attribute must be larger than 0.
+If a <<structuralParameter,`structural parameter`>> is referenced in <<Dimension>> elements, it must be of type `<UInt64>` and its <<start>> attribute must be larger than 0.
 The `min` attribute might still be 0.
 
 The default of <<causality>> is <<local>>. +
 A continuous-time <<state>> or an event indicator must have <<causality>> = <<local>> or <<output>>, see also <<ModelStructure>>.
 
-_[<<causality>> = <<calculatedParameter>> and <<causality>> = <<local>> with <<variability>> = <<fixed>> or <<tunable>> are similar._
-_The difference is that a <<calculatedParameter>> can be used in another model or FMU, whereas a <<local>> variable cannot._
-_For example, when importing an FMU in a Modelica environment, a <<calculatedParameter>> should be imported in a `public` section as `final parameter`, whereas a <<local>> variable should be imported in a `protected` section of the model.]_
-
-The causality of variables of type <<Clock>> must be either <<input>> or <<output>>.
+The causality of variables of type <<Clock>> must be either <<input>>, <<output>> or <<local>>.
 
 |`variability`
 |
