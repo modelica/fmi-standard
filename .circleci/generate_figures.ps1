@@ -6,6 +6,9 @@ $generator = Join-Path $generatorDir "XSDDiagramConsole.exe"
 
 function Clear-Gen() {
 	# Get-ChildItem $pngOutDir\*
+	if (Test-Path $generatorDir){
+		Remove-Item -Recurse $generatorDir
+	}
 	Remove-Item $pngOutDir\*
 }
 
