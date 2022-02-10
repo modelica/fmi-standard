@@ -119,6 +119,10 @@ _[Note that the definition of an encoding scheme is a prerequisite in order for 
 _Furthermore, note the FMI calling interface requires that strings are encoded in UTF-8._
 _Since the XML files are also required to be encoded in UTF-8, string variables need not to be transformed when reading from the XML files in to C string variables.]._
 
+[[uniqueNameAttribute]]
+`name` attributes of list elements (for example <<>> or <<>>) must be unique within that list and must not be empty strings.
+Additional restrictions for these `name` attributes are listed in their respective sections.
+
 _[Note that child information items, such as elements in a sequence are ordered lists according to document order, whereas attribute information items are unordered sets (see http://www.w3.org/TR/XML-infoset/#infoitem.element)._
 _The FMI schema is based on ordered lists in a sequence and therefore parsing must preserve this order._
 _For example, the order of the <<ContinuousStateDerivative>> elements defines the order to be used in <<fmi3GetContinuousStates>>, <<fmi3SetContinuousStates>>, and <<fmi3GetContinuousStateDerivatives>>.]_
@@ -318,7 +322,8 @@ Element `<fmiModelDescription><UnitDefinitions>` is defined as:
 [[figure-schema-UnitDefinitions]]
 image::images/schema/UnitDefinitions.png[width=90%]
 
-The `name` of a `Unit` must be unique with respect to all other `<Unit>` elements.
+Units are referenced via its <<uniqueNameAttribute,unique>> attribute `name` by the attribute `unit` and `displayUnit` of <<table-type-details,variable types>> and <<table-type-attributes,variables>>.
+The `name` of a `Unit` must be <<uniqueNameAttribute,unique>> with respect to all other `<Unit>` elements.
 If a variable is associated with a `Unit`, the value passed to <<get-and-set-variable-values,`fmi3Set{VariableType}`>> (resp. retrieved with <<get-and-set-variable-values,`fmi3Get{VariableType}`>>) has this unit.
 _[The purpose of the name is to uniquely identify a unit and, for example, use it to display the unit in menus or in plots._
 _Since there is no standard to represent units in strings, and there are different ways how this is performed in different tools, no specific format for the string representation of the unit is required.]_
@@ -541,9 +546,6 @@ Element `<fmiModelDescription><TypeDefinitions>` is defined as:
 image::images/schema/TypeDefinitions.png[width=70%, align="center"]
 
 This element consists of a set of `<TypeDefinition>` elements according to schema `fmi3TypeDefinition` in file `fmi3Type.xsd`.
-Each `<TypeDefinition>` has attributes `name` and `description`.
-Attribute `name` must be unique with respect to all other elements of the `<TypeDefinitions>` list.
-Furthermore, `name` of a `<TypeDefinition>` must be different to all `name` attributes of variables _[if the same names would be used, then this would nearly always give problems when importing the FMU in an environment using the Modelica language, where a type name cannot be used as instance name]_.
 
 Each variable type has its own set of attributes.
 <<figure-schema-Float64Type>>, <<figure-schema-Int32Type>>, <<figure-schema-BooleanType>>, <<figure-schema-BinaryType>>, <<figure-schema-EnumerationType>>, and <<figure-schema-ClockType>> are representative examples.
@@ -584,6 +586,13 @@ The attributes and elements have the following meaning:
 |====
 |Attribute or Element
 |Description
+
+|`name`
+|The <<uniqueNameAttribute,unique>> name of the variable type referenced using the attribute <<table-type-attributes,`declaredType`>>.
+This attribute must be different to all `name` attributes of variables _[if the same names would be used, then this would nearly always give problems when importing the FMU in an environment using the Modelica language, where a type name cannot be used as instance name]_.
+
+|`description`
+An optional description string describing the meaning of the variable type.
 
 |`quantity`
 |Physical quantity of the variable.
@@ -715,7 +724,7 @@ image::images/schema/LogCategories.png[width=80%, align="center"]
 
 `<LogCategories>` defines an unordered set of category strings that classify output of the callback function <<logMessage>>.
 The importer may use the function <<fmi3SetDebugLogging>> to control for which `<LogCategories>` the callback function <<logMessage>> is allowed to be called.
-The `name` attribute of `<Category>` must be unique with respect to all other elements of the `<LogCategories>` list.
+The `name` attribute of `<Category>` must be <<uniqueNameAttribute,unique>> with respect to all other elements of the `<LogCategories>` list.
 
 <<table-standard-categories>> shows the standardized values for `name` of `<Category>`.
 These names should be used if a tool supports the corresponding log category.
@@ -873,8 +882,8 @@ image::images/schema/fmi3AbstractVariable.png[width=80%, align="center"]
 |Description
 
 |`name`
-|The full, unique name of the variable.
-The `name` must be unique for all variables of an FMU and may follow a defined <<namingSection, naming convention>>.
+|The <<uniqueNameAttribute,unique>> name of the variable.
+This attribute may follow a defined <<namingSection, naming convention>>.
 
 |`valueReference`
 |
@@ -1292,6 +1301,15 @@ _[For example, if `min` is present both in variable type element of `<TypeDefini
 For `<Enumeration>` the attribute `declaredType` is required because the `<Enumeration>` items are defined in `<TypeDefinitions><TypeDefinition>`.
 For all other types, this attribute is optional.
 
+|`unit`
+|Unit of the variable referencing to a `<UnitDefinitions><Unit>` with the same `name`, which must exist.
+Variables without unit must not have a `unit` attribute.
+
+|[[displayUnit,`displayUnit`]] `displayUnit`
+|Default display unit of the variable referencing to a `<DisplayUnit>` which must exist under `<UnitDefinitions><Unit>` with the `name` of `unit`.
+The conversion to the `unit` is defined with the element `<fmiModelDescription><UnitDefinitions><Unit><DisplayUnit>`.
+If `displayUnit` is defined a `unit` must also be defined.
+
 |`initial`
 |
 [[initial,`initial`]]
@@ -1467,8 +1485,7 @@ In the following definitions, the http://en.wikipedia.org/wiki/Extended_BNF[EBNF
 |   or
 ----
 
-The names must be unique, non-empty strings. +
-_[It is recommended that the names are visually clearly different from each other; but it is not required.]_
+The names must be unique, non-empty strings.
 
 The following conventions for scalar names are defined:
 
@@ -1992,7 +2009,7 @@ Element `<fmiTerminalsAndIcons><Terminals>` is defined as:
 [[figure-schema-Terminals]]
 image::images/schema/Terminals.png[width=80%, align="center"]
 
-The normalized string attribute `name` of the `<Terminal>` element is the instance name of the terminal.
+The normalized string attribute `name` of the `<Terminal>` element is the <<uniqueNameAttribute,unique>> instance name of the terminal.
 The terminal name must be unique on each level.
 
 The normalized string attribute `matchingRule` describes the rules for variable matching in a connection of terminals.
@@ -2270,7 +2287,7 @@ An importer of the FMU has to regard every `<SourceFileSet>` of the matching <<B
 |Description
 
 |`name`
-|Name of the `<SourceFileSet>`
+|<<uniqueNameAttribute,Unique>> name of the `<SourceFileSet>`
 
 |`language`
 |Language of the source files (e.g. `C99`, `C++11`)
@@ -2292,7 +2309,8 @@ An importer of the FMU has to regard every `<SourceFileSet>` of the matching <<B
 |Description
 
 |`name`
-|Path of the source file relative to the `sources` directory
+|Path of the source file relative to the `sources` directory.
+
 |====
 
 ===== PreprocessorDefinition
