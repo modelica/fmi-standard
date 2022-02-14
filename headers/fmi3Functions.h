@@ -173,6 +173,8 @@ Common Functions
 #define fmi3GetShiftFraction         fmi3FullName(fmi3GetShiftFraction)
 #define fmi3SetIntervalDecimal       fmi3FullName(fmi3SetIntervalDecimal)
 #define fmi3SetIntervalFraction      fmi3FullName(fmi3SetIntervalFraction)
+#define fmi3SetShiftDecimal          fmi3FullName(fmi3SetShiftDecimal)
+#define fmi3SetShiftFraction         fmi3FullName(fmi3SetShiftFraction)
 #define fmi3EvaluateDiscreteStates   fmi3FullName(fmi3EvaluateDiscreteStates)
 #define fmi3UpdateDiscreteStates     fmi3FullName(fmi3UpdateDiscreteStates)
 

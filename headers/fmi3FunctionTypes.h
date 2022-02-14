@@ -506,6 +506,21 @@ typedef fmi3Status fmi3SetIntervalFractionTYPE(fmi3Instance instance,
                                                const fmi3UInt64 resolutions[]);
 /* end::SetIntervalFraction[] */
 
+/* tag::SetShiftDecimal[] */
+typedef fmi3Status fmi3SetShiftDecimalTYPE(fmi3Instance instance,
+                                           const fmi3ValueReference valueReferences[],
+                                           size_t nValueReferences,
+                                           const fmi3Float64 shifts[]);
+/* end::SetShiftDecimal[] */
+
+/* tag::SetShiftFraction[] */
+typedef fmi3Status fmi3SetShiftFractionTYPE(fmi3Instance instance,
+                                            const fmi3ValueReference valueReferences[],
+                                            size_t nValueReferences,
+                                            const fmi3UInt64 shiftCounters[],
+                                            const fmi3UInt64 resolutions[]);
+/* end::SetShiftFraction[] */
+
 /* tag::EvaluateDiscreteStates[] */
 typedef fmi3Status fmi3EvaluateDiscreteStatesTYPE(fmi3Instance instance);
 /* end::EvaluateDiscreteStates[] */
