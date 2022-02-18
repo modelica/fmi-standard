@@ -78,6 +78,14 @@ typedef enum {
 } fmi3IntervalQualifier;
 /* end::IntervalQualifier[] */
 
+/* tag::EventQualifier[] */
+typedef enum {
+    fmi3EventTrue,
+    fmi3EventFalse,
+    fmi3EventUnknown
+} fmi3EventQualifier;
+/* end::EventQualifier[] */
+
 /* tag::CallbackLogMessage[] */
 typedef void  (*fmi3LogMessageCallback) (fmi3InstanceEnvironment instanceEnvironment,
                                          fmi3Status status,
@@ -183,11 +191,11 @@ typedef fmi3Status fmi3ExitInitializationModeTYPE(fmi3Instance instance);
 
 /* tag::EnterEventMode[] */
 typedef fmi3Status fmi3EnterEventModeTYPE(fmi3Instance instance,
-                                          fmi3Boolean stepEvent,
-                                          fmi3Boolean stateEvent,
+                                          fmi3EventQualifier stepEvent,
+                                          fmi3EventQualifier stateEvent,
                                           const fmi3Int32 rootsFound[],
                                           size_t nEventIndicators,
-                                          fmi3Boolean timeEvent);
+                                          fmi3EventQualifier timeEvent);
 /* end::EnterEventMode[] */
 
 /* tag::Terminate[] */

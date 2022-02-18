@@ -128,9 +128,9 @@ include::../headers/fmi3FunctionTypes.h[tags=GetEventIndicators]
 +
 Returns the event indicators signaling <<state-event,state events>> by their sign changes.
 +
-* [[eventIndicators,`eventIndicators`]]Return argument `eventIndicators` contains the values for the event indicators in the order defined by the ordered list of elements <<EventIndicator>>.
+* [[eventIndicators,`eventIndicators`]]Return argument `eventIndicators` contains the values for the event indicators in the order defined by the ordered list of XML elements <<EventIndicator>>.
 
-* Argument `nEventIndicators` is the size of the `eventIndicators` vector.
+* Argument `nEventIndicators` is the current size of the `eventIndicators` vector (see <<fmi3GetNumberOfEventIndicators>>).
 
 +
 _[<<fmi3Discard,`fmi3Status = fmi3Discard`>> should be returned if the FMU was not able to compute the event indicators according to_ latexmath:[\mathbf{f}_{\mathit{cont}}] _because, for example, a numerical issue, such as division by zero, occurred.]_
@@ -185,13 +185,39 @@ include::../headers/fmi3FunctionTypes.h[tags=EnterEventMode]
 ----
 +
 This function changes the state to <<EventMode>>.
++
+The arguments `stepEvent`, `stateEvent`, and `timeEvent` enable efficient and robust event handling.
+They are of enumeration type `fmi3EventQualifier`:
++
+[source, C]
+----
+include::../headers/fmi3FunctionTypes.h[tags=EventQualifier]
+----
+with the following meanings:
++
+--
+[[fmi3EventTrue,`fmi3EventTrue`]]
+ * `fmi3EventTrue` indicates that the given event type happens.
 
-* Model Exchange only: `stepEvent = fmi3True` signals that a <<step-event>> occurs.
+[[fmi3EventFalse,`fmi3EventFalse`]]
+ * `fmi3EventFalse` indicates that the given event type does not happen.
 
-* Model Exchange only: `stateEvent = fmi3True` signals that a <<state-event>> occurs.
+[[fmi3EventUnknown,`fmi3EventUnknown`]]
+ * `fmi3EventUnknown` indicates that the importer is unable to provide this information about this event type.
+ In this case, the FMU must determine itself if this event type happens.
+--
++
+The arguments of the function have the following meaning:
++
+--
+* Model Exchange only: `stepEvent` signals a <<step-event>>.
+`stepEvent` must be `fmi3EventTrue` if <<fmi3CompletedIntegratorStep>> returned with `enterEventMode = fmi3True`.
+
+* Model Exchange only: `stateEvent` signals a <<state-event>>, triggered by a zero-crossing of an event indicator.
 
 * Model Exchange only: `rootsFound` is an array of length `nEventIndicators` that informs the FMU which event indicator has a root. +
 For `i = 0, ... nEventIndicators-1, rootsFound[i]` informs about event indicator latexmath:[{\mathbf{z}_{\mathit{i}}}]:
++
 ** `rootsFound[i] = 0` no root,
 ** `rootsFound[i] = +1` indicates the direction of the zero-crossing from negative to positive,
 ** `rootsFound[i] = -1` indicates the direction of the zero-crossing from positive to negative.
@@ -200,12 +226,15 @@ For `i = 0, ... nEventIndicators-1, rootsFound[i]` informs about event indicator
 If `nEventIndicators = 0` the value of `rootsFound` is not defined.
 The order in the `rootsFound` array is the same as in <<eventIndicators>> of <<fmi3GetEventIndicators>>.
 
-* Model Exchange only: `nEventIndicators` contains the number of event indicators as deduced from the list <<EventIndicator>> or `0` if the importer cannot provide this information.
+* Model Exchange only: `nEventIndicators` contains the current number of event indicators (see <<fmi3GetNumberOfEventIndicators>>) or `0`.
+If `nEventIndicators = 0` and `stateEvent != fmi3EventFalse` the importer is unable to provide this information and the FMU must determine itself which event indicator has a zero-crossing.
 
-* [[timeEvent,`timeEvent`]]`timeEvent = fmi3True` signals that this event is a <<time-event>> triggered by <<nextEventTime>> of <<fmi3UpdateDiscreteStates>>.
-
+* [[timeEvent,`timeEvent`]]`timeEvent` signals a <<time-event>> triggered by <<nextEventTime>> of <<fmi3UpdateDiscreteStates>>.
+--
 +
-_[An <<input-event>> can be detected by the FMU by keeping track of the calls of <<get-and-set-variable-values,`fmi3Set{VariableType}`>> in <<EventMode>>.]_
+_[An <<input-event>> can be detected by the FMU by keeping track of the calls of <<get-and-set-variable-values,`fmi3Set{VariableType}`>> in <<EventMode>>._ +
+_Please note: if all event types are given as `fmi3EventUnknown` then the functionality is the same as in FMI 2.0.]_
+
 
 Function <<fmi3GetDirectionalDerivative>>::
 See <<fmi3GetDirectionalDerivative>>.
