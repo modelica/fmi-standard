@@ -80,8 +80,8 @@ typedef enum {
 
 /* tag::EventQualifier[] */
 typedef enum {
-    fmi3EventTrue,
     fmi3EventFalse,
+    fmi3EventTrue,
     fmi3EventUnknown
 } fmi3EventQualifier;
 /* end::EventQualifier[] */
