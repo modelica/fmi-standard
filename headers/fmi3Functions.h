@@ -285,6 +285,8 @@ FMI3_Export fmi3GetShiftDecimalTYPE        fmi3GetShiftDecimal;
 FMI3_Export fmi3GetShiftFractionTYPE       fmi3GetShiftFraction;
 FMI3_Export fmi3SetIntervalDecimalTYPE     fmi3SetIntervalDecimal;
 FMI3_Export fmi3SetIntervalFractionTYPE    fmi3SetIntervalFraction;
+FMI3_Export fmi3SetShiftDecimalTYPE        fmi3SetShiftDecimal;
+FMI3_Export fmi3SetShiftFractionTYPE       fmi3SetShiftFraction;
 FMI3_Export fmi3EvaluateDiscreteStatesTYPE fmi3EvaluateDiscreteStates;
 FMI3_Export fmi3UpdateDiscreteStatesTYPE   fmi3UpdateDiscreteStates;
 
