@@ -555,9 +555,9 @@ The importer calls <<fmi3GetClock>> to inquire the Clock's activation state.
 h|<<causality>>
 h|<<intervalVariability>>
 
-.7+|<<time-based-clock,time-based>>
-.5+|[[periodic-clock]]periodic
-.5+|<<input>>
+.5+|<<time-based-clock,time-based>>
+.3+|[[periodic-clock]]periodic
+.3+|<<input>>
 |`constant`
 |[[constant-clock]]<<fmi3SetClock>> in <<EventMode>>,
 <<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
@@ -565,31 +565,22 @@ h|<<intervalVariability>>
 |clocked PI-controller with a defined constant interval
 
 |`fixed`
-|[[fixed-clock]]<<fmi3SetClock>> in <<EventMode>>,
+a|[[fixed-clock]]<<fmi3SetClock>> in <<EventMode>>,
 <<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
-<<fmi3SetInterval>> in <<InitializationMode>>
-|clocked PI-controller with an adaptable interval
+
+* if <<intervalDecimal>> is defined, <<fmi3SetInterval>> in <<InitializationMode>>,
+* if <<intervalDecimal>> is not defined, <<fmi3GetInterval>> and <<fmi3GetShift>> in <<InitializationMode>>
+
+|clocked PI-controller with directly or indirectly adaptable interval
 
 |`tunable`
-|[[tunable-clock]]<<fmi3SetClock>> in <<EventMode>>,
+a|[[tunable-clock]]<<fmi3SetClock>> in <<EventMode>>,
 <<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
-<<fmi3SetInterval>> in <<InitializationMode>>, <<EventMode>> and in <<ClockActivationMode>>
-|clocked PI-controller with an adaptable interval
 
-|`fixed` and +
-`computed = true`
-|[[fixed-computed-clock]]<<fmi3SetClock>> in <<EventMode>>,
-<<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
-<<fmi3GetInterval>> and <<fmi3GetShift>> in <<InitializationMode>>
-|clocked PI-controller with interval defined by fixed parameter(s) of the FMU
+* if <<intervalDecimal>> is defined, <<fmi3SetInterval>> in <<InitializationMode>>, <<EventMode>> and in <<ClockActivationMode>>
+* if <<intervalDecimal>> is not defined, <<fmi3GetShift>> in <<InitializationMode>>, <<fmi3GetInterval>> in <<InitializationMode>>, <<EventMode>> and in <<ClockActivationMode>>
 
-|`tunable` and +
-`computed = true`
-|[[tunable-computed-clock]]<<fmi3SetClock>> in <<EventMode>>,
-<<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
-<<fmi3GetShift>> in <<InitializationMode>>,
-<<fmi3GetInterval>> in <<InitializationMode>>, <<EventMode>> and in <<ClockActivationMode>>
-|clocked PI-controller with interval defined by tunable parameter(s) of the FMU
+|clocked PI-controller with directly or indirectly tunable interval
 
 .2+|[[aperiodic-clock]]aperiodic
 .2+|<<input>>
@@ -677,26 +668,26 @@ is a time-based periodic clock that defines its <<intervalDecimal>> and optional
 
 Fixed periodic Clock::
 is a time-based periodic Clock which ticks with an arbitrary, but fixed interval latexmath:[\mathbf{T}_{\mathit{interval}}] starting after an arbitrary latexmath:[\mathbf{T}_{\mathit{shift}}], both interval and shift can be changed by the importer.
-The importer informs the FMU about the Clock's `fixed` interval using <<fmi3SetInterval>> in <<InitializationMode>>.
-If the function is not called the value given in <<intervalDecimal,`intervalDecimal`>> and <<intervalCounter,`intervalCounter`>> is used. +
+
+If <<intervalDecimal,`intervalDecimal`>> is specified, the importer sets the Clock's `fixed` interval using <<fmi3SetInterval>> in <<InitializationMode>>.
+If the function is not called the value given in <<intervalDecimal,`intervalDecimal`>> and <<intervalCounter,`intervalCounter`>> is used.
+
+If <<intervalDecimal,`intervalDecimal`>> is not specified, then the importer must use <<fmi3GetInterval>> and <<fmi3GetShift>> to retrieve the Clock interval and shift in <<InitializationMode>> because they depend on <<fixed>> <<parameter, parameters>>.
+
 _[This information enables the FMU to adapt internal computations to the `fixed` Clock interval determined by the importer.]_
 
 Tunable periodic Clock::
-is a time-based periodic Clock which ticks with an arbitrary and changeble interval latexmath:[\mathbf{T}_{\mathit{interval}}] starting after an arbitrary latexmath:[\mathbf{T}_{\mathit{shift}}], both interval and shift can be changed by the importer.
-The importer informs the FMU about the Clock's `tunable` interval using <<fmi3SetInterval>> in <<InitializationMode>>.
+is a time-based periodic Clock which ticks with an arbitrary and changeable interval latexmath:[\mathbf{T}_{\mathit{interval}}] starting after an arbitrary latexmath:[\mathbf{T}_{\mathit{shift}}], both interval and shift can be changed by the importer.
+
+If <<intervalDecimal,`intervalDecimal`>> is specified, the importer sets the Clock's `tunable` interval using <<fmi3SetInterval>> in <<InitializationMode>>.
 It can later change this interval in <<EventMode>> or <<ClockActivationMode>>.
-If the function is not called the value given in <<intervalDecimal,`intervalDecimal`>> and <<intervalCounter,`intervalCounter`>> is used. +
-_[This information enables the FMU to adapt internal computations to the `tunable` Clock interval determined by the importer.]_
+If the function is not called, the value given in <<intervalDecimal,`intervalDecimal`>> and <<intervalCounter,`intervalCounter`>> is used by the importer.
 
-Fixed computed periodic Clock::
-is a time-based periodic Clock whose interval and shift depend on <<fixed>> <<parameter, parameters>>.
-The importer must use <<fmi3GetInterval>> and <<fmi3GetShift>> to retrieve the Clock interval and shift in <<InitializationMode>>.
-
-Tunable computed periodic Clock::
-is a time-based periodic Clock whose interval depends on <<tunable>> <<parameter, parameters>>.
+If <<intervalDecimal,`intervalDecimal`>> is not specified, then the importer must use <<fmi3GetInterval>> to retrieve the Clock interval in <<InitializationMode>>, and later in <<EventMode>> or <<ClockActivationMode>>, if any of the <<tunable>> <<parameter, parameters>> the Clock's interval depends on was changed.
 The shift may only depend on <<fixed>> <<parameter, parameters>>.
-The importer must use <<fmi3GetInterval>> to retrieve the Clock interval in <<InitializationMode>>, and later in <<EventMode>> or <<ClockActivationMode>>, if any of the <<tunable>> <<parameter, parameters>> it depends on was changed.
 The importer must use <<fmi3GetShift>> to retrieve the Clock shift in <<InitializationMode>>.
+
+_[This information enables the FMU to adapt internal computations to the `tunable` Clock interval determined by the importer.]_
 
 Aperiodic Clock::
 is a time-based Clock with an interval that can change during runtime by FMU-internal mechanisms.
