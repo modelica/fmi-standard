@@ -905,35 +905,35 @@ The `valueReference` must be unique for all variables of an FMU.
 |
 [[causality,`causality`]]
 Enumeration that defines the causality of the variable.
-Allowed values of this enumeration are:
+Allowed combinations of <<causality>> and <<variability>> and their semantics are defined in <<table-allowed-variability-causality-combinations>>.
+
+Values of this enumeration are:
 
 [[parameter,`parameter`]]
 `= parameter`: A data value that is provided by the importer or user to change the behavior of the FMU.
 It is constant during the simulation (except for <<tunable>> parameters) and should not be used in connections, except for parameter propagation in terminals as described in <<GeneralRemarkOnSignal>>.
-<<variability>> must be <<fixed>> or <<tunable>>.
 These parameters can be changed independently, unlike <<calculatedParameter,calculated parameters>>.
-<<initial>> must be <<exact>> or not present (meaning <<exact>>).
 
 [[calculatedParameter,`calculatedParameter`]]
 `= calculatedParameter`: A data value that is constant during the simulation and is computed during initialization or when <<tunable>> <<parameter,`parameters`>> change.
-<<variability>> must be <<fixed>> or <<tunable>>.
-<<initial>> must be <<approx>>, <<calculated>> or not present (meaning <<calculated>>).
 
 [[input,`input`]]
-`= input`: The variable value can be provided by the importer. +
+`= input`: The variable value may be provided by the importer. +
 _[For example, the importer could forward the output of another FMU into this input.]_
 
 [[output,`output`]]
-`= output`: The variable value can be used by the importer. +
+`= output`: The variable value may be used by the importer. +
 _[For example, this value can be forwarded to an input of another FMU.]_ +
-The algebraic relationships to the <<input,`inputs`>> can be defined via the <<dependencies>> attribute of <<Output,`<fmiModelDescription><ModelStructure><Output>`>>.
+The algebraic relationships to the <<input,`inputs`>> may be defined via the <<dependencies>> attribute of <<Output,`<fmiModelDescription><ModelStructure><Output>`>>.
 
 [[local,`local`]]
 `= local`: Local variables are: +
 
-* continuous <<state,states>> and their <<ContinuousStateDerivative,`ContinuousStateDerivatives`>>, <<ClockedState,`ClockedStates`>>, <<EventIndicator,`EventIndicators`>> or <<InitialUnknown,`InitialUnknowns`>>.
+* continuous <<state,states>>.
+These variables are referenced by the <<derivative>> attribute of a <<ContinuousStateDerivative>>.
+* <<ContinuousStateDerivative,`ContinuousStateDerivatives`>>, <<ClockedState,`ClockedStates`>>, <<EventIndicator,`EventIndicators`>> or <<InitialUnknown,`InitialUnknowns`>>.
 These variables are listed in the <<ModelStructure>>. +
-* [[localClock,`local clock`]] internal, intermediate variables or local clocks which can be read for debugging purposes and are not listed in the <<ModelStructure>>.
+* [[localClock,`local clock`]] internal, intermediate variables or local clocks which may be read for debugging purposes and are not listed in the <<ModelStructure>>.
 
 Setting of local variables: +
 
@@ -947,7 +947,6 @@ Local variable values must not be used as input to another model or FMU.
 [[independent,`independent`]]
 `= independent`: The independent variable (usually `time` _[but could also be, for example, `angle`]_).
 All variables are a function of this <<independent>> variable.
-<<variability>> must be <<continuous>>.
 Exactly one variable of an FMU must be defined as <<independent>>.
 If the unit for the independent variable is not defined, it is implicitly `s` (seconds).
 The independent variable must be defined as a floating point type without a <<start>> attribute.
@@ -957,8 +956,6 @@ The actual value may be inquired with <<get-and-set-variable-values,`fmi3Get{Var
 
 [[structuralParameter,`structuralParameter`]]
 `= structuralParameter`: The variable value can only be changed in <<ConfigurationMode>> or <<ReconfigurationMode>>.
-The <<variability>> attribute must be <<fixed>> or <<tunable>>.
-The <<initial>> attribute must be <<exact>> or not present (meaning <<exact>>).
 The <<start>> attribute is mandatory.
 A <<structuralParameter,`structural parameter`>> must not have a <<Dimension>> element.
 A <<structuralParameter,`structural parameter`>> may be referenced in <<Dimension>> elements.
@@ -966,17 +963,20 @@ If a <<structuralParameter,`structural parameter`>> is referenced in <<Dimension
 The `min` attribute might still be 0.
 
 The default of <<causality>> is <<local>>. +
-A continuous-time <<state>> or an event indicator must have <<causality>> = <<local>> or <<output>>, see also <<ModelStructure>>.
-
+A continuous-time <<state>> or an event indicator must have <<causality>> = <<local>> or <<output>>, see also <<ModelStructure>>. +
 The causality of variables of type <<Clock>> must be either <<input>>, <<output>> or <<local>>.
 
 |`variability`
 |
 [[variability,`variability`]]
 Enumeration that defines the time dependency of the variable, in other words, it defines the time instants when a variable can change its value.
-_[The purpose of this attribute is to define when a result value needs to be inquired and to be stored._
-_For example, <<discrete>> variables change their values only at event instants (ME) or at a communication point (CS and SE) and it is therefore only necessary to inquire them with <<get-and-set-variable-values,`fmi3Get{VariableType}`>> and store them at event times.]_
-Allowed values of this enumeration:
+
+_[The purpose of this attribute is to define when a variable can be set and when it makes sense to inquire its potentially changed value._
+_For example, <<discrete>> variables change their values only at event instants (ME) or at communication points (CS and SE) and it is therefore only necessary to inquire them with <<get-and-set-variable-values,`fmi3Get{VariableType}`>> them at these points in time.]_
+
+Allowed combinations of <<causality>> and <<variability>> and their semantics are defined in <<table-allowed-variability-causality-combinations>>.
+
+Values of this enumeration are:
 
 [[constant,`constant`]]
 `= constant`: The value of the variable never changes.
@@ -985,26 +985,22 @@ Allowed values of this enumeration:
 `= fixed`: The value of the variable is fixed after initialization, in other words, after <<fmi3ExitInitializationMode>> was called the variable value does not change anymore.
 
 [[tunable,`tunable`]]
-`= tunable`: The value of the variable is constant between events (ME) and between communication points (CS and SE) due to changing variables with <<causality>> = <<parameter>> and <<variability>> = <<tunable>>.
-Whenever a <<parameter>> with <<variability>> = <<tunable>> changes, an event is triggered externally (ME or CS if events are supported), or the change is performed at the next communication point (CS and SE) and the variables with <<variability>> = <<tunable>> and <<causality>> = <<calculatedParameter>> or <<output>> must be newly computed.
-_[<<tunable>> <<input,inputs>> are not allowed, see <<table-allowed-variability-causality-combinations>>.]_
+`= tunable`: The value of the variable is constant between events (ME and CS if <<EventMode>> is supported) and between communication points (CS and SE).
+A <<parameter>> with <<variability>> = <<tunable>> may be changed only in <<EventMode>> or, if <<EventMode>> is not supported, at communication points (CS and SE).
 
 [[discrete,`discrete`]]
 `= discrete`: +
-Model Exchange: The value of the variable is constant between external and internal events (= <<time event,time event>>, <<state event,state event>>, <<step event,step events>> defined implicitly in the FMU). +
-Co-Simulation: By convention, the variable is from a real sampled data system and its value is only changed at communication points (including event handling).
-During <<intermediateUpdate>>, <<discrete>> variables are not allowed to change.
-_[If the simulation algorithm notices a change in a discrete variable during <<intermediateUpdate>>, the simulation algorithm will delay the change, raise an event with <<earlyReturnRequested,`earlyReturnRequested = fmi3True`>> and during the communication point it can change the <<discrete>> variable, followed by event handling.]_
+The value of the variable may change only in <<EventMode>>. +
+Co-Simulation without <<EventMode>> and Scheduled Execution: The value may change only at communication points.
+During <<IntermediateUpdateMode>>, <<discrete>> variables are not allowed to change.
+The <<variability>> of <<clocked-variable,`clocked variables`>> must have <<discrete>>.
 
 [[continuous,`continuous`]]
-`= continuous`: Only a variable of `type = fmi3GetFloat32` or `type = fmi3GetFloat64` can be <<continuous>>. +
-Model Exchange: No restrictions on value changes (see <<smoothness>>).
+`= continuous`: Only variables of type `<Float32>` or `<Float64>` may be <<continuous>>.
+The default for variables of type `<Float32>` and `<Float64>` is <<continuous>>.
+Variables with <<variability>> `continuous` may change in <<InitializationMode>> and super state <<Initialized>>.
 
-The default is <<continuous>> for variables of type `<Float32>` and `<Float64>`, and <<discrete>> for all other types.
-
-For variables of type `Clock` and <<clocked-variable,`clocked variables`>> the <<variability>> is always <<discrete>> or <<tunable>>.
-
-_[Note that the information about continuous <<state,states>> is defined with elements <<ContinuousStateDerivative>> in <<ModelStructure>>.]_
+For more explanations on value changes see <<smoothness>>.
 
 |`canHandleMultipleSetPerTimeInstant`
 |
@@ -1057,14 +1053,15 @@ _For example, an <<input>> Clock could be a clocked variable of another (<<input
 
 |====
 
+
 <<table-allowed-variability-causality-combinations>> shows the combinations of <<variability>>/<<causality>> settings that are allowed.
 
 .Allowed combinations of <<variability>>/<<causality>>.
 [[table-allowed-variability-causality-combinations]]
-[cols="1,1,1,1,1,1,1,1",options="header"]
+[cols="1,1,1,1,1,1,1,1"]
 |====
-.2+|<<variability>>
-7+^|<<causality>>
+.2+h|<<variability>>
+7+^h|<<causality>>
 
 ^|<<structuralParameter,`structural Parameter`>>
 ^|<<parameter>>
@@ -1074,7 +1071,7 @@ _For example, an <<input>> Clock could be a clocked variable of another (<<input
 ^|<<local>>
 ^|<<independent>>
 
-^|<<constant>> data
+^|<<constant>>
 ^|-- (a)
 ^|-- (a)
 ^|-- (a)
@@ -1083,7 +1080,7 @@ _For example, an <<input>> Clock could be a clocked variable of another (<<input
 ^|(10)
 ^|-- (c)
 
-^|<<fixed>> data
+^|<<fixed>>
 ^|(16)
 ^|(1)
 ^|(3)
@@ -1092,7 +1089,7 @@ _For example, an <<input>> Clock could be a clocked variable of another (<<input
 ^|(11)
 ^|-- (c)
 
-^|<<tunable>> data
+^|<<tunable>>
 ^|(17)
 ^|(2)
 ^|(4)
@@ -1101,7 +1098,7 @@ _For example, an <<input>> Clock could be a clocked variable of another (<<input
 ^|(12)
 ^|-- (c)
 
-^|<<discrete>> variables
+^|<<discrete>>
 ^|-- (b)
 ^|-- (b)
 ^|-- (b)
@@ -1110,7 +1107,7 @@ _For example, an <<input>> Clock could be a clocked variable of another (<<input
 ^|(13)
 ^|-- (c)
 
-^|<<continuous>> variables
+^|<<continuous>>
 ^|-- (b)
 ^|-- (b)
 ^|-- (b)
@@ -1293,9 +1290,10 @@ image::images/schema/Enumeration.png[width=70%, align="center"]
 [[figure-schema-Clock]]
 image::images/schema/Clock.png[width=70%, align="center"]
 
-The attributes are defined in <<table-type-details>> and <<table-variableBase-attributes>>, except:
+The attributes common to all variable types are defined in <<table-type-details>> and <<table-variableBase-attributes>>.
+Type specific attributes are listed in the following table.
 
-.TypeDefinition attribute details.
+.Type specific attributes.
 [[table-type-attributes]]
 [cols="1,7a", options="header"]
 |====
@@ -1336,17 +1334,15 @@ The attribute <<initial>> for other variables can have the following values and 
 `= calculated`: The variable is calculated from other variables during initialization.
 It is not allowed to provide a <<start>> value.
 
-If <<initial>> is not present, it is defined by <<table-definition-initial>> based on <<causality>> and <<variability>>.
+<<table-definition-initial>> defines the allowed values for <<initial>> as combination of <<causality>> and <<variability>> and the default value if <<initial>> is not present.
+
 If <<initial>> = <<exact>> or <<approx>>, or <<causality>> = <<input>>, a <<start>> value must be provided.
 If <<initial>> = <<calculated>>, or <<causality>> = <<independent>>, it is not allowed to provide a <<start>> value.
 
-_[The environment decides when to use the <<start>> value of a variable with <<causality>> = <<input>>._
-_Examples:_
- * _Automatic tests of FMUs are performed, and the FMU is tested by providing the <<start>> value as <<constant>> <<input>>._
- * _For a Model Exchange FMU, the FMU might be part of an algebraic loop._
-_If the <<input>> variable is iteration variable of this algebraic loop, then initialization starts with its <<start>> value.]_
+_[The importer decides when to use the <<start>> value of a variable with <<causality>> = <<input>>._
+_For example, if the <<input>> variable is an iteration variable of an algebraic loop in <<InitializationMode>>, then the <<start>> value can be used as start value for the iteration.]_
 
-If <<get-and-set-variable-values,`fmi3Set{VariableType}`>> is not called on a variable with <<causality>> = <<input>>, then the FMU must use the <<start>> value as value of this <<input>>.
+If <<get-and-set-variable-values,`fmi3Set{VariableType}`>> is not called on a variable with <<causality>> = <<input>>, then the FMU must keep the <<start>> value as value of this <<input>>.
 
 
 |`start`
@@ -1416,10 +1412,10 @@ If <<initial>> is not present in a type that can have that attribute, its value 
 
 .Definition of <<initial>>.
 [#table-definition-initial]
-[cols="1,1,1,1,1,1,1,1",options="header"]
+[cols="1,1,1,1,1,1,1,1"]
 |====
-.2+^|<<variability>>
-7+^|<<causality>>
+.2+^h|<<variability>>
+7+^h|<<causality>>
 
 ^|<<structuralParameter,`structural Parameter`>>
 ^|<<parameter>>
@@ -1429,7 +1425,7 @@ If <<initial>> is not present in a type that can have that attribute, its value 
 ^|<<local>>
 ^|<<independent>>
 
-^|<<constant>> data
+^|<<constant>>
 ^|--
 ^|--
 ^|--
@@ -1438,46 +1434,55 @@ If <<initial>> is not present in a type that can have that attribute, its value 
 ^|[.underline]#exact#
 ^|--
 
-^|<<fixed>> data
+^|<<fixed>>
 ^|[.underline]#exact#
 ^|[.underline]#exact#
-^|[.underline]#calculated#, approx
+^|[.underline]#calculated# +
+approx
 ^|--
 ^|--
-^|[.underline]#calculated#, approx
+^|[.underline]#calculated# +
+approx
 ^|--
 
-^|<<tunable>> data
+^|<<tunable>>
 ^|[.underline]#exact#
 ^|[.underline]#exact#
-^|[.underline]#calculated#, approx
+^|[.underline]#calculated# +
+approx
 ^|--
 ^|--
-^|[.underline]#calculated#, approx
+^|[.underline]#calculated# +
+approx
 ^|--
 
-^|<<discrete>> variables
+^|<<discrete>>
 ^|--
 ^|--
 ^|--
 ^|[.underline]#exact#
-^|[.underline]#calculated#, exact, approx
-^|[.underline]#calculated#, exact, approx
+^|[.underline]#calculated# +
+exact +
+approx
+^|[.underline]#calculated# +
+exact +
+approx
 ^|--
 
-^|<<continuous>> variables
+^|<<continuous>>
 ^|--
 ^|--
 ^|--
 ^|[.underline]#exact#
-^|[.underline]#calculated#, exact, approx
-^|[.underline]#calculated#, exact, approx
+^|[.underline]#calculated# +
+exact +
+approx
+^|[.underline]#calculated# +
+exact +
+approx
 ^|--
 ^|--
 |====
-
-_[Note: For <<local>> and <<output>> variables and <<initial>> = <<exact>>, then the variable is explicitly set in <<InitializationMode>>._
-_The value of the variable is either the <<start>> value stored in a variable element `<XXX start=YYY/>` or the value set with <<get-and-set-variable-values,`fmi3Set{VariableType}`>> during <<InitializationMode>>.]_
 
 ====== Variable Naming Conventions [[namingSection]]
 
