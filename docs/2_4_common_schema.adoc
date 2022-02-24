@@ -969,10 +969,9 @@ The causality of variables of type <<Clock>> must be either <<input>>, <<output>
 |`variability`
 |
 [[variability,`variability`]]
-Enumeration that defines the time dependency of the variable, in other words, it defines the time instants when a variable can change its value.
+Enumeration that defines the time dependency of the variable, in other words, it defines the time instants when a variable may be changed by the importer or may change its value due to FMU internal computations, depending on their <<causality>>.
 
-_[The purpose of this attribute is to define when a variable can be set and when it makes sense to inquire its potentially changed value._
-_For example, <<discrete>> variables change their values only at event instants (ME) or at communication points (CS and SE) and it is therefore only necessary to inquire them with <<get-and-set-variable-values,`fmi3Get{VariableType}`>> them at these points in time.]_
+_[For example, <<discrete>> variables change their values only at event instants (ME) or at communication points (CS and SE) and it is therefore only necessary to inquire them with <<get-and-set-variable-values,`fmi3Get{VariableType}`>> them at these points in time.]_
 
 Allowed combinations of <<causality>> and <<variability>> and their semantics are defined in <<table-allowed-variability-causality-combinations>>.
 
@@ -982,23 +981,27 @@ Values of this enumeration are:
 `= constant`: The value of the variable never changes.
 
 [[fixed,`fixed`]]
-`= fixed`: The value of the variable is fixed after initialization, in other words, after <<fmi3ExitInitializationMode>> was called the variable value does not change anymore.
+`= fixed`: The value of the variable is fixed in super state <<Initialized>>, in other words, after <<fmi3ExitInitializationMode>> was called the variable value does not change anymore.
 
 [[tunable,`tunable`]]
 `= tunable`: The value of the variable is constant between events (ME and CS if <<EventMode>> is supported) and between communication points (CS and SE).
 A <<parameter>> with <<variability>> = <<tunable>> may be changed only in <<EventMode>> or, if <<EventMode>> is not supported, at communication points (CS and SE).
 
 [[discrete,`discrete`]]
-`= discrete`: +
-The value of the variable may change only in <<EventMode>>. +
-Co-Simulation without <<EventMode>> and Scheduled Execution: The value may change only at communication points.
+`= discrete`:
+
+ * Model Exchange: The value of the variable may change only in <<EventMode>>.
+ * Co-Simulation: The value may change at communication points and in <<EventMode>>, if supported.
 During <<IntermediateUpdateMode>>, <<discrete>> variables are not allowed to change.
-The <<variability>> of <<clocked-variable,`clocked variables`>> must have <<discrete>>.
+ * Scheduled Execution: The value may change only at communication points.
+
+The <<variability>> of <<Clock,Clocks>> must be <<discrete>>.
+The <<variability>> of <<clocked-variable,`clocked variables`>> must be <<discrete>> or <<tunable>>.
 
 [[continuous,`continuous`]]
 `= continuous`: Only variables of type `<Float32>` or `<Float64>` may be <<continuous>>.
 The default for variables of type `<Float32>` and `<Float64>` is <<continuous>>.
-Variables with <<variability>> `continuous` may change in <<InitializationMode>> and super state <<Initialized>>.
+Variables with <<variability>> `continuous` may change in <<InitializationMode>> and in super state <<Initialized>>.
 
 For more explanations on value changes see <<smoothness>>.
 
@@ -1008,6 +1011,7 @@ For more explanations on value changes see <<smoothness>>.
 Only for variables with <<causality>> = <<input>>. +
 The default value is `true`.
 If `canHandleMultipleSetPerTimeInstant = false`, then only one <<get-and-set-variable-values,`fmi3Set{VariableType}`>> call is allowed for this variable per super-dense time instant in <<EventMode>>.
+
 _[This flag can be set to `false` for variables where discrete-time states are directly updated when assigned (_ latexmath:[\mathbf{x}_\mathit{d} := f(\mathbf{x}_\mathit{d},\mathbf{u}_\mathit{c+d})] _instead of_ latexmath:[\mathbf{x}_\mathit{d} := f({}^\bullet\mathbf{x}_\mathit{d},\mathbf{u}_\mathit{c+d})] _)._
 _If an <<output>> depends on this <<input>> and on discrete-time states, then an algebraic loop could be formed with such an <<input>>._
 _Such loops cannot be solved iteratively because of the limitation on <<get-and-set-variable-values,`fmi3Set{VariableType}`>>._
@@ -1017,7 +1021,7 @@ _Therefore, such an <<input>> should not appear in an algebraic loop.]_
 |
 [[intermediateUpdate,`intermediateUpdate`]]
 If this boolean attribute is `true`, the variable can be accessed in <<IntermediateUpdateMode>>.
-Variables with <<causality>> <<parameter>> must not be marked with <<intermediateUpdate,`intermediateUpdate = true`>>.
+Variables with <<causality>> = <<parameter>> must not be marked with <<intermediateUpdate,`intermediateUpdate = true`>>.
 
 This attribute is ignored in Model Exchange and Scheduled Execution.
 Variables of type <<Clock>> must not have the <<intermediateUpdate>> attribute.
@@ -1026,7 +1030,7 @@ The default value of this attribute is `false`.
 |`previous`
 a|
 [[previous,`previous`]]
-If present, this variable is a <<ClockedState>> and this attribute is a value reference to the variable with the previous value.
+If present, this variable is a <<ClockedState>> and this attribute contains the value reference of the variable with the previous value.
 The following constraints apply:
 
 * Only clocked variables (i.e. variables with the attribute <<clocks>>) may have the <<previous>> attribute.
@@ -1044,7 +1048,7 @@ _Note: This is reverse compared to the <<derivative>> attribute.]_
 |
 [[clocks,`clocks`]]
 If present, this variable is clocked.
-The value of <<clocks>> is a list of value references of <<Clock>> variables this variable depends on.
+The value of <<clocks>> is a list of value references of <<Clock,Clocks>> this variable depends on.
 Only variables with <<variability,`variability = discrete`>> or <<variability,`variability = tunable`>> can have this attribute.
 _[Some importers might require a variable to be dependent on a single Clock for technical reasons._
 _They could reject FMUs violating this restriction._
@@ -1127,7 +1131,7 @@ _[Discussion of the combinations that are not allowed:_
 |_Explanation why this combination is not allowed_
 
 ^|_(a)_
-|_The combinations <<constant>> / <<structuralParameter>>, <<constant>> / <<parameter>>, <<constant>> / <<calculatedParameter>> and <<constant>> / <<input>> do not make sense, since <<parameter,`parameters`>> and <<input,`inputs`>> are set from the environment, whereas <<constant>> variables have an unchangeable value._
+|_The combinations <<constant>> / <<structuralParameter>>, <<constant>> / <<parameter>>, <<constant>> / <<calculatedParameter>> and <<constant>> / <<input>> do not make sense, since <<parameter,`parameters`>> and <<input,`inputs`>> are set by the importer, whereas <<constant>> variables have an unchangeable value._
 
 ^|_(b)_
 |_The combinations <<discrete>> / <<structuralParameter>>, <<discrete>> / <<parameter>>, <<discrete>> / <<calculatedParameter>> , <<continuous>> / <<structuralParameter>>, <<continuous>> / <<parameter>> and <<continuous>> / <<calculatedParameter>> do not make sense, since <<causality>> = <<structuralParameter>>, <<causality>> = <<parameter>> and <<causality>> = <<calculatedParameter>> define variables that do not depend on time, whereas <<discrete>> and <<continuous>> define variables where the values can change during simulation._
@@ -1137,11 +1141,11 @@ _[Discussion of the combinations that are not allowed:_
 
 ^|_(d)_
 |_A <<fixed>> or <<tunable>> <<input>> has exactly the same properties as a <<fixed>> or <<tunable>> <<parameter>>._
-_For simplicity, only <<fixed>> and <<tunable>> <<parameter,`parameters`>> shall be defined._
+_For simplicity, only <<fixed>> and <<tunable>> <<parameter,`parameters`>> are allowed._
 
 ^|_(e)_
 |_A <<fixed>> or <<tunable>> <<output>> has exactly the same properties as a <<fixed>> or <<tunable>> <<calculatedParameter>>._
-_For simplicity, only <<fixed>> and <<tunable>> <<calculatedParameter,`calculatedParameters`>> shall be defined._
+_For simplicity, only <<fixed>> and <<tunable>> <<calculatedParameter,`calculatedParameters`>> are allowed._
 |====
 
 _Discussion of the combinations that are allowed_:
@@ -1160,23 +1164,23 @@ _Discussion of the combinations that are allowed_:
 
 >|_(2)_
 |_<<tunable>> <<parameter>>_
-|_<<tunable,`Tunable`>> <<parameter>> (changing such a <<parameter>> triggers event handling (ME) or takes effect at the next communication point (CS and SE), and <<tunable>> <<calculatedParameter>>/<<output>>/<<local>> variables might change their values)._
+|_<<tunable,`Tunable`>> <<parameter>> (<<HowToTreatTunable,See below this table.>>)._
 
 >|_(3)_
 |_<<fixed>> <<calculatedParameter>>_
-|_Non-<<tunable>> <<calculatedParameter>> (variable that is computed directly or indirectly from constants or <<parameter,`parameters`>>)._
+|_Non-<<tunable>> <<calculatedParameter>> (variable that depends directly or indirectly on constants or <<fixed>> <<parameter,`parameters`>>)._
 
 >|_(4)_
 |_<<tunable>> <<calculatedParameter>>_
-|_<<tunable,`Tunable`>> <<calculatedParameter>> (changing a <<parameter>> triggers event handling (ME) or takes effect at the next communication point (CS and SE), and <<tunable>> <<calculatedParameter>> and <<tunable>> <<local>> variables might change their values)._
+|_<<tunable,`Tunable`>> <<calculatedParameter>> (variable that depends directly or indirectly on constants or <<fixed>> and <<tunable>> <<parameter,`parameters`>>)._
 
 >|_(5)_
 |_<<discrete>> <<input>>_
-|_<<discrete,`Discrete`>> <<input>> variable from another model._
+|_<<discrete,`Discrete`>> <<input>> variable from the importer._
 
 >|_(6)_
 |_<<continuous>> <<input>>_
-|_<<continuous,`Continuous`>> <<input>> variable from another model._
+|_<<continuous,`Continuous`>> <<input>> variable from the importer._
 
 >|_(7)_
 |_<<constant>> <<output>>_
@@ -1185,15 +1189,15 @@ _Discussion of the combinations that are allowed_:
 >|_(8)_
 |_<<discrete>> <<output>>_
 |_<<discrete,`Discrete`>> variable that is computed in the FMU._
-_Can be used in another model._
+_Can be used by the importer._
 
 >|_(9)_
 |_<<continuous>> <<output>>_
-|_<<continuous,`Continuous`>> variable that is computed in the FMU and can be used in another model._
+|_<<continuous,`Continuous`>> variable that is computed in the FMU and can be used by the importer._
 
 >|_(10)_
 |_<<constant>> <<local>>_
-|_Variable where the value never changes._
+|_Variable that never changes its value._
 _Cannot be used in another model._
 
 >|_(11)_
@@ -1223,14 +1227,17 @@ _Usually, this is `time`._
 
 >|_(16)_
 |_<<fixed>> <<structuralParameter>>_
-|_<<parameter,`Parameter`>> used in  <<Dimension>> element;  can be changed before initialization in <<ConfigurationMode>>._
+|_<<parameter,`Parameter`>> used in <<Dimension>> element._
+_Can be changed in <<ConfigurationMode>>._
 
 >|_(17)_
 |_<<tunable>> <<structuralParameter>>_
-|_<<parameter,`Parameter`>> used in  <<Dimension>> element;  can be changed before initialization in <<ConfigurationMode>> and in <<ReconfigurationMode>>._
+|_<<parameter,`Parameter`>> used in <<Dimension>> element._
+_Can be changed in <<ConfigurationMode>> and in <<ReconfigurationMode>>._
 
 |====
 
+[[HowToTreatTunable]]
 _How to treat <<tunable>> variables:_
 
 _A <<parameter>> p is a variable that does not change its value during simulation, in other words, dp/dt = 0._
