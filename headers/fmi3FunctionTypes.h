@@ -425,12 +425,12 @@ typedef fmi3Status fmi3SerializeFMUStateTYPE     (fmi3Instance instance,
                                                   size_t size);
 /* end::SerializeFMUState[] */
 
-/* tag::DeSerializeFMUState[] */
-typedef fmi3Status fmi3DeSerializeFMUStateTYPE   (fmi3Instance instance,
+/* tag::DeserializeFMUState[] */
+typedef fmi3Status fmi3DeserializeFMUStateTYPE   (fmi3Instance instance,
                                                   const fmi3Byte serializedState[],
                                                   size_t size,
                                                   fmi3FMUState* FMUState);
-/* end::DeSerializeFMUState[] */
+/* end::DeserializeFMUState[] */
 
 /* Getting partial derivatives */
 /* tag::GetDirectionalDerivative[] */
