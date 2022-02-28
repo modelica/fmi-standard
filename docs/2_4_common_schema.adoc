@@ -1570,10 +1570,10 @@ The <<variableNamingConvention>> `structured` does not define if arrays are 0-ba
 The structure of the model is defined in element `<fmiModelDescription><ModelStructure>`.
 It defines the <<model-dependencies,dependencies>> between variables.
 
-The required part of the model structure defines an ordering of the <<output,`outputs`>>, the (exposed) <<derivative,`derivatives`>>, the event indicators, and the unknowns that are available during Initialization.
-A Model Exchange FMU must expose all <<derivative,`derivatives`>> of its continuous-time <<state,states>> in <<ContinuousStateDerivative>> in <<ModelStructure>> elements and must expose all event indicators in <<EventIndicator>> elements.
+The required part of the model structure for all FMI types defines the ordering of outputs in <<Output>> and unknowns during initialization in <<InitialUnknown>>.
+A Model Exchange FMU must also expose all derivatives of continuous states in <<ContinuousStateDerivative>> and all event indicators in <<EventIndicator>>.
 
-The optional part of the model structure defines in which way <<derivative,`derivatives`>>, <<output,`outputs`>>, and initial unknowns depend on <<input,`inputs`>> and/or <<parameter,`parameters`>>, and continuous-time <<state,states>>, at the current super-dense time instant (ME) or at the current communication point (CS and SE).
+The optional part of the model structure defines in which way <<derivative,`derivatives`>>, <<output,`outputs`>>, and initial unknowns depend on <<input,`inputs`>> and/or <<parameter,`parameters`>>, and continuous-time <<state,states>>.
 The listed <<dependencies>> declare the dependencies between whole (multi-dimensional-)variables and not individual elements of the variables.
 _[Dependencies of individual array elements can be retrieved during runtime using <<fmi3GetVariableDependencies>>.]_
 
@@ -1585,7 +1585,7 @@ image::images/schema/ModelStructure.png[width=90%]
 
 Note that attribute <<dependenciesKind>> for element <<InitialUnknown>> has less enumeration values as <<dependenciesKind>> in the other lists, as detailed in <<table-model-structure-elements>>.
 
-<<ModelStructure>> consists of the elements detailed in <<table-model-structure-elements>> (see also <<figure-schema-ModelStructure>>; the symbols of the mathematical equations describing the dependency are defined in <<concepts-model-exchange>>):
+<<ModelStructure>> consists of the elements detailed in <<table-model-structure-elements>> (see also <<figure-schema-ModelStructure>>; the symbols of the mathematical equations describing the dependencies are defined in <<concepts-model-exchange>>):
 
 .ModelStructure elements.
 [#table-model-structure-elements]
@@ -1597,15 +1597,10 @@ Note that attribute <<dependenciesKind>> for element <<InitialUnknown>> has less
 |`Output`
 |[[Output,`<Output>`]]
 Ordered list of all outputs, in other words, a list of value references where every corresponding variable must have <<causality>> = <<output>> (and every variable with <<causality>> = <<output>> must be listed here).
-_[Note that all <<output>> variables are listed here, especially <<discrete>> and <<continuous>> <<output,`outputs`>>._
-_The ordering of the variables in this list is defined by the exporting tool._
-_Usually, it is best to order according to the declaration order in the source model, since then the <<Output>> list does not change if the declaration order of <<output,`outputs`>> in the source model is not changed._
-_This is for example, important for linearization, in order that the interpretation of the output vector does not change for a re-exported FMU.]_
-Attribute <<dependencies>> defines the dependencies of the <<output,`outputs`>> from the knowns at the current super-dense time instant in Event and in <<ContinuousTimeMode>> (ME) and at the current communication point (CS and SE).
+Attribute <<dependencies>> defines the dependencies of the <<output,`outputs`>> from the knowns after the <<InitializationMode>>.
 Attribute <<dependencies>> for <<output>> <<Clock,`Clocks`>> lists all known variables (including input clocks) that contribute to trigger a clock tick for that <<outputClock,output Clock>>.
-Beside the knowns, the <<output,`outputs`>> also depend on "frozen" variables (= variables which cannot be changed in the current mode) but these "frozen" variables are not listed as <<dependencies>>.
-The functional dependency is defined as (dependencies of variables that are fixed in Event and <<ContinuousTimeMode>> and at communication points are not shown): +
-latexmath:[{(\mathbf{y}_c, \mathbf{y}_d) := \mathbf{f}_{\mathit{output}}(\mathbf{x}_c, \mathbf{u}_c, \mathbf{u}_d, t, \mathbf{p}_{\mathit{tune}})}]
+The functional dependency is defined as: +
+latexmath:[{(\mathbf{y}_c, \mathbf{y}_d) := \mathbf{f}_{\mathit{output}}(\mathbf{x}_c, \mathbf{u}_c, \mathbf{u}_d, t, \mathbf{p})}]
 
 |`ContinuousStateDerivative`
 |[[ContinuousStateDerivative,`<ContinuousStateDerivative>`]]
@@ -1614,18 +1609,12 @@ The order defined by this list defines the order of the elements for <<fmi3GetCo
 _[Note that only <<continuous>> floating point variables are listed here._
 _If a <<state>> or a <<derivative>> of a <<state>> shall not be exposed from the FMU, or if states are not statically associated with a variable (due to <<dynamic-state-selection,dynamic state selection>>), then dummy variables have to be introduced, for example, `x[4]`, or `xDynamicStateSet2[5]`.]_
 
-The corresponding continuous-time <<state,states>> are defined by attribute <<derivative>> of the corresponding variable state derivative element.
+The corresponding continuous-time <<state,states>> are defined by attribute <<derivative>> of the corresponding variable state-derivative element.
 _[Note that higher order derivatives must be mapped to first order derivatives but the mapping definition can be preserved due to attribute <<derivative>>._
 _Example: if_ latexmath:[{\frac{\text{ds}}{\text{dt}} = v,\ \frac{\text{dv}}{\text{dt}} =f(..)}] _,then_ latexmath:[{\left\{ v,\ \frac{\text{dv}}{\text{dt}} \right\}}] _is the vector of state derivatives and attribute <<derivative>> of_ latexmath:[{v}] _references_ latexmath:[{s}] _, and attribute <<derivative>> of_ latexmath:[{\frac{\text{dv}}{\text{dt}}}] _references_ latexmath:[{v}] _.]_ +
 For Co-Simulation, elements <<ContinuousStateDerivative>> are ignored if capability flag <<providesDirectionalDerivatives>> has a value of `false`, in other words, it cannot be computed.
-_[This is the default._
-_If an FMU supports more than Model Exchange , then the <<ContinuousStateDerivative>> elements might be present, since it is needed for Model Exchange._
-_If the above flag is set to `false` for the Co-Simulation cases, then the <<ContinuousStateDerivative>> elements are ignored for Co-Simulation._
-_If "inline integration" is used for a co-simulation FMU, then the model still has continuous-time <<state,states>> and just a special solver is used (internally the implementation results in a discrete-time system, but from the outside, it is still a continuous-time system).]_ +
-Attribute <<dependencies>> defines the dependencies of the state derivatives from the knowns at the current super-dense time instant in Event and in <<ContinuousTimeMode>> (ME) and at the current communication point (CS and SE).
-Beside the knowns the derivatives also depend on the "frozen" variables (= variables which cannot be changed in the current mode) but these "frozen" variables are not listed as <<dependencies>>.
-The functional dependency is defined as (dependencies of variables that are fixed in Event and <<ContinuousTimeMode>> and at communication points are not shown): +
-latexmath:[{\dot{\mathbf{x}_c} := \mathbf{f}_{\mathit{der}}(\mathbf{x}_c, \mathbf{u}_c, \mathbf{u}_d, t, \mathbf{p}_{\mathit{tune}})}]
+The functional dependency is defined as: +
+latexmath:[{\dot{\mathbf{x}_c} := \mathbf{f}_{\mathit{der}}(\mathbf{x}_c, \mathbf{u}_c, \mathbf{u}_d, t, \mathbf{p})}]
 
 |`ClockedState`
 |
