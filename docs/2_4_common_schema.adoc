@@ -1242,7 +1242,7 @@ _How to treat <<tunable>> variables:_
 
 _A <<parameter>> p is a variable that does not change its value during simulation, in other words, dp/dt = 0._
 _If the <<parameter>> p is changing, then Dirac impulses are introduced since dp/dt of a discontinuous <<constant>> variable `p` is a Dirac impulse._
-_Even if this Dirac impulse would be modeled correctly by the modeling environment, it would introduce unwanted `vibrations`._
+_Even if this Dirac impulse would be modeled correctly by the FMU, it would introduce unwanted `vibrations`._
 _Furthermore, in many cases the model equations are derived under the assumption of a <<constant>> value (like mass or capacity), and the model equations would be different if `p` would be time varying._
 
 _FMI for Model Exchange:_ +
@@ -1263,15 +1263,14 @@ _With this interpretation, changing <<parameter,`parameters`>> online is "clean"
 
 _FMI for Co-Simulation:_
 _Changing of <<tunable>> <<parameter,`parameters`>> is allowed before an <<fmi3DoStep>> call (so, whenever an <<input>> can be set with <<get-and-set-variable-values,`fmi3Set{VariableType}`>>) and before <<fmi3ExitInitializationMode>> is called (that is before and during <<InitializationMode>>)._
-_The FMU internally carries out event handling if necessary.]_
+_The FMU internally carries out event handling if necessary._
 
 _FMI for Scheduled Execution:_
-_Changing of <<tunable>> <<parameter,`parameters`>> is allowed before an <<fmi3ActivateModelPartition>> call (so, whenever an <<input>> can be set with <<get-and-set-variable-values,`fmi3Set{VariableType}`>>) and before <<fmi3ExitInitializationMode>> is called (that is before and during <<InitializationMode>>)._
+_Changing of <<tunable>> <<parameter,`parameters`>> is allowed before an <<fmi3ActivateModelPartition>> call (so, whenever an <<input>> can be set with <<get-and-set-variable-values,`fmi3Set{VariableType}`>>) and before <<fmi3ExitInitializationMode>> is called (that is before and during <<InitializationMode>>).]_
 
-===== Type specific properties
+===== Type-specific properties
 
-Type specific properties are defined in the required choice element, where exactly one float, integer, boolean, binary, enumeration, or Clock, must be present in the XML file:
-<<figure-schema-Float64>>, <<figure-schema-Int32>>, <<figure-schema-Boolean>>, <<figure-schema-Binary>>, <<figure-schema-Enumeration>> and <<figure-schema-Clock>>, are representative examples.
+<<ModelVariables>> can be of different types, for example <<figure-schema-Float64,Float64>>, <<figure-schema-Int32,Int32>>, <<figure-schema-Boolean,Boolean>>, <<figure-schema-Binary,Binary>>, <<figure-schema-Enumeration,Enumeration>> and <<figure-schema-Clock,Clock>>.
 
 .Float64 element.
 [[figure-schema-Float64]]
@@ -1309,16 +1308,16 @@ Type specific attributes are listed in the following table.
 
 |`declaredType`
 |If present, name of type defined with `<TypeDefinitions><TypeDefinition>`.
-The value defined in the corresponding `<TypeDefinition>` (see <<definition-of-types>>) is used as default.
-_[For example, if `min` is present both in variable type element of `<TypeDefinition>` and in the concrete variable type element of the variable, then the `min` of the variable is actually used.]_
+The attributs defined in the corresponding `<TypeDefinition>` (see <<definition-of-types>>) are used as defaults.
+_[For example, if `min` is present both in variable type element of `<TypeDefinition>` and in the specific variable type element of the variable, then the `min` of the variable is actually used.]_
 For `<Enumeration>` the attribute `declaredType` is required because the `<Enumeration>` items are defined in `<TypeDefinitions><TypeDefinition>`.
 For all other types, this attribute is optional.
 
 |`unit`
-|Unit of the variable referencing to a `<UnitDefinitions><Unit>` with the same `name`, which must exist.
+|This attributes defines the unit of the variable by referencing a `<UnitDefinitions><Unit>` with the same `name`, which must exist.
 Variables without unit must not have a `unit` attribute.
 
-|displayUnit`
+|`displayUnit`
 |Default display unit of the variable referencing to a `<DisplayUnit>` which must exist under `<UnitDefinitions><Unit>` with the `name` of `unit`.
 The conversion to the `unit` is defined with the element `<fmiModelDescription><UnitDefinitions><Unit><DisplayUnit>`.
 If `displayUnit` is defined a `unit` must also be defined.
@@ -1332,36 +1331,31 @@ For the variable with <<causality>> = <<independent>>, the attribute <<initial>>
 
 The attribute <<initial>> for other variables can have the following values and meanings:
 [[exact,`exact`]]
-`= exact`: The variable is initialized with the <<start>> value (provided under the variable type element).
+`= exact`: The variable is initialized with the <<start>> value by the FMU.
+The importer may set a different initial value using <<get-and-set-variable-values,`fmi3Set{VariableType}`>>.
 
 [[approx,`approx`]]
-`= approx`: The <<start>> value provides an approximation that may be modified during initialization, e.g., if the FMU is part of an algebraic loop where the variable might be an iteration variable and <<start>> value is taken as initial value for an iterative solution process.
+`= approx`: The variable is an iteration variable of an algebraic loop within the FMU and the
+iteratative solution process in <<InitializationMode>> starts with the <<start>> value as guess value.
+_[The importer may call <<get-and-set-variable-values,`fmi3Set{VariableType}`>> in <<Instantiated>> to help the FMU find a solution.]_
 
 [[calculated,`calculated`]]
-`= calculated`: The variable is calculated from other variables during initialization.
-It is not allowed to provide a <<start>> value.
+`= calculated`: The variable is calculated by the FMU from other variables during initialization.
+For `calculated` variables a <<start>> attribute must not be provided.
 
 <<table-definition-initial>> defines the allowed values for <<initial>> as combination of <<causality>> and <<variability>> and the default value if <<initial>> is not present.
-
-If <<initial>> = <<exact>> or <<approx>>, or <<causality>> = <<input>>, a <<start>> value must be provided.
-If <<initial>> = <<calculated>>, or <<causality>> = <<independent>>, it is not allowed to provide a <<start>> value.
-
-_[The importer decides when to use the <<start>> value of a variable with <<causality>> = <<input>>._
-_For example, if the <<input>> variable is an iteration variable of an algebraic loop in <<InitializationMode>>, then the <<start>> value can be used as start value for the iteration.]_
-
-If <<get-and-set-variable-values,`fmi3Set{VariableType}`>> is not called on a variable with <<causality>> = <<input>>, then the FMU must keep the <<start>> value as value of this <<input>>.
 
 
 |`start`
 |
 [[start,`start`]]
-Initial or guess value of variable.
-This value is also stored in the C functions.
+Initial or guess value of the variable.
+During instantiation, the FMU initializes its variables with their <<start>> values.
 _[Therefore, calling_ <<get-and-set-variable-values,`fmi3Set{VariableType}`>> _to set <<start>> values is only necessary, if a different value as stored in the XML file is desired._
-_It is not allowed to change the start values in the <<modelDescription.xml>> file of an FMU, as this would break the consistency with the hard-coded start values in the C-Code._
-_This could lead to unpredictable behavior of the FMU in different importers, as it is not mandatory to call <<get-and-set-variable-values,`fmi3Set{VariableType}`>> to set start values during initialization.]_
+_It is not allowed to change the start values in the <<modelDescription.xml>> file of an FMU, as this would break the consistency with the hard-coded start values within the FMU._
+_This could lead to unpredictable behavior of the FMU in different importers, as it is not mandatory to call <<get-and-set-variable-values,`fmi3Set{VariableType}`>> to set <<start>> values during initialization.]_
 
-The <<start>> is either a single value or a list of values.
+The <<start>> attribute is either a single value or a list of values.
 The serialization of a multi-dimensional array variable is described in <<serialization-of_variables>>.
 If only a single value is given for a multi-dimensional array, all values of the multi-dimensional array are equal to this value.
 
@@ -1375,26 +1369,17 @@ include::examples/string_vector_example.xml[tags=string_start_values]
 ----
 _]_
 
+The interpretation of <<start>> is defined by variable attribute <<initial>>. +
+If <<initial>> = <<exact>> or <<approx>>, a <<start>> attribute must be provided. +
+If <<initial>> = <<calculated>> or <<causality>> = <<independent>>, it is not allowed to provide a <<start>> attribute.
 
-The interpretation of <<start>> is defined by variable attribute <<initial>>.
-A different <<start>> value can be provided with an <<get-and-set-variable-values,`fmi3Set{VariableType}`>> function before <<fmi3ExitInitializationMode>> is called (but not for variables with <<variability>> = <<constant>>).
+Variables with <<causality>> = <<parameter>> or <<input>>, as well as variables with <<variability>> = <<constant>>, must have a <<start>> attribute wich has the following meaning:
 
-_[The standard approach is to set the <<start>> value before <<fmi3EnterInitializationMode>>._
-_However, if the initialization shall be modified in the calling environment (for example, changing from initialization of states to steady-state initialization), it is also possible to use the <<start>> value as iteration variable of an algebraic loop: using an additional condition in the environment, such as_ latexmath:[{\dot{x} = 0}] _, the actual <<start>> value is determined.]_
+* If <<causality>> = <<parameter>>, the <<start>> attribute defines the default value of the parameter.
 
-If <<initial>> = <<exact>> or <<approx>>, a <<start>> value must be provided.
+* If <<variability>> = <<constant>>, the <<start>> attribute defines the value of the constant.
 
-If <<initial>> = <<calculated>> or <<causality>> = <<independent>>, it is not allowed to provide a <<start>> value.
-
-Variables with <<causality>> = <<parameter>> or <<input>>, as well as variables with <<variability>> = <<constant>>, must have a <<start>> value.
-
-- If <<causality>> = <<parameter>>, the <<start>> value is the value of it.
-
-- If <<causality>> = <<input>>, the <<start>> value is used by the model as value of the <<input>>, if the <<input>> is not set by the environment, except for variables of type <<Clock>>.
-
-- If <<variability>> = <<constant>>, the <<start>> value is the value of the constant.
-
-If <<causality>> = <<output>> or <<local>>, then the <<start>> value is either an <<initial>> or a `guess` value, depending on the setting of attribute <<initial>>.
+* If <<causality>> = <<input>>, the <<start>> value is used by the FMU as value of the <<input>>, if it is not set by the importer, except for variables of type <<Clock>>.
 
 |`derivative`
 |
@@ -1409,9 +1394,9 @@ All variables listed in these elements must have attribute `derivative`.
 |`reinit`
 |[[reinit,`reinit`]]
 Only used in Model Exchange, ignored for the other interface types.
-Can only be present for a continuous-time <<state>>. +
-If `true`, <<state>> can be reinitialized at an event by the FMU. +
-If `false`, <<state>> will not be reinitialized at an event by the FMU.
+May only be present for a continuous-time <<state>>. +
+If `true`, <<state>> may be reinitialized by the FMU in <<EventMode>>. +
+If `false`, <<state>> will not be reinitialized.
 
 |====
 
