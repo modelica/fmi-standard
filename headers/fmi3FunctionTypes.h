@@ -479,7 +479,7 @@ typedef fmi3Status fmi3GetIntervalDecimalTYPE(fmi3Instance instance,
 typedef fmi3Status fmi3GetIntervalFractionTYPE(fmi3Instance instance,
                                                const fmi3ValueReference valueReferences[],
                                                size_t nValueReferences,
-                                               fmi3UInt64 intervalCounters[],
+                                               fmi3UInt64 counters[],
                                                fmi3UInt64 resolutions[],
                                                fmi3IntervalQualifier qualifiers[]);
 /* end::GetIntervalFraction[] */
@@ -495,7 +495,7 @@ typedef fmi3Status fmi3GetShiftDecimalTYPE(fmi3Instance instance,
 typedef fmi3Status fmi3GetShiftFractionTYPE(fmi3Instance instance,
                                             const fmi3ValueReference valueReferences[],
                                             size_t nValueReferences,
-                                            fmi3UInt64 shiftCounters[],
+                                            fmi3UInt64 counters[],
                                             fmi3UInt64 resolutions[]);
 /* end::GetShiftFraction[] */
 
@@ -510,7 +510,7 @@ typedef fmi3Status fmi3SetIntervalDecimalTYPE(fmi3Instance instance,
 typedef fmi3Status fmi3SetIntervalFractionTYPE(fmi3Instance instance,
                                                const fmi3ValueReference valueReferences[],
                                                size_t nValueReferences,
-                                               const fmi3UInt64 intervalCounters[],
+                                               const fmi3UInt64 counters[],
                                                const fmi3UInt64 resolutions[]);
 /* end::SetIntervalFraction[] */
 
@@ -525,7 +525,7 @@ typedef fmi3Status fmi3SetShiftDecimalTYPE(fmi3Instance instance,
 typedef fmi3Status fmi3SetShiftFractionTYPE(fmi3Instance instance,
                                             const fmi3ValueReference valueReferences[],
                                             size_t nValueReferences,
-                                            const fmi3UInt64 shiftCounters[],
+                                            const fmi3UInt64 counters[],
                                             const fmi3UInt64 resolutions[]);
 /* end::SetShiftFraction[] */
 
