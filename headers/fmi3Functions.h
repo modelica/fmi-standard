@@ -156,7 +156,7 @@ Common Functions
 #define fmi3FreeFMUState             fmi3FullName(fmi3FreeFMUState)
 #define fmi3SerializedFMUStateSize   fmi3FullName(fmi3SerializedFMUStateSize)
 #define fmi3SerializeFMUState        fmi3FullName(fmi3SerializeFMUState)
-#define fmi3DeSerializeFMUState      fmi3FullName(fmi3DeSerializeFMUState)
+#define fmi3DeserializeFMUState      fmi3FullName(fmi3DeserializeFMUState)
 
 /* Getting partial derivatives */
 #define fmi3GetDirectionalDerivative fmi3FullName(fmi3GetDirectionalDerivative)
@@ -268,7 +268,7 @@ FMI3_Export fmi3SetFMUStateTYPE            fmi3SetFMUState;
 FMI3_Export fmi3FreeFMUStateTYPE           fmi3FreeFMUState;
 FMI3_Export fmi3SerializedFMUStateSizeTYPE fmi3SerializedFMUStateSize;
 FMI3_Export fmi3SerializeFMUStateTYPE      fmi3SerializeFMUState;
-FMI3_Export fmi3DeSerializeFMUStateTYPE    fmi3DeSerializeFMUState;
+FMI3_Export fmi3DeserializeFMUStateTYPE    fmi3DeserializeFMUState;
 
 /* Getting partial derivatives */
 FMI3_Export fmi3GetDirectionalDerivativeTYPE fmi3GetDirectionalDerivative;
