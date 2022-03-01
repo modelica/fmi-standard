@@ -1048,7 +1048,7 @@ _Note: This is reverse compared to the <<derivative>> attribute.]_
 |
 [[clocks,`clocks`]]
 If present, this variable is clocked.
-The value of <<clocks>> is a list of value references of <<Clock,Clocks>> this variable depends on.
+The value of the attribute <<clocks>> is a non-empty list of value references of <<Clock,Clocks>> this variable belongs to.
 Only variables with <<variability,`variability = discrete`>> or <<variability,`variability = tunable`>> can have this attribute.
 _[Some importers might require a variable to be dependent on a single Clock for technical reasons._
 _They could reject FMUs violating this restriction._
@@ -1600,7 +1600,7 @@ Ordered list of all outputs, in other words, a list of value references where ev
 Attribute <<dependencies>> defines the dependencies of the <<output,`outputs`>> from the knowns after the <<InitializationMode>>.
 Attribute <<dependencies>> for <<output>> <<Clock,`Clocks`>> lists all known variables (including input clocks) that contribute to trigger a clock tick for that <<outputClock,output Clock>>.
 The functional dependency is defined as: +
-latexmath:[{(\mathbf{y}_c, \mathbf{y}_d) := \mathbf{f}_{\mathit{output}}(\mathbf{x}_c, \mathbf{u}_c, \mathbf{u}_d, t, \mathbf{p})}]
+latexmath:[{(\mathbf{y}_c, \mathbf{y}_d) := \mathbf{f}_{\mathit{output}}(\mathbf{x}_c, \mathbf{u}_c, \mathbf{u}_d, \mathbf{t}, \mathbf{p})}]
 
 |`ContinuousStateDerivative`
 |[[ContinuousStateDerivative,`<ContinuousStateDerivative>`]]
@@ -1614,36 +1614,32 @@ _[Note that higher order derivatives must be mapped to first order derivatives b
 _Example: if_ latexmath:[{\frac{\text{ds}}{\text{dt}} = v,\ \frac{\text{dv}}{\text{dt}} =f(..)}] _,then_ latexmath:[{\left\{ v,\ \frac{\text{dv}}{\text{dt}} \right\}}] _is the vector of state derivatives and attribute <<derivative>> of_ latexmath:[{v}] _references_ latexmath:[{s}] _, and attribute <<derivative>> of_ latexmath:[{\frac{\text{dv}}{\text{dt}}}] _references_ latexmath:[{v}] _.]_ +
 For Co-Simulation, elements <<ContinuousStateDerivative>> are ignored if capability flag <<providesDirectionalDerivatives>> has a value of `false`, in other words, it cannot be computed.
 The functional dependency is defined as: +
-latexmath:[{\dot{\mathbf{x}_c} := \mathbf{f}_{\mathit{der}}(\mathbf{x}_c, \mathbf{u}_c, \mathbf{u}_d, t, \mathbf{p})}]
+latexmath:[{\dot{\mathbf{x}_c} := \mathbf{f}_{\mathit{der}}(\mathbf{x}_c, \mathbf{u}_c, \mathbf{u}_d, \mathbf{t}, \mathbf{p})}]
 
 |`ClockedState`
 |
-[[ClockedState,`ClockedState`]]
+[[ClockedState,`<ClockedState>`]]
 A <<ClockedState>> is part of the discrete state of a model partition and represented by a clocked variable.
-To which Clock or Clocks it belongs is described by the attribute <<clocks>>.
+To which Clock or Clocks it belongs is described by the attribute <<clocks>> of that variable.
 Each <<ClockedState>> must have the attribute <<previous>> to represent the previous value of this <<ClockedState>>.
-All clocked states must have <<variability,`variability = discrete`>> and must not be of type <<fmi3Clock>>.
+All clocked states must have <<variability,`variability = discrete`>>, must have the attribute <<clocks>>, and must not be of type <<fmi3Clock>>.
 
 |`InitialUnknown`
-|
+a|
 [[InitialUnknown,`<InitialUnknown>`]]
 Ordered list of all exposed unknowns in <<InitializationMode>>.
-This list consists of all variables which
+This list consists of all variables which:
 
-- are not <<clocked-variable,clocked variables>> and have <<causality>> = <<output>> (with <<initial>> = <<approx>> or <<calculated>>), or
-
-- have <<causality>> = <<calculatedParameter>>, or
-
-- are continuous-time <<state,states>> or state derivatives (defined with elements <<ContinuousStateDerivative>>) with <<initial>> = <<approx>> or <<calculated>> _[if a Co-Simulation FMU does not define the <<ContinuousStateDerivative>> elements, (3) cannot be present]_, or
-
-- are <<clocked-variable,clocked variables>> that the FMU wishes to initialize in initialization mode.
+* are not <<clocked-variable,clocked variables>> and have <<causality>> = <<output>> (with <<initial>> = <<approx>> or <<calculated>>), or
+* have <<causality>> = <<calculatedParameter>>, or
+* are continuous-time <<state,states>> or state derivatives (defined with elements <<ContinuousStateDerivative>>) with <<initial>> = <<approx>> or <<calculated>>, or
+* are <<clocked-variable,clocked variables>> that the FMU wishes to initialize in initialization mode.
 
 The resulting list is not allowed to have duplicates (for example, if a <<state>> is also an <<output>>, it is included only once in the list). +
-Attribute <<dependencies>> defines the dependencies of the unknowns from the knowns in <<InitializationMode>> at the initial time.
-Beside the knowns the initial unknowns also depend on the "frozen" variables (= variables which cannot be changed in the current mode) but these "frozen" variables are not listed as <<dependencies>>.
+Attribute <<dependencies>> defines the dependencies of the unknowns from the knowns in <<InitializationMode>>.
 The functional dependency is defined as:
 
-latexmath:[{\mathbf{v}_{\mathit{initialUnknowns}} := \mathbf{f}_{\mathit{init}}(\mathbf{u}_c, \mathbf{u}_d, t_0, \mathbf{v}_{\mathit{initial=exact}})}]
+latexmath:[{\mathbf{v}_{\mathit{initialUnknowns}} := \mathbf{f}_{\mathit{init}}(\mathbf{u}_c, \mathbf{u}_d, \mathbf{t}_{start}, \mathbf{v}_{\mathit{initial=exact}})}]
 
 Since, <<output,`outputs`>>, continuous-time <<state,states>> and state derivatives are either present as knowns (if <<initial>> = <<exact>>) or as unknowns (if <<initial>> = <<approx>> or <<calculated>>), they can be inquired with <<get-and-set-variable-values,`fmi3Get{VariableType}`>> in <<InitializationMode>>.
 
@@ -1651,27 +1647,26 @@ Since, <<output,`outputs`>>, continuous-time <<state,states>> and state derivati
 
 _[Example: Assume an FMU is defined in the following way:_
 
-latexmath:[{(\mathbf{y}_{c+d}, \dot{\mathbf{x}}_c) := \mathbf{f}_{\mathit{init}}(\mathbf{x}_c, \mathbf{u}_{c+d}, t_0, \mathbf{p})}] +
+latexmath:[{(\mathbf{y}_{c+d}, \dot{\mathbf{x}}_c) := \mathbf{f}_{\mathit{init}}(\mathbf{x}_c, \mathbf{u}_{c+d}, \mathbf{t}_{start}, \mathbf{p})}] +
 
-latexmath:[{(\mathbf{y}_{c+d}, \dot{\mathbf{x}}_c) := \mathbf{f}_{\mathit{sim}}(\mathbf{x}_c, \mathbf{u}_{c+d}, t_i, \mathbf{p})}] +
+latexmath:[{(\mathbf{y}_{c+d}, \dot{\mathbf{x}}_c) := \mathbf{f}_{\mathit{sim}}(\mathbf{x}_c, \mathbf{u}_{c+d}, \mathbf{t}_i, \mathbf{p})}] +
 
-_Therefore, the initial state latexmath:[{\mathbf{x}_c(t_0)}] has <<initial>> = <<exact>> and the initial state derivative latexmath:[{\dot{\mathbf{x}}_c(t_0)}] has <<initial>> = <<calculated>>._
-_The environment can still initialize this FMU in steady-state, by using latexmath:[{\mathbf{x}_c(t_0)}] as iteration variables and adding the equations latexmath:[{\dot{\mathbf{x}}_c(t_0) = \mathbf{0}}] in the environment.]_
+_Therefore, the initial state_ latexmath:[{\mathbf{x}_c(\mathbf{t}_{start})}] _has <<initial>> = <<exact>> and the initial state derivative_ latexmath:[{\dot{\mathbf{x}}_c(\mathbf{t}_{start})}] _has <<initial>> = <<calculated>>._
+_The importer can still initialize this FMU in steady-state, by using_ latexmath:[{\mathbf{x}_c(\mathbf{t}_{start})}] _as iteration variables and adding the equations_ latexmath:[{\dot{\mathbf{x}}_c(\mathbf{t}_{start}) = \mathbf{0}}] _in the importer.]_
 
 |`EventIndicator`
 |
 [[EventIndicator,`<EventIndicator>`]]
-An ordered list of all event indicators, in other words, a list of value references where every referenced variable must be an event indicator.
+An ordered list of value references where every referenced variable must be an event indicator.
 The serialized (if value reference points to array variable) and concatenated values of the variables referenced by the attribute `valueReference` form the array that can be retrieved with <<fmi3GetEventIndicators>>.
 The number of event indicators may change if one or more value references listed in <<EventIndicator>> point to array variables of variable size (see <<fmi3GetNumberOfEventIndicators>>).
 Only <<continuous>> variables of type `Float32` and `Float64` can be referenced by <<EventIndicator>>.
 
-_[If an event indicator shall not be exposed from the FMU, or if event indicators are not statically associated with a variable (due to dynamic event indicator selection), then dummy variables have to be introduced, for example, `eventIndicator[4]`._
-_The ordering of the variables in this list is defined by the exporting tool.]_
+For Co-Simulation and Scheduled Execution, <<EventIndicator>> elements are ignored.
 
-For Co-Simulation, elements <<EventIndicator>> are ignored.
+_[The intention for connecting event indicators to variables via `valueReferences` is to facilitate debugging of the FMU._
+_If an event indicator shall not be exposed, or if event indicators are not statically associated with a variable (due to dynamic event indicator selection), then dummy variables have to be introduced, for example, `eventIndicator[4]`.]_
 
-_[If an FMU supports more than Model Exchange, then the <<EventIndicator>> elements might be present, since it is needed for Model Exchange, but will be ignored for Co-Simulation and Scheduled Execution.]_
 |====
 
 Elements <<Output>>, <<ContinuousStateDerivative>>, <<ClockedState>>, <<InitialUnknown>>, and <<EventIndicator>> have (partially) the following attributes:
@@ -1689,7 +1684,7 @@ Elements <<Output>>, <<ContinuousStateDerivative>>, <<ClockedState>>, <<InitialU
 |`dependencies`
 |
 [[dependencies,`dependencies`]]
-Optional attribute defining the dependencies of the unknown latexmath:[{\mathbf{v}_{\mathit{unknown}}}] (directly or indirectly via other variables) with respect to latexmath:[{\mathbf{v}_{\mathit{known}}}].
+Optional attribute defining the dependencies as list of value references of the unknown latexmath:[{\mathbf{v}_{\mathit{unknown}}}] (directly or indirectly via other variables) with respect to latexmath:[{\mathbf{v}_{\mathit{known}}}].
 If not present, it must be assumed that the unknown depends on all knowns.
 If present as empty list, the unknown depends on none of the knowns.
 Otherwise the unknown depends on the knowns defined by the given value references. +
@@ -1719,22 +1714,22 @@ In other words, the respective partial derivatives cannot be computed.
 |
 [[dependenciesKind, `dependenciesKind`]]
 If <<dependenciesKind>> is present, <<dependencies>> must be present and must have the same number of list elements.
-If not present, it must be assumed that the unknown latexmath:[{\mathbf{v}_{\mathit{unknow}}}] depends on the knowns latexmath:[{\mathbf{v}_{\mathit{known}}}] without a particular structure.
-Otherwise, the corresponding known latexmath:[{\mathbf{f}_{\mathit{known},i}}] enters the equation as:
+If <<dependenciesKind>> is not present, it must be assumed that the unknown latexmath:[{\mathbf{v}_{\mathit{unknow}}}] depends on the knowns latexmath:[{\mathbf{v}_{\mathit{known}}}] without a particular structure.
+Otherwise, the corresponding known latexmath:[{\mathbf{v}_{\mathit{known},i}}] enters the equation as:
 
-`= dependent`: no particular structure, latexmath:[{{\mathbf{f}(..,\ v}_{\mathit{known},i}}],..)
+`= dependent`: no particular structure, latexmath:[{{\mathbf{f}(..,\ \mathbf{v}}_{\mathit{known},i}},..)]
 
-Only for floating point type unknowns latexmath:[{\mathbf{v}_{\mathit{unknown}}}]:
+The following <<dependenciesKind>> is only allowed for floating point latexmath:[{\mathbf{v}_{\mathit{unknown}}}]:
 
-`=` <<constant>>: constant factor, latexmath:[{c \cdot \mathbf{v}_{\mathit{known},i}}] where latexmath:[{c}] is an expression that is evaluated before <<fmi3EnterInitializationMode>> is called.
+`=` <<constant>>: constant factor, latexmath:[{\mathbf{c} \cdot \mathbf{v}_{\mathit{known},i}}] where latexmath:[\mathbf{c}] is an expression that is evaluated before <<fmi3EnterInitializationMode>> is called.
 
-Only for floating point type unknowns latexmath:[{\mathbf{v}_{\mathit{unknown}}}] in Event and <<ContinuousTimeMode>> (ME) and at communication points (CS and SE), and not for <<InitialUnknown>> for <<InitializationMode>>:
+The following <<dependenciesKind>> is only allowed for floating point latexmath:[{\mathbf{v}_{\mathit{unknown}}}] in <<EventMode>> and <<ContinuousTimeMode>> (ME) and at communication points (CS and SE), and not for <<InitialUnknown>> for <<InitializationMode>>:
 
-`=` <<fixed>>: fixed factor, latexmath:[{p \cdot \mathbf{v}_{\mathit{known},i}}] where latexmath:[{p}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called.
+`=` <<fixed>>: fixed factor, latexmath:[{\mathbf{p} \cdot \mathbf{v}_{\mathit{known},i}}] where latexmath:[\mathbf{p}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called.
 
-`=` <<tunable>>: tunable factor, latexmath:[{p \cdot \mathbf{v}_{\mathit{known},i}}] where latexmath:[{p}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called and in <<EventMode>> due to event handling (ME) or at a communication point (CS and SE)
+`=` <<tunable>>: tunable factor, latexmath:[{\mathbf{p} \cdot \mathbf{v}_{\mathit{known},i}}] where latexmath:[\mathbf{p}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called and in <<EventMode>> or at a communication point (ME and CS) due to a change of a <<tunable>> parameter.
 
-`=` <<discrete>>: discrete factor, latexmath:[{d \cdot \mathbf{v}_{\mathit{known},i}}] where latexmath:[{d}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called and in <<EventMode>> due to an external or internal event or at a communication point (CS and SE).
+`=` <<discrete>>: discrete factor, latexmath:[{\mathbf{d} \cdot \mathbf{v}_{\mathit{known},i}}] where latexmath:[\mathbf{d}] is an expression that is evaluated before <<fmi3ExitInitializationMode>> is called and in <<EventMode>> or at a communication point (CS and SE).
 |====
 
 _[Example 1:_
@@ -1810,8 +1805,8 @@ _The definition of the model structure is then:_
 include::examples/model_structure_example2.xml[tags=ModelStructure]
 ----
 
-_[Note that_ latexmath:[{y = d \cdot u}] _where_ latexmath:[{d}] _changes only during <<EventMode>> (_ latexmath:[{d = 2 \cdot u}] _or_ latexmath:[{3 \cdot u\ }] _depending on relation_ latexmath:[{u > 0}] _that changes only at <<EventMode>>)._
-_Therefore <<dependenciesKind>> = <<discrete>>.]_
+_Note that_ latexmath:[{y = d \cdot u}] _where_ latexmath:[{d}] _changes only during <<EventMode>> (_ latexmath:[{d = 2 \cdot u}] _or_ latexmath:[{3 \cdot u\ }] _depending on relation_ latexmath:[{u > 0}] _that changes only at <<EventMode>>)._
+_Therefore <<dependenciesKind>> = <<discrete>>._
 
 _Example 3:_
 
@@ -1831,8 +1826,8 @@ _The definition of the model structure is then:_
 include::examples/model_structure_example3.xml[tags=ModelStructure]
 ----
 
-_[Note that_ latexmath:[{y = c}] _where_ latexmath:[{c}] _changes only during <<EventMode>> (_ latexmath:[{c = 2}] _or_ latexmath:[{3\ }] _depending on relation_ latexmath:[{u > 0}] _that changes only at <<EventMode>>)._
-_Therefore <<dependenciesKind>> = <<dependenciesKind,`dependent`>> because it is not a linear relationship on_ latexmath:[{u}]. _]_
+_Note that_ latexmath:[{y = c}] _where_ latexmath:[{c}] _changes only during <<EventMode>> (_ latexmath:[{c = 2}] _or_ latexmath:[{3\ }] _depending on relation_ latexmath:[{u > 0}] _that changes only at <<EventMode>>)._
+_Therefore <<dependenciesKind>> = <<dependenciesKind,`dependent`>> because it is not a linear relationship on_ latexmath:[{u}] _._
 
 _Example 4:_
 
@@ -1841,25 +1836,13 @@ _Example 4:_
 \frac{dx}{dt}=u, y=x
 ++++
 
-where `u` is continuous-time input value reference `1`, `y` is a continuous-time output with value reference `2` and `dxdt` is a continuous-time derivative with value reference `4`.
-The definition of the model structure is then:
+_where `u` is continuous-time input value reference `1`, `y` is a continuous-time output with value reference `2` and `dxdt` is a continuous-time derivative with value reference `4`._
+_The definition of the model structure is then:_
 
 [source, xml]
 ----
 include::examples/model_structure_example4.xml[tags=VariablesAndStructure]
 ----
-
-_Defining FMU features with the_ <<dependencies>> _list:_
-
-_[Note that via the <<dependencies>> list the supported features of the FMU can be defined._
-_Examples:_
-
-- _If a state derivative `der_x` is a function of a <<parameter>> p (so of a <<start>> value of a variable with <<causality>> = <<parameter>> and <<variability>> = <<fixed>>), and the FMU does not support an iteration over `p` during <<InitializationMode>> (for example, to iterate over p such that the state derivative `der_x` is zero), then the <<dependencies>> list of `der_x` should not include `p`._
-_If an FMU is imported in an environment and such an iteration is set up, then the tool can figure out that the resulting algebraic system of equations is structurally singular and therefore can reject such a definition._
-
-- _For Co-Simulation FMUs, it is common that no algebraic loops over the <<input>> / <<output>> variables nor over <<start>> values is supported._
-_In such a case, all <<dependencies>> lists for <<output>> variables under the <<InitialUnknown>> element should be defined as empty lists defining that the setting of <<input,`inputs`>> and/or of <<start>> values does not influence the <<output,`outputs`>>._
-_As a result, it is not possible to formulate algebraic loops of connected FMUs during <<InitializationMode>>.]_
 
 ==== Terminals and Icons [[fmiTerminalsAndIcons]]
 
