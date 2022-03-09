@@ -11,7 +11,7 @@ Common states are defined in <<common-state-machine>>, such as super states <<FM
 ==== State: Step Mode [[StepMode,*Step Mode*]]
 
 The state <<StepMode>> is used to compute the values of all variables between communication points and events and to advance time in the FMU.
-If the FMU is connected in loops with other models, iterations over the FMU equations requires setting the FMU to a previous communication point and repeating the <<fmi3DoStep>>.
+If the FMU is connected in <<algebraic-loops,algebraic loops>> with other models, iterations over the FMU equations requires <<get-set-fmu-state,setting the FMU to a state previously stored>> (using <<fmi3GetFMUState>> and <<fmi3SetFMUState>>) and repeating <<fmi3DoStep>>.
 
 During <<StepMode>>, <<clocked-variable,clocked variables>> can not be set or get because <<Clock,Clocks>> are only active during <<EventMode>>.
 
@@ -84,12 +84,12 @@ The importer requests the computation of the next time step with the following f
 include::../headers/fmi3FunctionTypes.h[tags=DoStep]
 ----
 Only <<fmi3DoStep>> can change the time of a Co-Simulation FMU from the outside (<<advancing-time,time advances internally during `fmi3DoStep`>>).
-Arguments referring to time inherit the the unit of the <<independent>> variable.
+Arguments referring to time inherit the unit of the <<independent>> variable.
 
-* [[currentCommunicationPoint,`currentCommunicationPoint`]] `currentCommunicationPoint` is the current communication point of the importer (latexmath:[\mathbf{t}_\mathit{i}]) with the unit of the <<independent>> variable.
+* [[currentCommunicationPoint,`currentCommunicationPoint`]] `currentCommunicationPoint` is the current communication point of the importer (latexmath:[\mathbf{t}_\mathit{i}]).
 At the first call of <<fmi3DoStep>>, <<currentCommunicationPoint>> must be equal to the argument <<startTime>> of <<fmi3EnterInitializationMode>>.
 
-* [[communicationStepSize,`communicationStepSize`]] `communicationStepSize` is the expected communication step size (latexmath:[\mathbf{h}_\mathit{i}]) with the unit of the <<independent>> variable.
+* [[communicationStepSize,`communicationStepSize`]] `communicationStepSize` is the communication step size (latexmath:[\mathbf{h}_\mathit{i}]).
 <<communicationStepSize>> must be latexmath:[> 0.0].
 The FMU is expected to compute until time latexmath:[\mathbf{t}_{i+1} = \mathbf{t}_\mathit{i} + \mathbf{h}_\mathit{i}].
 See <<canHandleVariableCommunicationStepSize>> for restrictions.
@@ -98,17 +98,17 @@ _[Formally, argument <<currentCommunicationPoint>> is not needed._
 _It is present in order to handle a potential mismatch between the importer's and the FMU's time representations and/or computations._
 _Both arguments <<currentCommunicationPoint>> and <<communicationStepSize>> allow computing of_ latexmath:[\mathbf{t}_\mathit{i+1}] _by one addition, avoiding accumulation of numerical errors.]_
 
-* [[noSetFMUStatePriorToCurrentPoint,`noSetFMUStatePriorToCurrentPoint`]] `noSetFMUStatePriorToCurrentPoint = fmi3True` if `fmi3SetFMUState` will no longer be called for time instants prior to <<currentCommunicationPoint>> in this simulation run.
+* [[noSetFMUStatePriorToCurrentPoint,`noSetFMUStatePriorToCurrentPoint`]] `noSetFMUStatePriorToCurrentPoint = fmi3True` if <<fmi3SetFMUState>> will no longer be called for time instants prior to <<currentCommunicationPoint>> in this simulation run.
 +
 _[The FMU can use this flag to flush a result buffer.]_
 
-* [[eventHandlingNeeded,`eventHandlingNeeded`]] <<eventHandlingNeeded,`eventHandlingNeeded = fmi3True`>> indicates that an event was encountered at <<lastSuccessfulTime>> and the importer has to enter <<EventMode>> by calling <<fmi3EnterEventModeCS>>.
+* [[eventHandlingNeeded,`eventHandlingNeeded`]] <<eventHandlingNeeded,`eventHandlingNeeded = fmi3True`>> indicates that an event was encountered by the FMU at <<lastSuccessfulTime>> and the importer has to enter <<EventMode>> by calling <<fmi3EnterEventModeCS>>.
 <<eventHandlingNeeded,`eventHandlingNeeded = fmi3True`>> must not be signaled, if the importer indicates to not support <<EventMode>> by <<eventModeUsed,`eventModeUsed = fmi3False`>>.
-_[This is different from <<earlyReturn>> which only indicates that the <<fmi3DoStep>> did not complete the intended step up until <<currentCommunicationPoint>> + <<communicationStepSize>> and does not require event handling in itself.]_
+_[This is different from <<earlyReturn>> which only indicates that the <<fmi3DoStep>> did not complete the intended step up until <<currentCommunicationPoint>> + <<communicationStepSize>> and does not require event handling.]_
 
 * [[terminateSimulationDS,`terminateSimulation`]] When <<terminateSimulationDS,`terminateSimulation = fmi3True`>>, the FMU requests to stop the simulation and the importer must call <<fmi3Terminate>>.
 
-* [[earlyReturn,`earlyReturn`]] `earlyReturn` signals to the importer that the FMU returns at latexmath:[\mathbf{t}_\mathit{i+1} < \mathbf{t}_i +]<<communicationStepSize>> from the <<fmi3DoStep>>.
+* [[earlyReturn,`earlyReturn`]] `earlyReturn` signals to the importer that the FMU returns at latexmath:[\mathbf{t}_\mathit{i+1} < \mathbf{t}_i +]<<communicationStepSize>>.
 <<earlyReturn, `earlyReturn = fmi3True`>> is only allowed if <<earlyReturnAllowed,`earlyReturnAllowed = fmi3True`>> in <<fmi3InstantiateCoSimulation>>.
 The time reached is specified in <<lastSuccessfulTime>>.
 Reasons for <<earlyReturn, `earlyReturn = fmi3True`>> are
@@ -121,7 +121,7 @@ It is possible that the <<lastSuccessfulTime>> is equal to <<currentCommunicatio
 Even if the FMU returns from <<fmi3DoStep>> with <<fmi3OK>> and <<earlyReturn, `earlyReturn = fmi3False`>>, it is allowed that <<lastSuccessfulTime>> deviates from the expected <<currentCommunicationPoint>> `+` <<communicationStepSize>>.
 _[Examples:_
 ** _A fixed-step integrator inside the FMU cannot reach the requested time exactly._
-_<<fixedInternalStepSize>> was introduced to reduce these effects._
+_<<fixedInternalStepSize>> was introduced to counter these effects._
 ** _A variable-step integrator with minimal step size is not able to land exactly at_ latexmath:[\mathbf{t}_\mathit{i+1}]_.]_
 
 Function <<fmi3IntermediateUpdateCallback>>::
@@ -138,20 +138,19 @@ Function <<fmi3EnterConfigurationMode>>::
 
 ==== State: Intermediate Update Mode [[IntermediateUpdateMode,*Intermediate Update Mode*]]
 
-_[The following use cases are enabled:_
+<<IntermediateUpdateMode>> can only be entered by the FMU itself using the callback function <<fmi3IntermediateUpdateCallback>>.
+An FMU may enter <<IntermediateUpdateMode>> in order to exchange input and output values between communication points.
+Furthermore, the <<IntermediateUpdateMode>> allows the importer to request an <<early-return, early return>> from the current <<fmi3DoStep>> because of an event between communication points.
 
-* _Access to intermediate variables enables advanced Co-Simulation with interpolation/extrapolation techniques (such as polynomial extrapolation, <<transmission-line-modeling>> (<<tlm>>) co-simulation, anti-alias filtering, smoothing of input among others)._
-* _<<IntermediateUpdateMode>> enables the same input approximation that was possible in FMI 2.0 with `fmi2SetInputDerivatives`, by evaluation of the approximation polynomial by the importer and not within the FMU as in FMI 2.0_
-* _The Co-Simulation algorithm can request an <<early-return,early return>> from <<fmi3DoStep>>, because of an event between communication points (see <<early-return>>)._
+The importer cannot request entering <<IntermediateUpdateMode>> from the FMU and hence for some use cases (e.g. cooperative multitasking and setting of intermediate input values) the importer relies on the callbacks from the FMUs.
 
-_Note that the call to <<fmi3IntermediateUpdateCallback>> and thus entering the <<IntermediateUpdateMode>> can only be triggered by the FMU itself._
-_The importer cannot actively trigger this and hence for some use cases (e.g. cooperative multitasking and setting of intermediate input values) it relies on the callbacks from the FMUs to be able to realize these use cases properly.]_
+<<IntermediateUpdateMode>> enables:
 
-A Co-Simulation FMU can provide values for its <<output>> variables at intermediate points between two consecutive communication points, and is able to receive new values for <<input>> variables at these intermediate points.
-This is typically required when the FMU uses a numerical solver to integrate the FMU's internal state between communication points in <<fmi3DoStep>>.
-This numerical solver assumes that the inputs are continuous in the integration interval, dictated by <<fmi3DoStep>>.
-In FMI 2.0 Co-simulation, the intermediate inputs are provided by the use of extrapolations.
-The intermediate update functions allow FMUs to receive inputs, and provide outputs, directly to the co-simulation algorithm, in those intermediate time points.
+* enables advanced Co-Simulation with interpolation/extrapolation techniques of inputs and outputs (such as polynomial extrapolation, <<transmission-line-modeling>> (<<tlm>>) co-simulation, anti-alias filtering, smoothing of input among others).
+* the same input approximation that was possible in FMI 2.0 with `fmi2SetInputDerivatives`, by evaluation of the approximation polynomial by the importer and not within the FMU as in FMI 2.0.
+
+The FMU signals the support of <<IntermediateUpdateMode>> via the capability flag <<providesIntermediateUpdate>>.
+The co-simulation algorithm signals the support for <<IntermediateUpdateMode>> by providing a non-NULL callback-function pointer for <<fmi3IntermediateUpdateCallback, `intermediateUpdate`>>.
 
 Intermediate values for <<continuous>> inputs are computed by the importer for example by an extrapolation polynomial build with the output derivatives of connected FMUs.
 FMUs can signal with the optional attribute <<recommendedIntermediateInputSmoothness>> of value latexmath:[k] to the co-simulation algorithm that best convergence rates can be achieved if these approximation functions are of smoothness latexmath:[C^{k}([\mathbf{t}_i, \mathbf{t}_{i+1}\])], that is k-time continuously differentiable, with latexmath:[C^{0}] meaning continuous. +
@@ -159,9 +158,8 @@ _[This can increase simulation speed for higher order multi-step solvers that in
 
 The importer must ensure that the input approximation function latexmath:[\mathbf{u}_u] is consistent with the values of the input variable (latexmath:[\mathbf{u}_u(\mathbf{t}_{i+1})= \mathbf{u}(\mathbf{t}_{i+1})]).
 
-Due to the way numerical solvers estimate and correct the approximation error, these intermediate <<output>> values may be tentative or may be final.
-It is possible for the FMU to inform the co-simulation algorithm whether the internal solver is in a tentative state, meaning that the output values computed from that state are also tentative, or if the internal solver has successfully completed the integration step, meaning that the FMU's internal state is final, and will never be changed in the current execution of <<fmi3DoStep>>.
-If the internal integration step has been successfully completed, the co-simulation algorithm can forward intermediate outputs to other FMUs, where they can be used, for e.g., for extrapolation, interpolation, filtering or asynchronous co-simulation.
+Due to the way FMU internal solvers may estimate and correct the approximation error, tentative states may occur and lead to tentative intermediate <<output>> values (see <<intermediateStepFinished>>).
+If an FMU internal integration step has been completed successfully, the importer can forward intermediate outputs to other FMUs, where they can be used to approximate inputs.
 
 <<figure-IntermediateUpdateMode>> summarizes the above description.
 It illustrates multiple intermediate internal solver steps, distinguishing between the final ones (with black-filled circles) and tentative ones (with white-filled circles).
@@ -170,9 +168,6 @@ It distinguishes the level of trust that can be placed in the tentative outputs 
 .Overview of solver states and intermediate update during a communication step
 [#figure-IntermediateUpdateMode]
 image::images/intermediateupdate.svg[width=65%, align="center"]
-
-The FMU signals the support of <<IntermediateUpdateMode>> via the capability flag <<providesIntermediateUpdate>>.
-The co-simulation algorithm signals the support for <<IntermediateUpdateMode>> by providing a non-NULL callback-function pointer for <<fmi3IntermediateUpdateCallback, `intermediateUpdate`>>.
 
 The FMU enters <<IntermediateUpdateMode>> by calling <<fmi3IntermediateUpdateCallback>> within <<StepMode>> and leaves the state towards <<StepMode>> when the function returns.
 
@@ -183,34 +178,35 @@ include::../headers/fmi3FunctionTypes.h[tag=CallbackIntermediateUpdate]
 ----
 
 [[intermediateUpdateTime,`intermediateUpdateTime`]]
-* <<intermediateUpdateTime>> is the internal value of the <<independent>> variable _[typically simulation time]_ of the FMU at which the callback has been called for intermediate and final steps.
-If an event happens or an <<outputClock>> ticks, <<intermediateUpdateTime>> is the time of event or <<outputClock>> tick.
-In Co-Simulation, <<intermediateUpdateTime>> is restricted by the arguments to <<fmi3DoStep>> as follows: +
+* <<intermediateUpdateTime>> is the internal value of the <<independent>> variable _[typically simulation time]_ of the FMU at which the callback has been called.
+<<intermediateUpdateTime>> is restricted by the arguments of <<fmi3DoStep>> as follows: +
 <<currentCommunicationPoint>> latexmath:[\leq] <<intermediateUpdateTime>> latexmath:[\leq] (<<currentCommunicationPoint>> + <<communicationStepSize>>). +
 The FMU must not call the callback function <<fmi3IntermediateUpdateCallback>> with an <<intermediateUpdateTime>> that is smaller than the <<intermediateUpdateTime>> given in a previous call of <<fmi3IntermediateUpdateCallback>> with `intermediateStepFinished = fmi3True`. +
 
 [[intermediateVariableSetRequested,`intermediateVariableSetRequested`]]
-* If <<intermediateVariableSetRequested,`intermediateVariableSetRequested = fmi3True`>>, the co-simulation algorithm may provide intermediate values for continuous <<input>> variables with <<intermediateUpdate,`intermediateUpdate = true`>> by calling <<get-and-set-variable-values,`fmi3Set{VariableType}`>>.
-The set of variables for which the co-simulation algorithm will provide intermediate values is declared through the <<requiredIntermediateVariables>> argument to <<fmi3Instantiate>>.
-If a co-simulation algorithm does not provide a new value for any of the variables contained in the set it registered, the last value set remains.
+* If <<intermediateVariableSetRequested,`intermediateVariableSetRequested = fmi3True`>>, the importer may provide intermediate values for continuous <<input>> variables with <<intermediateUpdate,`intermediateUpdate = true`>> by calling <<get-and-set-variable-values,`fmi3Set{VariableType}`>>.
+The set of variables for which the importer may provide intermediate values is declared through the <<requiredIntermediateVariables>> argument of <<fmi3InstantiateCoSimulation>>.
+If the importer does not provide a new value for any of the variables contained in the set it registered, the values set last remain.
 
 [[intermediateVariableGetAllowed,`intermediateVariableGetAllowed`]]
-* If <<intermediateVariableGetAllowed,`intermediateVariableGetAllowed = fmi3True`>>, the co-simulation algorithm may collect intermediate output variables by calling <<get-and-set-variable-values,`fmi3Get{VariableType}`>> for variables with <<intermediateUpdate,`intermediateUpdate = true`>>.
-The set of variables for which the co-simulation algorithm can get values is supplied through the <<requiredIntermediateVariables>> argument to <<fmi3Instantiate>>.
+* If <<intermediateVariableGetAllowed,`intermediateVariableGetAllowed = fmi3True`>>, the importer may obtain intermediate output values by calling <<get-and-set-variable-values,`fmi3Get{VariableType}`>> for variables with <<intermediateUpdate,`intermediateUpdate = true`>>.
+The set of variables for which the importer may get values is defined by the <<requiredIntermediateVariables>> argument of <<fmi3InstantiateCoSimulation>>.
 
 [[intermediateStepFinished,`intermediateStepFinished`]]
-* If <<intermediateStepFinished, `intermediateStepFinished = fmi3False`>>, the intermediate outputs of the FMU that the co-simulation algorithm inquires with <<get-and-set-variable-values,`fmi3Get{VariableType}`>> resulting from tentative internal solver states and may still change for the same <<intermediateUpdateTime>> _[e.g., if the solver deems the tentative state to cause a too high approximation error, it may go back in time and try to re-estimate the state using smaller internal time steps]_. +
-If <<intermediateStepFinished, `intermediateStepFinished = fmi3True`>>, intermediate outputs inquired by the co-simulation algorithm with <<get-and-set-variable-values,`fmi3Get{VariableType}`>> correspond to accepted internal solver step.
+* If <<intermediateStepFinished, `intermediateStepFinished = fmi3False`>>, the intermediate output values of the FMU that the importer inquires with <<get-and-set-variable-values,`fmi3Get{VariableType}`>> resulting from tentative internal solver states and may still change for the same <<intermediateUpdateTime>> _[e.g., if the solver deems the tentative state to cause an unacceptable approximation error, it may go back in time and try to re-estimate the state using smaller internal time steps]_. +
+If <<intermediateStepFinished, `intermediateStepFinished = fmi3True`>>, intermediate output values inquired by the importer with <<get-and-set-variable-values,`fmi3Get{VariableType}`>> correspond to accepted internal solver steps.
 
 [[canReturnEarly,`canReturnEarly`]]
-* When <<canReturnEarly,`canReturnEarly = fmi3True`>> the FMU signals to the co-simulation algorithm its ability to return early from the current <<fmi3DoStep>>.
+* When <<canReturnEarly,`canReturnEarly = fmi3True`>> the FMU signals to the importer its ability to return early from the current <<fmi3DoStep>>.
 
 [[earlyReturnRequested,`earlyReturnRequested`]]
-* `earlyReturnRequested`: If and only if <<canReturnEarly,`canReturnEarly = fmi3True`>>, the co-simulation algorithm may request the FMU to return early from <<fmi3DoStep>> by setting `earlyReturnRequested = fmi3True`.
+* `earlyReturnRequested`: If and only if <<canReturnEarly,`canReturnEarly = fmi3True`>>, the importer may request the FMU to return early from <<fmi3DoStep>> by setting `earlyReturnRequested = fmi3True`.
 
 [[earlyReturnTime,`earlyReturnTime`]]
-* `earlyReturnTime` is used to signal the FMU at which time to return early from the current <<fmi3DoStep>>, if the return value of <<earlyReturnRequested, `earlyReturnRequested = fmi3True`>>.
-If the <<earlyReturnTime>> is greater than the last signaled <<intermediateUpdateTime>>, the FMU may integrate up to the time instant <<earlyReturnTime>>.
+* `earlyReturnTime` is used to signal the FMU at which time to return early from the current <<fmi3DoStep>>, if <<earlyReturnRequested, `earlyReturnRequested = fmi3True`>>.
+If the <<earlyReturnTime>> is greater than the current <<intermediateUpdateTime>>, the FMU may compute up to <<earlyReturnTime>>.
+<<earlyReturnTime>> is restricted by the arguments of <<fmi3DoStep>> as follows: +
+<<currentCommunicationPoint>> latexmath:[\leq] <<earlyReturnTime>> latexmath:[\leq] (<<currentCommunicationPoint>> + <<communicationStepSize>>).
 
 .Mathematical description of <<IntermediateUpdateMode>>.
 [#table-math-intermediateUpdateMode]
@@ -236,15 +232,16 @@ Allowed Function Calls::
 
 Function <<get-and-set-variable-values,`fmi3Get{VariableType}`>>::
 This function can be called for intermediate variables, if <<intermediateVariableGetAllowed,`intermediateVariableGetAllowed = fmi3True`>>.
-Intermediate variables are variables that are marked with attribute <<intermediateUpdate,`intermediateUpdate = true`>> in the <<modelDescription.xml>> and have been included in the <<requiredIntermediateVariables>> argument to <<fmi3Instantiate>>.
+Intermediate variables are variables that are marked with attribute <<intermediateUpdate,`intermediateUpdate = true`>> in the <<modelDescription.xml>> and have been included in the <<requiredIntermediateVariables>> argument of <<fmi3InstantiateCoSimulation>>.
 
-+
+Function `fmi3GetOutputDerivatives`::
 For details on <<fmi3GetOutputDerivatives>> see <<getting-output-derivatives>>.
+Furthermore, calling <<fmi3GetOutputDerivatives>> is only allowed on variables as defined for `fmi3Get{VariableType}` above.
 
 Function <<get-and-set-variable-values,`fmi3Set{VariableType}`>>::
 This function can be called for intermediate input variables, if <<intermediateVariableSetRequested,`intermediateVariableSetRequested = fmi3True`>>.
-Intermediate input variables are input variables that are marked with attribute <<intermediateUpdate,`intermediateUpdate = true`>> in the <<modelDescription.xml>> and have been included in the <<requiredIntermediateVariables>> argument of <<fmi3Instantiate>>.
-In Co-Simulation, <<discrete>> <<input,`inputs`>> must not be set.
+Intermediate input variables are input variables that are marked with attribute <<intermediateUpdate,`intermediateUpdate = true`>> in the <<modelDescription.xml>> and have been included in the <<requiredIntermediateVariables>> argument of <<fmi3InstantiateCoSimulation>>.
+<<discrete,Discrete>> <<input,`inputs`>> must not be set.
 
 There is a defined order of calling these functions: first all <<get-and-set-variable-values,`fmi3Get{VariableType}`>> calls must be performed, then <<get-and-set-variable-values,`fmi3Set{VariableType}`>> may be called. +
-_[This is analogous to the calling sequence of_ <<get-and-set-variable-values,`fmi3Get{VariableType}`>> _and_ <<get-and-set-variable-values,`fmi3Set{VariableType}`>> _calls at communication points.]_
+_[This is analogous to the calling sequence of_ <<get-and-set-variable-values,`fmi3Get{VariableType}`>> _and_ <<get-and-set-variable-values,`fmi3Set{VariableType}`>> _calls in <<StepMode>>.]_
