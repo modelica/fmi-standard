@@ -33,10 +33,10 @@ During <<StepMode>>, <<clocked-variable,clocked variables>> can not be set or ge
 |<<fmi3GetOutputDerivatives>>
 
 a|
-* latexmath:[(\mathbf{y}_{c+d-k}, \mathbf{y}_c^{(j)}, \mathbf{x}_{d-k}, \mathbf{w}_{c+d-k}, \mathbf{b}, t_\mathit{i+1}) := \mathbf{f}_{\mathit{doStep}}({}^{\bullet}\mathbf{x}_d, \mathbf{u}_{c+d}, {}^{\bullet}\mathbf{u}_{c,u}, \mathbf{p}, {}^{\bullet}\mathbf{b}, t_i, h_i)] +
+* latexmath:[(\mathbf{y}_{c+d-k}, \mathbf{y}_c^{(j)}, \mathbf{x}_{d-k}, \mathbf{w}_{c+d-k}, \mathbf{b}, t_{i+1}) := \mathbf{f}_{\mathit{doStep}}({}^{\bullet}\mathbf{x}_d, \mathbf{u}_{c+d}, {}^{\bullet}\mathbf{u}_{c,u}, \mathbf{p}, {}^{\bullet}\mathbf{b}, t_i, h_i)] +
 * Update previous values of non-clocked, discrete states: latexmath:[{}^\bullet\mathbf{x}_{d-k} := \mathbf{x}_{d-k}].
 * Update previous values of buffers: latexmath:[{}^\bullet\mathbf{b} := \mathbf{b}].
-* latexmath:[t := (t_\mathit{i+1}, 0)]
+* latexmath:[t := (t_{i+1}, 0)]
 |<<fmi3DoStep>>
 
 |latexmath:[(\mathbf{v}_{u-k}, t_u) := \mathbf{f}_{\mathit{inter}}({}^{\bullet}\mathbf{x}_d, \mathbf{u}_{c+d}, {}^{\bullet}\mathbf{u}_{c,u}, \mathbf{p}, {}^{\bullet}\mathbf{b}, t_i, h_i)]
@@ -59,7 +59,7 @@ at time latexmath:[t].
 
 Function <<get-and-set-variable-values,`fmi3Get{VariableType}`>>::
 returns values for all variables at latexmath:[t].
-<<get-and-set-variable-values,`fmi3Get{VariableType}`>> does not trigger an evaluation of latexmath:[\mathbf{f}_\mathit{doStep}].
+<<get-and-set-variable-values,`fmi3Get{VariableType}`>> does not trigger an evaluation of latexmath:[\mathbf{f}_{doStep}].
 Therefore, <<algebraic-loops,algebraic loops>> at communication points cannot be handled by an appropriate sequence of <<get-and-set-variable-values,`fmi3Get{VariableType}`>> and <<get-and-set-variable-values,`fmi3Set{VariableType}`>> calls _[contrary to <<InitializationMode>>, <<EventMode>> and <<ContinuousTimeMode>>]_.
 Repeating a communication step requires to reset the FMU state to the previous communication point with <<fmi3SetFMUState>> and repeating the <<fmi3DoStep>> with new input values.
 +
@@ -86,17 +86,17 @@ include::../headers/fmi3FunctionTypes.h[tags=DoStep]
 Only <<fmi3DoStep>> can change the time of a Co-Simulation FMU from the outside (<<advancing-time,time advances internally during `fmi3DoStep`>>).
 Arguments referring to time inherit the unit of the <<independent>> variable.
 
-* [[currentCommunicationPoint,`currentCommunicationPoint`]] `currentCommunicationPoint` is the current communication point of the importer (latexmath:[t_\mathit{i}]).
+* [[currentCommunicationPoint,`currentCommunicationPoint`]] `currentCommunicationPoint` is the current communication point of the importer (latexmath:[t_{i}]).
 At the first call of <<fmi3DoStep>>, <<currentCommunicationPoint>> must be equal to the argument <<startTime>> of <<fmi3EnterInitializationMode>>.
 
-* [[communicationStepSize,`communicationStepSize`]] `communicationStepSize` is the communication step size (latexmath:[h_\mathit{i}]).
+* [[communicationStepSize,`communicationStepSize`]] `communicationStepSize` is the communication step size (latexmath:[h_{i}]).
 <<communicationStepSize>> must be latexmath:[> 0.0].
-The FMU is expected to compute until time latexmath:[t_{i+1} = t_\mathit{i} + h_\mathit{i}].
+The FMU is expected to compute until time latexmath:[t_{i+1} = t_{i} + h_{i}].
 See <<canHandleVariableCommunicationStepSize>> for restrictions.
 +
 _[Formally, argument <<currentCommunicationPoint>> is not needed._
 _It is present in order to handle a potential mismatch between the importer's and the FMU's time representations and/or computations._
-_Both arguments <<currentCommunicationPoint>> and <<communicationStepSize>> allow computing of_ latexmath:[t_\mathit{i+1}] _by one addition, avoiding accumulation of numerical errors.]_
+_Both arguments <<currentCommunicationPoint>> and <<communicationStepSize>> allow computing of_ latexmath:[t_{i+1}] _by one addition, avoiding accumulation of numerical errors.]_
 
 * [[noSetFMUStatePriorToCurrentPoint,`noSetFMUStatePriorToCurrentPoint`]] `noSetFMUStatePriorToCurrentPoint = fmi3True` if <<fmi3SetFMUState>> will no longer be called for time instants prior to <<currentCommunicationPoint>> in this simulation run.
 +
@@ -108,7 +108,7 @@ _[This is different from <<earlyReturn>> which only indicates that the <<fmi3DoS
 
 * [[terminateSimulationDS,`terminateSimulation`]] When <<terminateSimulationDS,`terminateSimulation = fmi3True`>>, the FMU requests to stop the simulation and the importer must call <<fmi3Terminate>>.
 
-* [[earlyReturn,`earlyReturn`]] `earlyReturn` signals to the importer that the FMU returns at latexmath:[t_\mathit{i+1} < t_i +]<<communicationStepSize>>.
+* [[earlyReturn,`earlyReturn`]] `earlyReturn` signals to the importer that the FMU returns at latexmath:[t_{i+1} < t_i +]<<communicationStepSize>>.
 <<earlyReturn, `earlyReturn = fmi3True`>> is only allowed if <<earlyReturnAllowed,`earlyReturnAllowed = fmi3True`>> in <<fmi3InstantiateCoSimulation>>.
 The time reached is specified in <<lastSuccessfulTime>>.
 Reasons for <<earlyReturn, `earlyReturn = fmi3True`>> are
@@ -116,13 +116,13 @@ Reasons for <<earlyReturn, `earlyReturn = fmi3True`>> are
 ** the FMU's reaction to the importers request for <<earlyReturn>> by the return argument <<earlyReturnRequested, `earlyReturnRequested = fmi3True`>> of <<fmi3IntermediateUpdateCallback>>, or
 ** the FMU's request for a communication point at <<lastSuccessfulTime>> for any other reason.
 
-* [[lastSuccessfulTime,`lastSuccessfulTime`]] `lastSuccessfulTime` represents the internal time latexmath:[t_\mathit{i+1}] of the FMU when <<fmi3DoStep>> returns, for any value of <<earlyReturn>>.
+* [[lastSuccessfulTime,`lastSuccessfulTime`]] `lastSuccessfulTime` represents the internal time latexmath:[t_{i+1}] of the FMU when <<fmi3DoStep>> returns, for any value of <<earlyReturn>>.
 It is possible that the <<lastSuccessfulTime>> is equal to <<currentCommunicationPoint>> when <<earlyReturn,`earlyReturn = fmi3True`>> to indicate, for example, the detection of an event at <<currentCommunicationPoint>>.
 Even if the FMU returns from <<fmi3DoStep>> with <<fmi3OK>> and <<earlyReturn, `earlyReturn = fmi3False`>>, it is allowed that <<lastSuccessfulTime>> deviates from the expected <<currentCommunicationPoint>> `+` <<communicationStepSize>>.
 _[Examples:_
 ** _A fixed-step integrator inside the FMU cannot reach the requested time exactly._
 _<<fixedInternalStepSize>> was introduced to counter these effects._
-** _A variable-step integrator with minimal step size is not able to land exactly at_ latexmath:[t_\mathit{i+1}]_.]_
+** _A variable-step integrator with minimal step size is not able to land exactly at_ latexmath:[t_{i+1}]_.]_
 
 Function <<fmi3IntermediateUpdateCallback>>::
 <<fmi3IntermediateUpdateCallback>> switches the FMU itself into the <<IntermediateUpdateMode>>.
@@ -218,7 +218,7 @@ If the <<earlyReturnTime>> is greater than the current <<intermediateUpdateTime>
 |Get intermediate variable values latexmath:[\mathbf{v}_u(t_u)]
 |<<get-and-set-variable-values,`fmi3Get{VariableType}`>>
 
-|Get time derivatives of <<continuous>> <<output,`outputs`>> latexmath:[\mathbf{y}_\mathit{c,u}^{(j)}(\mathbf{t_\mathit{u}})].
+|Get time derivatives of <<continuous>> <<output,`outputs`>> latexmath:[\mathbf{y}_{c,u}^{(j)}(\mathbf{t_{u}})].
 |<<fmi3GetOutputDerivatives>>
 
 a|
