@@ -193,7 +193,7 @@ typedef fmi3Status fmi3ExitInitializationModeTYPE(fmi3Instance instance);
 typedef fmi3Status fmi3EnterEventModeTYPE(fmi3Instance instance,
                                           fmi3EventQualifier stepEvent,
                                           fmi3EventQualifier stateEvent,
-                                          const fmi3Int32 rootsFound[],
+                                          const fmi3Int32 eventIndicatorDomainChanges[],
                                           size_t nEventIndicators,
                                           fmi3EventQualifier timeEvent);
 /* end::EnterEventMode[] */
