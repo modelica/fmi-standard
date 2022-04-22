@@ -266,10 +266,6 @@ void algebraicLoop2() {
 
 void algebraicLoop3() {
 
-    fmi3Boolean v1, v2, v5;
-    fmi3Int32 *v3;
-    size_t v4;
-
     fmi3Boolean M1_DStatesNeedUpdate, M2_DStatesNeedUpdate, *p2, *p3, *p4, *p5;
     fmi3Float64 *p6;
     bool isCoSimulation;
@@ -277,8 +273,8 @@ void algebraicLoop3() {
     // tag::AlgebraicLoop3[]
     FMU *M1, *M2;  // structures that hold the functions and instances of the FMUs
 
-    M1->fmi3EnterEventMode(M1->instance, v1, v2, v3, v4, v5);
-    M2->fmi3EnterEventMode(M2->instance, v1, v2, v3, v4, v5);
+    M1->fmi3EnterEventMode(M1->instance);
+    M2->fmi3EnterEventMode(M2->instance);
 
     // start event iteration
     do {
