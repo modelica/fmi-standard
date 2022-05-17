@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
 
-    - name: checkout
+    - name: Checkout
       uses: actions/checkout@v3
       with:
         submodules: recursive
@@ -23,12 +23,17 @@ jobs:
     - name: Get current directory
       run: pwd
 
+    - name: Create build directory
+      run: mkdir build
+
     - name: Generate HTML
-      run: docker run -v ~/project/:/documents/ --name asciidoc-to-html asciidoctor/docker-asciidoctor asciidoctor --base-dir /documents/ --backend html5 --failure-level WARN --verbose --attribute=revnumber=$REVNUMBER --attribute=revdate=$(date +"%F") docs/index.adoc
+      uses: avattathil/asciidoctor-action@master
+      with:
+        program: "asciidoctor --destination-dir=build --backend=html5 --attribute=revnumber=${GITHUB_REF#refs/heads/}-$GITHUB_SHA --attribute=revdate=$(date +%F) docs/index.adoc"
 
     - name: Create ZIP archive
       uses: actions/upload-artifact@v3
       with:
         name: FMI-Specification
-        path: docs/*
+        path: build/*
         if-no-files-found: error
