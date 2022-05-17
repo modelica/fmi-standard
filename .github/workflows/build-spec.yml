@@ -1,0 +1,34 @@
+name: Build Spec
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  build-spec:
+
+    name: Build FMI Specification
+    runs-on: ubuntu-22.04
+    steps:
+
+    - name: checkout
+      uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: List directories
+      run: ls -al
+
+    - name: Get current directory
+      run: pwd
+
+    - name: Generate HTML
+      run: docker run -v ~/project/:/documents/ --name asciidoc-to-html asciidoctor/docker-asciidoctor asciidoctor --base-dir /documents/ --backend html5 --failure-level WARN --verbose --attribute=revnumber=$REVNUMBER --attribute=revdate=$(date +"%F") docs/index.adoc
+
+    - name: Create ZIP archive
+      uses: actions/upload-artifact@v3
+      with:
+        name: FMI-Specification
+        path: docs/*
+        if-no-files-found: error
