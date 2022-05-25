@@ -1,0 +1,72 @@
+name: Build Spec
+
+on:
+  pull_request:
+    branches: [ v3.0.x ]
+
+jobs:
+
+  build-spec:
+
+    name: Build FMI Specification
+    runs-on: ubuntu-18.04
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: List variables
+      run: |
+        [[ $GITHUB_REF_TYPE == "tag" ]] && REVNUMBER=${GITHUB_REF:11} || REVNUMBER=${GITHUB_SHA:0:7}
+        echo GITHUB_SHA:      $GITHUB_SHA
+        echo GITHUB_REF_TYPE: $GITHUB_REF_TYPE
+        echo GITHUB_REF:      $GITHUB_REF
+        echo REVNUMBER:       $REVNUMBER
+
+    - name: Create build directory
+      run: |
+        mkdir -p build/headers
+        mkdir -p build/schema
+        mkdir -p build/images/schema
+
+    - name: Generate HTML
+      uses: avattathil/asciidoctor-action@master
+      with:
+        program: "asciidoctor --base-dir . --destination-dir=build --backend=html5 --attribute=revnumber=$REVNUMBER --attribute=revdate=$(date +%F) docs/index.adoc"
+
+    - name: Copy resources
+      run: |
+        cp LICENSE.txt build
+        cp headers/*.h build/headers
+        cp schema/*.xsd build/schema
+        cp docs/images/favicon.ico build/images
+        cp docs/images/*.svg build/images
+        cp docs/images/schema/*.png build/images/schema
+
+    - name: Create ZIP archive
+      uses: actions/upload-artifact@v3
+      with:
+        name: FMI-Specification
+        path: build/*
+        if-no-files-found: error
+
+    - name: Check HTML
+      uses: chabad360/htmlproofer@master
+      with:
+        directory: build
+        arguments: --only-4xx
+
+    - name: Push HTML to fmi-standard.org
+      if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/v3.0.x' }}
+      uses: cpina/github-action-push-to-another-repository@v1.4.2
+      env:
+        API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
+      with:
+        source-directory: 'build'
+        destination-github-username: 'modelica'
+        destination-repository-name: 'fmi-standard.org'
+        user-email: ci@fmi-standard
+        target-branch: master
+        target-directory: docs/v3.0.x
