@@ -142,6 +142,15 @@ extern "C" {
 #include "fmi2FunctionTypes.h"
 #include <stdlib.h>
 
+/*
+Allow override of FMI2_FUNCTION_PREFIX: If FMI2_OVERRIDE_FUNCTION_PREFIX
+is defined, then FMI2_ACTUAL_FUNCTION_PREFIX will be used, if defined,
+or no prefix if undefined. Otherwise FMI2_FUNCTION_PREFIX will be used,
+if defined.
+*/
+#if !defined(FMI2_OVERRIDE_FUNCTION_PREFIX) && defined(FMI2_FUNCTION_PREFIX)
+  #define FMI2_ACTUAL_FUNCTION_PREFIX FMI2_FUNCTION_PREFIX
+#endif
 
 /*
   Export FMI2 API functions on Windows and under GCC.
@@ -150,7 +159,7 @@ extern "C" {
   it may be set to __declspec(dllimport).
 */
 #if !defined(FMI2_Export)
-  #if !defined(FMI2_FUNCTION_PREFIX)
+  #if !defined(FMI2_ACTUAL_FUNCTION_PREFIX)
     #if defined _WIN32 || defined __CYGWIN__
      /* Note: both gcc & MSVC on Windows support this syntax. */
         #define FMI2_Export __declspec(dllexport)
@@ -168,10 +177,10 @@ extern "C" {
 
 /* Macros to construct the real function name
    (prepend function name by FMI2_FUNCTION_PREFIX) */
-#if defined(FMI2_FUNCTION_PREFIX)
+#if defined(FMI2_ACTUAL_FUNCTION_PREFIX)
   #define fmi2Paste(a,b)     a ## b
   #define fmi2PasteB(a,b)    fmi2Paste(a,b)
-  #define fmi2FullName(name) fmi2PasteB(FMI2_FUNCTION_PREFIX, name)
+  #define fmi2FullName(name) fmi2PasteB(FMI2_ACTUAL_FUNCTION_PREFIX, name)
 #else
   #define fmi2FullName(name) name
 #endif
