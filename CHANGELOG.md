@@ -1,5 +1,24 @@
 # Changelog
 
+## v2.0.3 (unreleased)
+
+### FMI 2.0.4 backports the following FMI 3.0 features to FMI 2.0:
+
+* Terminals and Icons https://fmi-standard.org/docs/3.0/#fmiTerminalsAndIcons, `p. 69ff.`
+* Build Configuration https://fmi-standard.org/docs/3.0/#BuildConfiguration, `p. 70ff.`
+
+(These optional new features are "orthogonal" to the other FMI 2.0 features)
+
+### FMI 2.0.4 introduces the following clarifications and fixes compared to 2.0.3:
+
+* Fix Comments in ME pseudocode #1629, `p.91`
+* Fix typo in CS Calling sequence figure #1630, `p. 108`
+* Correct "+INF" to "INF" #1784, `p. 30` 
+* Use FMI 3.0 platform tuples #1772 , `p. 70f.`
+* Back-port FMI3_ACTUAL_FUNCTION_PREFIX to FMI 2.0 #1777, `p. 15`
+* Forbidding symlinks #1664, `p. 69`
+* Clarification of  allowed calling of fmi2GetXXX in initialization mode #1581, `p. 24`, `p. 90`, `p. 110`
+
 ## v2.0.3 (2021-11-15)
 
 * `p. 22f` Fixed: Update logging documentation (#1435)
