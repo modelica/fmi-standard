@@ -1,5 +1,17 @@
 # Changelog
 
+## v2.0.4 (unreleased)
+
+* `p. 69 ff.` [Terminals and Icons](https://fmi-standard.org/docs/3.0/#fmiTerminalsAndIcons)
+* `p. 70 ff.` [Build Configuration](https://fmi-standard.org/docs/3.0/#BuildConfiguration)
+* `p. 91` Fix Comments in ME pseudocode (#1629)
+* `p. 108` Fix typo in CS Calling sequence figure (#1630) 
+* `p. 30` Correct "+INF" to "INF" (#1784)  
+* `p. 70 ff.` Use FMI 3.0 platform tuples (#1772) 
+* `p. 15` Back-port FMI3_ACTUAL_FUNCTION_PREFIX to FMI 2.0 (#1777) 
+* `p. 69` Forbidding symlinks (#1664) 
+* `p. 24, p. 90, p. 110` Clarification of  allowed calling of fmi2GetXXX in initialization mode (#1581)
+
 ## v2.0.3 (2021-11-15)
 
 * `p. 22f` Fixed: Update logging documentation (#1435)
@@ -8,7 +20,6 @@
 * `p. 79` Mention event indicators in math description of initialization mode (#1318)
 * `p. 90`  Allow getNominalsOfContinuous stats in initialization model (#1312)
 * `fmi2FunctionTypes.h` : Fixed: Add missing parameter name "serializedState" in fmi2SerializeFMUstate() (#1279)
-
 
 ## v2.0.2 (2020-12-15)
 
