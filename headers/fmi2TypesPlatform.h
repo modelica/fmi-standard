@@ -2,7 +2,7 @@
 #define fmi2TypesPlatform_h
 
 /* Standard header file to define the argument types of the
-   functions of the Functional Mock-up Interface 2.0.3
+   functions of the Functional Mock-up Interface 2.0.4
    This header file must be utilized both by the model and
    by the simulation engine.
 
@@ -40,7 +40,7 @@
 
 
    Copyright (C) 2008-2011 MODELISAR consortium,
-                 2012-2021 Modelica Association Project "FMI"
+                 2012-2022 Modelica Association Project "FMI"
                  All rights reserved.
 
    This file is licensed by the copyright holders under the 2-Clause BSD License
