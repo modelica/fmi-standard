@@ -10,6 +10,12 @@ double A[3][2] = { {0.0, 0.1},
 
 typedef struct {
     fmi3Instance instance;
+    fmi3InstantiateCoSimulationTYPE* fmi3InstantiateCoSimulation;
+    fmi3EnterInitializationModeTYPE* fmi3EnterInitializationMode;
+    fmi3ExitInitializationModeTYPE* fmi3ExitInitializationMode;
+    fmi3DoStepTYPE* fmi3DoStep;
+    fmi3TerminateTYPE* fmi3Terminate;
+    fmi3FreeInstanceTYPE* fmi3FreeInstance;
     fmi3GetFloat64TYPE* fmi3GetFloat64;
     fmi3SetFloat64TYPE* fmi3SetFloat64;
     fmi3EnterEventModeTYPE* fmi3EnterEventMode;
@@ -231,7 +237,7 @@ void algebraicLoop1() {
 
     // tag::AlgebraicLoop1[]
     FMU *M1, *M2;
-    fmi3ValueReference vr_M1_u, vr_M1_y, vr_M2_u1, vr_M2_u2, vr_M2_y1, vr_M2_y2;
+    fmi3ValueReference vr_M1_u, vr_M1_y, vr_M2_u1, vr_M2_u2, vr_M2_y1;
     fmi3Float64 s = 0.1, M2_y1, M1_y, M2_y2;
     // ...
     M2->fmi3SetFloat64(M2->instance, &vr_M2_u1, 1, &s, 1);
@@ -296,6 +302,123 @@ void algebraicLoop3() {
         M2->fmi3EnterContinuousTimeMode(M2->instance);
     }
     // end::AlgebraicLoop3[]
+}
+
+int connectedFMUs() {
+
+    fmi3Float64 startTime, stopTime, h, time;
+    int nSteps;
+    fmi3Status status = fmi3OK;
+    const char *guid;
+    FMU* M1;
+    FMU* M2;
+    fmi3Instance s1, s2;
+    fmi3Boolean eventEncountered, terminateSimulation, earlyReturn;
+    fmi3Float64 lastSuccessfulTime;
+    fmi3LogMessageCallback cb_logMessage;
+
+    // tag::ConnectedFMUs[]
+    ////////////////////////////
+    // Initialization sub-phase
+
+    // instantiate both FMUs
+    s1 = M1->fmi3InstantiateCoSimulation("s1",          // instanceName
+                                         guid,          // instantiationToken
+                                         NULL,          // resourceLocation
+                                         fmi3False,     // visible
+                                         fmi3False,     // loggingOn
+                                         fmi3False,     // eventModeUsed
+                                         fmi3False,     // earlyReturnAllowed
+                                         NULL,          // requiredIntermediateVariables
+                                         0,             // nRequiredIntermediateVariables
+                                         NULL,          // instanceEnvironment
+                                         cb_logMessage, // logMessage
+                                         NULL);         // intermediateUpdate
+
+    s2 = M2->fmi3InstantiateCoSimulation("s2",          // instanceName
+                                         guid,          // instantiationToken
+                                         NULL,          // resourceLocation
+                                         fmi3False,     // visible
+                                         fmi3False,     // loggingOn
+                                         fmi3False,     // eventModeUsed
+                                         fmi3False,     // earlyReturnAllowed
+                                         NULL,          // requiredIntermediateVariables
+                                         0,             // nRequiredIntermediateVariables
+                                         NULL,          // instanceEnvironment
+                                         cb_logMessage, // logMessage
+                                         NULL);         // intermediateUpdate
+
+    if (s1 == NULL || s2 == NULL)
+        return EXIT_FAILURE;
+
+    // start and stop time
+    startTime = 0;
+    stopTime = 10;
+
+    // communication step size
+    h = 0.01;
+
+    // set all variable start values (of "ScalarVariable / <type> / start")
+    // s1_fmi3Set{VariableType}(s1, ...);
+    // s2_fmi3Set{VariableType}(s2, ...);
+
+    // initialize the FMUs
+    M1->fmi3EnterInitializationMode(s1, fmi3False, 0.0, startTime, fmi3True, stopTime);
+    M2->fmi3EnterInitializationMode(s2, fmi3False, 0.0, startTime, fmi3True, stopTime);
+
+    // set the input values at time = startTime
+    // fmi3Set{VariableType}(s1, ...);
+    // fmi3Set{VariableType}(s2, ...);
+
+    M1->fmi3ExitInitializationMode(s1);
+    M2->fmi3ExitInitializationMode(s2);
+
+    ////////////////////////
+    // Simulation sub-phase
+    time = startTime; // current time
+
+    nSteps = 0;
+
+    while ((time < stopTime) && (status == fmi3OK)) {
+
+        // retrieve outputs
+        // fmi3Get{VariableType}(s1, ..., 1, &y1);
+        // fmi3Get{VariableType}(s2, ..., 1, &y2);
+
+        // set inputs
+        // fmi3Set{VariableType}(s1, ..., 1, &y2);
+        // fmi3Set{VariableType}(s2, ..., 1, &y1);
+
+        // call instance s1 and check status
+        status = M1->fmi3DoStep(s1, time, h, fmi3True, &eventEncountered, &terminateSimulation, &earlyReturn, &lastSuccessfulTime);
+
+        if (terminateSimulation) {
+            break;  // Instance s1 requested to terminate simulation.
+        }
+
+        // call instance s2 and check status as above
+        status = M2->fmi3DoStep(s2, time, h, fmi3True, &eventEncountered, &terminateSimulation, &earlyReturn, &lastSuccessfulTime);
+
+        // ...
+
+        // increment current time
+        time = (++nSteps) * h;
+     }
+
+    //////////////////////////
+    // Shutdown sub-phase
+    if (status != fmi3Error && status != fmi3Fatal) {
+        M1->fmi3Terminate(s1);
+        M2->fmi3Terminate(s2);
+    }
+
+    if (status != fmi3Fatal) {
+        M1->fmi3FreeInstance(s1);
+        M2->fmi3FreeInstance(s2);
+    }
+
+    return EXIT_SUCCESS;
+    // end::ConnectedFMUs[]
 }
 
 // dummy main function
