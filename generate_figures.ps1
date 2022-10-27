@@ -104,3 +104,10 @@ Export-Schema ModelStructure 2
 Export-Schema ModelExchange 2
 Export-Schema CoSimulation 2
 Export-Schema ScheduledExecution 2
+
+Export-Schema fmiBuildDescription 2 -schema fmi3BuildDescription.xsd
+Export-Schema SourceFileSet 1 -schema fmi3BuildDescription.xsd
+Export-Schema SourceFile 1 -schema fmi3BuildDescription.xsd
+Export-Schema PreprocessorDefinition 1 -schema fmi3BuildDescription.xsd
+Export-Schema IncludeDirectory 1 -schema fmi3BuildDescription.xsd
+Export-Schema Library 1 -schema fmi3BuildDescription.xsd
