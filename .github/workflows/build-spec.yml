@@ -11,10 +11,8 @@ on:
       - 'v2.0.x'
 
 jobs:
-
-  build-snippets:
-
-    name: Build code snippets
+  
+  build-code-snippets:
     runs-on: ubuntu-18.04
     steps:
 
@@ -26,17 +24,35 @@ jobs:
         cd docs/examples/build
         cmake ..
         cmake --build .
+        
+  generate-schema-figures:
+    runs-on: windows-2022
+    steps:
+    - uses: actions/checkout@v3
+    - run: |
+        PowerShell -ExecutionPolicy Bypass -Command generate_figures.ps1
 
-  build-spec:
+    - name: Create ZIP archive
+      uses: actions/upload-artifact@v3
+      with:
+        name: schema-figures
+        path: docs/images/schema/*.png
+        if-no-files-found: error
 
-    name: Build FMI Specification
-    runs-on: ubuntu-18.04
+  generate-html:
+    runs-on: ubuntu-20.04
+    needs: [generate-schema-figures]
     steps:
 
     - name: Checkout
       uses: actions/checkout@v3
       with:
         submodules: recursive
+
+    - uses: actions/download-artifact@v3
+      with:
+        name: schema-figures
+        path: docs/images/schema/*.png
 
     - name: List variables
       run: |
@@ -72,11 +88,6 @@ jobs:
         name: FMI-Specification
         path: build/*
         if-no-files-found: error
-
-    - name: Check HTML
-      uses: anishathalye/proof-html@v1.4.1
-      with:
-        directory: ./build
 
     - name: Push HTML to fmi-standard.org
       if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
