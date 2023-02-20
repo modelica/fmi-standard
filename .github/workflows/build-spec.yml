@@ -1,15 +1,49 @@
 name: Build Spec
 
 on:
+  push:
+    branches-ignore:
+      - 'temp/*'
   pull_request:
-    branches: [ v3.0.x ]
+    branches:
+      - 'main'
+      - 'v3.0.x'
+      - 'v2.0.x'
 
 jobs:
-
-  build-spec:
-
-    name: Build FMI Specification
+  
+  build-code-snippets:
     runs-on: ubuntu-18.04
+    steps:
+
+    - uses: actions/checkout@v3
+
+    - name: Build code snippets
+      run: |
+        mkdir docs/examples/build
+        cd docs/examples/build
+        cmake ..
+        cmake --build .
+
+  generate-schema-figures:
+    runs-on: windows-2022
+    steps:
+
+    - uses: actions/checkout@v3
+    
+    - run: |
+        PowerShell -ExecutionPolicy Bypass -Command ./generate_figures.ps1
+
+    - name: Create ZIP archive
+      uses: actions/upload-artifact@v3
+      with:
+        name: schema-figures
+        path: docs/images/schema/*.png
+        if-no-files-found: error
+
+  generate-html:
+    runs-on: ubuntu-20.04
+    needs: [generate-schema-figures]
     steps:
 
     - name: Checkout
@@ -17,13 +51,19 @@ jobs:
       with:
         submodules: recursive
 
-    - name: List variables
+    - uses: actions/download-artifact@v3
+      with:
+        name: schema-figures
+        path: docs/images/schema
+
+    - name: Generate revnumber
       run: |
         [[ $GITHUB_REF_TYPE == "tag" ]] && REVNUMBER=${GITHUB_REF:11} || REVNUMBER=${GITHUB_SHA:0:7}
         echo GITHUB_SHA:      $GITHUB_SHA
         echo GITHUB_REF_TYPE: $GITHUB_REF_TYPE
         echo GITHUB_REF:      $GITHUB_REF
         echo REVNUMBER:       $REVNUMBER
+        echo "REVNUMBER=$REVNUMBER" >> $GITHUB_ENV
 
     - name: Create build directory
       run: |
@@ -34,7 +74,7 @@ jobs:
     - name: Generate HTML
       uses: avattathil/asciidoctor-action@master
       with:
-        program: "asciidoctor --base-dir . --destination-dir=build --backend=html5 --attribute=revnumber=$REVNUMBER --attribute=revdate=$(date +%F) docs/index.adoc"
+        program: "asciidoctor --base-dir . --destination-dir=build --backend=html5 --attribute=revnumber=${{ env.REVNUMBER }} --attribute=revdate=$(date +%F) docs/index.adoc"
 
     - name: Copy resources
       run: |
@@ -52,21 +92,15 @@ jobs:
         path: build/*
         if-no-files-found: error
 
-    - name: Check HTML
-      uses: chabad360/htmlproofer@master
-      with:
-        directory: build
-        arguments: --only-4xx
-
     - name: Push HTML to fmi-standard.org
-      if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/v3.0.x' }}
-      uses: cpina/github-action-push-to-another-repository@v1.4.2
+      if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      uses: cpina/github-action-push-to-another-repository@v1.5
       env:
-        API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
+        SSH_DEPLOY_KEY: ${{ secrets.SSH_DEPLOY_KEY }}
       with:
         source-directory: 'build'
         destination-github-username: 'modelica'
         destination-repository-name: 'fmi-standard.org'
         user-email: ci@fmi-standard
-        target-branch: master
-        target-directory: docs/v3.0.x
+        target-branch: main
+        target-directory: static/docs/main
