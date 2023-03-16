@@ -2,7 +2,7 @@
 #define fmi3Functions_h
 
 /*
-This header file declares the functions of FMI 3.0.
+This header file declares the functions of FMI 3.0.1.
 It must be used when compiling an FMU.
 
 In order to have unique function names even if several FMUs
@@ -21,7 +21,7 @@ static link library. For FMUs compiled in a DLL/sharedObject, the "actual" funct
 names are used and "FMI3_FUNCTION_PREFIX" must not be defined.
 
 Copyright (C) 2008-2011 MODELISAR consortium,
-              2012-2022 Modelica Association Project "FMI"
+              2012-2023 Modelica Association Project "FMI"
               All rights reserved.
 
 This file is licensed by the copyright holders under the 2-Clause BSD License
