@@ -125,44 +125,7 @@ typedef fmi3Status fmi3SetDebugLoggingTYPE(fmi3Instance instance,
                                            const fmi3String categories[]);
 /* end::SetDebugLogging[] */
 
-/* Creation and destruction of FMU instances and setting debug status */
-/* tag::Instantiate[] */
-typedef fmi3Instance fmi3InstantiateModelExchangeTYPE(
-    fmi3String                 instanceName,
-    fmi3String                 instantiationToken,
-    fmi3String                 resourcePath,
-    fmi3Boolean                visible,
-    fmi3Boolean                loggingOn,
-    fmi3InstanceEnvironment    instanceEnvironment,
-    fmi3LogMessageCallback     logMessage);
-
-typedef fmi3Instance fmi3InstantiateCoSimulationTYPE(
-    fmi3String                     instanceName,
-    fmi3String                     instantiationToken,
-    fmi3String                     resourcePath,
-    fmi3Boolean                    visible,
-    fmi3Boolean                    loggingOn,
-    fmi3Boolean                    eventModeUsed,
-    fmi3Boolean                    earlyReturnAllowed,
-    const fmi3ValueReference       requiredIntermediateVariables[],
-    size_t                         nRequiredIntermediateVariables,
-    fmi3InstanceEnvironment        instanceEnvironment,
-    fmi3LogMessageCallback         logMessage,
-    fmi3IntermediateUpdateCallback intermediateUpdate);
-
-typedef fmi3Instance fmi3InstantiateScheduledExecutionTYPE(
-    fmi3String                     instanceName,
-    fmi3String                     instantiationToken,
-    fmi3String                     resourcePath,
-    fmi3Boolean                    visible,
-    fmi3Boolean                    loggingOn,
-    fmi3InstanceEnvironment        instanceEnvironment,
-    fmi3LogMessageCallback         logMessage,
-    fmi3ClockUpdateCallback        clockUpdate,
-    fmi3LockPreemptionCallback     lockPreemption,
-    fmi3UnlockPreemptionCallback   unlockPreemption);
-/* end::Instantiate[] */
-
+/* Destruction of FMU instances */
 /* tag::FreeInstance[] */
 typedef void fmi3FreeInstanceTYPE(fmi3Instance instance);
 /* end::FreeInstance[] */
@@ -534,6 +497,18 @@ typedef fmi3Status fmi3UpdateDiscreteStatesTYPE(fmi3Instance instance,
 Types for Functions for Model Exchange
 ****************************************************/
 
+/* Creation of FMU instances */
+/* tag::InstantiateModelExchange[] */
+typedef fmi3Instance fmi3InstantiateModelExchangeTYPE(
+    fmi3String                 instanceName,
+    fmi3String                 instantiationToken,
+    fmi3String                 resourcePath,
+    fmi3Boolean                visible,
+    fmi3Boolean                loggingOn,
+    fmi3InstanceEnvironment    instanceEnvironment,
+    fmi3LogMessageCallback     logMessage);
+/* end::InstantiateModelExchange[] */
+
 /* tag::EnterContinuousTimeMode[] */
 typedef fmi3Status fmi3EnterContinuousTimeModeTYPE(fmi3Instance instance);
 /* end::EnterContinuousTimeMode[] */
@@ -595,6 +570,23 @@ typedef fmi3Status fmi3GetNumberOfContinuousStatesTYPE(fmi3Instance instance,
 Types for Functions for Co-Simulation
 ****************************************************/
 
+/* Creation of FMU instances */
+/* tag::InstantiateCoSimulation[] */
+typedef fmi3Instance fmi3InstantiateCoSimulationTYPE(
+    fmi3String                     instanceName,
+    fmi3String                     instantiationToken,
+    fmi3String                     resourcePath,
+    fmi3Boolean                    visible,
+    fmi3Boolean                    loggingOn,
+    fmi3Boolean                    eventModeUsed,
+    fmi3Boolean                    earlyReturnAllowed,
+    const fmi3ValueReference       requiredIntermediateVariables[],
+    size_t                         nRequiredIntermediateVariables,
+    fmi3InstanceEnvironment        instanceEnvironment,
+    fmi3LogMessageCallback         logMessage,
+    fmi3IntermediateUpdateCallback intermediateUpdate);
+/* end::InstantiateCoSimulation[] */
+
 /* Simulating the FMU */
 
 /* tag::EnterStepMode[] */
@@ -624,6 +616,21 @@ typedef fmi3Status fmi3DoStepTYPE(fmi3Instance instance,
 /***************************************************
 Types for Functions for Scheduled Execution
 ****************************************************/
+
+/* Creation of FMU instances */
+/* tag::InstantiateScheduledExecution[] */
+typedef fmi3Instance fmi3InstantiateScheduledExecutionTYPE(
+    fmi3String                     instanceName,
+    fmi3String                     instantiationToken,
+    fmi3String                     resourcePath,
+    fmi3Boolean                    visible,
+    fmi3Boolean                    loggingOn,
+    fmi3InstanceEnvironment        instanceEnvironment,
+    fmi3LogMessageCallback         logMessage,
+    fmi3ClockUpdateCallback        clockUpdate,
+    fmi3LockPreemptionCallback     lockPreemption,
+    fmi3UnlockPreemptionCallback   unlockPreemption);
+/* end::InstantiateScheduledExecution[] */
 
 /* tag::ActivateModelPartition[] */
 typedef fmi3Status fmi3ActivateModelPartitionTYPE(fmi3Instance instance,

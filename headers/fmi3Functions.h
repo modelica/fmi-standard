@@ -113,10 +113,7 @@ Common Functions
 #define fmi3GetVersion               fmi3FullName(fmi3GetVersion)
 #define fmi3SetDebugLogging          fmi3FullName(fmi3SetDebugLogging)
 
-/* Creation and destruction of FMU instances */
-#define fmi3InstantiateModelExchange         fmi3FullName(fmi3InstantiateModelExchange)
-#define fmi3InstantiateCoSimulation          fmi3FullName(fmi3InstantiateCoSimulation)
-#define fmi3InstantiateScheduledExecution    fmi3FullName(fmi3InstantiateScheduledExecution)
+/* Destruction of FMU instances */
 #define fmi3FreeInstance                     fmi3FullName(fmi3FreeInstance)
 
 /* Enter and exit initialization mode, terminate and reset */
@@ -192,6 +189,9 @@ Common Functions
 Functions for Model Exchange
 ****************************************************/
 
+/* Creation of FMU instances */
+#define fmi3InstantiateModelExchange      fmi3FullName(fmi3InstantiateModelExchange)
+
 #define fmi3EnterContinuousTimeMode       fmi3FullName(fmi3EnterContinuousTimeMode)
 #define fmi3CompletedIntegratorStep       fmi3FullName(fmi3CompletedIntegratorStep)
 
@@ -211,11 +211,21 @@ Functions for Model Exchange
 Functions for Co-Simulation
 ****************************************************/
 
+/* Creation of FMU instances */
+#define fmi3InstantiateCoSimulation  fmi3FullName(fmi3InstantiateCoSimulation)
+
 /* Simulating the FMU */
 #define fmi3EnterStepMode            fmi3FullName(fmi3EnterStepMode)
 #define fmi3GetOutputDerivatives     fmi3FullName(fmi3GetOutputDerivatives)
 #define fmi3DoStep                   fmi3FullName(fmi3DoStep)
 #define fmi3ActivateModelPartition   fmi3FullName(fmi3ActivateModelPartition)
+
+/***************************************************
+Functions for Scheduled Execution
+****************************************************/
+
+/* Creation of FMU instances */
+#define fmi3InstantiateScheduledExecution fmi3FullName(fmi3InstantiateScheduledExecution)
 
 /***************************************************
 Common Functions
@@ -225,11 +235,8 @@ Common Functions
 FMI3_Export fmi3GetVersionTYPE      fmi3GetVersion;
 FMI3_Export fmi3SetDebugLoggingTYPE fmi3SetDebugLogging;
 
-/* Creation and destruction of FMU instances */
-FMI3_Export fmi3InstantiateModelExchangeTYPE         fmi3InstantiateModelExchange;
-FMI3_Export fmi3InstantiateCoSimulationTYPE          fmi3InstantiateCoSimulation;
-FMI3_Export fmi3InstantiateScheduledExecutionTYPE    fmi3InstantiateScheduledExecution;
-FMI3_Export fmi3FreeInstanceTYPE                     fmi3FreeInstance;
+/* Destruction of FMU instances */
+FMI3_Export fmi3FreeInstanceTYPE fmi3FreeInstance;
 
 /* Enter and exit initialization mode, terminate and reset */
 FMI3_Export fmi3EnterInitializationModeTYPE fmi3EnterInitializationMode;
@@ -304,6 +311,9 @@ FMI3_Export fmi3UpdateDiscreteStatesTYPE   fmi3UpdateDiscreteStates;
 Functions for Model Exchange
 ****************************************************/
 
+/* Creation of FMU instances */
+FMI3_Export fmi3InstantiateModelExchangeTYPE fmi3InstantiateModelExchange;
+
 FMI3_Export fmi3EnterContinuousTimeModeTYPE fmi3EnterContinuousTimeMode;
 FMI3_Export fmi3CompletedIntegratorStepTYPE fmi3CompletedIntegratorStep;
 
@@ -325,6 +335,9 @@ FMI3_Export fmi3GetNumberOfContinuousStatesTYPE   fmi3GetNumberOfContinuousState
 Functions for Co-Simulation
 ****************************************************/
 
+/* Creation of FMU instances */
+FMI3_Export fmi3InstantiateCoSimulationTYPE fmi3InstantiateCoSimulation;
+
 /* Simulating the FMU */
 FMI3_Export fmi3EnterStepModeTYPE        fmi3EnterStepMode;
 FMI3_Export fmi3GetOutputDerivativesTYPE fmi3GetOutputDerivatives;
@@ -333,6 +346,9 @@ FMI3_Export fmi3DoStepTYPE               fmi3DoStep;
 /***************************************************
 Functions for Scheduled Execution
 ****************************************************/
+
+/* Creation of FMU instances */
+FMI3_Export fmi3InstantiateScheduledExecutionTYPE fmi3InstantiateScheduledExecution;
 
 FMI3_Export fmi3ActivateModelPartitionTYPE fmi3ActivateModelPartition;
 
