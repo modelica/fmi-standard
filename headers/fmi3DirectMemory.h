@@ -53,11 +53,13 @@ typedef fmi3Status fmi3GetFloat32PointerTYPE(fmi3Instance instance,
     fmi3Float32* valuePointers[],
     size_t nValues);
 
+/* tag::GetFloat64Pointer[] */
 typedef fmi3Status fmi3GetFloat64PointerTYPE(fmi3Instance instance,
     const fmi3ValueReference valueReferences[],
     size_t nValueReferences,
     fmi3Float64* valuePointers[],
     size_t nValues);
+/* end::GetFloat64Pointer[] */
 
 typedef fmi3Status fmi3GetInt8PointerTYPE(fmi3Instance instance,
     const fmi3ValueReference valueReferences[],
@@ -137,11 +139,13 @@ typedef fmi3Status fmi3SetFloat32PointerTYPE(fmi3Instance instance,
     fmi3Float32* valuePointers[],
     size_t nValues);
 
+/* tag::SetFloat64Pointer[] */
 typedef fmi3Status fmi3SetFloat64PointerTYPE(fmi3Instance instance,
     const fmi3ValueReference valueReferences[],
     size_t nValueReferences,
     fmi3Float64* valuePointers[],
     size_t nValues);
+/* end::SetFloat64Pointer[] */
 
 typedef fmi3Status fmi3SetInt8PointerTYPE(fmi3Instance instance,
     const fmi3ValueReference valueReferences[],
