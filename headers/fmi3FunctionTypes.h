@@ -103,8 +103,8 @@ typedef void (*fmi3IntermediateUpdateCallback) (
 /* end::CallbackIntermediateUpdate[] */
 
 /* tag::CallbackPreemptionLock[] */
-typedef void (*fmi3LockPreemptionCallback)   ();
-typedef void (*fmi3UnlockPreemptionCallback) ();
+typedef void (*fmi3LockPreemptionCallback)   (void);
+typedef void (*fmi3UnlockPreemptionCallback) (void);
 /* end::CallbackPreemptionLock[] */
 
 /* Define fmi3 function pointer types to simplify dynamic loading */
