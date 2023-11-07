@@ -324,7 +324,7 @@ int connectedFMUs() {
     // instantiate both FMUs
     s1 = M1->fmi3InstantiateCoSimulation("s1",          // instanceName
                                          guid,          // instantiationToken
-                                         NULL,          // resourceLocation
+                                         NULL,          // resourcePath
                                          fmi3False,     // visible
                                          fmi3False,     // loggingOn
                                          fmi3False,     // eventModeUsed
@@ -337,7 +337,7 @@ int connectedFMUs() {
 
     s2 = M2->fmi3InstantiateCoSimulation("s2",          // instanceName
                                          guid,          // instantiationToken
-                                         NULL,          // resourceLocation
+                                         NULL,          // resourcePath
                                          fmi3False,     // visible
                                          fmi3False,     // loggingOn
                                          fmi3False,     // eventModeUsed
