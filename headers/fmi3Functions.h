@@ -103,7 +103,7 @@ it may be set to __declspec(dllimport).
 #endif
 
 /* FMI version */
-#define fmi3Version "3.0"
+#define fmi3Version "3.0.1"
 
 /***************************************************
 Common Functions
