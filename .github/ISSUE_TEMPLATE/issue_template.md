@@ -1,3 +1,8 @@
+---
+name: Issue
+about: File an issue
+---
+
 <!--
 
 This project is used for the development of the FMI Standard (https://fmi-standard.org/)
