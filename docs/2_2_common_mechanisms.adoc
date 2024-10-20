@@ -657,7 +657,7 @@ latexmath:[T_{\mathit{interval, i}}] can be set with <<fmi3SetIntervalDecimal>> 
 
 Periodic Clock::
 is a time-based Clock with a constant interval, except when <<intervalVariability>> = <<tunable>>, which indicates that the interval can change when tunable <<parameter, parameters>> change.
-The time instant of the first Clock tick is defined by a <<shiftCounter>> or <<shiftDecimal>>.
+The time instant of the first Clock tick is defined by a decimal (<<shiftDecimal>>) and optionally by a fraction (<<shiftNumerator>>, <<shiftDenominator>>).
 +
 The next Clock tick at time instant latexmath:[t_i] is defined as: +
 latexmath:[\begin{align*}
@@ -676,14 +676,14 @@ t_i &:= t_{i-1} + T_{\mathit{interval, i}} \qquad i = 1,2,3,{...}
 |===
 
 Constant periodic Clock::
-is a time-based periodic clock that defines its <<intervalDecimal>> and optionally <<intervalCounter>>, <<shiftCounter>> and <<shiftDecimal>> in the <<modelDescription.xml>>.
+is a time-based periodic clock that defines its <<intervalDecimal>> in the <<modelDescription.xml>>. Optionally a fractional representation for the interval using <<intervalNumerator>> and <<intervalDenominator>>, a time shift <<shiftDecimal>> and also its fractional representation defined by <<shiftNumerator>> and <<shiftDenominator>> can optionally be provided in the <<modelDescription.xml>>.
 
 Fixed periodic Clock::
 is a time-based periodic Clock which ticks with an arbitrary, but fixed interval latexmath:[T_{\mathit{interval}}] starting after an arbitrary latexmath:[T_{\mathit{shift}}], both interval and shift can be changed by the importer.
 
 +
 If <<intervalDecimal,`intervalDecimal`>> is specified, the importer sets the Clock's `fixed` interval using <<fmi3SetInterval>> in <<InitializationMode>>.
-If the function is not called the value given in <<intervalDecimal,`intervalDecimal`>> and <<intervalCounter,`intervalCounter`>> is used.
+If the function is not called the value given in <<intervalDecimal,`intervalDecimal`>>, <<intervalNumerator,`intervalNumerator`>> and <<intervalDenominator,`intervalDenominator`>> is used.
 
 +
 _[Calling <<fmi3SetInterval>> informs the FMU about the interval determined by the importer to enable the FMU to adapt internal computations to this `fixed` interval.]_
@@ -697,7 +697,7 @@ is a time-based periodic Clock which ticks with an arbitrary and changeable inte
 +
 If <<intervalDecimal,`intervalDecimal`>> is specified, the importer sets the Clock's `tunable` interval using <<fmi3SetInterval>> in <<InitializationMode>>.
 It can later change this interval in <<EventMode>> or <<ClockActivationMode>>.
-If the function is not called, the value given in <<intervalDecimal,`intervalDecimal`>> and <<intervalCounter,`intervalCounter`>> is used by the importer.
+If the function is not called, the value given in <<intervalDecimal,`intervalDecimal`>>, <<intervalNumerator,`intervalNumerator`>> and <<intervalDenominator,`intervalDenominator`>> is used by the importer.
 
 +
 _[Calling <<fmi3SetInterval>> informs the FMU about the interval determined by the importer to enable the FMU to adapt internal computations to this `tunable` interval.]_
@@ -716,7 +716,7 @@ is a time-based Clock whose next interval is unchangeably known right after the 
 +
 The next Clock tick at time instant latexmath:[t_i] is defined as: +
 latexmath:[\begin{align*}
-t_0 &:= t_{\mathit{start}} + T_{\mathit{interval, 0}} \\
+t_0 &:= t_{\mathit{start}} + T_{\mathit{interval}, 0} \\
 t_i &:= t_{i-1} + T_{\mathit{interval, i}} \qquad i = 1,2,3,{...}
 \end{align*}]
 
@@ -726,7 +726,7 @@ t_i &:= t_{i-1} + T_{\mathit{interval, i}} \qquad i = 1,2,3,{...}
 [cols="1,2"]
 |===
 
-|latexmath:[T_{\mathit{interval, 0}} \geq 0]
+|latexmath:[T_{\mathit{interval}, 0} \geq 0]
 |The time interval from latexmath:[t_{\mathit{start}}] to first Clock tick.
 Must be retrieved using <<fmi3GetInterval>> in <<InitializationMode>>.
 
@@ -742,7 +742,7 @@ The return argument <<qualifiers>> of <<fmi3GetInterval>> is used to indicate if
 +
 The next Clock tick at time instant latexmath:[t_i] is defined as: +
 latexmath:[\begin{align*}
-t_0 &:= t_{\mathit{start}} + T_{\mathit{interval, 0}} \\
+t_0 &:= t_{\mathit{start}} + T_{\mathit{interval}, 0} \\
 t_i &:= t_{\mathit{event}} + T_{\mathit{interval, i}} \qquad i = 1,2,3,{...}
 \end{align*}]
 
@@ -752,7 +752,7 @@ t_i &:= t_{\mathit{event}} + T_{\mathit{interval, i}} \qquad i = 1,2,3,{...}
 [cols="1,2"]
 |===
 
-|latexmath:[T_{\mathit{interval, 0}} \geq 0]
+|latexmath:[T_{\mathit{interval}, 0} \geq 0]
 |The time interval from latexmath:[t_{\mathit{start}}] to the first Clock tick.
 Must be retrieved using <<fmi3GetInterval>> in <<InitializationMode>>.
 
@@ -836,7 +836,7 @@ For restrictions on when to call which of the following functions for <<table-ov
 
 [[fmi3SetInterval,`fmi3SetInterval`]]
 For <<table-overview-clocks,some Clock types>>, the interval must be set by the environment for the current time instant by the function <<fmi3SetIntervalDecimal>> or <<fmi3SetIntervalFraction>>.
-The values of the arguments <<intervals>>, <<shifts>>, and <<counters>> / <<resolutions>> refer to the unit of the <<independent>> variable.
+The values of the arguments <<intervals>>, <<shifts>>, <<intervalNumerators>> / <<intervalDenominators>> and <<shiftNumerators>> / <<shiftDenominators>> refer to the unit of the <<independent>> variable.
 
 The attribute <<supportsFraction>> of a Clock declares if the <<fmi3SetIntervalFraction>> and/or `fmi3GetXXXFraction` functions may be called.
 
@@ -859,11 +859,11 @@ include::../headers/fmi3FunctionTypes.h[tag=SetIntervalFraction]
 
 * `valueReferences` is an array of size `nValueReferences` holding the value references of the Clock variables.
 
-[[counters,`counters`]]
-* <<counters>> _[Note: This variable may increment by values other than 1.]_ and
+[[intervalNumerators,`intervalNumerators`]]
+* <<intervalNumerators>> and
 
-[[resolutions,`resolutions`]]
-* <<resolutions>> are arrays of size `nValueReferences` holding the Clock <<counters>> and <<resolutions>> to be set.
+[[intervalDenominators,`intervalDenominators`]]
+* <<intervalDenominators>> are arrays of size `nValueReferences` holding the Clock intervals to be set.
 
 [[fmi3GetInterval,`fmi3GetInterval`]]
 For <<table-overview-clocks,other Clock types>>, the importer must call <<fmi3GetIntervalDecimal>> or <<fmi3GetIntervalFraction>> to query the next Clock interval:
@@ -880,7 +880,7 @@ include::../headers/fmi3FunctionTypes.h[tag=GetIntervalDecimal]
 
 [[qualifiers,`qualifiers`]]
 * <<qualifiers>> is an array of size `nValueReferences` to retrieve the Clocks <<qualifiers>>.
-<<qualifiers>> describes how to treat the <<intervals>> and <<counters>> arguments and is defined as:
+<<qualifiers>> describes how to treat the <<intervals>>, <<intervalNumerators>> and <<intervalDenominators>> arguments and is defined as:
 
 [source, C]
 ----
@@ -911,7 +911,7 @@ include::../headers/fmi3FunctionTypes.h[tag=GetIntervalFraction]
 
 * `valueReferences` is an array of size `nValueReferences` holding the value references of the `Clock` variables.
 
-* <<counters>> and <<resolutions>> are arrays of size `nValueReferences` to retrieve the Clock intervals as a fraction `counters / resolutions`.
+* <<intervalNumerators>> and <<intervalDenominators>> are arrays of size `nValueReferences` to retrieve the Clock intervals as a fraction `intervalNumerator / intervalDenominator`.
 
 * <<qualifiers>> is an array of size `nValueReferences` to retrieve the Clock <<qualifiers>>.
 
@@ -924,15 +924,21 @@ For <<table-overview-clocks,some Clock types>>, the importer must query the dela
 include::../headers/fmi3FunctionTypes.h[tag=GetShiftDecimal]
 ----
 
+* `valueReferences` is an array of size `nValueReferences` holding the value references of the Clock variables.
+
+* <<shifts>> is an array of size `nValueReferences` to retrieve the Clock intervals.
+
 [[fmi3GetShiftFraction,`fmi3GetShiftFraction`]]
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tag=GetShiftFraction]
 ----
 
-* `valueReferences` is an array of size `nValueReferences` holding the value references of the Clock variables.
+[[shiftNumerators,`shiftNumerators`]]
+* <<shiftNumerators>> and
 
-* <<shifts>> and <<counters>> are arrays of length `nValueReferences` that define the time of the first Clock tick (see <<shiftCounter>>).
+[[shiftDenominators,`shiftDenominators`]]
+* <<shiftDenominators>> are arrays of length `nValueReferences` that define the time of the first Clock tick (see <<shiftNumerator>> and <<shiftDenominators>>).
 
 For <<table-overview-clocks,other Clock types>>, the importer may set the delay to the first Clock tick from the FMU using the following functions[[fmi3SetShift,`fmi3SetShift`]]:
 [[fmi3SetShiftDecimal,`fmi3SetShiftDecimal`]]
@@ -949,7 +955,7 @@ include::../headers/fmi3FunctionTypes.h[tag=SetShiftFraction]
 
 * `valueReferences` is an array of size `nValueReferences` holding the value references of the Clock variables.
 
-* <<shifts>> and <<counters>> is an array of length `nValueReferences` that defines the time of the first Clock tick (see <<shiftCounter>>).
+* <<shifts>>, <<shiftNumerators>> and <<shiftDenominators>> are arrays of length `nValueReferences` that define the time of the first Clock tick (see <<shiftNumerators>> and <<shiftDenominators>>).
 
 ==== Dependencies of Variables [[model-dependencies]]
 

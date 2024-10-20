@@ -466,8 +466,8 @@ typedef fmi3Status fmi3GetIntervalDecimalTYPE(fmi3Instance instance,
 typedef fmi3Status fmi3GetIntervalFractionTYPE(fmi3Instance instance,
                                                const fmi3ValueReference valueReferences[],
                                                size_t nValueReferences,
-                                               fmi3UInt64 counters[],
-                                               fmi3UInt64 resolutions[],
+                                               fmi3UInt64 intervalNumerators[],
+                                               fmi3UInt64 intervalDenominators[],
                                                fmi3IntervalQualifier qualifiers[]);
 /* end::GetIntervalFraction[] */
 
@@ -482,8 +482,8 @@ typedef fmi3Status fmi3GetShiftDecimalTYPE(fmi3Instance instance,
 typedef fmi3Status fmi3GetShiftFractionTYPE(fmi3Instance instance,
                                             const fmi3ValueReference valueReferences[],
                                             size_t nValueReferences,
-                                            fmi3UInt64 counters[],
-                                            fmi3UInt64 resolutions[]);
+                                            fmi3UInt64 shiftNumerators[],
+                                            fmi3UInt64 shiftDenominators[]);
 /* end::GetShiftFraction[] */
 
 /* tag::SetIntervalDecimal[] */
@@ -497,8 +497,8 @@ typedef fmi3Status fmi3SetIntervalDecimalTYPE(fmi3Instance instance,
 typedef fmi3Status fmi3SetIntervalFractionTYPE(fmi3Instance instance,
                                                const fmi3ValueReference valueReferences[],
                                                size_t nValueReferences,
-                                               const fmi3UInt64 counters[],
-                                               const fmi3UInt64 resolutions[]);
+                                               const fmi3UInt64 intervalNumerators[],
+                                               const fmi3UInt64 intervalDenominators[]);
 /* end::SetIntervalFraction[] */
 
 /* tag::SetShiftDecimal[] */
@@ -512,8 +512,8 @@ typedef fmi3Status fmi3SetShiftDecimalTYPE(fmi3Instance instance,
 typedef fmi3Status fmi3SetShiftFractionTYPE(fmi3Instance instance,
                                             const fmi3ValueReference valueReferences[],
                                             size_t nValueReferences,
-                                            const fmi3UInt64 counters[],
-                                            const fmi3UInt64 resolutions[]);
+                                            const fmi3UInt64 shiftNumerators[],
+                                            const fmi3UInt64 shiftDenominators[]);
 /* end::SetShiftFraction[] */
 
 /* tag::EvaluateDiscreteStates[] */
