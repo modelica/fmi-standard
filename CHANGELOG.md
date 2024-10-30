@@ -1,6 +1,17 @@
 # Changelog
 
-## v2.0.4 (unreleased)
+## v2.0.5 (unreleased)
+
+* `p. 49` Clarification of default variability for discrete variables (#1890)
+* `p.20` Clarification of lifetime of argument functions in fmi2Instantiate() (#1923)
+* `p.29` Adding a statement to forbid changing the modelDescription.xml (#850) (which should have been part of FMI 2.0.1-4 already) (#1958)
+* `p.19` Remove requirement to call fmi2FreeInstance or fmi2Reset (#1945)
+* `p.131` Add definition of reinitialization to appendix (#1965)
+* `p.85` Remove requirement to to call fmi2Terminate (#1975)
+* `p.18` fmi2Reset can be called in case of fmi2Error (#1974)
+* Fix text of CC-BY-SA license in LICENSE.txt (#1922)
+
+## v2.0.4 (2022-12-01)
 
 * `p. 69 ff.` [Terminals and Icons](https://fmi-standard.org/docs/3.0/#fmiTerminalsAndIcons)
 * `p. 70 ff.` [Build Configuration](https://fmi-standard.org/docs/3.0/#BuildConfiguration)
