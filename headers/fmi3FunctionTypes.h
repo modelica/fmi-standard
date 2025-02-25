@@ -55,7 +55,7 @@ typedef enum {
     fmi3Warning,
     fmi3Discard,
     fmi3Error,
-    fmi3Fatal,
+    fmi3Fatal
 } fmi3Status;
 /* end::Status[] */
 
