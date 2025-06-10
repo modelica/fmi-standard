@@ -1,6 +1,8 @@
-<p align="center">
-  <img src="docs/images/FMI_logo_horizontal.svg" width="30%" alt="FMI Logo"/>
-</p>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/FMI-logo-horizontal-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/images/FMI-logo-horizontal-light.svg">
+  <img alt="Functional Mock-up Interface" src="docs/images/FMI-logo-horizontal-light.svg">
+</picture>
 
 # Functional Mock-up Interface
 
