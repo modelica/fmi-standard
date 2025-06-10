@@ -17,13 +17,13 @@ git submodule update --init --recursive
 
 or use your favorite Git client.
 
-To build the HTML document you have two alternatives.
-
 To open the repository in [Gitpod](https://www.gitpod.io/), [fork](https://github.com/modelica/fmi-standard/fork) the repository and open:
 
 ```
 https://gitpod.io/#https://github.com/<your-github-user-name>/fmi-standard
 ```
+
+To build the HTML document locally you have two alternatives.
 
 ### Alternative 1: Docker (recommended)
 
@@ -54,8 +54,6 @@ https://gitpod.io/#https://github.com/<your-github-user-name>/fmi-standard
 
 The generated `docs/index.html` can be viewed with any modern web browser.
 
----
-
 ## Validating the Files
 
 To validate the files, run the following Python scripts in the root of the repository:
@@ -64,8 +62,6 @@ To validate the files, run the following Python scripts in the root of the repos
 python .circleci/lint_docs.py
 python .circleci/validate_xml.py
 ```
-
----
 
 ## Generating the XSD Schema Figures
 
@@ -77,16 +73,12 @@ PowerShell -ExecutionPolicy Bypass -Command generate_figures.ps1
 
 to generate the figures in `docs/images/schema`.
 
----
-
 ## Using the Issue Tracker
 
 The issue tracker is the preferred channel for [Bug reports](#bug-reports), [Feature requests](#feature-requests), and submitting [Pull requests](#pull-requests), but please respect the following restrictions:
 
 - **Do not** use the issue tracker for personal support requests (use [Stack Overflow](https://stackoverflow.com)).
 - **Do not** derail or troll issues. Keep the discussion on topic and respect the opinions of others.
-
----
 
 ## Bug Reports
 
@@ -118,13 +110,9 @@ Any other information you want to share that is relevant to the issue being repo
 This might include the lines of code that you have identified as causing the bug, and potential solutions (and your opinions on their merits).
 ```
 
----
-
 ## Feature Requests
 
 Feature requests are welcome. But take a moment to find out whether your idea fits with the scope and aims of the project. It's up to **you** to make a strong case to convince the project's developers of the merits of this feature. Please provide as much detail and context as possible.
-
----
 
 ## Commit Messages
 
@@ -164,8 +152,6 @@ If you use an issue tracker, put references to them at the bottom, like this:
 Resolves: #123
 See also: #456, #789
 ```
-
----
 
 ## Pull Requests
 
@@ -219,8 +205,6 @@ Please adhere to the coding conventions used throughout a project (indentation, 
 
 **IMPORTANT**: By submitting a patch, you agree to allow the project owner to license your work under the same license as that used by the project.
 
----
-
 ## Branching and Versioning
 
 We use a branching scheme with _support_ branches that allows us to maintain multiple major and minor releases concurrently.
@@ -259,8 +243,6 @@ master
   .    .
 ```
 
----
-
 ## Release Checklist
 
 Follow these steps to create a (pre-)release:
@@ -273,13 +255,9 @@ Follow these steps to create a (pre-)release:
   - Add a description of the changes
   - Add the version to `fmi-standard.zip` (e.g. `fmi-standard-3.0-rc.1.zip`) and upload it to the release
 
----
-
 ## Corporate Contributor License Agreement
 
 All contributors have to sign the [Corporate Contributor License Agreement (CCLA)](https://fmi-standard.org/FMI_CCLA_v1.0_2016_06_21.pdf). Therefore, the first step is getting your company to agree and sign the CCLA. The CCLA ensures that all IP contributed to the FMI standard will be licensed to the Modelica Association (MA) which in turn will sublicense the FMI standard to tool vendors implementing it and end users using it, free of charge.
-
----
 
 ## Formatting Rules
 
@@ -392,8 +370,6 @@ Example:
 _[This is the first line._
 _This is the second line.]_
 ```
-
----
 
 ## Adding and Editing Figures
 
