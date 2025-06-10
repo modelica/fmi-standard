@@ -13,28 +13,28 @@ Releases and the [latest development version](https://fmi-standard.org/docs/main
 
 ## Repository Structure
 
-- [docs](docs) - sources of the specification document
-- [headers](headers) - header files of the C-API
-- [schema](schema) - XSD schema for the modelDescription.xml
-- [CONTRIBUTING.md](CONTRIBUTING.md) - info on contributing to the project and building the specification document
-- [README.md](README.md) - this document
+- [docs](docs) &mdash; sources of the specification document
+- [headers](headers) &mdash; header files of the C-API
+- [schema](schema) &mdash; XSD schema for the modelDescription.xml
+- [CONTRIBUTING.md](CONTRIBUTING.md) &mdash; info on contributing to the project and building the specification document
+- [README.md](README.md) &mdash; this document
 
 ## Branches
 
-- `main` - development of the next release
-- `v{2|3}.0.x` - maintenance of the 2.0 and 3.0 releases
+- `main` &mdash; development of the next release
+- `v{2|3}.0.x` &mdash; maintenance of the 2.0 and 3.0 releases
 
 ## Layered Standards
 
 The following [layered standards](https://github.com/modelica/fmi-standard/blob/main/docs/2_6_versioning_layered_standards.adoc#versioning-and-layered-standards) are currently under development:
 
-- [XCP](https://github.com/modelica/fmi-ls-xcp) - information for calibration and measurement
-- [Network Communication](https://github.com/modelica/fmi-ls-bus) - mapping of variables to buses
-- [Structure](https://github.com/modelica/fmi-ls-struct) - semantic grouping of variables
-- [REF](https://github.com/modelica/fmi-ls-ref) - stimuli and reference results
+- [XCP](https://github.com/modelica/fmi-ls-xcp) &mdash; information for calibration and measurement
+- [Network Communication](https://github.com/modelica/fmi-ls-bus) &mdash; mapping of variables to buses
+- [Structure](https://github.com/modelica/fmi-ls-struct) &mdash; semantic grouping of variables
+- [REF](https://github.com/modelica/fmi-ls-ref) &mdash; stimuli and reference results
 
 ## Copyright and License
 
-Code and documentation copyright (C) 2008-2011 the MODELISAR consortium and 2012-2025 the Modelica Association Project FMI.
+Code and documentation copyright &copy; 2008-2011 the MODELISAR consortium and 2012-2025 the Modelica Association Project FMI.
 Code released under the [2-Clause BSD License](https://opensource.org/licenses/BSD-2-Clause).
 Docs released under [Attribution-ShareAlike 4.0 International](https://creativecommons.org/licenses/by-sa/4.0/).
