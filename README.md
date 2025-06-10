@@ -13,25 +13,25 @@ Releases and the [latest development version](https://fmi-standard.org/docs/main
 
 ## Repository Structure
 
-- `docs` — sources of the specification document
-- `headers` — header files of the C-API
-- `schema` — XSD schema for the modelDescription.xml
-- [CONTRIBUTING.md](CONTRIBUTING.md) — info on contributing to the project and building the specification document
-- [README.md](README.md) — this document
+- `docs` - sources of the specification document
+- `headers` - header files of the C-API
+- `schema` - XSD schema for the modelDescription.xml
+- [CONTRIBUTING.md](CONTRIBUTING.md) - info on contributing to the project and building the specification document
+- [README.md](README.md) - this document
 
 ## Branches
 
-- `main` — development of the next release
-- `v{2|3}.0.x` — maintenance of the 2.0 and 3.0 releases
+- `main` - development of the next release
+- `v{2|3}.0.x` - maintenance of the 2.0 and 3.0 releases
 
 ## Layered Standards
 
 The following [layered standards](https://github.com/modelica/fmi-standard/blob/main/docs/2_6_versioning_layered_standards.adoc#versioning-and-layered-standards) are currently under development:
 
-- [XCP](https://github.com/modelica/fmi-ls-xcp) — information for calibration and measurement
-- [Network Communication](https://github.com/modelica/fmi-ls-bus) — mapping of variables to buses
-- [Structure](https://github.com/modelica/fmi-ls-struct) — semantic grouping of variables
-- [REF](https://github.com/modelica/fmi-ls-ref) — stimuli and reference results
+- [XCP](https://github.com/modelica/fmi-ls-xcp) - information for calibration and measurement
+- [Network Communication](https://github.com/modelica/fmi-ls-bus) - mapping of variables to buses
+- [Structure](https://github.com/modelica/fmi-ls-struct) - semantic grouping of variables
+- [REF](https://github.com/modelica/fmi-ls-ref) - stimuli and reference results
 
 ## Copyright and License
 
