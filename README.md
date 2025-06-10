@@ -13,9 +13,9 @@ Releases and the [latest development version](https://fmi-standard.org/docs/main
 
 ## Repository Structure
 
-- `docs` - sources of the specification document
-- `headers` - header files of the C-API
-- `schema` - XSD schema for the modelDescription.xml
+- [docs](docs) - sources of the specification document
+- [headers](headers) - header files of the C-API
+- [schema](schema) - XSD schema for the modelDescription.xml
 - [CONTRIBUTING.md](CONTRIBUTING.md) - info on contributing to the project and building the specification document
 - [README.md](README.md) - this document
 
