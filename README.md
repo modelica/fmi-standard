@@ -1,0 +1,38 @@
+<p align="center">
+  <img src="docs/images/FMI_logo_horizontal.svg" width="30%" alt="FMI Logo"/>
+</p>
+
+# Functional Mock-up Interface
+
+The Functional Mock-up Interface (FMI) is a free standard that defines an interface to exchange dynamic models using a combination of XML files, binaries and C code.  
+It's supported by [230+ tools](https://fmi-standard.org/tools/) and maintained as a [Modelica Association Project](https://modelica.org/projects).
+
+Releases and the [latest development version](https://fmi-standard.org/docs/main/) of the specification are available on the [FMI website](https://fmi-standard.org/).
+
+## Repository Structure
+
+- `docs` — sources of the specification document
+- `headers` — header files of the C-API
+- `schema` — XSD schema for the modelDescription.xml
+- [CONTRIBUTING.md](CONTRIBUTING.md) — info on contributing to the project and building the specification document
+- [README.md](README.md) — this document
+
+## Branches
+
+- `main` — development of the next release
+- `v{2|3}.0.x` — maintenance of the 2.0 and 3.0 releases
+
+## Layered Standards
+
+The following [layered standards](https://github.com/modelica/fmi-standard/blob/main/docs/2_6_versioning_layered_standards.adoc#versioning-and-layered-standards) are currently under development:
+
+- [XCP](https://github.com/modelica/fmi-ls-xcp) — information for calibration and measurement
+- [Network Communication](https://github.com/modelica/fmi-ls-bus) — mapping of variables to buses
+- [Structure](https://github.com/modelica/fmi-ls-struct) — semantic grouping of variables
+- [REF](https://github.com/modelica/fmi-ls-ref) — stimuli and reference results
+
+## Copyright and License
+
+Code and documentation copyright (C) 2008-2011 the MODELISAR consortium and 2012-2025 the Modelica Association Project FMI.  
+Code released under the [2-Clause BSD License](https://opensource.org/licenses/BSD-2-Clause).  
+Docs released under [Attribution-ShareAlike 4.0 International](https://creativecommons.org/licenses/by-sa/4.0/).
