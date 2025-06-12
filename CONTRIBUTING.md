@@ -257,7 +257,9 @@ Follow these steps to create a (pre-)release:
 
 ## Corporate Contributor License Agreement
 
-All contributors have to sign the [Corporate Contributor License Agreement (CCLA)](https://fmi-standard.org/FMI_CCLA_v1.0_2016_06_21.pdf). Therefore, the first step is getting your company to agree and sign the CCLA. The CCLA ensures that all IP contributed to the FMI standard will be licensed to the Modelica Association (MA) which in turn will sublicense the FMI standard to tool vendors implementing it and end users using it, free of charge.
+All contributors have to sign the [Corporate Contributor License Agreement](https://fmi-standard.org/FMI_CCLA_v1.0_2016_06_21.pdf) or the [Contributor License Agreement of the Modelica Association](https://github.com/modelica/ModelicaAssociationCLA/releases/download/1.1.1/ModelicaAssociationCLA_1.1.1.pdf).
+Therefore, the first step is getting your company to agree and sign one of the CLAs.
+This ensures that all IP contributed to the FMI standard will be licensed to the Modelica Association (MA) which in turn will sublicense the FMI standard to tool vendors implementing it and end users using it, free of charge.
 
 ## Formatting Rules
 
