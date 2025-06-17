@@ -1341,3 +1341,36 @@ include::Reference-FMUs/examples/jacobian.c[tags=GetJacobianAdjoint]
 ----
 
 _]_
+
+==== Direct Memory Access [[direct-memory]]
+
+The optional Direct Memory Access (DMA) API allows importers to access memory allocated by the FMU and vice versa.
+_[This eliminates the need to copy the values upon every call to `fmi3{Get|Set}{VariableType}()`]_.
+The variables that support DMA have to be listed in the `directMemory.xml` at the root of the FMU.
+
+[source, XML]
+----
+include::examples/directMemory.xml[]
+----
+
+An FMU that contains the `directMemory.xml` must also implement all functions declared in `fmi3DirectMemory.h`.
+These functions allow direct access to the variables memory.
+
+[source, C]
+----
+include::../headers/fmi3DirectMemory.h[tags=GetFloat64Pointer]
+
+include::../headers/fmi3DirectMemory.h[tags=SetFloat64Pointer]
+----
+
+The `fmi3{Get|Set}{VariableType}Pointer()` functions follow the same rules as the respective `fmi3{Get|Set}{VariableType}()` functions with the following exceptions.
+
+===== Providing Memory for Outputs
+
+Memory for variables with `causality = output` can only be set before entering <<Initialization Mode>>.
+_[This way the FMU does not have to allocate memory for these variables.]_
+
+===== Lifetime of the Memory
+
+The memory shared between the importer and the FMU may not be changed by the importer during a function call and any change must be communicated to the FMU by a call to `fmi3Set{VariableType}Pointer()`.
+Memory of variables with `causality = output` may change during function calls and have to be retrieved using `fmi3Get{VariableType}Pointer()`.
