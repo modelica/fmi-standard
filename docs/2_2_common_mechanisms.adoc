@@ -555,10 +555,6 @@ is a variable of type Clock with <<causality>> = <<output>>.
 The attribute <<intervalVariability>> must be <<triggered>> for <<outputClock,output Clocks>>.
 The importer calls <<fmi3GetClock>> to inquire the Clock's activation state.
 
-*#ToDo#* Allow getInterval calls also for changing Clocks that do not currently tick, but check that everywhere else is defined that intervalChanged can only be returned, if the CLock ticked
-
-*#ToDo#* Distinguish between allowed API calls and sensible API calls. Maybe state somewhere that in general getInterval is always allowed
-
 .Overview of Clock types.
 [[table-overview-clocks]]
 [cols="9,9,16,9,40,40"]
@@ -604,7 +600,7 @@ a|[[tunable-clock]]<<fmi3SetClock>> in <<EventMode>>,
 |[[changing-aperiodic-clock]]<<fmi3SetClock>> in <<EventMode>>,
 <<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
 <<fmi3GetInterval>> in <<InitializationMode>>,
-<<fmi3GetInterval>> in both <<EventMode>> and <<ClockActivationMode>> if this Clock ticked
+<<fmi3GetInterval>> in both <<EventMode>> and <<ClockActivationMode>> when this Clock ticked
 |simulation of the behavior of a control algorithm with variable execution time, generation of pulse sequences
 
 |`countdown`
@@ -653,10 +649,10 @@ The mathematical descriptions of time-based Clocks uses the following notations:
 |The previous time instant, when the Clock ticked.
 
 |latexmath:[T_{\mathit{shift}}]
-|The delay for the first Clock tick relative to latexmath:[t_{\mathit{start}}]. latexmath:[T_{\mathit{shift}}] is defined differently for the different Clock types, and can be set with <<fmi3SetShiftDecimal>> or retrieved from the FMU with <<fmi3GetShiftDecimal>> as floating point value, or as rational number using <<fmi3SetShiftFraction>> or <<fmi3GetShiftFraction>>.
+|The delay for the first Clock tick relative to latexmath:[t_{\mathit{start}}]. latexmath:[T_{\mathit{shift}}] is provided differently for the different Clock types, and can be set with <<fmi3SetShiftDecimal>> or retrieved from the FMU with <<fmi3GetShiftDecimal>> as floating point value, or as rational number using <<fmi3SetShiftFraction>> or <<fmi3GetShiftFraction>>.
 
 |latexmath:[T_{\mathit{interval, i}}]
-|The time interval until the next Clock tick, defined differently for the different Clock types.
+|The time interval until the next Clock tick, provided differently for the different Clock types.
 latexmath:[T_{\mathit{interval, i}}] can be retrieved either as a floating-point value using <<fmi3GetIntervalDecimal>>, or as a rational number using <<fmi3GetIntervalFraction>>.
 For some Clock types, the interval is provided by the importer, either as a floating-point value using <<fmi3SetIntervalDecimal>> or as a rational number using <<fmi3SetIntervalFraction>>.
 _[Note that even though <<fmi3GetInterval>> may be called at any time for every time-based Clock, a new interval is not necessarily provided._
@@ -667,8 +663,6 @@ _In Scheduled Execution, this means that the model partition must not be re-sche
 |The current event time in <<EventMode>>, or the current time in Scheduled Execution.
 
 |===
-
-*#ToDo#* Add sentence that interval is defined differently for tunable Clocks (sometimes - when the interval changes)
 
 Periodic Clock::
 
@@ -688,14 +682,18 @@ t_i &:= t_{i-1} + T_{\mathit{interval, i}} \qquad i = 1,2,3,{...}
 |===
 
 |latexmath:[T_{\mathit{interval, i}} > 0]
-|The time interval from the previous Clock tick to the current Clock tick, specified differently for the different Clock types.
+|Generally, the time interval from the previous Clock tick to the current Clock tick.
+ An exception applies to a tunable Clock whose interval has just changed in <<EventMode>> or <<ClockActivationMode>>.
+ In this specific case, the new interval is relative to the time of the current <<EventMode>> or <<ClockActivationMode>>, not to the time of the previous Clock tick.
+ The interval is provided differently for the different Clock types.
+
 |===
 
 Constant periodic Clock::
 is a time-based periodic clock that defines its <<intervalDecimal>> and optionally <<intervalCounter>>, <<shiftCounter>> and <<shiftDecimal>> in the <<modelDescription.xml>>.
 
-Fixed periodic Clock::
-is a time-based periodic Clock which ticks with an arbitrary, but fixed interval latexmath:[T_{\mathit{interval}}] starting after an arbitrary latexmath:[T_{\mathit{shift}}], both interval and shift can be changed by the importer.
+[[fixed-periodic-clock,fixed periodic Clock]]Fixed periodic Clock::
+is a time-based periodic Clock which ticks with an arbitrary, but fixed interval latexmath:[T_{\mathit{interval}}] starting after an arbitrary latexmath:[T_{\mathit{shift}}].
 
 +
 If <<intervalDecimal,`intervalDecimal`>> is specified, the importer sets the Clock's `fixed` interval using <<fmi3SetInterval>> in <<InitializationMode>>.
@@ -707,8 +705,8 @@ _[Calling <<fmi3SetInterval>> informs the FMU about the interval determined by t
 +
 If <<intervalDecimal,`intervalDecimal`>> is not specified, then the importer must use <<fmi3GetInterval>> and <<fmi3GetShift>> to retrieve the Clock interval and shift in <<InitializationMode>> because they depend on <<fixed>> <<parameter, parameters>>.
 
-Tunable periodic Clock::
-is a time-based periodic Clock which ticks with an arbitrary and changeable interval latexmath:[T_{\mathit{interval}}] starting after an arbitrary latexmath:[T_{\mathit{shift}}], both interval and shift can be changed by the importer.
+[[tunable-periodic-clock,tunable periodic Clock]]Tunable periodic Clock::
+is a time-based periodic Clock which ticks with an arbitrary and changeable interval latexmath:[T_{\mathit{interval}}] starting after an arbitrary latexmath:[T_{\mathit{shift}}].
 
 +
 If <<intervalDecimal,`intervalDecimal`>> is specified, the importer sets the Clock's `tunable` interval using <<fmi3SetInterval>> in <<InitializationMode>>.
@@ -722,6 +720,9 @@ _[Calling <<fmi3SetInterval>> informs the FMU about the interval determined by t
 If <<intervalDecimal,`intervalDecimal`>> is not specified, then the importer must use <<fmi3GetInterval>> to retrieve the Clock interval in <<InitializationMode>>, and later in <<EventMode>> or <<ClockActivationMode>>, if any of the <<tunable>> <<parameter, parameters>> the Clock's interval depends on was changed.
 The shift may only depend on <<fixed>> <<parameter, parameters>>.
 The importer must use <<fmi3GetShift>> to retrieve the Clock shift in <<InitializationMode>>.
+
++
+In both cases, when an interval changes, the new interval is relative to the time of the current <<EventMode>> or <<ClockActivationMode>>, not to the time of the previous Clock tick.
 
 Aperiodic Clock::
 is a time-based Clock with an interval that can change during runtime by FMU-internal mechanisms.
@@ -743,17 +744,17 @@ t_i &:= t_{i-1} + T_{\mathit{interval, i}} \qquad i = 1,2,3,{...}
 |===
 
 |latexmath:[T_{\mathit{interval}, 0} \geq 0]
-|The time interval from latexmath:[t_{\mathit{start}}] to first Clock tick.
+|The time interval from latexmath:[t_{\mathit{start}}] to the first Clock tick.
 Must be retrieved using <<fmi3GetInterval>> in <<InitializationMode>>.
 
 |latexmath:[T_{\mathit{interval, i}} \geq 0, \qquad i = 1,2,3,{...}]
 |The time interval from the current Clock tick to the next Clock tick.
-Must be retrieved using <<fmi3GetInterval>> in <<EventMode>> or <<ClockActivationMode>> if and only if the corresponding Clock ticked.
+Must be retrieved using <<fmi3GetInterval>> in <<EventMode>> or <<ClockActivationMode>> when the corresponding Clock ticked.
 
 |===
 
 Countdown aperiodic Clock::
-is a time-based Clock whose next interval is not yet known right after the Clock just ticked, forcing the importer to call <<fmi3GetInterval>> in <<InitializationMode>>, in every <<EventMode>> and <<ClockUpdateMode>>.
+is a time-based Clock whose next interval is not yet known right after the Clock just ticked, forcing the importer to call <<fmi3GetInterval>> in <<InitializationMode>> and in every <<EventMode>> and <<ClockUpdateMode>>.
 The return argument <<qualifiers>> of <<fmi3GetInterval>> is used to indicate if the next interval is already known.
 +
 The next Clock tick at time instant latexmath:[t_i] is defined as: +
@@ -900,9 +901,9 @@ include::../headers/fmi3FunctionTypes.h[tag=GetIntervalDecimal]
 
 *#ToDo#* Also enhance the definition of intervals above
 
-*#ToDo#* Explain the meaning of "with specified interval" and link to the respective section
+*#ToDo#* Check consistency of new behavior at all occurrences of getInterval
 
-*#ToDo#* State that getInterval can be called for all Clock types (incl. settable)
+*#ToDo#* Check style of keywords
 
 *#ToDo#* Check also the definition of GetShift
 
@@ -918,14 +919,12 @@ include::../headers/fmi3FunctionTypes.h[tag=IntervalQualifier]
 ----
 with the following meanings:
 
-*#ToDo#* Add tunable CLocks and fixed Clocks set by the importer to the intervalNotYetKnown qualifier (if getInterval is called before setInterval)
-
 [[fmi3IntervalChanged,`fmi3IntervalChanged`]]
   * `fmi3IntervalChanged` is returned to indicate that the value for the interval has changed for this <<Clock>>.
   Any previously returned intervals (if any) are overwritten with the current value.
-  In Initialization Mode, the new <<Clock>> interval is relative to the Clock shift latexmath:[T_{\mathit{shift}}] (periodic Clocks) or to latexmath:[t_{\mathit{start}}] (aperiodic Clocks).
+  In <<InitializationMode>>, the new <<Clock>> interval is relative to the Clock shift latexmath:[T_{\mathit{shift}}] (periodic Clocks) or to latexmath:[t_{\mathit{start}}] (aperiodic Clocks).
   In <<EventMode>>, <<ClockActivationMode>> and <<ClockUpdateMode>>, the new <<Clock>> interval is always relative to the time of the current <<EventMode>>, <<ClockActivationMode>> or <<ClockUpdateMode>>.
-  In Scheduled Execution fmi3IntervalChanged means that the corresponding model partition must be scheduled or re-scheduled (if a previous call to <<fmi3GetInterval>> returned <<fmi3IntervalChanged>>).
+  In Scheduled Execution <<fmi3IntervalChanged>> means that the corresponding model partition must be scheduled or re-scheduled (if a previous call to <<fmi3GetInterval>> returned <<fmi3IntervalChanged>>).
 
 [[fmi3IntervalUnchanged,`fmi3IntervalUnchanged`]]
   * `fmi3IntervalUnchanged` is returned if a previous call to <<fmi3GetInterval>> already returned a value qualified with <<fmi3IntervalChanged>> which has not changed since, or if the FMU is not allowed to change the interval because it is meant to be set by the importer or already fixed for the simulation (e.g., the interval of a constant Clock).
@@ -937,9 +936,12 @@ with the following meanings:
   This qualifier value can only be returned directly after the Clock was active and previous calls to <<fmi3GetInterval>> never returned <<fmi3IntervalChanged>> (nor <<fmi3IntervalUnchanged>>).
   In Scheduled Execution this return value means that the corresponding model partition cannot be scheduled yet.
 
-<<table-qualifiers-for-time-based-clocks>> shows the qualifiers that are allowed for different time-based Clock types.
+<<table-qualifiers-for-time-based-clocks>> shows the allowed qualifiers for different time-based Clock types.
 For some combinations the FMU state is relevant.
-If a cell has two values, the left value refers to <<InitializationMode>>, whereas the right value refers to <<EventMode>> and <<ClockActivationMode>>/<<ClockUpdateMode>>.
+If a cell has two values, the left value refers to <<InitializationMode>>, whereas the right value refers to <<EventMode>>, <<ClockActivationMode>>, or <<ClockUpdateMode>>.
+
+The categorization of fixed and tunable Clocks as "_intervalDecimal specified_" and "_intervalDecimal not specified_" refers to the presence or absence of the <<intervalDecimal>> attribute on the Clock element in the model description.
+For a detailed explanation, refer to the definitions of <<fixed-periodic-clock,fixed Clocks>> and <<tunable-periodic-clock,tunable Clocks>>.
 
 .Allowed qualifiers for time-based Clocks.
 [[table-qualifiers-for-time-based-clocks]]
@@ -1011,8 +1013,6 @@ _For all other Clocks an interval must be known or be retrievable by the importe
 
 _Discussion of the combinations that are allowed_:
 
-*#ToDo#* Check style of keywords
-
 .Combinations of time-based Clocks and qualifiers that are allowed and why.
 [[table-allowed-qualifiers-for-time-based-clocks]]
 [cols="1,10", options="header"]
@@ -1033,7 +1033,7 @@ _Discussion of the combinations that are allowed_:
 |_For fixed/tunable Clocks with <<intervalDecimal,`intervalDecimal`>> specified, fmi3IntervalUnchanged is the only qualifier that can be returned, since the interval is set by the importer and cannot be changed by the FMU._
 
 ^|_(5)_
-|_s. <<fmi3IntervalNotYetKnown>>_
+|_See <<fmi3IntervalNotYetKnown>>_.
 
 ^|_(6)_
 |_For tunable Clocks with <<intervalDecimal,`intervalDecimal`>> not specified, fmi3IntervalChanged is returned when the last interval known by the importer is no longer valid, because the interval has changed due to the change of tunable parameters._
@@ -1047,9 +1047,6 @@ _Subsequent Clock ticks follow the general interval definition for periodic Cloc
 |_In <<EventMode>> and <<ClockUpdateMode>>, for a countdown Clock, fmi3IntervalChanged is returned if the last interval given to the importer is no longer valid (i.e., the Clock needs to be re-scheduled), or if the interval has not been known yet._
 
 |====
-
-*#ToDo#*
-_How to treat periodic Clocks: [...]]_
 
 [[fmi3GetIntervalFraction,`fmi3GetIntervalFraction`]]
 [source, C]
@@ -1322,7 +1319,7 @@ Both functions have the same arguments:
 * `nUnknowns` contains the length of argument `unknowns`.
 * `knowns` contains value references of the knowns.
 * `nKnowns` contains the length of argument `knowns`.
-* `seed` contains the <<serialization-of-variables,serialized>> components of the seed vector.  
+* `seed` contains the <<serialization-of-variables,serialized>> components of the seed vector.
 * `nSeed` contains the length of `seed`.
 * `sensitivity` contains the <<serialization-of-variables,serialized>> components of the sensitivity vector.
 * `nSensitivity` contains the length of `sensitivity`.
