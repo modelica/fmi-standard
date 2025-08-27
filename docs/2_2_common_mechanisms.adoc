@@ -540,6 +540,11 @@ In Scheduled Execution, when input Clocks tick, the importer will activate the a
 
 The importer is the source of the actual Clock activations of input Clocks.
 For time-based input Clocks, the timing is defined by the FMU, either through the <<modelDescription.xml>> or by the importer calling <<fmi3GetInterval>>.
+The importer may call <<fmi3GetInterval>> for any time-based Clock at any time in <<InitializationMode>>, <<EventMode>>, <<ClockActivationMode>> and <<ClockUpdateMode>>.
+The allowed return values are described in <<table-qualifiers-for-time-based-clocks>>.
+<<table-overview-clocks>> shows when <<fmi3GetInterval>> is usually called for each Clock.
+Consult the descriptions for each Clock type following <<table-overview-clocks>> to identify the specific conditions under which the call to <<fmi3GetInterval>> is mandatory for the respective Clock type.
+
 For <<triggered>> input clocks, the timing is determined by the importer.
 _[The timing could be given by a triggered output Clock, or a time-based input Clock of a connected FMU, or any other source.]_
 
@@ -550,7 +555,9 @@ is a variable of type Clock with <<causality>> = <<output>>.
 The attribute <<intervalVariability>> must be <<triggered>> for <<outputClock,output Clocks>>.
 The importer calls <<fmi3GetClock>> to inquire the Clock's activation state.
 
-*#ToDo#* Update table
+*#ToDo#* Allow getInterval calls also for changing Clocks that do not currently tick, but check that everywhere else is defined that intervalChanged can only be returned, if the CLock ticked
+
+*#ToDo#* Distinguish between allowed API calls and sensible API calls. Maybe state somewhere that in general getInterval is always allowed
 
 .Overview of Clock types.
 [[table-overview-clocks]]
@@ -597,7 +604,7 @@ a|[[tunable-clock]]<<fmi3SetClock>> in <<EventMode>>,
 |[[changing-aperiodic-clock]]<<fmi3SetClock>> in <<EventMode>>,
 <<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
 <<fmi3GetInterval>> in <<InitializationMode>>,
-<<fmi3GetInterval>> in both <<EventMode>> and <<ClockActivationMode>> if and only if this Clock ticked
+<<fmi3GetInterval>> in both <<EventMode>> and <<ClockActivationMode>> if this Clock ticked
 |simulation of the behavior of a control algorithm with variable execution time, generation of pulse sequences
 
 |`countdown`
@@ -650,15 +657,20 @@ The mathematical descriptions of time-based Clocks uses the following notations:
 
 |latexmath:[T_{\mathit{interval, i}}]
 |The time interval until the next Clock tick, defined differently for the different Clock types.
-latexmath:[T_{\mathit{interval, i}}] can be set with <<fmi3SetIntervalDecimal>> or retrieved with <<fmi3GetIntervalDecimal>> as floating point value, or as rational number using <<fmi3SetIntervalFraction>> or <<fmi3GetIntervalFraction>>.
+latexmath:[T_{\mathit{interval, i}}] can be retrieved either as a floating-point value using <<fmi3GetIntervalDecimal>>, or as a rational number using <<fmi3GetIntervalFraction>>.
+For some Clock types, the interval is provided by the importer, either as a floating-point value using <<fmi3SetIntervalDecimal>> or as a rational number using <<fmi3SetIntervalFraction>>.
+_[Note that even though <<fmi3GetInterval>> may be called at any time for every time-based Clock, a new interval is not necessarily provided._
+_For instance, if <<fmi3GetInterval>> is called within a previously returned interval, an FMU returning <<fmi3IntervalUnchanged>> signals that the previously provided interval is still valid._
+_In Scheduled Execution, this means that the model partition must not be re-scheduled.]_
 
 |latexmath:[t_{\mathit{event}}]
 |The current event time in <<EventMode>>, or the current time in Scheduled Execution.
 
 |===
 
-Periodic Clock::
 *#ToDo#* Add sentence that interval is defined differently for tunable Clocks (sometimes - when the interval changes)
+
+Periodic Clock::
 
 is a time-based Clock with a constant interval, except when <<intervalVariability>> = <<tunable>>, which indicates that the interval can change.
 The time instant of the first Clock tick is defined by a <<shiftCounter>> or <<shiftDecimal>>.
@@ -886,6 +898,8 @@ include::../headers/fmi3FunctionTypes.h[tag=GetIntervalDecimal]
 
 * <<intervals>> is an array of size `nValueReferences` to retrieve the Clock intervals.
 
+*#ToDo#* Also enhance the definition of intervals above
+
 *#ToDo#* Explain the meaning of "with specified interval" and link to the respective section
 
 *#ToDo#* State that getInterval can be called for all Clock types (incl. settable)
@@ -904,6 +918,8 @@ include::../headers/fmi3FunctionTypes.h[tag=IntervalQualifier]
 ----
 with the following meanings:
 
+*#ToDo#* Add tunable CLocks and fixed Clocks set by the importer to the intervalNotYetKnown qualifier (if getInterval is called before setInterval)
+
 [[fmi3IntervalChanged,`fmi3IntervalChanged`]]
   * `fmi3IntervalChanged` is returned to indicate that the value for the interval has changed for this <<Clock>>.
   Any previously returned intervals (if any) are overwritten with the current value.
@@ -913,6 +929,7 @@ with the following meanings:
 
 [[fmi3IntervalUnchanged,`fmi3IntervalUnchanged`]]
   * `fmi3IntervalUnchanged` is returned if a previous call to <<fmi3GetInterval>> already returned a value qualified with <<fmi3IntervalChanged>> which has not changed since, or if the FMU is not allowed to change the interval because it is meant to be set by the importer or already fixed for the simulation (e.g., the interval of a constant Clock).
+  In this case, no new interval is provided.
   In Scheduled Execution this means the corresponding model partition has already been scheduled.
 
 [[fmi3IntervalNotYetKnown,`fmi3IntervalNotYetKnown`]]
@@ -1025,7 +1042,6 @@ _Subsequent Clock ticks follow the general interval definition for periodic Cloc
 
 ^|_(7)_
 |_In super state <<Initialized>>, for a changing Clock, fmi3IntervalChanged is returned if and only if the Clock has just ticked._
-_In this case, a new interval must be provided by the FMU._
 
 ^|_(8)_
 |_In <<EventMode>> and <<ClockUpdateMode>>, for a countdown Clock, fmi3IntervalChanged is returned if the last interval given to the importer is no longer valid (i.e., the Clock needs to be re-scheduled), or if the interval has not been known yet._
