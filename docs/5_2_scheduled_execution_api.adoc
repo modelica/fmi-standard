@@ -4,7 +4,7 @@ The state machine in <<figure-scheduled-execution-state-machine>> defines the al
 
 .Calling sequence of Scheduled Execution C functions.
 [#figure-scheduled-execution-state-machine]
-image::images/state-machine-scheduled-execution.svg[width=80%, align="center"]
+image::images/state-machine-scheduled-execution.svg[width=900]
 
 Common states are defined in <<common-state-machine>>, such as super states <<FMUStateSettable>> and  <<Initialized>>, states <<Instantiated>>, <<ConfigurationMode>>, <<ReconfigurationMode>>, <<InitializationMode>>, and <<Terminated>>.
 
@@ -70,9 +70,9 @@ The importer can assume that <<get-and-set-variable-values,`fmi3Get{VariableType
 +
 It is not allowed to call <<get-and-set-variable-values,`fmi3Get{VariableTypeExclClock}`>> functions after <<get-and-set-variable-values,`fmi3Set{VariableTypeExclClock}`>> functions without an <<fmi3ActivateModelPartition>> call in between.
 +
-_[It is recommended, to call <<get-and-set-variable-values,`fmi3Set{VariableTypeExclClock}`>>, <<fmi3ActivateModelPartition>> and <<get-and-set-variable-values,`fmi3Get{VariableTypeExclClock}`>> in a sequence._ +
-_The reason is to avoid different interpretations of the caching, since contrary to <<fmi-for-model-exchange, `FMI for Model Exchange`>>, <<fmi3ActivateModelPartition>> will perform the actual calculation instead of <<get-and-set-variable-values,`fmi3Get{VariableTypeExclClock}`>>, and therefore, algebraic loops at communication points cannot be handled by an appropriate sequence of <<get-and-set-variable-values,`fmi3Get{VariableTypeExclClock}`>> and <<get-and-set-variable-values,`fmi3Set{VariableTypeExclClock}`>> calls as for Model Exchange._ +
-_To avoid data inconsistencies and safeguard predictable behavior with <<get-and-set-variable-values,`fmi3Get{VariableType}`>>, <<get-and-set-variable-values,`fmi3Set{VariableType}`>> a unique assignment of the respective variables to model partitions via its associated <<Clock>> is strongly recommended.]_
+NOTE: It is recommended, to call <<get-and-set-variable-values,`fmi3Set{VariableTypeExclClock}`>>, <<fmi3ActivateModelPartition>> and <<get-and-set-variable-values,`fmi3Get{VariableTypeExclClock}`>> in a sequence. +
+The reason is to avoid different interpretations of the caching, since contrary to <<fmi-for-model-exchange, `FMI for Model Exchange`>>, <<fmi3ActivateModelPartition>> will perform the actual calculation instead of <<get-and-set-variable-values,`fmi3Get{VariableTypeExclClock}`>>, and therefore, algebraic loops at communication points cannot be handled by an appropriate sequence of <<get-and-set-variable-values,`fmi3Get{VariableTypeExclClock}`>> and <<get-and-set-variable-values,`fmi3Set{VariableTypeExclClock}`>> calls as for Model Exchange. +
+To avoid data inconsistencies and safeguard predictable behavior with <<get-and-set-variable-values,`fmi3Get{VariableType}`>>, <<get-and-set-variable-values,`fmi3Set{VariableType}`>> a unique assignment of the respective variables to model partitions via its associated <<Clock>> is strongly recommended.
 
 Function <<fmi3GetDirectionalDerivative>>::
 See <<fmi3GetDirectionalDerivative>>.
@@ -82,24 +82,26 @@ See <<fmi3GetAdjointDerivative>>.
 
 [[fmi3ActivateModelPartition, `fmi3ActivateModelPartition`]]
 Function `fmi3ActivateModelPartition`::
-
-Each <<fmi3ActivateModelPartition>> call relates to one <<inputClock>> which triggers the computation of its associated model partition.
 +
+--
+Each <<fmi3ActivateModelPartition>> call relates to one <<inputClock>> which triggers the computation of its associated model partition.
+
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tag=ActivateModelPartition]
 ----
-+
+
 The <<fmi3ActivateModelPartition>> function has the following arguments:
 
 * [[clockReference,`clockReference`]] `clockReference`: <<valueReference>> of the <<inputClock>> associated with the model partition which shall be activated.
-
 * [[activationTime, `activationTime`]] `activationTime`: value of the <<independent>> variable of the assigned <<Clock>> tick time latexmath:[t_i] _[typically: simulation (i.e. virtual) time]_ (which is known to the simulation algorithm).
 
-+
-The <<fmi3ActivateModelPartition>> function must not be called on <<outputClock,output Clocks>> of an FMU. +
-_[Note, that other than <<fmi3DoStep>> for Co-Simulation, <<fmi3ActivateModelPartition>> will compute the variables of the model partition for the current `activationTime`.]_ +
+The <<fmi3ActivateModelPartition>> function must not be called on <<outputClock,output Clocks>> of an FMU.
+
+NOTE: Note, that other than <<fmi3DoStep>> for Co-Simulation, <<fmi3ActivateModelPartition>> will compute the variables of the model partition for the current `activationTime`.
+
 Consecutive calls to <<fmi3ActivateModelPartition>> for a <<clockReference>> must have strictly monotonically increasing <<activationTime>>.
+--
 
 Functions <<fmi3GetIntervalDecimal>> and <<fmi3GetIntervalFraction>>::
 These function calls are allowed for <<tunable-clock,`tunable`>> and <<changing-aperiodic-clock,`changing`>> aperiodic Clocks.
@@ -119,7 +121,8 @@ The callback may be called from several <<model-partition, model partitions>>.
 
 Functions <<fmi3GetFMUState>>, <<fmi3SetFMUState>>, <<fmi3FreeFMUState>>, <<fmi3SerializedFMUStateSize>>, <<fmi3SerializeFMUState>>, <<fmi3DeserializeFMUState>>::
 These functions must not be called if any model partition is currently active or preempted.
-_[This is because these functions apply to the whole FMU and not only to a specific model partition.]_
++
+NOTE: This is because these functions apply to the whole FMU and not only to a specific model partition.
 
 ==== State: Clock Update Mode [[ClockUpdateMode,*Clock Update Mode*]]
 
@@ -137,5 +140,5 @@ The FMU sets the reported activation state immediately back to `fmi3ClockInactiv
 Functions <<fmi3GetIntervalDecimal>> & <<fmi3GetIntervalFraction>>::
 These function calls are allowed for <<countdown-aperiodic-clock,`countdown`>> Clocks.
 
-_[In Scheduled Execution it cannot be determined which model partition has called <<fmi3ClockUpdateCallback>>, because multiple model partitions can be active at the same time._
-_Since all information about which model partition to activate is coded into its corresponding Clock, there is no need to know which potentially other model partition activated this Clock.]_
+NOTE: In Scheduled Execution it cannot be determined which model partition has called <<fmi3ClockUpdateCallback>>, because multiple model partitions can be active at the same time.
+Since all information about which model partition to activate is coded into its corresponding Clock, there is no need to know which potentially other model partition activated this Clock.
