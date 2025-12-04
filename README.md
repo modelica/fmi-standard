@@ -28,10 +28,10 @@ Releases and the [latest development version](https://fmi-standard.org/docs/main
 
 The following [layered standards](https://github.com/modelica/fmi-standard/blob/main/docs/2_6_versioning_layered_standards.adoc#versioning-and-layered-standards) are currently under development:
 
-- [XCP](https://github.com/modelica/fmi-ls-xcp) &mdash; information for calibration and measurement
-- [Network Communication](https://github.com/modelica/fmi-ls-bus) &mdash; mapping of variables to buses
-- [Structure](https://github.com/modelica/fmi-ls-struct) &mdash; semantic grouping of variables
-- [REF](https://github.com/modelica/fmi-ls-ref) &mdash; stimuli and reference results
+- [FMI-LS-XCP](https://github.com/modelica/fmi-ls-xcp) &mdash; FMI Layered Standard for XCP (released)
+- [FMI-LS-BUS](https://github.com/modelica/fmi-ls-bus) &mdash; FMI Layered Standard for Network Communication (released)
+- [FMI-LS-STRUCT](https://github.com/modelica/fmi-ls-struct) &mdash; FMI Layered Standard for Structured Data
+- [FMI-LS-REF](https://github.com/modelica/fmi-ls-ref) &mdash; = FMI Layered Standard References 
 
 ## Copyright and License
 
