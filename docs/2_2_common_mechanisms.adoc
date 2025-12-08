@@ -14,14 +14,13 @@ The FMU itself does not implement any services to support this.
 ====
 
 * The following FMI callback functions must not call back into the FMU:
- ** <<logMessage,`fmi3LogMessageCallback`>>, and
- ** <<preemption-support,`fmi3LockPreemptionCallback`>>, and
- ** <<preemption-support,`fmi3UnlockPreemptionCallback`>>).
+ ** <<logMessage,`fmi3LogMessageCallback`>>
+ ** <<preemption-support,`fmi3LockPreemptionCallback`>>
+ ** <<preemption-support,`fmi3UnlockPreemptionCallback`>>
 
-+
-The following callback functions lead to well-defined states and may call FMI functions according to their respective state definitions:
- ** <<intermediateUpdate,`fmi3IntermediateUpdateCallback`>>, and
- ** <<fmi3ClockUpdateCallback>>.
+* The following callback functions lead to well-defined states and may call FMI functions according to their respective state definitions:
+ ** <<intermediateUpdate,`fmi3IntermediateUpdateCallback`>>
+ ** <<fmi3ClockUpdateCallback>>
 
 * FMI functions must not change global settings which affect other processes/threads.
 An FMI function may change settings of the thread in which it is called (such as floating point control registers), provided these changes are restored before leaving the function or before a callback function is called.
@@ -512,18 +511,18 @@ Whenever needed, the byte vector can be loaded from file and deserialized, and t
 
 [[fmi3GetFMUState, `fmi3GetFMUState`]]
 Function `fmi3GetFMUState`::
-
++
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=GetFMUState]
 ----
-
++
 [[FMUState,`FMUState`]]This function copies the internal FMU state and returns a pointer to this copy in <<FMUState>>.
 <<FMUState>> must contain all information required to allow continuing the simulation from the current FMU state without additional FMI C-API calls.
 If on entry `*FMUState = NULL`, a new allocation is required.
 If `*FMUState != NULL`, then `*FMUState` points to a previously returned <<FMUState>> that is no longer needed and can be overwritten.
 In particular, <<fmi3FreeFMUState>> had not been called with this <<FMUState>> as an argument.
-
++
 [NOTE]
 ====
 Function <<fmi3GetFMUState>> typically reuses the memory of this <<FMUState>> in this case and returns the same pointer to it, but with the current <<FMUState>>.
@@ -531,23 +530,23 @@ Function <<fmi3GetFMUState>> typically reuses the memory of this <<FMUState>> in
 
 [[fmi3SetFMUState, `fmi3SetFMUState`]]
 Function `fmi3SetFMUState`::
-
++
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=SetFMUState]
 ----
-
++
 This function restores the state provided by <<FMUState>>.
 The FMU must not change the content of the provided <<FMUState>> to allow multiple calls of <<fmi3SetFMUState>> with this <<FMUState>>.
 
 [[fmi3FreeFMUState, `fmi3FreeFMUState`]]
 Function `fmi3FreeFMUState`::
-
++
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=FreeFMUState]
 ----
-
++
 This function frees all memory and other resources allocated with the <<fmi3GetFMUState>> call for the provided argument <<FMUState>>.
 If a NULL pointer is provided, the call is ignored.
 The function returns a NULL pointer in argument <<FMUState>>.
@@ -556,33 +555,33 @@ The functions above may be called, only if the capability flag <<canGetAndSetFMU
 
 [[fmi3SerializedFMUStateSize,`fmi3SerializedFMUStateSize`]]
 Function `fmi3SerializedFMUStateSize`::
-
++
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=SerializedFMUStateSize]
 ----
-
++
 This function returns the `size` of the byte vector, in order that <<FMUState>> can be stored in it.
 With this information, the environment must allocate an `fmi3Byte` vector of the required length `size`.
 
 [[fmi3SerializeFMUState,`fmi3SerializeFMUState`]]
 Function `fmi3SerializeFMUState`::
-
++
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=SerializeFMUState]
 ----
-
++
 This function serializes the data which is referenced by pointer <<FMUState>> and copies this data in to the byte vector `serializedState` of length `size`, that must be provided by the environment.
 
 [[fmi3DeserializeFMUState,`fmi3DeserializeFMUState`]]
 Function `fmi3DeserializeFMUState`::
-
++
 [source, C]
 ----
 include::../headers/fmi3FunctionTypes.h[tags=DeserializeFMUState]
 ----
-
++
 This function deserializes the byte vector `serializedState` of length `size`, constructs a copy of the FMU state and returns <<FMUState>>, the pointer to this copy.
 
 These serialization and deserialization functions may be called, only if the capability flags <<canGetAndSetFMUState>> and <<canSerializeFMUState>> are set to `true`.
@@ -609,28 +608,30 @@ They are restricted to being scalar variables.
 The variable's attribute <<intervalVariability>> declares the type of Clock, see overview in <<table-overview-clocks>>.
 After <<table-overview-clocks>> Clock types are explained in more detail.
 
-Input Clock::
 [[inputClock, `input Clock`]]
+Input Clock::
++
 is a variable of type Clock with <<causality>> = <<input>>.
 In Model Exchange and Co-Simulation, when input Clocks tick, the importer will activate the input Clocks using <<fmi3SetClock>>.
 In Scheduled Execution, when input Clocks tick, the importer will activate the associated model partitions (but not the input Clocks) using <<fmi3ActivateModelPartition>>.
-
++
 The importer is the source of the actual Clock activations of input Clocks.
 For time-based input Clocks, the timing is defined by the FMU, either through the <<modelDescription.xml>> or by the importer calling <<fmi3GetInterval>>.
 For <<triggered>> input clocks, the timing is determined by the importer.
-
++
 [NOTE]
 ====
 The timing could be given by a triggered output Clock, or a time-based input Clock of a connected FMU, or any other source.
 ====
 
-Output Clock::
 [[outputClock, `output Clock`]]
+Output Clock::
++
 is a variable of type Clock with <<causality>> = <<output>>.
-
++
 The attribute <<intervalVariability>> must be <<triggered>> for <<outputClock,output Clocks>>.
 The importer calls <<fmi3GetClock>> to inquire the Clock's activation state.
-
++
 .Overview of Clock types.
 [[table-overview-clocks]]
 [cols="9,9,16,9,40,40"]
