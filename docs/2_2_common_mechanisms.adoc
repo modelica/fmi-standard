@@ -12,7 +12,7 @@ The FMU itself does not implement any services to support this.]_
 * The following FMI callback functions must not call back into the FMU:
  ** <<logMessage,`fmi3LogMessageCallback`>>, and
  ** <<preemption-support,`fmi3LockPreemptionCallback`>>, and
- ** <<preemption-support,`fmi3UnlockPreemptionCallback`>>).
+ ** <<preemption-support,`fmi3UnlockPreemptionCallback`>>.
 
 +
 The following callback functions lead to well-defined states and may call FMI functions according to their respective state definitions:
@@ -222,9 +222,9 @@ The call failed.
 The output argument values are undefined and the simulation must not be continued.
 Function <<logMessage>> should be called by the FMU with further information before returning this status, respecting the current logging settings.
 If a function returns <<fmi3Error>>, it is possible to restore a previously retrieved FMU state by calling <<fmi3SetFMUState>> or to reset the instance by calling <<fmi3Reset>>.
-When detecting illegal arguments or a function call not allowed in the current state according to the respective state machine, the FMU must return <<fmi3Error>>.
+When detecting illegal arguments or a function call not allowed in the current state machine mode according to the respective state machine, the FMU must return <<fmi3Error>>.
 Other instances of this FMU are not affected by the error. +
-_[For example, when setting a constant with a call to <<get-and-set-variable-values,`fmi3Set{VariableType}`>>, then the function must return with an error (<<fmi3Error,`fmi3Status = fmi3Error`>>.]_
+_[For example, when setting a constant with a call to <<get-and-set-variable-values,`fmi3Set{VariableType}`>>, then the function must return with an error <<fmi3Error,`fmi3Status = fmi3Error`>>.]_
 
 [[fmi3Fatal,`fmi3Fatal`]]
 `fmi3Fatal`::
@@ -337,7 +337,7 @@ If an API function takes multiple value references, the serialized variables are
 
 ===== Getting and Setting Variable Values [[get-and-set-variable-values]]
 
-Restrictions for setting and getting of variables with certain types, causalities and variabilities are defined in the state machine and state descriptions (see <<common-state-machine>> for common states, <<state-machine-model-exchange>> for Model Exchange, <<state-machine-co-simulation>> for Co-Simulation, and <<state-machine-scheduled-execution>> for Scheduled Execution).
+Restrictions for setting and getting of variables with certain types, causalities and variabilities are defined in the state machine and state machine mode descriptions (see <<common-state-machine>> for common state machine modes, <<state-machine-model-exchange>> for Model Exchange, <<state-machine-co-simulation>> for Co-Simulation, and <<state-machine-scheduled-execution>> for Scheduled Execution).
 In addition to those state-specific restrictions, setting and getting of <<clocked-variable,clocked variables>> is only allowed during <<EventMode>> when their respective Clocks are active, and during <<InitializationMode>> irrespective of Clock activation status.
 
 The variable <<ModelVariables,type>> defined in the <<modelDescription.xml>> determines the function <<get-and-set-variable-values,`fmi3Get/Set{VariableType}`>> (see also <<VariableType,`{VariableType}`>> and <<VariableTypeExclClock,`{VariableTypeExclClock}`>>) that must be used for accessing the respective variable values.
@@ -1125,15 +1125,15 @@ where
 ** <<StepMode>> (Co-Simulation): The variables listed as elements <<Output>> of <<ModelStructure>> with a floating point type and <<variability>> = <<continuous>> or <<discrete>>.
 Each continuous state derivative variable listed as elements <<ContinuousStateDerivative>> in <<ModelStructure>>, if present.
 
-* latexmath:[\mathbf{v}_{\mathit{known}}] is the vector of arguments of function latexmath:[\mathbf{f}] which can be changed by the importer in the current state.
+* latexmath:[\mathbf{v}_{\mathit{known}}] is the vector of arguments of function latexmath:[\mathbf{f}] which can be changed by the importer in the current state machine mode.
 Details about which variables are in latexmath:[\mathbf{v}_{\mathit{known}}] are given in the description of element <<dependencies>> in <<ModelStructure>>.
 
-* latexmath:[{\mathbf{v}_{\mathit{rest}}}] is the set of <<input>> variables and discrete-time states of function latexmath:[\mathbf{f}] which cannot be set by the importer in the current state, but in other states _[for example, discrete-time <<input,`inputs`>> in <<ContinuousTimeMode>>]_.
+* latexmath:[{\mathbf{v}_{\mathit{rest}}}] is the set of <<input>> variables and discrete-time states of function latexmath:[\mathbf{f}] which cannot be set by the importer in the current state machine mode, but in other state machine modes _[for example, discrete-time <<input,`inputs`>> in <<ContinuousTimeMode>>]_.
 
 * <<EventIndicator,`EventIndicators`>> must not be included among latexmath:[\mathbf{v}_{\mathit{unknown}}]. +
 _[This is intentional as their dependencies listed in <<ModelStructure>> are intended for debugging purposes and not for partial derivatives.]_
 
-_[The variable relationships are different in different states._
+_[The variable relationships are different in different state machine modes._
 _For example, during <<ContinuousTimeMode>>, the partial derivate of a continuous-time output_ latexmath:[\mathbf{y}] _with respect to discrete-time <<input,`inputs`>> is undefined, because discrete-time <<input,`inputs`>> cannot be set between events.]_
 
 There are two access functions for partial derivatives:
@@ -1178,7 +1178,7 @@ Both functions have the same arguments:
 * `nUnknowns` contains the length of argument `unknowns`.
 * `knowns` contains value references of the knowns.
 * `nKnowns` contains the length of argument `knowns`.
-* `seed` contains the <<serialization-of-variables,serialized>> components of the seed vector.  
+* `seed` contains the <<serialization-of-variables,serialized>> components of the seed vector.
 * `nSeed` contains the length of `seed`.
 * `sensitivity` contains the <<serialization-of-variables,serialized>> components of the sensitivity vector.
 * `nSensitivity` contains the length of `sensitivity`.
