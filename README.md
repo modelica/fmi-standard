@@ -1,7 +1,7 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/FMI-logo-horizontal-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="docs/images/FMI-logo-horizontal-light.svg">
-  <img alt="Functional Mock-up Interface" src="docs/images/FMI-logo-horizontal-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/modelica/ma-asciidoctor-theme/blob/main/images/FMI-logo-horizontal-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="https://github.com/modelica/ma-asciidoctor-theme/blob/main/images/FMI-logo-horizontal-light.svg">
+  <img alt="Functional Mock-up Interface" src="https://github.com/modelica/ma-asciidoctor-theme/blob/main/images/FMI-logo-horizontal-light.svg">
 </picture>
 
 # Functional Mock-up Interface
