@@ -363,7 +363,7 @@ will be rendered as
 
 > The function <<fmi3DoStep>> may only be called in <<StepMode>>.
 
-### Non-normative Notes
+### Non-normative Paragraphs
 
 Short non-normative notes should be written as a single line prefixed with `NOTE: `, for example
 
