@@ -365,19 +365,20 @@ will be rendered as
 
 ### Non-normative Notes
 
-Short non-normative notes should be written as a single line prefixed with `NOTE: `, for example:
+Short non-normative notes should be written as a single line prefixed with `NOTE: `, for example
 
 ```
 NOTE: An importer has to determine the outer bounding box enclosing all graphical items.
 ```
 
-Longer non-normative notes may use an Asciidoctor note block:
+Longer non-normative notes with multiple paragraphs may use an `NOTE` block.
 
 ```
 [NOTE]
 ====
-This is a longer non-normative note that spans
-multiple lines and explains additional guidance.
+This is a longer non-normative text.
+
+It has multiple paragraphs.
 ====
 ```
 
