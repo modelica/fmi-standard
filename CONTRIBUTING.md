@@ -363,14 +363,23 @@ will be rendered as
 
 > The function <<fmi3DoStep>> may only be called in <<StepMode>>.
 
-### Italic Paragraphs
+### Non-normative Paragraphs
 
-Every line of an italic paragraph (e.g. in non-normative text) should be surrounded by underscores, so the text is highlighted correctly in code editors.  
-Example:
+Short non-normative notes should be written as a single line prefixed with `NOTE: `, for example
 
 ```
-_[This is the first line._
-_This is the second line.]_
+NOTE: An importer has to determine the outer bounding box enclosing all graphical items.
+```
+
+Longer non-normative notes with multiple paragraphs may use an `NOTE` block.
+
+```
+[NOTE]
+====
+This is a longer non-normative text.
+
+It has multiple paragraphs.
+====
 ```
 
 ## Adding and Editing Figures
