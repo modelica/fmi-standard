@@ -7,7 +7,7 @@
 # Functional Mock-up Interface
 
 The Functional Mock-up Interface (FMI) is a free standard that defines an interface to exchange dynamic models using a combination of XML files, binaries and C code.
-It's supported by [240+ tools](https://fmi-standard.org/tools/) and maintained as a [Modelica Association Project](https://modelica.org/projects).
+It's supported by [270+ tools](https://fmi-standard.org/tools/) and maintained as a [Modelica Association Project](https://modelica.org/association/).
 
 Releases and the [latest development version](https://fmi-standard.org/docs/main/) of the specification are available on the [FMI website](https://fmi-standard.org/).
 
