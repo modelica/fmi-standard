@@ -35,6 +35,6 @@ The following [layered standards](https://github.com/modelica/fmi-standard/blob/
 
 ## Copyright and License
 
-Code and documentation copyright &copy; 2008-2011 the MODELISAR consortium and 2012-2025 the Modelica Association Project FMI.
+Code and documentation copyright &copy; 2008-2011 the MODELISAR consortium and 2012-2026 the Modelica Association Project FMI.
 Code released under the [2-Clause BSD License](https://opensource.org/licenses/BSD-2-Clause).
 Docs released under [Attribution-ShareAlike 4.0 International](https://creativecommons.org/licenses/by-sa/4.0/).
