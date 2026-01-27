@@ -215,9 +215,24 @@ The following listing shows the base types used in the FMI C-API:
 include::../headers/fmi3PlatformTypes.h[tags=VariableTypes]
 ----
 
-==== Status Returned by Functions [[status-returned-by-functions]]
+==== Status Returned by Functions and Logging Mechanism [[status-returned-by-functions]]
 
-This section defines the return values the C-API functions indicating success or failure of the function call.
+This section defines the return values the C-API functions indicating success or failure of the function call, as well as required logging behavior of the FMU.
+
+NOTE: Prior to FMI 3.0.3, the standard did not unambiguously define the logging behavior for functions returning <<fmi3Error>>, and <<fmi3Fatal>>.
+This has been clarified in this version of the standard to clearly state that for <<fmi3Error>> and <<fmi3Fatal>>, as well as equivalent `NULL` returns from the instantiation functions, logging must be performed regardless of the current logging settings, unless the `logMessage` callback function pointer was provided as a `NULL` pointer.
+To support backward compatibility, definitions have been clarified in a way that FMUs that choose to only log errors and fatal errors when logging is enabled are still considered conforming, but this behavior is not recommended.
+Going forward, unless the `logMessage` callback function pointer was provided as a `NULL` pointer, FMUs should strive to always log error and fatal error conditions with informative messages regardless of the current logging settings.
+
+Required logging behavior for functions is determined based on the current logging settings.
+These settings are defined by the `loggingOn` argument provided during instantiation of the FMU (see <<FMUStateSettable>>), and may be changed later using <<fmi3SetDebugLogging>>.
+The following rules apply:
+
+* If no `logMessage` callback function pointer was provided (i.e. it is `NULL`), the FMU must not attempt to call <<logMessage>>.
+* If `loggingOn` is `false`, or debug logging has been disabled in a call to <<fmi3SetDebugLogging>>, the FMU must not call <<logMessage>>, except for <<fmi3Error>> and <<fmi3Fatal>> return statuses and equivalent error situations, where it should call <<logMessage>> to provide additional information about the error condition.
+* If `loggingOn` is `true`, or debug logging has been enabled in a call to <<fmi3SetDebugLogging>>, the FMU must call <<logMessage>> for <<fmi3Error>> and <<fmi3Fatal>> return statuses and equivalent error situations, and should call <<logMessage>> for all other return statuses except <<fmi3OK>>.
+
+The return type of almost all FMI functions is <<fmi3Status,`fmi3Status`>>.
 It is defined in file `fmi3FunctionTypes.h` as an enumeration of type `fmi3Status`:
 
 [source, C]
@@ -261,7 +276,8 @@ Examples for usage of <<fmi3Discard>> are
 `fmi3Error`::
 The call failed.
 The output argument values are undefined and the simulation must not be continued.
-Function <<logMessage>> should be called by the FMU with further information before returning this status, respecting the current logging settings.
+Function <<logMessage>> must be called by the FMU with further information before returning this status, respecting the current logging settings,
+and it should be called regardless of the current logging settings, unless the `logMessage` callback function pointer was provided as a `NULL` pointer.
 If a function returns <<fmi3Error>>, it is possible to restore a previously retrieved FMU state by calling <<fmi3SetFMUState>> or to reset the instance by calling <<fmi3Reset>>.
 When detecting illegal arguments or a function call not allowed in the current state according to the respective state machine, the FMU must return <<fmi3Error>>.
 Other instances of this FMU are not affected by the error.
@@ -274,8 +290,11 @@ The state of all instances of the model is irreparably corrupted.
 +
 NOTE: For example, due to a runtime exception such as access violation or integer division by zero during the execution of an FMI function.
 +
-Function <<logMessage>> should be called by the FMU with further information before returning this status, respecting the current logging settings, if still possible.
+Function <<logMessage>> should be called by the FMU with further information before returning this status, if still possible, regardless of the current logging settings, unless the `logMessage` callback function pointer was provided as a `NULL` pointer.
 The importer must not call any other function for any instance of the FMU.
+
+For the instantiation functions (see <<FMUStateSettable>>), a `NULL` pointer is returned to indicate that the instantiation failed.
+For the purposes of logging this is considered equivalent to returning <<fmi3Error>>, and the same logging requirements apply.
 
 ==== Inquire Version Number of Header Files [[inquire-version-number]]
 
