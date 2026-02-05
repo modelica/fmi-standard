@@ -64,22 +64,18 @@ In the following example, the usage of the fmi3XXX functions is sketched for a c
     // initialize the FMU
     CALL(FMI3EnterInitializationMode(S, fmi3False, 0.0, time, fmi3True, stopTime));
 
-    // apply continuous and discrete inputs
-    CALL(applyContinuousInputs(S, time, true));
-    CALL(applyDiscreteInputs(S, time));
-
     CALL(FMI3ExitInitializationMode(S));
 
     // record clocks and clocked variables before event update
     CALL(recordClocks(S, time, outputFile));
     CALL(recordClockedVariables(S, time, outputFile));
 
-    // activate input clocks and apply clocked inputs
-    CALL(applyInputClocks(S, time));
-    CALL(applyClockedInputs(S, time));
-
     // update discrete states
     do {
+        // activate input clocks and apply clocked inputs
+        CALL(applyInputClocks(S, time));
+        CALL(applyClockedInputs(S, time));
+
         CALL(FMI3UpdateDiscreteStates(S,
             &discreteStatesNeedUpdate,
             &terminateSimulation,
@@ -88,6 +84,10 @@ In the following example, the usage of the fmi3XXX functions is sketched for a c
             &nextEventTimeDefined,
             &nextEventTime
         ));
+
+        // record clocks and clocked variables 
+        CALL(recordClocks(S, time, outputFile));
+        CALL(recordClockedVariables(S, time, outputFile));
 
         if (terminateSimulation) {
             goto TERMINATE;
@@ -101,7 +101,12 @@ In the following example, the usage of the fmi3XXX functions is sketched for a c
 
     while (true) {
 
+        // record non-clocked outputs
         CALL(recordVariables(S, time, outputFile));
+
+        // apply non-clocked continuous and discrete inputs
+        CALL(applyContinuousInputs(S, time, true));
+        CALL(applyDiscreteInputs(S, time));
 
         if (terminateSimulation || time + stepSize > stopTime) {
             break;
@@ -119,9 +124,6 @@ In the following example, the usage of the fmi3XXX functions is sketched for a c
 
         if (eventEncountered) {
 
-            // record non-clocked variables before event update
-            CALL(recordVariables(S, time, outputFile));
-
             // enter Event Mode
             CALL(FMI3EnterEventMode(S));
 
@@ -129,16 +131,12 @@ In the following example, the usage of the fmi3XXX functions is sketched for a c
             CALL(recordClocks(S, time, outputFile));
             CALL(recordClockedVariables(S, time, outputFile));
 
-            // apply non-clocked continuous and discrete inputs
-            CALL(applyContinuousInputs(S, time, true));
-            CALL(applyDiscreteInputs(S, time));
-
-            // activate input clocks and apply clocked inputs
-            CALL(applyInputClocks(S, time));
-            CALL(applyClockedInputs(S, time));
-
             // update discrete states
             do {
+                // activate input clocks and apply clocked inputs
+                CALL(applyInputClocks(S, time));
+                CALL(applyClockedInputs(S, time));
+
                 CALL(FMI3UpdateDiscreteStates(S,
                     &discreteStatesNeedUpdate,
                     &terminateSimulation,
@@ -148,7 +146,9 @@ In the following example, the usage of the fmi3XXX functions is sketched for a c
                     &nextEventTime
                 ));
 
-                // Note: clocks and clocked variables are neither applied nor recorded here again
+                // record clocks and clocked variables 
+                CALL(recordClocks(S, time, outputFile));
+                CALL(recordClockedVariables(S, time, outputFile));
 
                 if (terminateSimulation) {
                     break;
