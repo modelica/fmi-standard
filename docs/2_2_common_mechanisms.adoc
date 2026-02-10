@@ -766,7 +766,7 @@ _In Scheduled Execution, this means that the model partition must not be re-sche
 
 Periodic Clock::
 
-is a time-based Clock with a constant interval, except when <<intervalVariability>> = <<tunable>>, which indicates that the interval can change.
+is a time-based Clock with a constant interval, except for Clocks with <<intervalVariability>> = <<tunable>>, which indicates that the interval can change.
 The time instant of the first Clock tick is defined by a <<shiftCounter>> or <<shiftDecimal>>.
 +
 The next Clock tick at time instant latexmath:[t_i] is defined as: +
@@ -860,8 +860,8 @@ Must be retrieved using <<fmi3GetInterval>> in <<EventMode>> or <<ClockActivatio
 |===
 
 Countdown aperiodic Clock::
-is a time-based Clock whose next interval is not yet known right after the Clock just ticked, forcing the importer to call <<fmi3GetInterval>> in <<InitializationMode>> and in every <<EventMode>> and <<ClockUpdateMode>>.
-The return argument <<qualifiers>> of <<fmi3GetInterval>> is used to indicate if the next interval is already known.
+is a time-based Clock whose next interval is not yet known to the FMU right after the Clock just ticked, forcing the importer to call <<fmi3GetInterval>> in <<InitializationMode>> and in every <<EventMode>> and <<ClockUpdateMode>>.
+The return argument <<qualifiers>> of <<fmi3GetInterval>> is used to indicate if the next interval is already known to the FMU.
 +
 The next Clock tick at time instant latexmath:[t_i] is defined as: +
 latexmath:[\begin{align*}
@@ -1054,12 +1054,12 @@ with the following meanings:
 
 [[fmi3IntervalUnchanged,`fmi3IntervalUnchanged`]]
   * `fmi3IntervalUnchanged` is returned if a previous call to <<fmi3GetInterval>> already returned a value qualified with <<fmi3IntervalChanged>> which has not changed since, or if the FMU is not allowed to change the interval because it is meant to be set by the importer or already fixed for the simulation (e.g., the interval of a constant Clock).
-  In this case, <<intervals-get>> returns the old unchanged interval.
+  In this case, <<intervals-get>> returns the unchanged interval value provided in a previous call to <<fmi3GetInterval>>.
   In Scheduled Execution this means the corresponding model partition has already been scheduled.
 
 [[fmi3IntervalNotYetKnown,`fmi3IntervalNotYetKnown`]]
-  * `fmi3IntervalNotYetKnown` is returned for a <<countdown-aperiodic-clock,`countdown`>> Clock for which the next interval is not yet known.
-  This qualifier value can only be returned directly after the Clock was active and previous calls to <<fmi3GetInterval>> never returned <<fmi3IntervalChanged>> (nor <<fmi3IntervalUnchanged>>).
+  * `fmi3IntervalNotYetKnown` is returned for a <<countdown-aperiodic-clock,`countdown`>> Clock whose next interval is not yet known to the FMU.
+  This qualifier value can only be returned if, since the most recent Clock activation, no call to <<fmi3GetInterval>> has returned <<fmi3IntervalChanged>> or <<fmi3IntervalUnchanged>>.
   If `fmi3IntervalNotYetKnown` is returned, the corresponding value in <<intervals-get>> is not defined.
   In Scheduled Execution this return value means that the corresponding model partition cannot be scheduled yet.
 
@@ -1171,7 +1171,7 @@ _Subsequent Clock ticks follow the general interval definition for periodic Cloc
 |_In super state <<Initialized>>, for a changing Clock, <<fmi3IntervalChanged>> is returned if and only if the Clock has just ticked._
 
 ^|_(8)_
-|_In <<EventMode>> and <<ClockUpdateMode>>, for a countdown Clock, <<fmi3IntervalChanged>> is returned if the last interval given to the importer is no longer valid (i.e., the Clock needs to be re-scheduled), or if the interval has not been known yet._
+|_In <<EventMode>> and <<ClockUpdateMode>>, for a countdown Clock, <<fmi3IntervalChanged>> is returned if the last interval given to the importer is no longer valid (i.e., the Clock needs to be re-scheduled), or if the interval was not yet known to the FMU._
 
 |====
 
