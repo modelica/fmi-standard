@@ -257,7 +257,7 @@ Follow these steps to create a (pre-)release:
 
 ## Corporate Contributor License Agreement
 
-All contributors have to sign the [Corporate Contributor License Agreement](https://fmi-standard.org/FMI_CCLA_v1.0_2016_06_21.pdf) or the [Contributor License Agreement of the Modelica Association](https://github.com/modelica/ModelicaAssociationCLA/releases/download/1.1.1/ModelicaAssociationCLA_1.1.1.pdf).
+All contributors have to sign the [Corporate Contributor License Agreement](https://github.com/modelica/fmi-standard.org/blob/main/static/assets/FMI_CCLA_v1.0_2016_06_21.pdf) or the [Contributor License Agreement of the Modelica Association](https://github.com/modelica/ModelicaAssociationCLA/releases/download/1.1.1/ModelicaAssociationCLA_1.1.1.pdf).
 Therefore, the first step is getting your company to agree and sign one of the CLAs.
 This ensures that all IP contributed to the FMI standard will be licensed to the Modelica Association (MA) which in turn will sublicense the FMI standard to tool vendors implementing it and end users using it, free of charge.
 
@@ -363,14 +363,23 @@ will be rendered as
 
 > The function <<fmi3DoStep>> may only be called in <<StepMode>>.
 
-### Italic Paragraphs
+### Non-normative Paragraphs
 
-Every line of an italic paragraph (e.g. in non-normative text) should be surrounded by underscores, so the text is highlighted correctly in code editors.  
-Example:
+Short non-normative notes should be written as a single line prefixed with `NOTE: `, for example
 
 ```
-_[This is the first line._
-_This is the second line.]_
+NOTE: An importer has to determine the outer bounding box enclosing all graphical items.
+```
+
+Longer non-normative notes with multiple paragraphs may use an `NOTE` block.
+
+```
+[NOTE]
+====
+This is a longer non-normative text.
+
+It has multiple paragraphs.
+====
 ```
 
 ## Adding and Editing Figures

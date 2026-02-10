@@ -8,7 +8,7 @@ This header file defines the data and function types of FMI 3.0.
 It must be used when compiling an FMU or an FMI importer.
 
 Copyright (C) 2011 MODELISAR consortium,
-              2012-2025 Modelica Association Project "FMI"
+              2012-2026 Modelica Association Project "FMI"
               All rights reserved.
 
 This file is licensed by the copyright holders under the 2-Clause BSD License
@@ -113,7 +113,7 @@ typedef void (*fmi3UnlockPreemptionCallback) (void);
 Types for Common Functions
 ****************************************************/
 
-/* Inquire version numbers and setting logging status */
+/* Inquire version numbers and set debug logging */
 /* tag::GetVersion[] */
 typedef const char* fmi3GetVersionTYPE(void);
 /* end::GetVersion[] */
@@ -125,7 +125,7 @@ typedef fmi3Status fmi3SetDebugLoggingTYPE(fmi3Instance instance,
                                            const fmi3String categories[]);
 /* end::SetDebugLogging[] */
 
-/* Creation and destruction of FMU instances and setting debug status */
+/* Creation and destruction of FMU instances */
 /* tag::Instantiate[] */
 typedef fmi3Instance fmi3InstantiateModelExchangeTYPE(
     fmi3String                 instanceName,
@@ -167,7 +167,7 @@ typedef fmi3Instance fmi3InstantiateScheduledExecutionTYPE(
 typedef void fmi3FreeInstanceTYPE(fmi3Instance instance);
 /* end::FreeInstance[] */
 
-/* Enter and exit initialization mode, enter event mode, terminate and reset */
+/* Enter and exit initialization mode, terminate and reset */
 /* tag::EnterInitializationMode[] */
 typedef fmi3Status fmi3EnterInitializationModeTYPE(fmi3Instance instance,
                                                    fmi3Boolean toleranceDefined,
@@ -445,7 +445,6 @@ typedef fmi3Status fmi3GetAdjointDerivativeTYPE(fmi3Instance instance,
 /* end::GetAdjointDerivative[] */
 
 /* Entering and exiting the Configuration or Reconfiguration Mode */
-
 /* tag::EnterConfigurationMode[] */
 typedef fmi3Status fmi3EnterConfigurationModeTYPE(fmi3Instance instance);
 /* end::EnterConfigurationMode[] */
@@ -454,6 +453,7 @@ typedef fmi3Status fmi3EnterConfigurationModeTYPE(fmi3Instance instance);
 typedef fmi3Status fmi3ExitConfigurationModeTYPE(fmi3Instance instance);
 /* end::ExitConfigurationMode[] */
 
+/* Clock related functions */
 /* tag::GetIntervalDecimal[] */
 typedef fmi3Status fmi3GetIntervalDecimalTYPE(fmi3Instance instance,
                                               const fmi3ValueReference valueReferences[],
@@ -596,7 +596,6 @@ Types for Functions for Co-Simulation
 ****************************************************/
 
 /* Simulating the FMU */
-
 /* tag::EnterStepMode[] */
 typedef fmi3Status fmi3EnterStepModeTYPE(fmi3Instance instance);
 /* end::EnterStepMode[] */
