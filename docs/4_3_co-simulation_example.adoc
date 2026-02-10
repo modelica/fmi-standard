@@ -76,8 +76,8 @@ In the following example, the usage of the fmi3XXX functions is sketched for a c
 
     do {
         // activate input clocks and apply the inputs with active clocks
-        CALL(applyInputClocks(S, time));
-        CALL(applyClockedInputs(S, time));
+        CALL(applyInputClocks(S, time, timeInstant));
+        CALL(applyClockedInputs(S, time, timeInstant));
 
         CALL(FMI3UpdateDiscreteStates(S,
             &discreteStatesNeedUpdate,
@@ -88,13 +88,20 @@ In the following example, the usage of the fmi3XXX functions is sketched for a c
             &nextEventTime
         ));
 
-        CALL(recordClockedVariables(S, time, outputFile));
+        // new super-dense time instant began
+        timeInstant++;
+
+        // record clocks and the clocked variables with active clocks
+        CALL(recordClocks(S, time, timeInstant, outputFile));
         CALL(recordClockedVariables(S, time, timeInstant, outputFile));
 
         if (terminateSimulation) {
             goto TERMINATE;
         }
     } while (discreteStatesNeedUpdate);
+
+    // integer part of the time tuple (super-dense time) stays zero in Step Mode
+    timeInstant = 0;
 
     CALL(FMI3EnterStepMode(S));
 
@@ -128,8 +135,8 @@ In the following example, the usage of the fmi3XXX functions is sketched for a c
 
             do {
                 // activate input clocks and apply the inputs with active clocks
-                CALL(applyInputClocks(S, time));
-                CALL(applyClockedInputs(S, time));
+                CALL(applyInputClocks(S, time, timeInstant));
+                CALL(applyClockedInputs(S, time, timeInstant));
 
                 CALL(FMI3UpdateDiscreteStates(S,
                     &discreteStatesNeedUpdate,
@@ -142,14 +149,15 @@ In the following example, the usage of the fmi3XXX functions is sketched for a c
 
                 // for the new super-dense time instant: record clocks and
                 // the clocked variables with active clocks
-                CALL(recordClocks(S, time, outputFile));
-                CALL(recordClockedVariables(S, time, outputFile));
+                CALL(recordClocks(S, time, timeInstant, outputFile));
                 CALL(recordClockedVariables(S, time, timeInstant, outputFile));
 
                 if (terminateSimulation) {
                     break;
                 }
             } while (discreteStatesNeedUpdate);
+
+            timeInstant = 0;
 
             // return to Step Mode
             CALL(FMI3EnterStepMode(S));
