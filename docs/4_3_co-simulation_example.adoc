@@ -59,7 +59,11 @@ In the following example, the usage of the fmi3XXX functions is sketched for a c
     // set start values
     CALL(applyStartValues(S));
 
+    // real part of the time tuple: the independent variable of the FMU
     fmi3Float64 time = startTime;
+
+    // integer part of the time tuple, indexing the super-dense time instants
+    fmi3UInt64 timeInstant = 0;
 
     // initialize the FMU
     CALL(FMI3EnterInitializationMode(S, fmi3False, 0.0, time, fmi3True, stopTime));
@@ -67,8 +71,8 @@ In the following example, the usage of the fmi3XXX functions is sketched for a c
     CALL(FMI3ExitInitializationMode(S));
 
     // record clocks and the clocked variables with active clocks
-    CALL(recordClocks(S, time, outputFile));
-    CALL(recordClockedVariables(S, time, outputFile));
+    CALL(recordClocks(S, time, timeInstant, outputFile));
+    CALL(recordClockedVariables(S, time, timeInstant, outputFile));
 
     do {
         // activate input clocks and apply the inputs with active clocks
@@ -84,10 +88,8 @@ In the following example, the usage of the fmi3XXX functions is sketched for a c
             &nextEventTime
         ));
 
-        // for the new super-dense time instant: record clocks and 
-        // the clocked variables with active clocks
-        CALL(recordClocks(S, time, outputFile));
         CALL(recordClockedVariables(S, time, outputFile));
+        CALL(recordClockedVariables(S, time, timeInstant, outputFile));
 
         if (terminateSimulation) {
             goto TERMINATE;
@@ -121,8 +123,8 @@ In the following example, the usage of the fmi3XXX functions is sketched for a c
             CALL(FMI3EnterEventMode(S));
 
             // record clocks and the clocked variables with active clocks
-            CALL(recordClocks(S, time, outputFile));
-            CALL(recordClockedVariables(S, time, outputFile));
+            CALL(recordClocks(S, time, timeInstant, outputFile));
+            CALL(recordClockedVariables(S, time, timeInstant, outputFile));
 
             do {
                 // activate input clocks and apply the inputs with active clocks
@@ -142,6 +144,7 @@ In the following example, the usage of the fmi3XXX functions is sketched for a c
                 // the clocked variables with active clocks
                 CALL(recordClocks(S, time, outputFile));
                 CALL(recordClockedVariables(S, time, outputFile));
+                CALL(recordClockedVariables(S, time, timeInstant, outputFile));
 
                 if (terminateSimulation) {
                     break;
