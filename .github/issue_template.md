@@ -7,7 +7,7 @@ about: File an issue
 
 This project is used for the development of the FMI Standard (https://fmi-standard.org/)
 
-Do you want to ask a question? Are you looking for support? 
+Do you want to ask a question? Are you looking for support?
 StackOverflow is the best place for getting support: https://stackoverflow.com/
 
 Have you searched the existing issues for related proposals?
