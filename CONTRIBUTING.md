@@ -209,15 +209,15 @@ Please adhere to the coding conventions used throughout a project (indentation, 
 
 We use a branching scheme with _support_ branches that allows us to maintain multiple major and minor releases concurrently.
 
-- **Main development branch `master`:**  
+- **Main development branch `master`:**
   Holds the latest development version. This is where the _next_ version of the standard is developed.
 
-- **Support branches `support/v<major>{.<minor>}.x`:**  
-  Upon every major release the latest version of `master` is tagged `v<major>.0`. The maintenance of this release is performed on a support branch `support/v<major>.x` starting at this tag.  
+- **Support branches `support/v<major>{.<minor>}.x`:**
+  Upon every major release the latest version of `master` is tagged `v<major>.0`. The maintenance of this release is performed on a support branch `support/v<major>.x` starting at this tag.
   Examples: `support/v3.x`, `support/v2.0.x`
 
-- **Tags `v<major>.<minor>{.<patch>}{-{alpha|beta|rc}.<number>}`:**  
-  Releases and pre-releases are tagged on the respective branches following the [Semantic Versioning](https://semver.org/) when the API, XSD schema or file structure of the FMU archive change.  
+- **Tags `v<major>.<minor>{.<patch>}{-{alpha|beta|rc}.<number>}`:**
+  Releases and pre-releases are tagged on the respective branches following the [Semantic Versioning](https://semver.org/) when the API, XSD schema or file structure of the FMU archive change.
   Examples: `v3.0-alpha.3`, `v3.0-beta.2`, `v3.0-rc.1`, `v3.0`
 
 ```
@@ -269,7 +269,7 @@ When writing or editing the specification documents please follow the [AsciiDoc 
 - Use Atx style [section titles](https://asciidoctor.org/docs/asciidoc-recommended-practices/#section-titles)
 - Use four dashes (`----`) for [delimited blocks](https://asciidoctor.org/docs/asciidoc-recommended-practices/#delimited-blocks)
 - Use the asterisk (`*`) as marker for nested [lists](https://asciidoctor.org/docs/asciidoc-recommended-practices/#lists)
-- Use angle brackets and backticks when citing XML elements.  
+- Use angle brackets and backticks when citing XML elements.
   Example:
   ```
   The internal step size can be provided by the attribute <<fixedInternalStepSize>> in element `<fmiModelDescription><CoSimulation>`.
@@ -287,7 +287,7 @@ Quotes must only be included if they are part of the original source or markup c
 
 ### Cross References
 
-When creating a [cross reference](https://asciidoctor.org/docs/asciidoc-writers-guide/#cross-references) (xref) use dash-separated, all-lowercase names.  
+When creating a [cross reference](https://asciidoctor.org/docs/asciidoc-writers-guide/#cross-references) (xref) use dash-separated, all-lowercase names.
 Example:
 
 ```
@@ -298,7 +298,7 @@ Example:
 These parts are defined in <<fmi-common-concepts>>.
 ```
 
-To reference a function, type, definition or argument, use its name as xref and add a pre-formatted label. Do not add brackets to function names.  
+To reference a function, type, definition or argument, use its name as xref and add a pre-formatted label. Do not add brackets to function names.
 Example:
 
 ```
@@ -315,16 +315,16 @@ A Clock interval is set by the environment for the current time instant by the f
 
 ### Spelling and Capitalization
 
-- Names start with a capital letter.  
-  Example:  
+- Names start with a capital letter.
+  Example:
   > A Co-Simulation FMU is different from a Model Exchange FMU.
 
-- General concepts are lower case.  
-  Example:  
+- General concepts are lower case.
+  Example:
   > A co-simulation environment is different from a model exchange environment.
 
-- Segments of C or XML are cited exactly as they appear in the code.  
-  Example:  
+- Segments of C or XML are cited exactly as they appear in the code.
+  Example:
   > The <<fmiModelDescription>> of a Model Exchange FMU must contain a `<ModelExchange>` element.
 
 - Headings are to be capitalized with the following rules:
@@ -333,7 +333,7 @@ A Clock interval is set by the environment for the current time instant by the f
 
 ### Non-ASCII Characters
 
-To avoid encoding problems AsciiDoc files may only contain ASCII characters. Non-ASCII characters can be escaped using the decimal representation of the Unicode character.  
+To avoid encoding problems AsciiDoc files may only contain ASCII characters. Non-ASCII characters can be escaped using the decimal representation of the Unicode character.
 Example:
 
 ```
