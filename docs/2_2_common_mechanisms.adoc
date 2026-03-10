@@ -624,6 +624,12 @@ Clocks define <<clocked-variable,model partitions>> affecting only <<clocked-var
 Clocks are <<discrete>> <<fmu-variables,variables>> of type `fmi3Clock`.
 They are restricted to being scalar variables.
 
+Clock tick::
+A super-dense time instant at which a Clock is active (i.e., the Clock's activation state is `fmi3ClockActive`). A Clock tick denotes the precise time point — including its super-dense ordering — during which clocked variables and the associated model partition may be evaluated.
+
+Clock activation::
+The action of changing a Clock's state to `fmi3ClockActive`.
+
 The variable's attribute <<intervalVariability>> declares the type of Clock, see overview in <<table-overview-clocks>>.
 After <<table-overview-clocks>> Clock types are explained in more detail.
 
@@ -631,8 +637,8 @@ After <<table-overview-clocks>> Clock types are explained in more detail.
 Input Clock::
 +
 is a variable of type Clock with <<causality>> = <<input>>.
-In Model Exchange and Co-Simulation, when input Clocks tick, the importer will activate the input Clocks using <<fmi3SetClock>>.
-In Scheduled Execution, when input Clocks tick, the importer will activate the associated model partitions (but not the input Clocks) using <<fmi3ActivateModelPartition>>.
+In Model Exchange and Co-Simulation, when input Clocks are activated, the importer will activate the input Clocks using <<fmi3SetClock>>.
+In Scheduled Execution, when input Clocks are activated, the importer will activate the associated model partitions (but not the input Clocks) using <<fmi3ActivateModelPartition>>.
 +
 The importer is the source of the actual Clock activations of input Clocks.
 For time-based input Clocks, the timing is defined by the FMU, either through the <<modelDescription.xml>> or by the importer calling <<fmi3GetInterval>>.
@@ -696,14 +702,14 @@ a|[[tunable-clock]]<<fmi3SetClock>> in <<EventMode>>,
 |[[changing-aperiodic-clock]]<<fmi3SetClock>> in <<EventMode>>,
 <<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
 <<fmi3GetInterval>> in <<InitializationMode>>,
-<<fmi3GetInterval>> in both <<EventMode>> and <<ClockActivationMode>> if and only if this Clock ticked
+<<fmi3GetInterval>> in both <<EventMode>> and <<ClockActivationMode>> if and only if this Clock was activated
 |simulation of the behavior of a control algorithm with variable execution time, generation of pulse sequences
 
 |`countdown`
 |[[countdown-aperiodic-clock]]<<fmi3SetClock>> in <<EventMode>>,
 <<fmi3ActivateModelPartition>> in <<ClockActivationMode>>,
 <<fmi3GetInterval>> in <<InitializationMode>>, in every <<EventMode>> and in every <<ClockUpdateMode>>.
-In Scheduled Execution the FMU must inform the importer by calling <<fmi3ClockUpdateCallback>> that the Clock is about to tick
+In Scheduled Execution the FMU must inform the importer by calling <<fmi3ClockUpdateCallback>> that the Clock is about to be activated
 |time-delayed actions after an event, for example, ignition signal some time after specific crank shaft angle
 
 2.3+|[[triggered,`triggered`]]<<triggered-clock,triggered>>
@@ -716,7 +722,7 @@ In Scheduled Execution the FMU must inform the importer by calling <<fmi3ClockUp
 |<<output>>
 |`triggered`
 |<<fmi3GetClock>> in both <<EventMode>> and <<ClockUpdateMode>>
-|crankshaft angle sensor ticking several times per revolution
+|crankshaft angle sensor activating several times per revolution
 
 |<<local>>
 |`triggered`
@@ -728,7 +734,7 @@ In Scheduled Execution the FMU must inform the importer by calling <<fmi3ClockUp
 
 is predictable and allows the importer to take its Clock ticks into account a priori.
 Time-based Clocks are input Clocks because the importer calls <<fmi3SetClock>> or <<fmi3ActivateModelPartition>> on these Clocks.
-The importer queries the FMU about when a time-based Clock should tick.
+The importer queries the FMU about when a time-based Clock should be activated.
 The importer must activate the Clock by calling <<fmi3SetClock>> or <<fmi3ActivateModelPartition>>.
 +
 The mathematical descriptions of time-based Clocks uses the following notations:
@@ -739,10 +745,10 @@ The mathematical descriptions of time-based Clocks uses the following notations:
 [cols="1,5"]
 |===
 |latexmath:[t_0]
-|The time instant when the Clock ticks the first time.
+|The time instant of the first Clock tick.
 
 |latexmath:[t_{i-1}]
-|The previous time instant, when the Clock ticked.
+|The previous Clock tick.
 
 |latexmath:[T_{\mathit{shift}}]
 |The delay for the first Clock tick relative to latexmath:[t_{\mathit{start}}]. latexmath:[T_{\mathit{shift}}] is defined differently for the different Clock types, and can be set with <<fmi3SetShiftDecimal>> or retrieved from the FMU with <<fmi3GetShiftDecimal>> as floating point value, or as rational number using <<fmi3SetShiftFraction>> or <<fmi3GetShiftFraction>>.
@@ -772,14 +778,14 @@ t_i &:= t_{i-1} + T_{\mathit{interval, i}} \qquad i = 1,2,3,{...}
 |===
 
 |latexmath:[T_{\mathit{interval, i}} > 0]
-|The time interval from the previous Clock tick to the current Clock tick, specified differently for the different Clock types.
+|The time interval from the previous to the current Clock tick, specified differently for the different Clock types.
 |===
 
 Constant periodic Clock::
 is a time-based periodic clock that defines its <<intervalDecimal>> and optionally <<intervalCounter>>, <<shiftCounter>> and <<shiftDecimal>> in the <<modelDescription.xml>>.
 
 Fixed periodic Clock::
-is a time-based periodic Clock which ticks with an arbitrary, but fixed interval latexmath:[T_{\mathit{interval}}] starting after an arbitrary latexmath:[T_{\mathit{shift}}], both interval and shift can be changed by the importer.
+is a time-based periodic Clock which is activated with an arbitrary, but fixed interval latexmath:[T_{\mathit{interval}}] starting after an arbitrary latexmath:[T_{\mathit{shift}}], both interval and shift can be changed by the importer.
 
 +
 If <<intervalDecimal,`intervalDecimal`>> is specified, the importer sets the Clock's `fixed` interval using <<fmi3SetInterval>> in <<InitializationMode>>.
@@ -795,7 +801,7 @@ Calling <<fmi3SetInterval>> informs the FMU about the interval determined by the
 If <<intervalDecimal,`intervalDecimal`>> is not specified, then the importer must use <<fmi3GetInterval>> and <<fmi3GetShift>> to retrieve the Clock interval and shift in <<InitializationMode>> because they depend on <<fixed>> <<parameter, parameters>>.
 
 Tunable periodic Clock::
-is a time-based periodic Clock which ticks with an arbitrary and changeable interval latexmath:[T_{\mathit{interval}}] starting after an arbitrary latexmath:[T_{\mathit{shift}}], both interval and shift can be changed by the importer.
+is a time-based periodic Clock which is activated with an arbitrary and changeable interval latexmath:[T_{\mathit{interval}}] starting after an arbitrary latexmath:[T_{\mathit{shift}}], both interval and shift can be changed by the importer.
 
 +
 If <<intervalDecimal,`intervalDecimal`>> is specified, the importer sets the Clock's `tunable` interval using <<fmi3SetInterval>> in <<InitializationMode>>.
@@ -818,7 +824,7 @@ is a time-based Clock with an interval that can change during runtime by FMU-int
 Calling <<fmi3GetShift>> or <<fmi3SetShift>> is not allowed.
 
 Changing aperiodic Clock::
-is a time-based Clock whose next interval is unchangeably known right after the Clock just ticked.
+is a time-based Clock whose next interval is unchangeably known right after the Clock was just activated.
 +
 The next Clock tick at time instant latexmath:[t_i] is defined as: +
 latexmath:[\begin{align*}
@@ -833,17 +839,17 @@ t_i &:= t_{i-1} + T_{\mathit{interval, i}} \qquad i = 1,2,3,{...}
 |===
 
 |latexmath:[T_{\mathit{interval}, 0} \geq 0]
-|The time interval from latexmath:[t_{\mathit{start}}] to first Clock tick.
+|The time interval from latexmath:[t_{\mathit{start}}] to the first Clock tick.
 Must be retrieved using <<fmi3GetInterval>> in <<InitializationMode>>.
 
 |latexmath:[T_{\mathit{interval, i}} \geq 0, \qquad i = 1,2,3,{...}]
-|The time interval from the current Clock tick to the next Clock tick.
-Must be retrieved using <<fmi3GetInterval>> in <<EventMode>> or <<ClockActivationMode>> if and only if the corresponding Clock ticked.
+|The time interval from the current to the next Clock tick.
+Must be retrieved using <<fmi3GetInterval>> in <<EventMode>> or <<ClockActivationMode>> if and only if the corresponding Clock was activated.
 
 |===
 
 Countdown aperiodic Clock::
-is a time-based Clock whose next interval is not yet known right after the Clock just ticked, forcing the importer to call <<fmi3GetInterval>> in <<InitializationMode>>, in every <<EventMode>> and <<ClockUpdateMode>>.
+is a time-based Clock whose next interval is not yet known right after the Clock was just activated, forcing the importer to call <<fmi3GetInterval>> in <<InitializationMode>>, in every <<EventMode>> and <<ClockUpdateMode>>.
 The return argument <<qualifiers>> of <<fmi3GetInterval>> is used to indicate if the next interval is already known.
 +
 The next Clock tick at time instant latexmath:[t_i] is defined as: +
@@ -868,7 +874,7 @@ Must be retrieved using <<fmi3GetInterval>> in <<InitializationMode>>.
 |===
 
 [[triggered-clock]]Triggered Clock::
-ticks unpredictably.
+is activated unpredictably.
 
 Triggered input Clock::
 is activated with <<fmi3SetClock>> by the importer in <<EventMode>>, or triggers activation of the associated model partition with <<fmi3ActivateModelPartition>> in <<ClockActivationMode>>.
@@ -892,7 +898,7 @@ An example is provided in <<example-scheduled-execution>>.
 ===== Model Partitions and Clocked Variables [[clocked-variable]]
 
 Each Clock latexmath:[k] induces a discrete subsystem.
-Its state advances at each tick of latexmath:[k].
+Its state advances at each activation of latexmath:[k].
 Such a system, also called the <<model-partition>> of latexmath:[k], may represent a part of control code, an interrupt service routine of an embedded system, or a discretized part of a plant model.
 
 A model partition is written as:
@@ -907,7 +913,7 @@ where:
 * latexmath:[\mathbf{f}_{\mathit{disc}}] denotes the state transition function and
 * latexmath:[\mathbf{f}_{\mathit{event}}] denotes the output function of the <<model-partition>> of latexmath:[k].
 
-When latexmath:[k] is active (i.e., ticking) invoking the FMI functions `fmi3Get{VariableType}` on variables in the output vector latexmath:[\mathbf{y}_k] will trigger the execution of the output function latexmath:[\mathbf{f}_{\mathit{event}}] to compute such variables.
+When latexmath:[k] is active invoking the FMI functions `fmi3Get{VariableType}` on variables in the output vector latexmath:[\mathbf{y}_k] will trigger the execution of the output function latexmath:[\mathbf{f}_{\mathit{event}}] to compute such variables.
 If <<providesEvaluateDiscreteStates>> is `false`, then latexmath:[\mathbf{f}_{\mathit{disc}}] cannot be called explicitly using <<fmi3EvaluateDiscreteStates>>, but will be implicitly executed during latexmath:[\mathbf{f}_{\mathit{event}}].
 When <<fmi3EvaluateDiscreteStates>> is called, the state vector latexmath:[\mathbf{x}_k] is updated according to state transition function latexmath:[\mathbf{f}_{\mathit{disc}}].
 
@@ -941,7 +947,7 @@ For example, a global counter could be incremented by multiple model partitions,
 
 Output clocks may depend on input Clocks and other variables.
 Such <<dependencies>> are declared in the <<ModelStructure>>.
-A Clock latexmath:[k] depends on a Clock or variable latexmath:[v] if a tick or the value of latexmath:[v] may trigger a tick of latexmath:[k] during the same super-dense time instant.
+A Clock latexmath:[k] depends on a Clock or variable latexmath:[v] if a tick or the value of latexmath:[v] may cause a activation of latexmath:[k] during the same super-dense time instant.
 
 Declaring a variable as <<clocked-variable,clocked variable>> using the <<clocks>> attribute specifies a <<dependencies,dependency>> too, but also declares that such a clocked variable can only be <<get-and-set-variable-values,accessed>> when one of the referenced Clocks is active.
 This also holds for <<clocked-variable,clocked variables>> of type <<Clock>>.
