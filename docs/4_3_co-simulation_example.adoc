@@ -24,7 +24,9 @@ Note that the points where the ball hits the floor are available, but only the o
 
 image::images/cs_early_return.svg[width=1000]
 
-==== Event Mode
+==== Event Mode without Clocks
+
+In the following example, the usage of the fmi3XXX functions is sketched for a co-simulation FMU that supports <<EventMode>>, but does not have any <<Clock,Clocks>> or <<clocked-variable,clocked variables>>.
 
 [source, C]
 ----
@@ -35,6 +37,137 @@ The plot below shows the output for the https://github.com/modelica/Reference-FM
 Note that the points where the ball hits the floor are available and the outputs before and after the event are recorded.
 
 image::images/cs_event_mode.svg[width=1000]
+
+==== Event Mode with Clocks
+
+In the following example, the usage of the fmi3XXX functions is sketched for a co-simulation FMU with <<EventMode>> support. It does not include <<early-return,Early Return>> or <<IntermediateUpdateMode,Intermediate Update>> capabilities and considers only <<discrete>> <<clocked-variable,clocked variables>> and their associated <<triggered,triggered Clocks>>.
+
+[source, C]
+----
+ CALL(FMI3InstantiateCoSimulation(S,
+        INSTANTIATION_TOKEN, // instantiationToken
+        NULL,                // resourcePath
+        fmi3False,           // visible
+        fmi3False,           // loggingOn
+        fmi3True,            // eventModeUsed
+        fmi3False,           // earlyReturnAllowed
+        NULL,                // requiredIntermediateVariables
+        0,                   // nRequiredIntermediateVariables
+        NULL                 // intermediateUpdate
+    ));
+
+    // set start values
+    CALL(applyStartValues(S));
+
+    // real part of the time tuple: the independent variable of the FMU
+    fmi3Float64 time = startTime;
+
+    // integer part of the time tuple, indexing the super-dense time instants
+    fmi3UInt64 timeInstant = 0;
+
+    // initialize the FMU
+    CALL(FMI3EnterInitializationMode(S, fmi3False, 0.0, time, fmi3True, stopTime));
+
+    CALL(FMI3ExitInitializationMode(S));
+
+    // record clocks and the clocked variables with active clocks
+    CALL(recordClocks(S, time, timeInstant, outputFile));
+    CALL(recordClockedVariables(S, time, timeInstant, outputFile));
+
+    do {
+        // activate input clocks and apply the inputs with active clocks
+        CALL(applyInputClocks(S, time, timeInstant));
+        CALL(applyClockedInputs(S, time, timeInstant));
+
+        CALL(FMI3UpdateDiscreteStates(S,
+            &discreteStatesNeedUpdate,
+            &terminateSimulation,
+            &nominalsChanged,
+            &statesChanged,
+            &nextEventTimeDefined,
+            &nextEventTime
+        ));
+
+        // new super-dense time instant began
+        timeInstant++;
+
+        // record clocks and the clocked variables with active clocks
+        CALL(recordClocks(S, time, timeInstant, outputFile));
+        CALL(recordClockedVariables(S, time, timeInstant, outputFile));
+
+        if (terminateSimulation) {
+            goto TERMINATE;
+        }
+    } while (discreteStatesNeedUpdate);
+
+    // integer part of the time tuple (super-dense time) stays zero in Step Mode
+    timeInstant = 0;
+
+    CALL(FMI3EnterStepMode(S));
+
+    // communication step size
+    const fmi3Float64 stepSize = 10 * FIXED_SOLVER_STEP;
+
+    while (true) {
+
+        if (terminateSimulation || time + stepSize > stopTime) {
+            break;
+        }
+
+        CALL(FMI3DoStep(S,
+            time,                 // currentCommunicationPoint
+            stepSize,             // communicationStepSize
+            fmi3True,             // noSetFMUStatePriorToCurrentPoint
+            &eventEncountered,    // eventEncountered
+            &terminateSimulation, // terminate
+            &earlyReturn,         // earlyReturn
+            &time                 // lastSuccessfulTime
+        ));
+
+        if (eventEncountered) {
+
+            // enter Event Mode
+            CALL(FMI3EnterEventMode(S));
+
+            // record clocks and the clocked variables with active clocks
+            CALL(recordClocks(S, time, timeInstant, outputFile));
+            CALL(recordClockedVariables(S, time, timeInstant, outputFile));
+
+            do {
+                // activate input clocks and apply the inputs with active clocks
+                CALL(applyInputClocks(S, time, timeInstant));
+                CALL(applyClockedInputs(S, time, timeInstant));
+
+                CALL(FMI3UpdateDiscreteStates(S,
+                    &discreteStatesNeedUpdate,
+                    &terminateSimulation,
+                    &nominalsChanged,
+                    &statesChanged,
+                    &nextEventTimeDefined,
+                    &nextEventTime
+                ));
+
+                // for the new super-dense time instant: record clocks and
+                // the clocked variables with active clocks
+                CALL(recordClocks(S, time, timeInstant, outputFile));
+                CALL(recordClockedVariables(S, time, timeInstant, outputFile));
+
+                if (terminateSimulation) {
+                    break;
+                }
+            } while (discreteStatesNeedUpdate);
+
+            timeInstant = 0;
+
+            // return to Step Mode
+            CALL(FMI3EnterStepMode(S));
+        }
+    }
+
+TERMINATE:
+    return tearDown();
+----
+
 
 ==== Intermediate Update
 
