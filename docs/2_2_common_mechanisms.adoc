@@ -755,12 +755,13 @@ The mathematical descriptions of time-based Clocks uses the following notations:
 |The delay for the first Clock tick relative to latexmath:[t_{\mathit{start}}]. latexmath:[T_{\mathit{shift}}] is provided differently for the different Clock types, and can be set with <<fmi3SetShiftDecimal>> or retrieved from the FMU with <<fmi3GetShiftDecimal>> as floating point value, or as rational number using <<fmi3SetShiftFraction>> or <<fmi3GetShiftFraction>>.
 
 |latexmath:[T_{\mathit{interval, i}}]
-|The time interval until the next Clock tick, provided differently for the different Clock types.
+a|The time interval until the next Clock tick, provided differently for the different Clock types.
 latexmath:[T_{\mathit{interval, i}}] can be retrieved either as a floating-point value using <<fmi3GetIntervalDecimal>>, or as a rational number using <<fmi3GetIntervalFraction>>.
 For some Clock types, the interval is provided by the importer, either as a floating-point value using <<fmi3SetIntervalDecimal>> or as a rational number using <<fmi3SetIntervalFraction>>.
-_[Note that even though <<fmi3GetInterval>> may be called at any event time for every time-based Clock, a new interval is not necessarily provided._
-_For instance, if <<fmi3GetInterval>> is called within a previously returned interval, an FMU returning <<fmi3IntervalUnchanged>> signals that the previously provided interval is still valid._
-_In Scheduled Execution, this means that the model partition must not be re-scheduled.]_
+
+NOTE: Note that even though <<fmi3GetInterval>> may be called at any event time for every time-based Clock, a new interval is not necessarily provided.
+For instance, if <<fmi3GetInterval>> is called within a previously returned interval, an FMU returning <<fmi3IntervalUnchanged>> signals that the previously provided interval is still valid.
+In Scheduled Execution, this means that the model partition must not be re-scheduled.
 
 |latexmath:[t_{\mathit{event}}]
 |The current event time in <<EventMode>>, or the current time in Scheduled Execution.
@@ -1116,66 +1117,69 @@ For a detailed explanation, refer to the definitions of <<fixed-periodic-clock,f
 
 |====
 
-_[Discussion of the combinations that are not allowed:_
+[NOTE]
+====
+Discussion of the combinations that are not allowed:
 
 .Combinations of time-based Clocks and qualifiers that are not allowed and why.
 [[table-not-allowed-qualifiers-for-time-based-clocks]]
 [cols="1,10", options="header"]
 |====
 |
-|_Explanation why this combination is not allowed_
+|Explanation why this combination is not allowed
 
-^|_(a)_
-|_The combination constant Clock and <<fmi3IntervalChanged>> is not valid, since the importer knows the interval and it cannot be changed by the FMU nor by the importer._
+^|(a)
+|The combination constant Clock and <<fmi3IntervalChanged>> is not valid, since the importer knows the interval and it cannot be changed by the FMU nor by the importer.
 
-^|_(b)_
-|_The combination fixed/tunable Clock with <<intervalDecimal,`intervalDecimal`>> specified and <<fmi3IntervalChanged>> does not make sense, since the interval is set by the importer and cannot be changed by the FMU._
+^|(b)
+|The combination fixed/tunable Clock with <<intervalDecimal,`intervalDecimal`>> specified and <<fmi3IntervalChanged>> does not make sense, since the interval is set by the importer and cannot be changed by the FMU.
 
-^|_(c)_
-|_fmi3IntervalNotYetKnown is only defined for countdown Clocks._
-_For all other Clocks an interval must be known or be retrievable by the importer at any time._
+^|(c)
+|fmi3IntervalNotYetKnown is only defined for countdown Clocks.
+For all other Clocks an interval must be known or be retrievable by the importer at any time.
 
-^|_(d)_
-|_The combination fixed Clock and <<fmi3IntervalChanged>> is not valid in states other than <<InitializationMode>>, since intervals of fixed Clocks cannot change in super state <<Initialized>>._
+^|(d)
+|The combination fixed Clock and <<fmi3IntervalChanged>> is not valid in states other than <<InitializationMode>>, since intervals of fixed Clocks cannot change in super state <<Initialized>>.
 
 |====
 
-_Discussion of the combinations that are allowed_:
+Discussion of the combinations that are allowed:
 
 .Combinations of time-based Clocks and qualifiers that are allowed and why.
 [[table-allowed-qualifiers-for-time-based-clocks]]
 [cols="1,10", options="header"]
 |====
 |
-|_Explanation of the allowed combinations_
+|Explanation of the allowed combinations
 
-^|_(1)_
-|_In <<InitializationMode>>, <<fmi3IntervalChanged>> signals that a new interval is provided that has not been known by the importer in advance, or that the interval of a previous call of <<fmi3GetInterval>> is overwritten._
+^|(1)
+|In <<InitializationMode>>, <<fmi3IntervalChanged>> signals that a new interval is provided that has not been known by the importer in advance, or that the interval of a previous call of <<fmi3GetInterval>> is overwritten.
 
-^|_(2)_
-|_For constant Clocks and for fixed Clocks in super state <<Initialized>>, <<fmi3IntervalUnchanged>> is the only qualifier that can be returned, since the interval is already known by the importer and cannot be changed by the FMU nor by the importer._
+^|(2)
+|For constant Clocks and for fixed Clocks in super state <<Initialized>>, <<fmi3IntervalUnchanged>> is the only qualifier that can be returned, since the interval is already known by the importer and cannot be changed by the FMU nor by the importer.
 
-^|_(3)_
-|_For fixed/tunable Clocks with <<intervalDecimal,`intervalDecimal`>> not specified and for aperiodic Clocks, <<fmi3IntervalUnchanged>> is returned when a previous call of <<fmi3GetInterval>> already returned an interval, which is still valid._
+^|(3)
+|For fixed/tunable Clocks with <<intervalDecimal,`intervalDecimal`>> not specified and for aperiodic Clocks, <<fmi3IntervalUnchanged>> is returned when a previous call of <<fmi3GetInterval>> already returned an interval, which is still valid.
 
-^|_(4)_
-|_For fixed/tunable Clocks with <<intervalDecimal,`intervalDecimal`>> specified, <<fmi3IntervalUnchanged>> is the only qualifier that can be returned, since the interval is set by the importer and cannot be changed by the FMU._
+^|(4)
+|For fixed/tunable Clocks with <<intervalDecimal,`intervalDecimal`>> specified, <<fmi3IntervalUnchanged>> is the only qualifier that can be returned, since the interval is set by the importer and cannot be changed by the FMU.
 
-^|_(5)_
-|_See <<fmi3IntervalNotYetKnown>>_.
+^|(5)
+|See <<fmi3IntervalNotYetKnown>>.
 
-^|_(6)_
-|_For tunable Clocks with <<intervalDecimal,`intervalDecimal`>> not specified, <<fmi3IntervalChanged>> is returned when the last interval known by the importer is no longer valid, because the interval has changed due to the change of tunable parameters._
-_In this case, the new interval until the next Clock tick is relative to the time of the current <<EventMode>> or <<ClockActivationMode>> in contrast to the general definition for a periodic Clock, where the interval specifies the time between consecutive ticks._
-_Subsequent Clock ticks follow the general interval definition for periodic Clocks until the tunable interval changes again._
+^|(6)
+|For tunable Clocks with <<intervalDecimal,`intervalDecimal`>> not specified, <<fmi3IntervalChanged>> is returned when the last interval known by the importer is no longer valid, because the interval has changed due to the change of tunable parameters.
+In this case, the new interval until the next Clock tick is relative to the time of the current <<EventMode>> or <<ClockActivationMode>> in contrast to the general definition for a periodic Clock, where the interval specifies the time between consecutive ticks.
+Subsequent Clock ticks follow the general interval definition for periodic Clocks until the tunable interval changes again.
 
-^|_(7)_
-|_In super state <<Initialized>>, for a changing Clock, <<fmi3IntervalChanged>> is returned if and only if the Clock has just ticked._
+^|(7)
+|In super state <<Initialized>>, for a changing Clock, <<fmi3IntervalChanged>> is returned if and only if the Clock has just ticked.
 
-^|_(8)_
-|_In <<EventMode>> and <<ClockUpdateMode>>, for a countdown Clock, <<fmi3IntervalChanged>> is returned if the last interval given to the importer is no longer valid (i.e., the Clock needs to be re-scheduled), or if the interval was not yet known to the FMU._
+^|(8)
+|In <<EventMode>> and <<ClockUpdateMode>>, for a countdown Clock, <<fmi3IntervalChanged>> is returned if the last interval given to the importer is no longer valid (i.e., the Clock needs to be re-scheduled), or if the interval was not yet known to the FMU.
 
 |====
+====
 
 [[fmi3GetIntervalFraction,`fmi3GetIntervalFraction`]]
 [source, C]
