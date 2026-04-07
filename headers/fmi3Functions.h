@@ -21,7 +21,7 @@ static link library. For FMUs compiled in a DLL/sharedObject, the "actual" funct
 names are used and "FMI3_FUNCTION_PREFIX" must not be defined.
 
 Copyright (C) 2008-2011 MODELISAR consortium,
-              2012-2025 Modelica Association Project "FMI"
+              2012-2026 Modelica Association Project "FMI"
               All rights reserved.
 
 This file is licensed by the copyright holders under the 2-Clause BSD License
@@ -215,6 +215,11 @@ Functions for Co-Simulation
 #define fmi3EnterStepMode            fmi3FullName(fmi3EnterStepMode)
 #define fmi3GetOutputDerivatives     fmi3FullName(fmi3GetOutputDerivatives)
 #define fmi3DoStep                   fmi3FullName(fmi3DoStep)
+
+/***************************************************
+Functions for Scheduled Execution
+****************************************************/
+
 #define fmi3ActivateModelPartition   fmi3FullName(fmi3ActivateModelPartition)
 
 /***************************************************
