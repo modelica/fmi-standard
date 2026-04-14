@@ -303,12 +303,13 @@ Example:
 
 ```
 [[fmi3SetIntervalDecimal,`fmi3SetIntervalDecimal`]]
-```c
+[source, C]
+----
 typedef fmi3Status fmi3SetIntervalDecimalTYPE(fmi3Instance instance,
                                               const fmi3ValueReference valueReferences[],
                                               size_t nValueReferences,
                                               const fmi3Float64 interval[]);
-```
+----
 
 A Clock interval is set by the environment for the current time instant by the function <<fmi3SetIntervalDecimal>>.
 ```
@@ -325,7 +326,7 @@ A Clock interval is set by the environment for the current time instant by the f
 
 - Segments of C or XML are cited exactly as they appear in the code.  
   Example:  
-  > The <<fmiModelDescription>> of a Model Exchange FMU must contain a `<ModelExchange>` element.
+  > The `<fmiModelDescription>` of a Model Exchange FMU must contain a `<ModelExchange>` element.
 
 - Headings are to be capitalized with the following rules:
   - Capitalize the first and last word of the title or heading.
@@ -361,7 +362,7 @@ The function <<fmi3DoStep>> may only be called in <<StepMode>>.
 
 will be rendered as
 
-> The function <<fmi3DoStep>> may only be called in <<StepMode>>.
+> The function fmi3DoStep may only be called in StepMode`.
 
 ### Non-normative Paragraphs
 
