@@ -390,5 +390,6 @@ The figures in the document should be provided as SVGs (Scalable Vector Graphics
 - select `File > Export as > SVG...`
 - check `Transparent Background`
 - uncheck `Include a copy of my diagram`
+- select `Appearance: Light`
 
 to export the SVG that can be embedded into the AsciiDoc document. Make sure you also save the original file using `File > Save as...` with the same name as the SVG (file extension `.xml`) and commit the files together.
