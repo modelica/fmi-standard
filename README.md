@@ -32,7 +32,7 @@ The following [layered standards](https://github.com/modelica/fmi-standard/blob/
 - [FMI-LS-BUS](https://github.com/modelica/fmi-ls-bus) &mdash; FMI Layered Standard for Network Communication (released)
 - [FMI-LS-STRUCT](https://github.com/modelica/fmi-ls-struct) &mdash; FMI Layered Standard for Structured Data
 - [FMI-LS-REF](https://github.com/modelica/fmi-ls-ref) &mdash; FMI Layered Standard References
-- [FMI-LS-REF](https://github.com/modelica/fmi-ls-dae) &mdash; FMI Layered Standard for DAE
+- [FMI-LS-DAE](https://github.com/modelica/fmi-ls-dae) &mdash; FMI Layered Standard for DAE
 
 ## Copyright and License
 
