@@ -7,9 +7,9 @@
 # Functional Mock-up Interface
 
 The Functional Mock-up Interface (FMI) is a free standard that defines an interface to exchange dynamic models using a combination of XML files, binaries and C code.
-It's supported by [270+ tools](https://fmi-standard.org/tools/) and maintained as a [Modelica Association Project](https://modelica.org/association/).
+It's supported by [280+ tools](https://fmi-standard.org/tools/) and maintained as a [Modelica Association Project](https://modelica.org/association/).
 
-Releases and the [latest development version](https://fmi-standard.org/docs/main/) of the specification are available on the [FMI website](https://fmi-standard.org/).
+Releases are available on the [FMI website](https://fmi-standard.org/) and the latest development version of the specification is available [here](https://fmi-standard.org/docs/main/).
 
 ## Repository Structure
 
@@ -31,7 +31,8 @@ The following [layered standards](https://github.com/modelica/fmi-standard/blob/
 - [FMI-LS-XCP](https://github.com/modelica/fmi-ls-xcp) &mdash; FMI Layered Standard for XCP (released)
 - [FMI-LS-BUS](https://github.com/modelica/fmi-ls-bus) &mdash; FMI Layered Standard for Network Communication (released)
 - [FMI-LS-STRUCT](https://github.com/modelica/fmi-ls-struct) &mdash; FMI Layered Standard for Structured Data
-- [FMI-LS-REF](https://github.com/modelica/fmi-ls-ref) &mdash; = FMI Layered Standard References 
+- [FMI-LS-REF](https://github.com/modelica/fmi-ls-ref) &mdash; FMI Layered Standard References
+- [FMI-LS-DAE](https://github.com/modelica/fmi-ls-dae) &mdash; FMI Layered Standard for DAE
 
 ## Copyright and License
 

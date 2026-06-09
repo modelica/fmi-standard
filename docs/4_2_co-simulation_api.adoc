@@ -60,7 +60,10 @@ at time latexmath:[t].
 Function <<get-and-set-variable-values,`fmi3Get{VariableType}`>>::
 returns values for all variables at latexmath:[t].
 <<get-and-set-variable-values,`fmi3Get{VariableType}`>> does not trigger an evaluation of latexmath:[\mathbf{f}_{\mathit{doStep}}].
-Therefore, <<algebraic-loops,algebraic loops>> at communication points cannot be handled by an appropriate sequence of <<get-and-set-variable-values,`fmi3Get{VariableType}`>> and <<get-and-set-variable-values,`fmi3Set{VariableType}`>> calls _[contrary to <<InitializationMode>>, <<EventMode>> and <<ContinuousTimeMode>>]_.
+Therefore, <<algebraic-loops,algebraic loops>> at communication points cannot be handled by an appropriate sequence of <<get-and-set-variable-values,`fmi3Get{VariableType}`>> and <<get-and-set-variable-values,`fmi3Set{VariableType}`>> calls.
++
+NOTE: In <<InitializationMode>>, <<EventMode>>, and <<ContinuousTimeMode>>, algebraic loops can be handled through such call sequences.
++
 Repeating a communication step requires to reset the FMU state to the previous communication point with <<fmi3SetFMUState>> and repeating the <<fmi3DoStep>> with new input values.
 +
 Calling <<get-and-set-variable-values,`fmi3Get{VariableType}`>> is not allowed after <<get-and-set-variable-values,`fmi3Set{VariableType}`>> without calling <<fmi3DoStep>> in between.
@@ -117,7 +120,7 @@ Reasons for <<earlyReturn, `earlyReturn = fmi3True`>> are
 ** expressed by the return arguments <<eventHandlingNeeded>> or <<terminateSimulationDS>> of <<fmi3DoStep>>, or
 ** the FMU's reaction to the importers request for <<earlyReturn>> by the return argument <<earlyReturnRequested, `earlyReturnRequested = fmi3True`>> of <<fmi3IntermediateUpdateCallback>>, or
 ** the FMU's request for a communication point at <<lastSuccessfulTime>> for any other reason.
-+ 
++
 <<earlyReturn,`earlyReturn = fmi3True`>> must not be used to signal that the requested step was not completed due to an error.
 Instead, the function must return with an error code (<<fmi3Error>> or <<fmi3Fatal>>).
 Alternatively, the function can return with <<fmi3Discard>>, if the FMU is in the same state as before the call, i.e. the output argument values are undefined, but the computation may continue.
@@ -163,6 +166,12 @@ Function <<fmi3EnterConfigurationMode>>::
 <<fmi3EnterConfigurationMode>> changes state to <<ReconfigurationMode>>.
 <<fmi3EnterConfigurationMode>> must not be called if the FMU contains no <<tunable>> <<structuralParameter,`structural parameters`>> (i.e. with <<causality>>= <<structuralParameter>> and <<variability>> = <<tunable>>).
 
+Function <<fmi3GetNumberOfVariableDependencies>>::
+See <<fmi3GetNumberOfVariableDependencies>>.
+
+Function <<fmi3GetVariableDependencies>>::
+See <<fmi3GetVariableDependencies>>.
+
 ==== State: Intermediate Update Mode [[IntermediateUpdateMode,*Intermediate Update Mode*]]
 
 <<IntermediateUpdateMode>> can only be entered by the FMU itself using the callback function <<fmi3IntermediateUpdateCallback>>.
@@ -206,7 +215,7 @@ include::../headers/fmi3FunctionTypes.h[tag=CallbackIntermediateUpdate]
 ----
 
 [[intermediateUpdateTime,`intermediateUpdateTime`]]
-* <<intermediateUpdateTime>> is the internal value of the <<independent>> variable _[typically simulation time]_ of the FMU at which the callback has been called.
+* <<intermediateUpdateTime>> is the internal value of the <<independent>> variable of the FMU at which the callback has been called.
 <<intermediateUpdateTime>> is restricted by the arguments of <<fmi3DoStep>> as follows: +
 <<currentCommunicationPoint>> latexmath:[\leq] <<intermediateUpdateTime>> latexmath:[\leq] (<<currentCommunicationPoint>> + <<communicationStepSize>>). +
 The FMU must not call the callback function <<fmi3IntermediateUpdateCallback>> with an <<intermediateUpdateTime>> that is smaller than the <<intermediateUpdateTime>> given in a previous call of <<fmi3IntermediateUpdateCallback>> with `intermediateStepFinished = fmi3True`. +
@@ -221,7 +230,10 @@ If the importer does not provide a new value for any of the variables contained 
 The set of variables for which the importer may get values is defined by the <<requiredIntermediateVariables>> argument of <<fmi3InstantiateCoSimulation>>.
 
 [[intermediateStepFinished,`intermediateStepFinished`]]
-* If <<intermediateStepFinished, `intermediateStepFinished = fmi3False`>>, the intermediate output values of the FMU that the importer inquires with <<get-and-set-variable-values,`fmi3Get{VariableType}`>> resulting from tentative internal solver states and may still change for the same <<intermediateUpdateTime>> _[e.g., if the solver deems the tentative state to cause an unacceptable approximation error, it may go back in time and try to re-estimate the state using smaller internal time steps]_. +
+* If <<intermediateStepFinished, `intermediateStepFinished = fmi3False`>>, the intermediate output values of the FMU that the importer inquires with <<get-and-set-variable-values,`fmi3Get{VariableType}`>> resulting from tentative internal solver states and may still change for the same <<intermediateUpdateTime>>.
++
+NOTE: E.g., if the solver deems the tentative state to cause an unacceptable approximation error, it may go back in time and try to re-estimate the state using smaller internal time steps.
++
 If <<intermediateStepFinished, `intermediateStepFinished = fmi3True`>>, intermediate output values inquired by the importer with <<get-and-set-variable-values,`fmi3Get{VariableType}`>> correspond to accepted internal solver steps.
 
 [[canReturnEarly,`canReturnEarly`]]
@@ -273,3 +285,9 @@ Intermediate input variables are input variables that are marked with attribute 
 There is a defined order of calling these functions: first all <<get-and-set-variable-values,`fmi3Get{VariableType}`>> calls must be performed, then <<get-and-set-variable-values,`fmi3Set{VariableType}`>> may be called.
 
 NOTE: This is analogous to the calling sequence of <<get-and-set-variable-values,`fmi3Get{VariableType}`>> and <<get-and-set-variable-values,`fmi3Set{VariableType}`>> calls in <<StepMode>>.
+
+Function <<fmi3GetNumberOfVariableDependencies>>::
+See <<fmi3GetNumberOfVariableDependencies>>.
+
+Function <<fmi3GetVariableDependencies>>::
+See <<fmi3GetVariableDependencies>>.
