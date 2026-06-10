@@ -70,7 +70,7 @@ typedef struct {
 
     fmi3IntervalQualifier CountdownClockQualifier; // fmi3IntervalNotYetKnown
     fmi3Float64 CountdownClockInterval; // 0.0
-    fmi3Boolean OutputClockTicked; // fmi3ClockInactive
+    fmi3Boolean OutputClockActive; // fmi3ClockInactive
 
 } ModelInstance;
 
@@ -109,14 +109,14 @@ void CallbackClockUpdate(fmi3InstanceEnvironment instanceEnvironment) {
     fmi3Float64 interval[] = { 0.0 };
     fmi3IntervalQualifier intervalQualifier[] = { fmi3IntervalNotYetKnown };
 
-    // ask FMU if countdown clock AperiodicClock is about to tick
+    // ask FMU if countdown clock AperiodicClock is about to be activated
     const fmi3ValueReference aperiodicClockReferences[] = { 6 };
     fmi3GetIntervalDecimal(fmu, aperiodicClockReferences, 1, interval, intervalQualifier);
     if (intervalQualifier[0] == fmi3IntervalChanged) {
         // schedule task for AperiodicClock with a delay
         ScheduleAperiodicTask(interval[0]);
     }
-    // ask FMU if OutputClock has ticked
+    // ask FMU if OutputClock is active
     fmi3ValueReference outputClockReferences[] = { 7 };
     fmi3Boolean clockActivationStates[] = { fmi3ClockInactive };
     fmi3GetClock(fmu, outputClockReferences, 1, clockActivationStates);
@@ -135,15 +135,15 @@ void activateModelPartition10ms(fmi3Instance instance, fmi3Float64 activationTim
     if (conditionForCountdownClockMet) {
         inst->CountdownClockQualifier = fmi3IntervalChanged;
         inst->CountdownClockInterval = 0.0;
-        // inform the simulation algorithm that countdown clock AperiodicClock is about to tick
+        // inform the simulation algorithm that countdown clock AperiodicClock is about to be activated
         inst->callbackClockUpdate(inst->instanceEnvironment);
     }
 
     fmi3Boolean conditionForOutputClockMet = (inst->AIn2 > 42.0);
     if (conditionForOutputClockMet) {
-        // OutputClock ticks
-        inst->OutputClockTicked = fmi3ClockActive;
-        // inform the simulation algorithm that OutputClock has ticked
+        // OutputClock becomes active
+        inst->OutputClockActive = fmi3ClockActive;
+        // inform the simulation algorithm that OutputClock has been activated
         inst->callbackClockUpdate(inst->instanceEnvironment);
     }
     inst->AOut = inst->AIn1 + inst->AIn2;
@@ -222,8 +222,8 @@ fmi3Status fmi3GetClock(fmi3Instance instance,
         switch (valueReferences[i]) {
         case 7:    // OutputClock
             env->lockPreemption(); // Optional: Preventing preemption is actually not needed here.
-            values[i] = inst->OutputClockTicked;
-            inst->OutputClockTicked = fmi3ClockInactive;
+            values[i] = inst->OutputClockActive;
+            inst->OutputClockActive = fmi3ClockInactive;
             env->unlockPreemption();
             break;
         // ...
