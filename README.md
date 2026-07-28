@@ -33,6 +33,7 @@ The following [layered standards](https://github.com/modelica/fmi-standard/blob/
 - [FMI-LS-STRUCT](https://github.com/modelica/fmi-ls-struct) &mdash; FMI Layered Standard for Structured Data
 - [FMI-LS-REF](https://github.com/modelica/fmi-ls-ref) &mdash; FMI Layered Standard References
 - [FMI-LS-DAE](https://github.com/modelica/fmi-ls-dae) &mdash; FMI Layered Standard for DAE
+- [FMI-LS-WASM](https://github.com/modelica/fmi-ls-wasm) &mdash; FMI Layered Standard for Web Assembly
 
 ## Copyright and License
 

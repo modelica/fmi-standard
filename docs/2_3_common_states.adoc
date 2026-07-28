@@ -583,9 +583,10 @@ a|
 |<<fmi3SetClockEM>>
 
 a|
-* If <<providesEvaluateDiscreteStates>> is `true`, then execute state transition function of the model partitions +
+* <<fmi3EvaluateDiscreteStates>> may only be called if <<providesEvaluateDiscreteStates>> is `true`, and the FMU cannot rely on it being called.
+If not called, latexmath:[\mathbf{f}_{\mathit{disc}}] is evaluated implicitly during <<fmi3UpdateDiscreteStates>>.
+If called, it evaluates the state transition function of the model partitions +
 latexmath:[(\mathbf{x}_{d}) := \mathbf{f}_{\mathit{disc}}({}^\bullet\mathbf{x}_{c+d}, \mathbf{u}_{c+d}, \mathbf{p}, {}^\bullet\mathbf{b}, t)]
-* else function is ignored.
 * For all active Clocks latexmath:[\mathbf{k}], the <<clocked-variable,clocked variables>> latexmath:[\mathbf{v}_{\mathbf{k}}] are part of the set of discrete variables latexmath:[\mathbf{v}_d] computed by latexmath:[\mathbf{f}_{\mathit{disc}}].
 |<<fmi3EvaluateDiscreteStates>>
 
@@ -644,10 +645,6 @@ When a Clock latexmath:[k] is deactivated, the FMU must
 * reset all clocked states of this Clock to the values computed during the last <<fmi3UpdateDiscreteStates>> when this Clock was active (latexmath:[{}^\bullet\mathbf{v}_{\mathit{k}}]); and, as a result:
 * deactivate all Clocks that were activated as a result of latexmath:[k]'s activation during the current super-dense time instant.
 
-NOTE: Rationale: a triggered <<outputClock,output Clock>> latexmath:[c] may depend on some variable latexmath:[v] that is involved in an algebraic loop.
-As part of the iterations to solve the algebraic loop, latexmath:[v] acquires a value that activates the Clock.
-If the final (or some intermediate) value of latexmath:[v] no longer activates the Clock, then this Clock must be deactivated by the Importer during the same super-dense time instant.
-
 The importer can set a Clock to `fmi3ClockInactive` only if the Clock has the attribute <<canBeDeactivated,`canBeDeactivated = true`>>.
 Any Clock active during <<fmi3UpdateDiscreteStates>> must be deactivated by the FMU itself. +
 <<periodic-clock,Periodic Clocks>> must not be active for more than one call of <<fmi3UpdateDiscreteStates>> per <<EventMode>>.
@@ -655,15 +652,17 @@ This restriction does not apply to <<triggered,triggered Clocks>>, nor does it a
 
 NOTE: The event mode may consist of several super-dense time instants.
 Each super-dense time instant represents a distinct event occurring at the same simulation time.
-If any event originating from the continuous time mode (for a ME FMU) resp. step mode (for a CS FMU) is present, its event iteration must be performed during the first super-dense time instant.
-Each super-dense time instant must conclude with a call to <<fmi3UpdateDiscreteStates>>.
+Each super-dense time instant concludes with a call to <<fmi3UpdateDiscreteStates>>.
 Super-dense time instants that handle <<time-based-clock, time-based Clocks>> are initiated by setting the corresponding Clocks using <<fmi3SetClock>>.
 No further constraints are imposed on the activation of <<time-based-clock, time-based Clocks>> (for example, activation during the first instant of a super-dense time, the order of handling multiple clocks, or handling multiple Clocks within the same super-dense time instant).
-If the semantics of certain Clocks require specific handling—such as simultaneous activation within the same super-dense time instant—this must be ensured by the importer.
+If the semantics of certain Clocks require specific handling — such as simultaneous activation within the same super-dense time instant — this should be ensured by the importer.
 --
 
 Function <<fmi3GetClock>>::
 is used to inquire the status of <<Clock,Clocks>>.
+
+NOTE: The importer calls this function for triggered output Clocks.
+For connected FMUs, these might depend on an algebraic loop and might change their value during event iteration, so it might be necessary to call this function several times.
 
 Functions <<fmi3GetIntervalDecimal>> & <<fmi3GetIntervalFraction>>::
 For <<inputClock,`input Clocks`>> it is allowed to call these functions to query the next activation interval. +
@@ -694,8 +693,10 @@ Function <<fmi3GetNumberOfEventIndicators>>::
 Not allowed in Co-Simulation and Scheduled Execution.
 
 Function <<fmi3EvaluateDiscreteStates>>::
-This function is called to trigger the evaluation of latexmath:[\mathbf{f}_{\mathit{disc}}] to compute the current values of discrete states from previous values.
-The FMU signals the support of <<fmi3EvaluateDiscreteStates>> via the capability flag <<providesEvaluateDiscreteStates>>.
+This function may only be called if <<providesEvaluateDiscreteStates>> is `true`.
+It evaluates latexmath:[\mathbf{f}_{\mathit{disc}}], computing the current discrete states.
+Calling this function is optional and the FMU must not rely on it being called.
+If this call is omitted in a super dense time instant, latexmath:[\mathbf{f}_{\mathit{disc}}] is evaluated implicitly by <<fmi3UpdateDiscreteStates>>.
 +
 [[fmi3EvaluateDiscreteStates,`fmi3EvaluateDiscreteStates`]]
 [source, C]
