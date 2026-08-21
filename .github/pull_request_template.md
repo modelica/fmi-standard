@@ -9,5 +9,6 @@ Checklist
 * [ ] [Built the specification](https://github.com/modelica/fmi-standard/blob/master/CONTRIBUTING.adoc#building-the-specification-document).
 * [ ] [Re-generated schema figures](https://github.com/modelica/fmi-standard/blob/master/CONTRIBUTING.adoc#changing-the-xsd-schemas).
 * [ ] [Linted the documents](https://github.com/modelica/fmi-standard/blob/master/CONTRIBUTING.adoc#building-the-specification-document).
+* [ ] My employer has signed the [Contributor License Agreement (CLA) of Modelica Association](https://github.com/modelica/ModelicaAssociationCLA).
 
 Add your [meaningful description](https://github.com/modelica/fmi-standard/blob/master/CONTRIBUTING.adoc#bug-reports) here and reference any related issues with `#<issue>`.
