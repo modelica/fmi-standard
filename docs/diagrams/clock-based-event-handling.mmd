@@ -1,0 +1,74 @@
+sequenceDiagram
+    autonumber
+    participant I as Importer
+    participant F1 as FMU #1
+    participant F2 as other FMU #2 (… #N)
+
+    Note over I, F2: --- STEP MODE ---
+    par Set inputs and step for all FMUs
+        I->>F1: fmi*SetReal/Int/Bool/...<br/>(inputs)
+        I->>F2: fmi*SetReal/Int/Bool/...<br/>(inputs)
+
+        I->>F1: fmi*DoStep(time, next_step)
+        F1-->>I: status + need_event_update
+
+        I->>F2: fmi*DoStep(time, next_step)
+        F2-->>I: status + need_event_update
+    end
+
+    par Get outputs for all FMUs
+        I->>F1: fmi*GetReal/Int/Bool/...<br/>(outputs)
+        I->>F2: fmi*GetReal/Int/Bool/...<br/>(outputs)
+    end
+
+    I->>I: time += next_step
+
+    Note over I, F2: --- EVENT MODE ---
+    par Enter event mode for all FMUs
+        I->>F1: fmi*EnterEventMode()
+        I->>F2: fmi*EnterEventMode()
+    end
+
+    loop Do While need_event_update
+
+        par Determine if/which triggered output clocks have ticked
+            I->>F1: fmi3GetClock(vr) for triggered output clocks
+            I->>F2: fmi3GetClock(vr) for triggered output clocks
+        end
+
+        par Activate clocks that should be activated
+            I->>F1: fmi3SetClock(vr, true) for importer-activated clocks
+            I->>F2: fmi3SetClock(vr, true) for importer-activated clocks
+        end
+    
+        par Set clocked inputs for all active clocks across FMUs
+            I->>F1: fmi*Set… (clocked inputs)
+            I->>F2: fmi*Set… (clocked inputs)
+        end
+    
+        par Get clocked outputs for all active clocks across FMUs
+            I->>F1: fmi*Get… (clocked outputs)
+            I->>F2: fmi*Get… (clocked outputs)
+        end
+
+        par Update discrete states for all FMUs
+            I->>F1: fmi*UpdateDiscreteStates()
+           F1-->>I: nextEventTime, need_event_update
+ 
+            I->>F2: fmi*UpdateDiscreteStates()
+            F2-->>I: nextEventTime, need_event_update
+        end
+
+    end
+
+    par Get next activation times for time-based clocks
+        I->>F1: fmi3GetIntervalDecimal()
+        I->>F2: fmi3GetIntervalDecimal()
+    end
+        I->>I: compute next_step
+
+    par Enter step mode for all FMUs
+        I->>F1: fmi*EnterStepMode()
+        I->>F2: fmi*EnterStepMode()
+    end
+    
