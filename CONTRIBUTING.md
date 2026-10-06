@@ -87,7 +87,7 @@ A bug is a _demonstrable problem_ that is caused by the code in the repository. 
 **Guidelines for bug reports:**
 
 1. **Use the GitHub issue search** -- check if the issue has already been reported.
-2. **Check if the issue has been fixed** -- try to reproduce it using the latest `master` or development branch in the repository.
+2. **Check if the issue has been fixed** -- try to reproduce it using the latest `main` or development branch in the repository.
 3. **Isolate the problem** -- create a reduced test case or example.
 
 A good bug report shouldn't leave others needing to chase you up for more information. Please try to be as detailed as possible in your report. What is your environment? What steps will reproduce the issue? What browser(s) and OS experience the problem? What would you expect to be the outcome? All these details will help people to fix any potential bugs.
@@ -177,8 +177,8 @@ Please adhere to the coding conventions used throughout a project (indentation, 
 2. If you cloned a while ago, get the latest changes from upstream:
 
    ```sh
-   git checkout master
-   git pull upstream master
+   git checkout main
+   git pull upstream main
    ```
 
 3. Create a new topic branch (off the main project development branch) to contain your feature, change, or fix:
@@ -192,7 +192,7 @@ Please adhere to the coding conventions used throughout a project (indentation, 
 5. Locally merge (or rebase) the upstream development branch into your topic branch:
 
    ```sh
-   git pull [--rebase] upstream master
+   git pull [--rebase] upstream main
    ```
 
 6. Push your topic branch up to your fork:
@@ -209,11 +209,11 @@ Please adhere to the coding conventions used throughout a project (indentation, 
 
 We use a branching scheme with _support_ branches that allows us to maintain multiple major and minor releases concurrently.
 
-- **Main development branch `master`:**  
+- **Main development branch `main`:**  
   Holds the latest development version. This is where the _next_ version of the standard is developed.
 
 - **Support branches `support/v<major>{.<minor>}.x`:**  
-  Upon every major release the latest version of `master` is tagged `v<major>.0`. The maintenance of this release is performed on a support branch `support/v<major>.x` starting at this tag.  
+  Upon every major release the latest version of `main` is tagged `v<major>.0`. The maintenance of this release is performed on a support branch `support/v<major>.x` starting at this tag.  
   Examples: `support/v3.x`, `support/v2.0.x`
 
 - **Tags `v<major>.<minor>{.<patch>}{-{alpha|beta|rc}.<number>}`:**  
@@ -221,7 +221,7 @@ We use a branching scheme with _support_ branches that allows us to maintain mul
   Examples: `v3.0-alpha.3`, `v3.0-beta.2`, `v3.0-rc.1`, `v3.0`
 
 ```
-master
+main
   |
   +--->+ branch "support/v2.0.x", tag "v2.0.1"
   |    |
@@ -249,7 +249,7 @@ Follow these steps to create a (pre-)release:
 
 - Update the FMI version in the schema, XML examples, and header files
 - Download the `fmi-standard.zip` artifact from [GitHub Actions](https://github.com/modelica/fmi-standard/actions) and check for completeness
-- Create a tag on `master` (e.g. `v3.0-rc.1`) and push it together with a commit to trigger the CI
+- Create a tag on `main` (e.g. `v3.0-rc.1`) and push it together with a commit to trigger the CI
 - Create a new [release](https://github.com/modelica/fmi-standard/releases) on GitHub for the tag
   - Check `This a pre-release` if it's not the final release
   - Add a description of the changes
