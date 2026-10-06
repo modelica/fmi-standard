@@ -14,7 +14,7 @@ Have you searched the existing issues for related proposals?
 Please comment on these issues instead of openening a new one.
 
 Have you read the Contribution Guide?
-By filing an Issue, you are expected to comply with it: https://github.com/modelica/fmi-standard/blob/master/CONTRIBUTING.adoc
+By filing an Issue, you are expected to comply with it: https://github.com/modelica/fmi-standard/blob/main/CONTRIBUTING.adoc
 
 ---
 
