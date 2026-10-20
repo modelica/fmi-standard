@@ -56,12 +56,9 @@ The generated `docs/index.html` can be viewed with any modern web browser.
 
 ## Validating the Files
 
-To validate the files, run the following Python scripts in the root of the repository:
-
-```sh
-python .circleci/lint_docs.py
-python .circleci/validate_xml.py
-```
+The [GitHub Actions workflow](.github/workflows/build-spec.yml) validates every push and pull request automatically.
+It checks for trailing spaces, builds the code snippets, generates the schema figures, and builds the specification (failing on any Asciidoctor message).
+No manual validation steps are required, but the results of the checks must be green before a pull request can be merged.
 
 ## Generating the XSD Schema Figures
 
