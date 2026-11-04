@@ -18,7 +18,7 @@ The FMU itself does not implement any services to support this.
  ** <<preemption-support,`fmi3LockPreemptionCallback`>>
  ** <<preemption-support,`fmi3UnlockPreemptionCallback`>>
 
-* The following callback functions lead to well-defined states and may call FMI functions according to their respective state definitions:
+* The following callback functions lead to well-defined modes and may call FMI functions according to their respective mode definitions:
  ** <<intermediateUpdate,`fmi3IntermediateUpdateCallback`>>
  ** <<fmi3ClockUpdateCallback>>
 
@@ -260,7 +260,7 @@ For production environments warnings should be treated like errors unless they c
 
 [[fmi3Discard,`fmi3Discard`]]
 `fmi3Discard`::
-The call was not successful and the FMU is in the same state as before the call.
+The call was not successful and the FMU is in the same mode as before the call.
 The output argument values are undefined, but the computation may continue.
 Function <<logMessage>> should be called by the FMU with further information before returning this status, respecting the current logging settings.
 Advanced importers may try alternative approaches to continue the simulation by calling the function with different arguments or calling another function - except in FMI for Scheduled Execution where repeating failed function calls is not allowed.
@@ -281,7 +281,7 @@ The output argument values are undefined and the simulation must not be continue
 Function <<logMessage>> must be called by the FMU with further information before returning this status, respecting the current logging settings,
 and it should be called regardless of the current logging settings, unless the `logMessage` callback function pointer was provided as a `NULL` pointer.
 If a function returns <<fmi3Error>>, it is possible to restore a previously retrieved FMU state by calling <<fmi3SetFMUState>> or to reset the instance by calling <<fmi3Reset>>.
-When detecting illegal arguments or a function call not allowed in the current state according to the respective state machine, the FMU must return <<fmi3Error>>.
+When detecting illegal arguments or a function call not allowed in the current mode according to the respective state machine, the FMU must return <<fmi3Error>>.
 Other instances of this FMU are not affected by the error.
 +
 NOTE: For example, when setting a constant with a call to <<get-and-set-variable-values,`fmi3Set{VariableType}`>>, then the function must return with an error (<<fmi3Error,`fmi3Status = fmi3Error`>>).
@@ -412,8 +412,8 @@ If an API function takes multiple value references, the serialized variables are
 
 ===== Getting and Setting Variable Values [[get-and-set-variable-values]]
 
-Restrictions for setting and getting of variables with certain types, causalities and variabilities are defined in the state machine and state descriptions (see <<common-state-machine>> for common states, <<state-machine-model-exchange>> for Model Exchange, <<state-machine-co-simulation>> for Co-Simulation, and <<state-machine-scheduled-execution>> for Scheduled Execution).
-In addition to those state-specific restrictions, setting and getting of <<clocked-variable,clocked variables>> is only allowed during <<EventMode>> when their respective Clocks are active, and during <<InitializationMode>> irrespective of Clock activation status.
+Restrictions for setting and getting of variables with certain types, causalities and variabilities are defined in the state machine and mode descriptions (see <<common-state-machine>> for common modes, <<state-machine-model-exchange>> for Model Exchange, <<state-machine-co-simulation>> for Co-Simulation, and <<state-machine-scheduled-execution>> for Scheduled Execution).
+In addition to those mode-specific restrictions, setting and getting of <<clocked-variable,clocked variables>> is only allowed during <<EventMode>> when their respective Clocks are active, and during <<InitializationMode>> irrespective of Clock activation status.
 
 The variable <<ModelVariables,type>> defined in the <<modelDescription.xml>> determines the function <<get-and-set-variable-values,`fmi3Get/Set{VariableType}`>> (see also <<VariableType,`{VariableType}`>> and <<VariableTypeExclClock,`{VariableTypeExclClock}`>>) that must be used for accessing the respective variable values.
 To set or inquire variables of type <<figure-schema-Enumeration,`Enumeration`>>, `fmi3SetInt64` and `fmi3GetInt64` must be used. +
@@ -1171,7 +1171,7 @@ Discussion of the combinations that are not allowed:
 For all other Clocks an interval must be known or be retrievable by the importer at any time.
 
 ^|(d)
-|The combination fixed Clock and <<fmi3IntervalChanged>> is not valid in states other than <<InitializationMode>>, since intervals of fixed Clocks cannot change in super state <<Initialized>>.
+|The combination fixed Clock and <<fmi3IntervalChanged>> is not valid in modes other than <<InitializationMode>>, since intervals of fixed Clocks cannot change in super mode <<Initialized>>.
 
 |====
 
@@ -1188,7 +1188,7 @@ Discussion of the combinations that are allowed:
 |In <<InitializationMode>>, <<fmi3IntervalChanged>> signals that a new interval is provided that has not been known by the importer in advance, or that the interval of a previous call of <<fmi3GetInterval>> is overwritten.
 
 ^|(2)
-|For constant Clocks and for fixed Clocks in super state <<Initialized>>, <<fmi3IntervalUnchanged>> is the only qualifier that can be returned, since the interval is already known by the importer and cannot be changed by the FMU nor by the importer.
+|For constant Clocks and for fixed Clocks in super mode <<Initialized>>, <<fmi3IntervalUnchanged>> is the only qualifier that can be returned, since the interval is already known by the importer and cannot be changed by the FMU nor by the importer.
 
 ^|(3)
 |For fixed/tunable Clocks with <<intervalDecimal,`intervalDecimal`>> not specified and for aperiodic Clocks, <<fmi3IntervalUnchanged>> is returned when a previous call of <<fmi3GetInterval>> already returned an interval, which is still valid.
@@ -1205,7 +1205,7 @@ In this case, the new interval until the next Clock activation is relative to th
 Subsequent Clock activations follow the general interval definition for periodic Clocks until the tunable interval changes again.
 
 ^|(7)
-|In super state <<Initialized>>, for a changing Clock, <<fmi3IntervalChanged>> is returned if and only if the Clock has just been activated.
+|In super mode <<Initialized>>, for a changing Clock, <<fmi3IntervalChanged>> is returned if and only if the Clock has just been activated.
 
 ^|(8)
 |In <<EventMode>> and <<ClockUpdateMode>>, for a countdown Clock, <<fmi3IntervalChanged>> is returned if the last interval given to the importer is no longer valid (i.e., the Clock needs to be re-scheduled), or if the interval was not yet known to the FMU.
@@ -1350,7 +1350,7 @@ For example,
 
 Because specific set functions exist (<<get-and-set-variable-values,`fmi3Set{VariableType}`>>, <<fmi3SetTime>>, <<fmi3SetContinuousStates>>), caching algorithms can be applied to reuse already computed values.
 
-In all tables describing the mathematical model of a state (e.g. <<table-math-model-exchange,ContinuousTimeMode>>), for notational convenience one function (e.g. latexmath:[\mathbf{f}_{\mathit{cont}}]) is defined to compute all outputs from all input arguments.
+In all tables describing the mathematical model of a mode (e.g. <<table-math-model-exchange,ContinuousTimeMode>>), for notational convenience one function (e.g. latexmath:[\mathbf{f}_{\mathit{cont}}]) is defined to compute all outputs from all input arguments.
 However, in an efficiently implemented FMU, computation of each output may be triggered by its specific get function.
 Additionally, the outputs may be a function of a subset of the input arguments, as defined in the <<ModelStructure>>.
 
@@ -1426,9 +1426,9 @@ Partial derivatives can be used:
 To avoid expensive numeric approximations of these derivatives, FMI offers dedicated functions to retrieve partial derivatives for variables of an FMU.
 For Model Exchange, this means computing the partial derivatives at any time instant, whereas for Co-Simulation, this means computing the partial derivatives at a communication point.
 
-An FMU has different states and in every state an FMU might be described by different equations and different unknowns.
+An FMU has different modes and in every mode an FMU might be described by different equations and different unknowns.
 The precise definitions are given in the mathematical descriptions of Model Exchange (<<state-machine-model-exchange>>), Co-Simulation (<<state-machine-co-simulation>>), and Scheduled Execution (<<state-machine-scheduled-execution>>).
-In every state, the general form of the FMU equations is:
+In every mode, the general form of the FMU equations is:
 
 [latexmath]
 ++++
@@ -1437,7 +1437,7 @@ In every state, the general form of the FMU equations is:
 
 where
 
-* latexmath:[\mathbf{v}_{\mathit{unknown}}] is the vector of unknown variables computed in the current state:
+* latexmath:[\mathbf{v}_{\mathit{unknown}}] is the vector of unknown variables computed in the current mode:
 
 ** <<InitializationMode>>: The exposed unknowns listed as elements <<InitialUnknown>> in <<ModelStructure>> that have a floating point type.
 
@@ -1450,7 +1450,7 @@ Each continuous state derivative variable listed as elements <<ContinuousStateDe
 
 * latexmath:[\mathbf{v}_{\mathit{known}}] is the vector of arguments of function latexmath:[\mathbf{f}] that could appear in <<dependencies>> (see the description there) in <<ModelStructure>> of the unknown variables latexmath:[\mathbf{v}_{\mathit{unknown}}].
 
-* latexmath:[{\mathbf{v}_{\mathit{rest}}}] is the set of <<input>> variables and <<discrete-state,discrete states>> of function latexmath:[\mathbf{f}] which cannot be set by the importer in the current state, but in other states
+* latexmath:[{\mathbf{v}_{\mathit{rest}}}] is the set of <<input>> variables and <<discrete-state,discrete states>> of function latexmath:[\mathbf{f}] which cannot be set by the importer in the current mode, but in other modes
 +
 [NOTE]
 ====
@@ -1466,7 +1466,7 @@ This is intentional as their dependencies listed in <<ModelStructure>> are inten
 
 [NOTE]
 ====
-The variable relationships are different in different states.
+The variable relationships are different in different modes.
 For example, during <<ContinuousTimeMode>>, the partial derivate of a continuous-time output latexmath:[\mathbf{y}] with respect to discrete-time <<input,`inputs`>> is undefined, because discrete-time <<input,`inputs`>> cannot be set between events.
 ====
 
