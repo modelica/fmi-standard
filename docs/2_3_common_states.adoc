@@ -585,21 +585,24 @@ a|
 |<<fmi3SetClockEM>>
 
 a|
-* <<fmi3EvaluateDiscreteStates>> may only be called if `providesEvaluateDiscreteStates` (<<providesEvaluateDiscreteStatesME,ME>>/<<providesEvaluateDiscreteStatesCS,CS>>) is `true`, and the FMU cannot rely on it being called.
-If not called, latexmath:[\mathbf{f}_{\mathit{disc}}] is evaluated implicitly during <<fmi3UpdateDiscreteStates>>.
+* <<fmi3EvaluateDiscreteStates>> may only be called if `providesEvaluateDiscreteStates` (<<providesEvaluateDiscreteStatesME,ME>>/<<providesEvaluateDiscreteStatesCS,CS>>) is `true`.
+If not called in a super-dense time instant, latexmath:[\mathbf{f}_{\mathit{disc}}] must be evaluated implicitly during <<fmi3UpdateDiscreteStates>>.
+To query values based on the current state transition before <<fmi3UpdateDiscreteStates>>, the importer must observe the calling-order requirements described in <<fmi3EvaluateDiscreteStates>>.
 If called, it evaluates the state transition function of the model partitions +
 latexmath:[(\mathbf{x}_{d}) := \mathbf{f}_{\mathit{disc}}({}^\bullet\mathbf{x}_{c+d}, \mathbf{u}_{c+d}, \mathbf{p}, {}^\bullet\mathbf{b}, t)]
-* For all active Clocks latexmath:[\mathbf{k}], the <<clocked-variable,clocked variables>> latexmath:[\mathbf{v}_{\mathbf{k}}] are part of the set of discrete variables latexmath:[\mathbf{v}_d] computed by latexmath:[\mathbf{f}_{\mathit{disc}}].
+* For all active Clocks latexmath:[\mathbf{k}], the <<ClockedState,clocked states>> latexmath:[\mathbf{x}_{\mathbf{k}}] are part of the discrete states latexmath:[\mathbf{x}_d] computed by latexmath:[\mathbf{f}_{\mathit{disc}}].
 |<<fmi3EvaluateDiscreteStates>>
 
 a|
 * Computes latexmath:[\mathbf{f}_{\mathit{event}}] depending on
   - if `providesEvaluateDiscreteStates` (<<providesEvaluateDiscreteStatesME,ME>>/<<providesEvaluateDiscreteStatesCS,CS>>) is `true`, then +
-latexmath:[(\mathbf{y}_{c+d}, \mathbf{\dot{x}}_c, \mathbf{x}_{c}, \mathbf{z}, \mathbf{r}, \mathbf{w}_{c+d}, \mathbf{b}, \mathbf{T}_{\mathit{next}}) := \mathbf{f}_{\mathit{event}}({}^\bullet\mathbf{x}_{c+d}, \mathbf{x}_{d}, \mathbf{u}_{c+d}, \mathbf{p}, {}^\bullet\mathbf{b}, t)]
+latexmath:[(\mathbf{y}_{c+d}, \mathbf{\dot{x}}_c, \mathbf{x}_{c}, \mathbf{z}, \mathbf{r}, \mathbf{w}_{c+d}, \mathbf{b}, \mathbf{T}_{\mathit{next}}) := \mathbf{f}_{\mathit{event}}({}^\bullet\mathbf{x}_{c+d}, \mathbf{x}_{d}, \mathbf{u}_{c+d}, \mathbf{p}, {}^\bullet\mathbf{b}, t)] +
+  which uses the current discrete states latexmath:[\mathbf{x}_d] without evaluating latexmath:[\mathbf{f}_{\mathit{disc}}].
   - else +
 latexmath:[(\mathbf{y}_{c+d}, \mathbf{\dot{x}}_c, \mathbf{x}_{c+d}, \mathbf{z}, \mathbf{r}, \mathbf{w}_{c+d}, \mathbf{b}, \mathbf{T}_{\mathit{next}}) := \mathbf{f}_{\mathit{event}}({}^\bullet\mathbf{x}_{c+d}, \mathbf{u}_{c+d}, \mathbf{p}, {}^\bullet\mathbf{b}, t)] +
   which includes latexmath:[\mathbf{f}_{\mathit{disc}}].
-* For all active Clocks latexmath:[\mathbf{k}], the <<clocked-variable,clocked variables>> latexmath:[\mathbf{v}_{\mathbf{k}}] are part of the set of discrete variables latexmath:[\mathbf{v}_d] computed by latexmath:[\mathbf{f}_{\mathit{event}}].
+* For all active Clocks latexmath:[\mathbf{k}], the clocked outputs latexmath:[\mathbf{y}_{\mathbf{k}}] are part of the outputs latexmath:[\mathbf{y}_d] computed by latexmath:[\mathbf{f}_{\mathit{event}}].
+Clocked states are also computed as part of latexmath:[\mathbf{f}_{\mathit{event}}] only if `providesEvaluateDiscreteStates` is `false`.
 |<<get-and-set-variable-values,`fmi3Get{VariableType}`>>, +
 <<fmi3GetContinuousStateDerivatives>>, +
 <<fmi3GetContinuousStates>>, +
@@ -635,6 +638,7 @@ This function can be called for variables with <<causality>> = <<input>>, <<caus
 
 Functions <<get-and-set-variable-values,`fmi3Get{VariableType}`>>::
 Getting variables might trigger <<selective-computation,computations>>.
+If `providesEvaluateDiscreteStates` (<<providesEvaluateDiscreteStatesME,ME>>/<<providesEvaluateDiscreteStatesCS,CS>>) is `true`, these computations do not include evaluation of latexmath:[\mathbf{f}_{\mathit{disc}}]; see <<fmi3EvaluateDiscreteStates>>.
 
 [[fmi3SetClockEM,`fmi3SetClock`]]
 Function <<fmi3SetClock>>::
@@ -695,10 +699,22 @@ Function <<fmi3GetNumberOfEventIndicators>>::
 Not allowed in Co-Simulation and Scheduled Execution.
 
 Function <<fmi3EvaluateDiscreteStates>>::
-This function may only be called if `providesEvaluateDiscreteStates` (<<providesEvaluateDiscreteStatesME,ME>>/<<providesEvaluateDiscreteStatesCS,CS>>) is `true`.
++
+--
+This function may only be called in <<EventMode>> if `providesEvaluateDiscreteStates` (<<providesEvaluateDiscreteStatesME,ME>>/<<providesEvaluateDiscreteStatesCS,CS>>) is `true`.
 It evaluates latexmath:[\mathbf{f}_{\mathit{disc}}], computing the current discrete states.
-Calling this function is optional and the FMU must not rely on it being called.
-If this call is omitted in a super dense time instant, latexmath:[\mathbf{f}_{\mathit{disc}}] is evaluated implicitly by <<fmi3UpdateDiscreteStates>>.
+
+When this capability flag is `true`, the importer controls when latexmath:[\mathbf{f}_{\mathit{disc}}] is evaluated by calling <<fmi3EvaluateDiscreteStates>>.
+Get functions do not implicitly evaluate latexmath:[\mathbf{f}_{\mathit{disc}}].
+Instead, they retrieve the current discrete states or evaluate latexmath:[\mathbf{f}_{\mathit{event}}] using these states.
+
+To obtain values based on the evaluation of latexmath:[\mathbf{f}_{\mathit{disc}}] for the current super-dense time instant and its current arguments, the importer must call <<fmi3EvaluateDiscreteStates>> before querying the discrete states or variables that depend on them.
+If arguments affecting latexmath:[\mathbf{f}_{\mathit{disc}}] subsequently change, the importer must call <<fmi3EvaluateDiscreteStates>> again before querying values that are to reflect the state transition evaluated with the changed arguments.
+
+Calling this function is optional in the sense that the FMU must still complete the state transition if the importer omits the call.
+If this call is omitted in a super-dense time instant, latexmath:[\mathbf{f}_{\mathit{disc}}] must be evaluated implicitly by <<fmi3UpdateDiscreteStates>>.
+This fallback does not ensure that get calls made before <<fmi3UpdateDiscreteStates>> use discrete states evaluated for the current arguments.
+--
 +
 [[fmi3EvaluateDiscreteStates,`fmi3EvaluateDiscreteStates`]]
 [source, C]
@@ -709,6 +725,9 @@ include::../headers/fmi3FunctionTypes.h[tag=EvaluateDiscreteStates]
 Function <<fmi3UpdateDiscreteStates>>::
 This function is called to signal a converged solution at the current super-dense time instant.
 <<fmi3UpdateDiscreteStates>> must be called at least once per super-dense time instant.
+This function deactivates the active Clocks and ends the current super-dense time instant.
+Consequently, clocked variables cannot be queried for that Clock activation after the call.
+If `providesEvaluateDiscreteStates` (<<providesEvaluateDiscreteStatesME,ME>>/<<providesEvaluateDiscreteStatesCS,CS>>) is `true`, an importer requiring clocked values based on the current state transition must call <<fmi3EvaluateDiscreteStates>> and query those values while their Clocks are active, before calling <<fmi3UpdateDiscreteStates>>.
 +
 [[fmi3UpdateDiscreteStates,`fmi3UpdateDiscreteStates`]]
 [source, C]
