@@ -426,10 +426,10 @@ typedef fmi3Status fmi3GetDirectionalDerivativeTYPE(fmi3Instance instance,
                                                     size_t nUnknowns,
                                                     const fmi3ValueReference knowns[],
                                                     size_t nKnowns,
-                                                    const fmi3Float64 seed[],
-                                                    size_t nSeed,
-                                                    fmi3Float64 sensitivity[],
-                                                    size_t nSensitivity);
+                                                    const fmi3Float64 seeds[],
+                                                    size_t nSeeds,
+                                                    fmi3Float64 sensitivities[],
+                                                    size_t nSensitivities);
 /* end::GetDirectionalDerivative[] */
 
 /* tag::GetAdjointDerivative[] */
@@ -438,10 +438,10 @@ typedef fmi3Status fmi3GetAdjointDerivativeTYPE(fmi3Instance instance,
                                                 size_t nUnknowns,
                                                 const fmi3ValueReference knowns[],
                                                 size_t nKnowns,
-                                                const fmi3Float64 seed[],
-                                                size_t nSeed,
-                                                fmi3Float64 sensitivity[],
-                                                size_t nSensitivity);
+                                                const fmi3Float64 seeds[],
+                                                size_t nSeeds,
+                                                fmi3Float64 sensitivities[],
+                                                size_t nSensitivities);
 /* end::GetAdjointDerivative[] */
 
 /* Entering and exiting the Configuration or Reconfiguration Mode */
