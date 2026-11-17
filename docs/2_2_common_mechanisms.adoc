@@ -1280,8 +1280,31 @@ The <<dependencies>> are encoded in the <<modelDescription.xml>> with the elemen
 * do not take changing dependencies due to resizing of arrays via <<structuralParameter,`structural parameters`>> into account,
 * are independent of the FMUs current operating point and parameter settings.
 
-An FMU can indicate via the `providesPerElementDependencies` capability flag that it is able to provide detailed dependency information at runtime through the following C-API.
+An FMU can indicate via the <<providesPerElementDependencies>> capability flag that it is able to provide detailed dependency information at runtime through the following C-API.
 The dependency information returned by these functions depend on the current operating point and parameter settings.
+
+The functions <<fmi3GetNumberOfVariableDependencies>> and <<fmi3GetVariableDependencies>> must only be called if <<providesPerElementDependencies>> is `true`.
+
+The FMU must provide the dependency information for every variable that is listed as an unknown in the <<ModelStructure>>:
+
+* before <<fmi3ExitInitializationMode>> has been called: the variables referenced by the <<InitialUnknown>> elements,
+
+* after <<fmi3ExitInitializationMode>> has been called: the variables referenced by the <<Output>>, <<ContinuousStateDerivative>>, <<ClockedState>> and <<EventIndicator>> elements.
+
+For these variables, the value references returned as independents must be knowns latexmath:[{\mathbf{v}_{\mathit{known}}}] of the respective <<ModelStructure>> element, as defined for the <<dependencies>> attribute.
+If the <<dependencies>> attribute is present, only value references listed there must be returned.
+
+For any other variable, the FMU must either
+
+* return <<fmi3Error>> from both <<fmi3GetNumberOfVariableDependencies>> and <<fmi3GetVariableDependencies>>, or
+
+* return the complete set of dependencies of that variable, where the value references returned as independents may reference any variable of the FMU that the dependent variable depends on.
+
+Returning an incomplete set of dependencies, or returning <<fmi3Error>> from only one of the two functions, is not allowed.
+
+NOTE: Calling these functions is an optional optimization: an importer must be able to simulate the FMU correctly based on the <<ModelStructure>> alone.
+The <<dependencies>> declared there are therefore a conservative over-approximation, which these functions refine by resolving to individual array elements, taking the current size of arrays into account and reflecting the current operating point.
+The number of returned entries can therefore be larger than the number of value references listed in the <<dependencies>> attribute, while the set of value references returned as independents can only become smaller.
 
 The number of dependencies of a given variable, which may change if <<structuralParameter,`structural parameters`>> are changed, can be retrieved by calling the following function:
 
@@ -1331,6 +1354,8 @@ If an array has more than one dimension the indices are serialized in the same o
 
 * `dependencyKinds` must point to a buffer of <<dependenciesKind>> values of size `nDependencies` allocated by the calling environment.
 It is filled in by this function with the enumeration value describing the dependency of this dependency entry.
+The values `fmi3Constant`, `fmi3Fixed`, `fmi3Tunable`, `fmi3Discrete` and `fmi3Dependent` have the same meaning as the corresponding values of the <<dependenciesKind>> attribute and are restricted in the same way.
+The meaning of the value `fmi3Independent` is not defined in this version of the standard and it must not be returned by this function.
 
 If this function is called before the <<fmi3ExitInitializationMode>> call, it returns the initial dependencies.
 If this function is called after the <<fmi3ExitInitializationMode>> call, it returns the runtime dependencies.
